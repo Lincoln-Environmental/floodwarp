@@ -33,6 +33,7 @@ from floodwarp.local_inertial_kernels import (
     BOUNDARY_CLOSED,
     BOUNDARY_FREE_OUTFLOW,
     BOUNDARY_INTERNAL,
+    BOUNDARY_MASKED_EAST_STAGE, BOUNDARY_MASKED_SOUTH_STAGE,
     BOUNDARY_MASKED_EAST_FREE,
     BOUNDARY_MASKED_NORTH_FREE,
     BOUNDARY_MASKED_NORTH_STAGE,
@@ -234,6 +235,10 @@ def _subgrid_update_qx_face(
         eta_L = boundary_stage_qx[j, i]
         eta_R = eta_stage[j, i]
         nf = manning_n[j, i]
+    elif btype == BOUNDARY_MASKED_EAST_STAGE:
+        eta_R = boundary_stage_qx[j, i]
+        eta_L = eta_stage[j, i - 1]
+        nf = manning_n[j, i - 1]
     elif btype == BOUNDARY_MASKED_WEST_FREE:
         eta_L = WP_FLOAT(face_z_min_x[j, i])
         eta_R = eta_stage[j, i]
@@ -303,7 +308,7 @@ def _subgrid_update_qx_face(
         wp.max(h_a_hydraulic, depth_epsilon), WP_FLOAT(7.0 / 3.0)
     )
     numerator = q_old - gravity * h_a_hydraulic * dt * Sf
-    if btype == BOUNDARY_SPECIFIED_STAGE or btype == BOUNDARY_MASKED_WEST_STAGE:
+    if btype == BOUNDARY_SPECIFIED_STAGE or btype == BOUNDARY_MASKED_WEST_STAGE or btype == BOUNDARY_MASKED_EAST_STAGE:
         pressure = subgrid_stage_pressure(
             face_z_x, j, i, BED_FLOAT(eta_L), BED_FLOAT(eta_R), factor
         )
@@ -369,6 +374,10 @@ def _subgrid_update_qy_face(
         eta_U = eta_stage[j - 1, i]
         eta_D = boundary_stage_qy[j, i]
         nf = manning_n[j - 1, i]
+    elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+        eta_D = eta_stage[j, i]
+        eta_U = boundary_stage_qy[j, i]
+        nf = manning_n[j, i]
     elif btype == BOUNDARY_MASKED_SOUTH_FREE:
         eta_U = WP_FLOAT(face_z_min_y[j, i])
         eta_D = eta_stage[j, i]
@@ -438,7 +447,7 @@ def _subgrid_update_qy_face(
         wp.max(h_a_hydraulic, depth_epsilon), WP_FLOAT(7.0 / 3.0)
     )
     numerator = q_old - gravity * h_a_hydraulic * dt * Sf
-    if btype == BOUNDARY_SPECIFIED_STAGE or btype == BOUNDARY_MASKED_NORTH_STAGE:
+    if btype == BOUNDARY_SPECIFIED_STAGE or btype == BOUNDARY_MASKED_NORTH_STAGE or btype == BOUNDARY_MASKED_SOUTH_STAGE:
         pressure = subgrid_stage_pressure(
             face_z_y, j, i, BED_FLOAT(eta_U), BED_FLOAT(eta_D), factor
         )
@@ -607,6 +616,9 @@ def subgrid_calc_cfl_dt_x_kernel(
     elif btype == BOUNDARY_MASKED_WEST_STAGE:
         eta_L = boundary_stage_qx[j, i]
         eta_R = eta_stage[j, i]
+    elif btype == BOUNDARY_MASKED_EAST_STAGE:
+        eta_R = boundary_stage_qx[j, i]
+        eta_L = eta_stage[j, i - 1]
     elif btype == BOUNDARY_MASKED_WEST_FREE:
         eta_L = WP_FLOAT(face_z_min_x[j, i])
         eta_R = eta_stage[j, i]
@@ -661,6 +673,9 @@ def subgrid_calc_cfl_dt_y_kernel(
     elif btype == BOUNDARY_MASKED_NORTH_STAGE:
         eta_U = eta_stage[j - 1, i]
         eta_D = boundary_stage_qy[j, i]
+    elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+        eta_D = eta_stage[j, i]
+        eta_U = boundary_stage_qy[j, i]
     elif btype == BOUNDARY_MASKED_SOUTH_FREE:
         eta_U = WP_FLOAT(face_z_min_y[j, i])
         eta_D = eta_stage[j, i]
@@ -715,6 +730,9 @@ def subgrid_lts_face_dt_x_kernel(
         elif btype == BOUNDARY_MASKED_WEST_STAGE:
             eta_L = boundary_stage_qx[j, i]
             eta_R = eta_stage[j, i]
+        elif btype == BOUNDARY_MASKED_EAST_STAGE:
+            eta_R = boundary_stage_qx[j, i]
+            eta_L = eta_stage[j, i - 1]
         elif btype == BOUNDARY_MASKED_WEST_FREE:
             eta_L = WP_FLOAT(face_z_min_x[j, i])
             eta_R = eta_stage[j, i]
@@ -772,6 +790,9 @@ def subgrid_lts_face_dt_y_kernel(
         elif btype == BOUNDARY_MASKED_NORTH_STAGE:
             eta_U = eta_stage[j - 1, i]
             eta_D = boundary_stage_qy[j, i]
+        elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+            eta_D = eta_stage[j, i]
+            eta_U = boundary_stage_qy[j, i]
         elif btype == BOUNDARY_MASKED_SOUTH_FREE:
             eta_U = WP_FLOAT(face_z_min_y[j, i])
             eta_D = eta_stage[j, i]

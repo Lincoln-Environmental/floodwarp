@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import tempfile
 from pathlib import Path
 import numpy as np
 import warp as wp
@@ -24,14 +25,21 @@ def durable_checkpoint(*, surface, path, signature, report):
     metadata=dict(signature=signature,host=host,initial_volume=surface.initial_volume,
         none_fields=[name for name,field in state['device'].items() if field is None],
         cumulative_report=report,geometry_key=geometry_key)
-    temporary=path.with_suffix('.partial.npz')
-    with temporary.open('wb') as stream:
-        np.savez(file=stream,metadata=json.dumps(metadata,default=json_value),**arrays)
-        stream.flush();os.fsync(stream.fileno())
-    temporary.replace(target=path)
-    with np.load(file=path,allow_pickle=False) as saved:
-        for name,values in arrays.items():
-            np.testing.assert_array_equal(actual=saved[name],desired=values,err_msg=name)
+    temporary=None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent,prefix=path.name+'.',suffix='.partial.npz',delete=False) as stream:
+            temporary=Path(stream.name)
+            np.savez(file=stream,metadata=json.dumps(metadata,default=json_value),**arrays)
+            stream.flush();os.fsync(stream.fileno())
+        with np.load(file=temporary,allow_pickle=False) as saved:
+            for name,values in arrays.items():
+                np.testing.assert_array_equal(actual=saved[name],desired=values,err_msg=name)
+        temporary.replace(target=path)
+        descriptor=os.open(path.parent,os.O_RDONLY | os.O_DIRECTORY)
+        try:os.fsync(descriptor)
+        finally:os.close(descriptor)
+    finally:
+        if temporary is not None:temporary.unlink(missing_ok=True)
     return dict(path=str(path),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
         time_s=surface.simulation_time,bytes=path.stat().st_size,device_arrays=len(arrays),
         geometry_key=geometry_key,round_trip='all saved device arrays exact')
@@ -47,7 +55,7 @@ def restore_complete(*, surface, path, signature):
             raise ValueError('Checkpoint source/input/configuration mismatch')
         device={name:None for name in metadata['none_fields']}
         for name in saved.files:
-            if name=='metadata':continue
+            if name in ('metadata','_direct_manifest'):continue
             values=saved[name]
             template=expected['device'].get(name)
             device[name]=wp.array(values,dtype=template.dtype,device=surface.device) if template is not None else wp.array(values,device=surface.device)

@@ -65,6 +65,20 @@ def run_host_stepped(solver, duration, hyetograph, stage_series):
         remaining = end_time - t
         if hyetograph is not None and t < hyetograph.duration_s:
             remaining = min(remaining, hyetograph.next_breakpoint_after(t) - t)
+        if stage_series is not None:
+            times,values=stage_series
+            later=times[times>t]
+            if later.size:
+                remaining=min(remaining,float(later[0]-t))
+            stage=solver.boundary_stage_qx.numpy()
+            stage[solver.boundary_type_qx.numpy()==BOUNDARY_SPECIFIED_STAGE]=np.interp(t,times,values)
+            solver.set_boundary_stage_qx(stage=stage)
+        if hyetograph is not None:
+            cap=min(remaining,solver.maximum_dt)
+            if solver.adaptive_dt_growth_factor is not None and solver._adaptive_dt_reference>0.:
+                cap=min(cap,solver._adaptive_dt_reference*solver.adaptive_dt_growth_factor)
+            bound=max(hyetograph.rate_at(t),hyetograph.rate_at(t+cap)) if t<hyetograph.duration_s else 0.
+            solver.set_uniform_rainfall_rate(rainfall_rate=bound)
         trial_dt = solver.calculate_stable_timestep(remaining_time=remaining)
         if hyetograph is not None:
             # Hyetograph semantics: rainfall is zero outside the storm; the
@@ -77,9 +91,7 @@ def run_host_stepped(solver, duration, hyetograph, stage_series):
                 if t_sample < hyetograph.duration_s
                 else 0.0
             )
-            if rate != active_rate:
-                solver.set_uniform_rainfall_rate(rate)
-                active_rate = rate
+            solver.set_uniform_rainfall_rate(rainfall_rate=rate)
         if stage_series is not None:
             value = float(np.interp(t, *stage_series))
             stage = solver.boundary_stage_qx.numpy()

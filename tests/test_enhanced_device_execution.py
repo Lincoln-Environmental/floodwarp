@@ -53,6 +53,15 @@ def run_host(*,model,duration,rain,stage,checkpoints):
         t=model.simulation_time;remaining=end-t
         if t<rain.duration_s:remaining=min(remaining,rain.next_breakpoint_after(t)-t)
         if index<len(checkpoints):remaining=min(remaining,checkpoints[index]-t)
+        later=stage[0][stage[0]>t]
+        if later.size:remaining=min(remaining,float(later[0]-t))
+        boundary=model.boundary_stage_qx.numpy();types=model.boundary_type_qx.numpy()
+        boundary[types==3]=np.interp(t,*stage);model.set_boundary_stage_qx(stage=boundary)
+        cap=min(model.maximum_dt,remaining)
+        if model.adaptive_dt_growth_factor is not None and model._adaptive_dt_reference>0.:
+            cap=min(cap,model._adaptive_dt_reference*model.adaptive_dt_growth_factor)
+        bound=max(rain.rate_at(t),rain.rate_at(t+cap)) if t<rain.duration_s else 0.
+        model.set_uniform_rainfall_rate(rainfall_rate=bound)
         dt=model.calculate_stable_timestep(remaining_time=remaining)
         sample=t if model.apply_sources_after_momentum else t+.5*dt
         rate=rain.rate_at(sample) if sample<rain.duration_s else 0.

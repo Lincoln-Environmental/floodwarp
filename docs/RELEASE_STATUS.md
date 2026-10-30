@@ -13,14 +13,33 @@ water accounting, structures, traditional SGS hypsometry, enhanced SGS
 geometry/reduction/preprocessing/stepping, complete checkpoints, and the new
 direct input/model helpers. [Extraction manifest](extraction.json) lists every
 retained baseline module and source hash. [Import graph](import_graph.json)
-includes lazy imports. [Numerical audit](numerical_integrity.json) confirms
-baseline-equivalent ASTs for ten core operator/profile modules after namespace
-and source-channel renaming; no numerical constants or formulas changed.
+includes lazy imports. [Numerical audit](numerical_integrity.json) preserves
+the extraction hashes and identifies the subsequent numerical repairs. The
+original extraction was baseline-equivalent after namespace/source-channel
+renaming; the repaired implementation deliberately differs at documented defects.
 
 The LI factory still resolves ordinary omission to physical_candidate; SGS
 omission retains default. FV1 still uses contact_hll and velocity_extrapolation
 with reflecting walls and endpoint speeds. SGS constructors warn visibly and
 diagnostics identify the selected formulation. No inclined SGS is included.
+
+## Integration and repair qualification
+
+The original dev review commits are integrated without history rewriting.
+The repair adds forcing-aware LI step selection, symmetric masked stages,
+continuous FV1 FREE pressure, safeguarded Green-Ampt convergence, atomic
+direct checkpoints, enhanced-SGS state/rebuild safeguards, automatic public
+CUDA graph selection and LTS graph dependency tracking. Numerical defaults,
+reference fixtures and historical strict/v1/v2 evidence remain preserved.
+
+The pinned Python 3.14 suite passed 1,421 tests with 24 skips using opt-in
+FV1 CUDA controls; the separate CPU-only run passed 853 with 555 skips.
+Additional focused checks and fresh validation evidence are recorded in
+`validation/repair_review`. Both frozen v1/v2 analyses reproduce exactly.
+The repaired retained comparison cases pass 25/32 strict gates; the seven
+discrepancies remain visible and are assessed separately for engineering
+significance. The full-domain 72-hour independent FV1 GPU comparison and
+performance profiling are still in progress at this repair commit.
 
 ## Removed dependencies and interfaces
 

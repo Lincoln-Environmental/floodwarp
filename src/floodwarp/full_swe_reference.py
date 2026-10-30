@@ -160,7 +160,10 @@ def face_fluxes(*, state, bed, active, boundary_type, boundary_stage, axis, grav
     flux[..., 0] = np.where(wall, 0., flux[..., 0])
     flux[..., 2] = np.where(wall, 0., flux[..., 2])
     blocked = edge & (boundary_type == 2) & np.where(al, flux[..., 0] < 0, flux[..., 0] > 0)
-    flux = np.where((blocked | ~(al | ar))[..., None], 0., flux)
+    blocked_flux = np.zeros_like(flux)
+    blocked_flux[..., 1] = .5 * gravity * inside[..., 0]**2
+    flux = np.where(blocked[..., None], blocked_flux, flux)
+    flux = np.where((~(al | ar))[..., None], 0., flux)
     return flux[..., order], .5 * gravity * hl**2, .5 * gravity * hr**2
 
 

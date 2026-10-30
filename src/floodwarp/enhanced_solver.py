@@ -14,6 +14,7 @@ from floodwarp.config import NP_FLOAT, WP_FLOAT, PRECISION_MODE
 from floodwarp.local_inertial_solver import LocalInertialSolver
 from floodwarp.local_inertial_kernels import (
     DL_SIZE, device_loop_timestep_cap_kernel, device_loop_stage_fill_kernel,
+    device_loop_prepare_forcing_kernel,
     device_loop_accumulate_face_volume_qx_kernel, device_loop_accumulate_face_volume_qy_kernel,
 )
 from floodwarp.enhanced_geometry import (
@@ -334,7 +335,9 @@ class EnhancedSGSSolver(LocalInertialSolver):
             raise RuntimeError('Nonunique native connection identity; no state changed')
         old_q=self._ec_q.numpy();old_d=self._ec_previous_d.numpy()
         old_heads=self.get_component_boundary_stages()
+        old_override=self._ec_boundary_override.numpy().copy() if self._ec_has_boundary_override else np.zeros(len(old_q),dtype=np.int32)
         new_heads=np.full(len(geometry.endpoints),np.nan)
+        new_override=np.zeros(len(geometry.endpoints),dtype=np.int32)
         discharge=np.zeros(len(geometry.endpoints),dtype=NP_FLOAT);previous=np.zeros(len(discharge))
         retained=np.zeros(len(old_q),dtype=bool)
         for f,key in enumerate(geometry.connection_keys):
@@ -342,6 +345,7 @@ class EnhancedSGSSolver(LocalInertialSolver):
             if previous_f is not None:
                 discharge[f]=old_q[previous_f];previous[f]=old_d[previous_f];retained[previous_f]=True
                 new_heads[f]=old_heads[previous_f]
+                new_override[f]=old_override[previous_f]
         removed=float(.5*np.sum(old_d[~retained]*old_q[~retained].astype(np.float64)**2))
         self._upload_component_geometry(geometry=geometry)
         self._install_connection_layout(geometry=geometry)
@@ -349,6 +353,8 @@ class EnhancedSGSSolver(LocalInertialSolver):
         wp.copy(self._ec_q,wp.array(discharge,dtype=WP_FLOAT,device=self.device))
         wp.copy(self._ec_previous_d,wp.array(previous,dtype=wp.float64,device=self.device))
         self._assign_component_boundary_stages(stage_m=new_heads)
+        if self._ec_has_boundary_override:
+            wp.copy(self._ec_boundary_override,wp.array(new_override,dtype=int,device=self.device))
         ledger=self._ec_boundary_closure_loss.numpy();ledger[0]+=removed
         wp.copy(self._ec_boundary_closure_loss,wp.array(ledger,dtype=wp.float64,device=self.device))
         self._aggregate_components()
@@ -400,7 +406,7 @@ class EnhancedSGSSolver(LocalInertialSolver):
         faces=self._ec_face.numpy();types=np.r_[self.boundary_type_qx.numpy().ravel(),self.boundary_type_qy.numpy().ravel()]
         if native_contacts and not self._enhanced_geometry.diagnostics.get('native_boundary_contacts',0):
             raise ValueError('Independent native stages require explicitly prescribed native coastal contacts')
-        if not native_contacts and np.any(~np.isin(types[faces[finite]],(3,4,5))):
+        if not native_contacts and np.any(~np.isin(types[faces[finite]],(3,4,5,10,11))):
             raise ValueError('Component boundary stages require specified-stage boundary types')
         if np.any(values[finite]>g.maximum_stage):raise ValueError('Component stage exceeds the declared validation range')
         self._assign_component_boundary_stages(stage_m=values,native_contacts=native_contacts)
@@ -512,10 +518,27 @@ class EnhancedSGSSolver(LocalInertialSolver):
         if full_fields:
             wp.copy(self.qx_next,self.qx);wp.copy(self.qy_next,self.qy)
 
+    def _validate_boundary_stage(self, name, stage, expected_shape):
+        super()._validate_boundary_stage(name=name,stage=stage,expected_shape=expected_shape)
+        if getattr(self,'_enhanced_ready',False):
+            boundary=self.boundary_type_qx if name.endswith('qx') else self.boundary_type_qy
+            prescribed=np.isin(boundary.numpy(),(3,4,5,10,11))
+            if np.any(stage[prescribed]>self._enhanced_geometry.maximum_stage):
+                raise StageRangeError('Boundary stage exceeds preprocessed range; no state modified')
+
+    def _validate_component_volumes(self, *, values):
+        """Reject an unsupported stage before resetting clocks or live state."""
+        g=self._enhanced_geometry
+        for state,value in enumerate(values):
+            curve=g.storage_rows[g.storage_offsets[state]:g.storage_offsets[state+1]]
+            if storage_stage(volume=float(value),curve=curve)[0]>g.maximum_stage:
+                raise StageRangeError('Enhanced state exceeds preprocessed stage range; no state modified')
+
     def set_water_depth(self, depth):
         if not self._enhanced_ready:return super().set_water_depth(depth=depth)
         values=coarse_storage_to_components(geometry=self._enhanced_geometry,
             native_bed=self._native_bed,storage_depth=depth)
+        self._validate_component_volumes(values=values)
         super().set_water_depth(depth=depth)
         wp.copy(self._ec_volume,wp.array(values,dtype=WP_FLOAT,device=self.device))
         for field in (self._ec_q,self._ec_proposed,self._ec_previous_d,self._ec_soil,
@@ -544,6 +567,7 @@ class EnhancedSGSSolver(LocalInertialSolver):
         flux=np.zeros(self._connection_count) if discharge is None else np.array(discharge,dtype=float,copy=True)
         if flux.shape!=(self._connection_count,) or not np.all(np.isfinite(flux)):
             raise ValueError('finite connection discharges required')
+        self._validate_component_volumes(values=values)
         self.set_water_depth(depth=np.zeros((self.ny,self.nx)))
         wp.copy(self._ec_volume,wp.array(values,dtype=WP_FLOAT,device=self.device))
         wp.copy(self._ec_q,wp.array(flux,dtype=WP_FLOAT,device=self.device))
@@ -951,6 +975,14 @@ class EnhancedSGSSolver(LocalInertialSolver):
                 inputs=[control,dt_min_scratch,wp.float64(end_time),wp.float64(self.maximum_dt),
                     wp.float64(self.adaptive_dt_growth_factor or 0.),hyeto_times,use_hyetograph,
                     wp.float64(storm_duration),checkpoint_times,checkpoint_count],device=self.device)
+            wp.launch(kernel=device_loop_prepare_forcing_kernel,dim=1,
+                inputs=[control,hyeto_times,hyeto_rates,use_hyetograph,wp.float64(storm_duration),
+                    stage_times_qx,stage_values_qx,use_stage_qx,
+                    stage_times_qy,stage_values_qy,use_stage_qy],device=self.device)
+            if use_stage_qx or use_stage_qy:
+                wp.launch(kernel=device_loop_stage_fill_kernel,dim=(self.ny+1,self.nx+1),
+                    inputs=[self.boundary_type_qx,self.boundary_stage_qx,self.boundary_type_qy,
+                        self.boundary_stage_qy,control,use_stage_qx,use_stage_qy],device=self.device)
             wp.launch(kernel=kernels.prepare_device_timestep,dim=1,
                 inputs=[control,wp.float64(self.maximum_dt),hyeto_times,hyeto_rates,use_hyetograph,
                     self._ec_rain_bound,wp.float64(self.adaptive_dt_growth_factor or 0.),
@@ -1162,7 +1194,7 @@ class EnhancedSGSSolver(LocalInertialSolver):
         wp.overload(kernels.coefficients,{'values':wp.array2d(dtype=values.dtype),
             'indices':wp.array(dtype=indices.dtype)})
         wp.load_module(module=kernels.coefficients.module,device=self.device)
-        shape=(id(self._ec_q),id(self._ec_rows),id(values),id(self._lts_schedule_control),
+        shape=(self._lts_capture_signature(),id(self._ec_q),id(self._ec_rows),id(values),id(self._lts_schedule_control),
             id(self._ec_boundary_override),id(self._ec_boundary_head_values),
             bool(self._ec_has_boundary_override),bool(self.apply_sources_after_momentum),bool(use_uniform_rain))
         if self._lts_subcycle_graph is not None and self._lts_subcycle_graph_shape==shape:return True

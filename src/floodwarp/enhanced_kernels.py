@@ -227,12 +227,12 @@ def boundary_heads(f: int, faces: wp.array(dtype=int), endpoints: wp.array2d(dty
         if face<x_count:
             j=face//(nx+1);i=face%(nx+1);code=type_x[j,i]
             if code==3 or code==5 or code==10:head=wp.float64(stage_x[j,i])
-            if code==3 and use_stage_x==1:head=wp.float64(WP_FLOAT(control[DL_STAGE_QX]))
+            if (code==3 or code==5 or code==10) and use_stage_x==1:head=wp.float64(WP_FLOAT(control[DL_STAGE_QX]))
         else:
             face-=x_count;j=face//nx;i=face%nx;code=type_y[j,i]
             if code==3 or code==4 or code==11:head=wp.float64(stage_y[j,i])
-            if code==3 and use_stage_y==1:head=wp.float64(WP_FLOAT(control[DL_STAGE_QY]))
-        if use_override==1 and (code==3 or code==4 or code==5):
+            if (code==3 or code==4 or code==11) and use_stage_y==1:head=wp.float64(WP_FLOAT(control[DL_STAGE_QY]))
+        if use_override==1 and (code==3 or code==4 or code==5 or code==10 or code==11):
             if override[f]==1:head=override_head[f]
         if use_override==1:
             if override[f]==2:

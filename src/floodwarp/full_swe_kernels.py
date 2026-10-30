@@ -505,7 +505,12 @@ def faces(q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64),
     f = hll(ls, rs, g, dry, flux_mode)
     if wall:
         f = wp.vec3d(wp.float64(0.0), f[1], wp.float64(0.0))
-    if (not al and not ar) or (al != ar and types[k] == 2 and ((al and f[0] < wp.float64(0.0)) or (ar and f[0] > wp.float64(0.0)))):
+    if al != ar and types[k] == 2 and ((al and f[0] < wp.float64(0.0)) or (ar and f[0] > wp.float64(0.0))):
+        # Block advective exchange while retaining the inside hydrostatic
+        # traction. Removing pressure creates an O(g h^2) acceleration even
+        # as the incoming velocity tends to zero.
+        f = wp.vec3d(wp.float64(0.0), wp.float64(0.5) * g * inside[0] * inside[0], wp.float64(0.0))
+    if not al and not ar:
         f = wp.vec3d(wp.float64(0.0))
     if axis == 1:
         f = wp.vec3d(f[0], f[2], f[1])

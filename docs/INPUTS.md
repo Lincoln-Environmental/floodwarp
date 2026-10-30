@@ -105,10 +105,14 @@ snapshot. Examples do this and save depth series, interval-mean hydrographs,
 water balance, optional figures and complete checkpoints.
 
 `save_checkpoint`/`load_checkpoint` bind the direct model's inputs, numerical
-controls, soil parameters and source commit to a checksum-checked disk state.
+controls and soil parameters to a checksum-checked disk state. New direct-model
+archives embed their identity and checksums in the NPZ and publish it with a
+single atomic replacement after validation and fsync. Interrupted writes retain
+the previous complete restart. Legacy NPZ/JSON pairs remain readable.
 FV1 retains its baseline disk format; LI/SGS use the extracted complete-state
-serializer and an immutable SGS geometry sidecar. Keep checkpoint JSON and
-geometry files together. Restore into an identically configured fresh model.
+serializer and an immutable SGS geometry sidecar. Keep the geometry directory
+beside the checkpoint (and the JSON sidecar for legacy archives). Restore into
+an identically configured fresh model.
 External source-slot and environment names were renamed for standalone use;
 old LI/SGS disk archives are not silently accepted as new FloodWarp packages.
 Historical numerical profiles remain available, and FV1 legacy checkpoint

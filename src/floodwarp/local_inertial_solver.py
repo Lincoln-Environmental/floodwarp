@@ -18,6 +18,7 @@ from floodwarp.boundary_conditions import (
     BOUNDARY_INTERNAL, BOUNDARY_CLOSED,
     BOUNDARY_FREE_OUTFLOW, BOUNDARY_SPECIFIED_STAGE,
     BOUNDARY_MASKED_NORTH_STAGE, BOUNDARY_MASKED_WEST_STAGE,
+    BOUNDARY_MASKED_EAST_STAGE, BOUNDARY_MASKED_SOUTH_STAGE,
     BOUNDARY_MASKED_WEST_FREE, BOUNDARY_MASKED_EAST_FREE,
     BOUNDARY_MASKED_SOUTH_FREE, BOUNDARY_MASKED_NORTH_FREE,
 )
@@ -62,6 +63,7 @@ from floodwarp.local_inertial_kernels import (
     max_active_depth_kernel,
     device_loop_timestep_cap_kernel,
     device_loop_predict_depth_kernel,
+    device_loop_prepare_forcing_kernel,
     device_loop_max_depth_kernel,
     device_loop_timestep_finalize_kernel,
     device_loop_stage_fill_kernel,
@@ -834,6 +836,14 @@ class LocalInertialSolver:
             np.asarray(stage[:, 1:self.nx], dtype=np.float64) - bed[:, 1:]
         )
         stage_depth[:, 1:self.nx][masked_west] = internal_depth[masked_west]
+        masked_east = boundary_type[:, 1:self.nx] == BOUNDARY_MASKED_EAST_STAGE
+        east_depth = np.asarray(stage[:, 1:self.nx],dtype=np.float64)-bed[:, :-1]
+        stage_depth[:, 1:self.nx][masked_east] = east_depth[masked_east]
+        reference=np.zeros_like(stage,dtype=np.float64)
+        reference[:,0]=bed[:,0];reference[:,-1]=bed[:,-1]
+        reference[:,1:self.nx][masked_west]=bed[:,1:][masked_west]
+        reference[:,1:self.nx][masked_east]=bed[:,:-1][masked_east]
+        wp.copy(self.boundary_stage_reference_qx,wp.array(reference,dtype=STAGE_FLOAT,device=self.device))
         wp.copy(self.boundary_stage_depth_qx, wp.array(stage_depth, dtype=WP_FLOAT, device=self.device))
         wp.copy(
             self.boundary_free_slope_qx,
@@ -855,6 +865,14 @@ class LocalInertialSolver:
             np.asarray(stage[1:self.ny, :], dtype=np.float64) - bed[:-1, :]
         )
         stage_depth[1:self.ny, :][masked_north] = internal_depth[masked_north]
+        masked_south = boundary_type[1:self.ny, :] == BOUNDARY_MASKED_SOUTH_STAGE
+        south_depth = np.asarray(stage[1:self.ny, :],dtype=np.float64)-bed[1:, :]
+        stage_depth[1:self.ny, :][masked_south] = south_depth[masked_south]
+        reference=np.zeros_like(stage,dtype=np.float64)
+        reference[0,:]=bed[0,:];reference[-1,:]=bed[-1,:]
+        reference[1:self.ny,:][masked_north]=bed[:-1,:][masked_north]
+        reference[1:self.ny,:][masked_south]=bed[1:,:][masked_south]
+        wp.copy(self.boundary_stage_reference_qy,wp.array(reference,dtype=STAGE_FLOAT,device=self.device))
         wp.copy(self.boundary_stage_depth_qy, wp.array(stage_depth, dtype=WP_FLOAT, device=self.device))
         wp.copy(
             self.boundary_free_slope_qy,
@@ -1712,6 +1730,7 @@ class LocalInertialSolver:
             BOUNDARY_MASKED_WEST_STAGE, BOUNDARY_MASKED_WEST_FREE,
             BOUNDARY_MASKED_EAST_FREE, BOUNDARY_MASKED_SOUTH_FREE,
             BOUNDARY_MASKED_NORTH_FREE,
+            BOUNDARY_MASKED_EAST_STAGE, BOUNDARY_MASKED_SOUTH_STAGE,
         ]
         if not np.all(np.isin(boundary_type, valid_types)):
             raise ValueError(f"{name} contains an unknown boundary code")
@@ -1723,11 +1742,11 @@ class LocalInertialSolver:
             name="boundary_type_qx",
         )
 
-        if np.any(boundary_type == BOUNDARY_MASKED_NORTH_STAGE):
+        if np.any(np.isin(boundary_type, (BOUNDARY_MASKED_NORTH_STAGE, BOUNDARY_MASKED_SOUTH_STAGE))):
             raise ValueError("BOUNDARY_MASKED_NORTH_STAGE is only valid on qy faces")
         if np.any(np.isin(boundary_type, [BOUNDARY_MASKED_SOUTH_FREE, BOUNDARY_MASKED_NORTH_FREE])):
             raise ValueError("BOUNDARY_MASKED_SOUTH_FREE/BOUNDARY_MASKED_NORTH_FREE are only valid on qy faces")
-        if np.any(boundary_type[:, (0, self.nx)] == BOUNDARY_MASKED_WEST_STAGE):
+        if np.any(np.isin(boundary_type[:, (0, self.nx)], (BOUNDARY_MASKED_WEST_STAGE, BOUNDARY_MASKED_EAST_STAGE))):
             raise ValueError("BOUNDARY_MASKED_WEST_STAGE is only valid on interior qx faces")
         if np.any(np.isin(boundary_type[:, (0, self.nx)], [BOUNDARY_MASKED_WEST_FREE, BOUNDARY_MASKED_EAST_FREE])):
             raise ValueError("Masked FREE boundary types are only valid on interior qx faces")
@@ -1764,6 +1783,9 @@ class LocalInertialSolver:
             (self._active_mask_host[:, :-1] == 1)
             & (self._active_mask_host[:, 1:] == 0)
         )
+        masked_east_stage = boundary_type[:, 1:self.nx] == BOUNDARY_MASKED_EAST_STAGE
+        if np.any(masked_east_stage & ~valid_masked_east_free):
+            raise ValueError("BOUNDARY_MASKED_EAST_STAGE requires active west and inactive east cells")
         if np.any(masked_east_free & ~valid_masked_east_free):
             raise ValueError(
                 "BOUNDARY_MASKED_EAST_FREE must have an active i-1 cell "
@@ -1781,13 +1803,13 @@ class LocalInertialSolver:
             name="boundary_type_qy",
         )
 
-        if np.any(boundary_type == BOUNDARY_MASKED_WEST_STAGE):
+        if np.any(np.isin(boundary_type, (BOUNDARY_MASKED_WEST_STAGE, BOUNDARY_MASKED_EAST_STAGE))):
             raise ValueError("BOUNDARY_MASKED_WEST_STAGE is only valid on qx faces")
         if np.any(np.isin(boundary_type, [BOUNDARY_MASKED_WEST_FREE, BOUNDARY_MASKED_EAST_FREE])):
             raise ValueError("BOUNDARY_MASKED_WEST_FREE/BOUNDARY_MASKED_EAST_FREE are only valid on qx faces")
         if np.any(boundary_type[0, :] == BOUNDARY_INTERNAL) or np.any(boundary_type[self.ny, :] == BOUNDARY_INTERNAL):
             raise ValueError("BOUNDARY_INTERNAL is only valid on interior qy faces")
-        if np.any(boundary_type[(0, self.ny), :] == BOUNDARY_MASKED_NORTH_STAGE):
+        if np.any(np.isin(boundary_type[(0, self.ny), :], (BOUNDARY_MASKED_NORTH_STAGE, BOUNDARY_MASKED_SOUTH_STAGE))):
             raise ValueError("BOUNDARY_MASKED_NORTH_STAGE is only valid on interior qy faces")
         if np.any(np.isin(boundary_type[(0, self.ny), :], [BOUNDARY_MASKED_SOUTH_FREE, BOUNDARY_MASKED_NORTH_FREE])):
             raise ValueError("Masked FREE boundary types are only valid on interior qy faces")
@@ -1820,6 +1842,9 @@ class LocalInertialSolver:
             (self._active_mask_host[:-1, :] == 0)
             & (self._active_mask_host[1:, :] == 1)
         )
+        masked_south_stage = boundary_type[1:self.ny, :] == BOUNDARY_MASKED_SOUTH_STAGE
+        if np.any(masked_south_stage & ~valid_masked_south_free):
+            raise ValueError("BOUNDARY_MASKED_SOUTH_STAGE requires inactive south and active north cells")
         if np.any(masked_south_free & ~valid_masked_south_free):
             raise ValueError(
                 "BOUNDARY_MASKED_SOUTH_FREE must have an inactive j-1 cell "
@@ -3349,16 +3374,29 @@ class LocalInertialSolver:
                     checkpoint_volume_out=checkpoint_volume_out,checkpoint_depth_out=checkpoint_depth_out,
                     collect_free_outflow_diagnostics=collect_free_outflow_diagnostics)
                 return
+            wp.launch(
+                kernel=device_loop_timestep_cap_kernel, dim=1,
+                inputs=[control, dt_min_scratch, wp.float64(end_time), wp.float64(self.maximum_dt),
+                        wp.float64(self.adaptive_dt_growth_factor or 0.0),
+                        hyeto_times, use_hyetograph, wp.float64(storm_duration),
+                        checkpoint_times_wp, checkpoint_count], device=self.device)
+            wp.launch(kernel=device_loop_prepare_forcing_kernel, dim=1,
+                inputs=[control,hyeto_times,hyeto_rates,use_hyetograph,wp.float64(storm_duration),
+                        stage_times_qx_wp,stage_values_qx_wp,use_stage_qx,
+                        stage_times_qy_wp,stage_values_qy_wp,use_stage_qy],device=self.device)
+            if use_stage and USE_CONDITIONED_MIXED_KERNELS:
+                wp.launch(kernel=device_loop_conditioned_stage_fill_kernel,
+                    dim=(self.ny+1,self.nx+1),
+                    inputs=[self.boundary_type_qx,self.boundary_stage_qx,
+                        self.boundary_stage_depth_qx,self.boundary_stage_reference_qx,
+                        self.boundary_type_qy,self.boundary_stage_qy,
+                        self.boundary_stage_depth_qy,self.boundary_stage_reference_qy,
+                        control,use_stage_qx,use_stage_qy],device=self.device)
+            elif use_stage:
+                wp.launch(kernel=device_loop_stage_fill_kernel,dim=(self.ny+1,self.nx+1),
+                    inputs=[self.boundary_type_qx,self.boundary_stage_qx,
+                        self.boundary_type_qy,self.boundary_stage_qy,control,use_stage_qx,use_stage_qy],device=self.device)
             if not self.use_lisflood_acc_timestep:
-                wp.launch(
-                    kernel=device_loop_timestep_cap_kernel,
-                    dim=(1,),
-                    inputs=[control, dt_min_scratch, wp.float64(end_time), wp.float64(self.maximum_dt),
-                            wp.float64(self.adaptive_dt_growth_factor or 0.0),
-                            hyeto_times, use_hyetograph, wp.float64(storm_duration),
-                            checkpoint_times_wp, checkpoint_count],
-                    device=self.device,
-                )
                 wp.launch(
                     kernel=device_loop_predict_depth_kernel,
                     dim=(self.ny, self.nx),
@@ -3435,26 +3473,6 @@ class LocalInertialSolver:
                         checkpoint_times_wp, checkpoint_count],
                 device=self.device,
             )
-            if use_stage and USE_CONDITIONED_MIXED_KERNELS:
-                wp.launch(
-                    kernel=device_loop_conditioned_stage_fill_kernel,
-                    dim=(self.ny + 1, self.nx + 1),
-                    inputs=[self.boundary_type_qx, self.boundary_stage_qx,
-                            self.boundary_stage_depth_qx, self.boundary_stage_reference_qx,
-                            self.boundary_type_qy, self.boundary_stage_qy,
-                            self.boundary_stage_depth_qy, self.boundary_stage_reference_qy,
-                            control, use_stage_qx, use_stage_qy],
-                    device=self.device,
-                )
-            elif use_stage:
-                wp.launch(
-                    kernel=device_loop_stage_fill_kernel,
-                    dim=(self.ny + 1, self.nx + 1),
-                    inputs=[self.boundary_type_qx, self.boundary_stage_qx,
-                            self.boundary_type_qy, self.boundary_stage_qy,
-                            control, use_stage_qx, use_stage_qy],
-                    device=self.device,
-                )
             qx_old, qy_old = self.qx, self.qy
             qx_next, qy_next = self.qx_next, self.qy_next
             if not self.apply_sources_after_momentum:
@@ -4807,6 +4825,24 @@ class LocalInertialSolver:
             inputs=[self._mass_rain_sum,self._mass_infil_sum,self._mass_other_sum,
                 wp.float64(float(self.dx)*float(self.dy)),self.cumulative_totals],device=self.device)
 
+    def _lts_capture_signature(self):
+        """Identity of captured buffers and launch-time numerical constants.
+
+        In-place array updates are read by a graph on replay; replacing a
+        buffer or changing a launch scalar requires recapture.
+        """
+        names=('dx','dy','gravity','dry_depth','depth_epsilon','limiter_epsilon',
+            'negative_depth_tolerance','infiltration_method','source_mode',
+            'manning_face_mode','use_two_dimensional_friction','free_outflow_mode',
+            'free_outflow_limiter_mode','apply_sources_after_momentum',
+            '_source_subgrid_infiltration_enabled','_subgrid_factor',
+            '_use_native_face_manning','_kinetic_transport','_exact_momentum',
+            '_ec_has_boundary_override','track_max_water_depth')
+        scalars=tuple((name,str(getattr(self,name,None))) for name in names)
+        buffers=tuple(sorted((name,value.ptr,tuple(value.shape),str(value.dtype))
+            for name,value in vars(self).items() if isinstance(value,wp.array)))
+        return scalars,buffers
+
     def _lts_build_subcycle_graph(
         self,
         schedule: dict[str, object],
@@ -4833,6 +4869,7 @@ class LocalInertialSolver:
         qx_count = int(np.sum(schedule["qx_counts"]))
         qy_count = int(np.sum(schedule["qy_counts"]))
         graph_shape = (
+            self._lts_capture_signature(),
             cell_count,
             qx_count,
             qy_count,

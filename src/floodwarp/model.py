@@ -2,6 +2,8 @@
 from dataclasses import dataclass
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -117,7 +119,7 @@ def model_time(*, model):
     return model.solver.time if isinstance(model.solver, FullSWESolver) else model.solver.simulation_time
 
 
-def advance(*, model, end_time, use_cuda_graph=False):
+def advance(*, model, end_time, use_cuda_graph=None):
     solver = model.solver
     start = model_time(model=model)
     if not np.isfinite(end_time) or end_time <= start:
@@ -145,9 +147,9 @@ def advance(*, model, end_time, use_cuda_graph=False):
                             remaining = min(remaining, later[0]-solver.time)
                 solver.step(remaining_time=remaining)
         else:
-            solver.run_device_loop(duration=end_time-start, use_cuda_graph=use_cuda_graph)
+            return solver.run_device_loop(duration=end_time-start, use_cuda_graph=use_cuda_graph)
     else:
-        solver.run_device_loop(duration=end_time-start, rainfall_hyetograph=model.rainfall,
+        return solver.run_device_loop(duration=end_time-start, rainfall_hyetograph=model.rainfall,
             stage_series_qx=model.stage_series_x, stage_series_qy=model.stage_series_y,
             use_cuda_graph=use_cuda_graph)
 
@@ -164,19 +166,53 @@ def diagnostics(*, model):
 
 
 def save_checkpoint(*, model, path: Path):
+    """Publish state and its checksummed identity in one atomic archive swap."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    if isinstance(model.solver, FullSWESolver):
-        model.solver.save_checkpoint(path=path)
-    else:
-        durable_checkpoint(surface=model.solver, path=path, signature=checkpoint_identity(model=model), report={})
-    path.with_suffix(path.suffix+'.json').write_text(json.dumps(dict(source_commit='ba503b8bde51d3f212199e81efc7038d9fffecc8',
-        identity=checkpoint_identity(model=model), checkpoint_sha256=hashlib.sha256(path.read_bytes()).hexdigest()), indent=2)+'\n')
+    with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name+'.', suffix='.npz', delete=False) as stream:
+        temporary=Path(stream.name)
+    try:
+        if isinstance(model.solver, FullSWESolver):
+            model.solver.save_checkpoint(path=temporary)
+        else:
+            durable_checkpoint(surface=model.solver, path=temporary, signature=checkpoint_identity(model=model), report={})
+        with np.load(file=temporary, allow_pickle=False) as saved:
+            arrays={name:saved[name] for name in saved.files}
+        manifest=dict(identity=checkpoint_identity(model=model),
+            sha256={name:hashlib.sha256(value.tobytes()).hexdigest() for name,value in arrays.items()})
+        arrays['_direct_manifest']=np.asarray(json.dumps(manifest,sort_keys=True))
+        with temporary.open('wb') as stream:
+            np.savez(file=stream, **arrays)
+            stream.flush()
+            os.fsync(stream.fileno())
+        validate_checkpoint_archive(path=temporary, identity=manifest['identity'])
+        os.replace(temporary, path)
+        descriptor=os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def validate_checkpoint_archive(*, path, identity):
+    with np.load(file=path, allow_pickle=False) as saved:
+        if '_direct_manifest' not in saved.files:
+            return False
+        manifest=json.loads(str(saved['_direct_manifest']))
+        if manifest['identity']!=identity or set(saved.files)!=(set(manifest['sha256']) | {'_direct_manifest'}):
+            raise ValueError('Checkpoint provenance or direct inputs do not match')
+        for name,digest in manifest['sha256'].items():
+            if hashlib.sha256(saved[name].tobytes()).hexdigest()!=digest:
+                raise ValueError('Checkpoint checksum failure: '+name)
+    return True
 
 
 def load_checkpoint(*, model, path: Path):
-    metadata = json.loads(path.with_suffix(path.suffix+'.json').read_text())
-    if metadata['identity'] != checkpoint_identity(model=model) or metadata['checkpoint_sha256'] != hashlib.sha256(path.read_bytes()).hexdigest():
-        raise ValueError("Checkpoint provenance or direct inputs do not match")
+    if not validate_checkpoint_archive(path=path, identity=checkpoint_identity(model=model)):
+        metadata = json.loads(path.with_suffix(path.suffix+'.json').read_text())
+        if metadata['identity'] != checkpoint_identity(model=model) or metadata['checkpoint_sha256'] != hashlib.sha256(path.read_bytes()).hexdigest():
+            raise ValueError("Checkpoint provenance or direct inputs do not match")
     if isinstance(model.solver, FullSWESolver):
         model.solver.load_checkpoint(path=path)
     else:

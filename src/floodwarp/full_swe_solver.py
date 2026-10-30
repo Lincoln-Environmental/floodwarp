@@ -219,7 +219,7 @@ class FullSWESolver:
             inputs=[self.q, f["flux_x"], f["flux_y"], f["pressure_x"], f["pressure_y"], f["active"], f["manning"], f["maximum"], f["inflow"], f["outflow"], self.ctrl, *common, self.dx, self.dy, self.gravity, self.dry_depth], device=self.device)
         wp.launch(kernels.finish_step, dim=1, inputs=[self.ctrl, self.condition, f["dt_histogram"], self.minimum_dt], device=self.device)
 
-    def run_device_loop(self, *, duration, use_cuda_graph=True, max_steps=10000000):
+    def run_device_loop(self, *, duration, use_cuda_graph=None, max_steps=10000000):
         """Run to an exact requested time; CUDA uses a device conditional loop.
 
         No CFL/state readback occurs inside a CUDA graph. CPU fallback steps
@@ -247,7 +247,13 @@ class FullSWESolver:
         wp.load_module(module=kernels, device=self.device)
         compilation = perf_counter() - began
         capture_seconds = 0.
-        graph = use_cuda_graph and self.device.is_cuda
+        graph = use_cuda_graph is not False and self.device.is_cuda
+        if graph:
+            with wp.ScopedDevice(device=self.device):
+                supported=wp.is_conditional_graph_supported()
+            if not supported and use_cuda_graph is True:
+                raise ValueError('CUDA conditional graphs are not supported on this device')
+            graph=supported
         if graph and self._graph is None:
             began = perf_counter()
             with wp.ScopedCapture(device=self.device, force_module_load=True) as body:

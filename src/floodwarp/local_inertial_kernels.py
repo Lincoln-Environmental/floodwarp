@@ -262,6 +262,13 @@ def calc_cfl_dt_x_kernel(
         eta_R = z_R + BED_FLOAT(h_R)
         eta_L = wp.max(boundary_stage_qx[j, i], z_L)
         h_L = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_L - z_L))
+    elif btype == BOUNDARY_MASKED_EAST_STAGE:
+        z_L = bed_elevation[j, i - 1]
+        z_R = z_L
+        h_L = water_depth[j, i - 1]
+        eta_L = z_L + BED_FLOAT(h_L)
+        eta_R = wp.max(boundary_stage_qx[j, i], z_R)
+        h_R = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_R - z_R))
     elif btype == BOUNDARY_MASKED_WEST_FREE:
         z_R = bed_elevation[j, i]
         z_L = z_R
@@ -346,6 +353,13 @@ def calc_cfl_dt_y_kernel(
         eta_U = z_U + BED_FLOAT(h_U)
         eta_D = wp.max(boundary_stage_qy[j, i], z_D)
         h_D = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_D - z_D))
+    elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+        z_D = bed_elevation[j, i]
+        z_U = z_D
+        h_D = water_depth[j, i]
+        eta_D = z_D + BED_FLOAT(h_D)
+        eta_U = wp.max(boundary_stage_qy[j, i], z_U)
+        h_U = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_U - z_U))
     elif btype == BOUNDARY_MASKED_SOUTH_FREE:
         z_D = bed_elevation[j, i]
         z_U = z_D
@@ -456,6 +470,9 @@ def calc_conditioned_cfl_dt_x_kernel(
     elif btype == BOUNDARY_MASKED_WEST_STAGE:
         h_left = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qx[j, i])
         h_right = water_depth[j, i]
+    elif btype == BOUNDARY_MASKED_EAST_STAGE:
+        h_right = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qx[j, i])
+        h_left = water_depth[j, i - 1]
     elif btype == BOUNDARY_MASKED_WEST_FREE:
         h_right = water_depth[j, i]
     elif btype == BOUNDARY_MASKED_EAST_FREE:
@@ -504,6 +521,9 @@ def calc_conditioned_cfl_dt_y_kernel(
     elif btype == BOUNDARY_MASKED_NORTH_STAGE:
         h_up = water_depth[j - 1, i]
         h_down = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qy[j, i])
+    elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+        h_down = water_depth[j, i]
+        h_up = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qy[j, i])
     elif btype == BOUNDARY_MASKED_SOUTH_FREE:
         h_down = water_depth[j, i]
     elif btype == BOUNDARY_MASKED_NORTH_FREE:
@@ -534,7 +554,7 @@ def _boundary_vector_qx(qy: wp.array2d(dtype=WP_FLOAT), j: int, i: int, btype: i
     nx = qy.shape[1]
     if i == 0 or btype == BOUNDARY_MASKED_WEST_STAGE or btype == BOUNDARY_MASKED_WEST_FREE:
         return WP_FLOAT(0.5) * (qy[j, i] + qy[j + 1, i])
-    if i == nx or btype == BOUNDARY_MASKED_EAST_FREE:
+    if i == nx or btype == BOUNDARY_MASKED_EAST_FREE or btype == BOUNDARY_MASKED_EAST_STAGE:
         return WP_FLOAT(0.5) * (qy[j, i - 1] + qy[j + 1, i - 1])
     return WP_FLOAT(0.25) * (qy[j, i - 1] + qy[j, i] + qy[j + 1, i - 1] + qy[j + 1, i])
 
@@ -542,7 +562,7 @@ def _boundary_vector_qx(qy: wp.array2d(dtype=WP_FLOAT), j: int, i: int, btype: i
 @wp.func
 def _boundary_vector_qy(qx: wp.array2d(dtype=WP_FLOAT), j: int, i: int, btype: int) -> WP_FLOAT:
     ny = qx.shape[0]
-    if j == 0 or btype == BOUNDARY_MASKED_SOUTH_FREE:
+    if j == 0 or btype == BOUNDARY_MASKED_SOUTH_FREE or btype == BOUNDARY_MASKED_SOUTH_STAGE:
         return WP_FLOAT(0.5) * (qx[j, i] + qx[j, i + 1])
     if j == ny or btype == BOUNDARY_MASKED_NORTH_STAGE or btype == BOUNDARY_MASKED_NORTH_FREE:
         return WP_FLOAT(0.5) * (qx[j - 1, i] + qx[j - 1, i + 1])
@@ -646,6 +666,14 @@ def _update_qx_face(
         eta_L = wp.max(boundary_stage_qx[j, i], z_L)
         h_L = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_L - z_L))
         nf = manning_n[j, i]
+    elif btype == BOUNDARY_MASKED_EAST_STAGE:
+        z_L = bed_elevation[j, i - 1]
+        z_R = z_L
+        h_L = water_depth[j, i - 1]
+        eta_L = z_L + BED_FLOAT(h_L)
+        eta_R = wp.max(boundary_stage_qx[j, i], z_R)
+        h_R = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_R - z_R))
+        nf = manning_n[j, i - 1]
     elif btype == BOUNDARY_MASKED_WEST_FREE:
         # Ghost cell on the inactive side: ghost bed = active bed, ghost
         # depth = 0 (free drainage over a sill at bed level).
@@ -856,6 +884,14 @@ def _update_qy_face(
         eta_D = wp.max(boundary_stage_qy[j, i], z_D)
         h_D = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_D - z_D))
         nf = manning_n[j - 1, i]
+    elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+        z_D = bed_elevation[j, i]
+        z_U = z_D
+        h_D = water_depth[j, i]
+        eta_D = z_D + BED_FLOAT(h_D)
+        eta_U = wp.max(boundary_stage_qy[j, i], z_U)
+        h_U = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_U - z_U))
+        nf = manning_n[j, i]
     elif btype == BOUNDARY_MASKED_SOUTH_FREE:
         # Ghost cell on the inactive side: ghost bed = active bed, ghost
         # depth = 0 (free drainage over a sill at bed level).
@@ -1204,6 +1240,12 @@ def _update_conditioned_qx_face(
         surface_left = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qx[j, i])
         surface_right = h_right
         nf = manning_n[j, i]
+    elif btype == BOUNDARY_MASKED_EAST_STAGE:
+        h_right = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qx[j, i])
+        h_left = water_depth[j, i - 1]
+        surface_right = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qx[j, i])
+        surface_left = h_left
+        nf = manning_n[j, i - 1]
     elif btype == BOUNDARY_MASKED_WEST_FREE:
         # Ghost on the inactive side: zero depth at the active bed, so
         # the ghost surface is exactly the local datum (dz = 0).
@@ -1339,6 +1381,12 @@ def _update_conditioned_qy_face(
         surface_down = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qy[j, i])
         h_down = wp.max(WP_FLOAT(0.0), surface_down)
         nf = manning_n[j - 1, i]
+    elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+        h_down = water_depth[j, i]
+        surface_down = h_down
+        surface_up = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qy[j, i])
+        h_up = wp.max(WP_FLOAT(0.0), surface_up)
+        nf = manning_n[j, i]
     elif btype == BOUNDARY_MASKED_SOUTH_FREE:
         # Ghost on the inactive side: zero depth at the active bed, so
         # the ghost surface is exactly the local datum (dz = 0).
@@ -2085,7 +2133,7 @@ def _accumulate_boundary_flux_edges(
 
     # A masked east-FREE face qx[j, i + 1] has this active cell on its
     # i-1 side; positive q leaves the domain (inflow is clamped to zero).
-    if i < nx - 1 and boundary_type_qx[j, i + 1] == BOUNDARY_MASKED_EAST_FREE:
+    if i < nx - 1 and (boundary_type_qx[j, i + 1] == BOUNDARY_MASKED_EAST_FREE or boundary_type_qx[j, i + 1] == BOUNDARY_MASKED_EAST_STAGE):
         q = qx[j, i + 1]
         volume = wp.float64(wp.abs(q)) * wp.float64(dy) * wp.float64(dt)
         if q < WP_FLOAT(0.0):
@@ -2126,7 +2174,7 @@ def _accumulate_boundary_flux_edges(
 
     # A masked south-FREE face qy[j, i] has this active cell on its j
     # side; negative q leaves the domain (inflow is clamped to zero).
-    if j > 0 and boundary_type_qy[j, i] == BOUNDARY_MASKED_SOUTH_FREE:
+    if j > 0 and (boundary_type_qy[j, i] == BOUNDARY_MASKED_SOUTH_FREE or boundary_type_qy[j, i] == BOUNDARY_MASKED_SOUTH_STAGE):
         q = qy[j, i]
         volume = wp.float64(wp.abs(q)) * wp.float64(dx) * wp.float64(dt)
         if q > WP_FLOAT(0.0):
@@ -2398,18 +2446,29 @@ def _green_ampt_potential_depth(
     lower = WP_FLOAT(0.0)
     upper = target + WP_FLOAT(2.0) * wp.sqrt(a * target) + WP_FLOAT(2.0) * a
     x = wp.min(upper, target + wp.sqrt(WP_FLOAT(2.0) * a * target))
-    # Newton converges quadratically from the asymptotic initial guess; ten
-    # safeguarded iterations retain margin for extreme F0/A ratios.
-    for _ in range(10):
-        residual = x - a * wp.log(WP_FLOAT(1.0) + x / (f0 + a)) - target
+    # Evaluate r-log(1+r) by its series near zero to avoid cancellation.
+    # Check convergence before tightening the bracket: an exact Newton root
+    # is otherwise rejected as a bracket endpoint on the next iteration.
+    for _ in range(64):
+        ratio = x / (f0 + a)
+        remainder = ratio - wp.log(WP_FLOAT(1.0) + ratio)
+        if ratio < WP_FLOAT(0.001):
+            remainder = ratio * ratio * (WP_FLOAT(0.5) + ratio * (WP_FLOAT(-1.0 / 3.0) + ratio * (WP_FLOAT(0.25) + ratio * (WP_FLOAT(-0.2) + ratio / WP_FLOAT(6.0)))))
+        residual = x * (f0 / (f0 + a)) + a * remainder - target
+        derivative = (f0 + x) / (f0 + a + x)
+        update = residual / wp.max(derivative, WP_FLOAT(1.0e-30))
+        tolerance = WP_FLOAT(2.0e-14) * wp.max(x, target)
+        if wp.abs(residual) <= WP_FLOAT(2.0e-14) * target or wp.abs(update) <= tolerance:
+            return wp.max(WP_FLOAT(0.0), x)
         if residual > WP_FLOAT(0.0):
             upper = x
         else:
             lower = x
-        derivative = (f0 + x) / (f0 + a + x)
-        candidate = x - residual / wp.max(derivative, WP_FLOAT(1.0e-20))
-        if candidate <= lower or candidate >= upper:
+        candidate = x - update
+        if not wp.isfinite(candidate) or candidate <= lower or candidate >= upper:
             candidate = lower + WP_FLOAT(0.5) * (upper - lower)
+        if wp.abs(candidate - x) <= tolerance:
+            return wp.max(WP_FLOAT(0.0), candidate)
         x = candidate
     return wp.max(WP_FLOAT(0.0), wp.min(upper, wp.max(lower, x)))
 
@@ -2984,6 +3043,36 @@ def device_loop_timestep_cap_kernel(
 
 
 @wp.kernel
+def device_loop_prepare_forcing_kernel(
+    control: wp.array(dtype=wp.float64),
+    hyeto_times: wp.array(dtype=wp.float64), hyeto_rates: wp.array(dtype=wp.float64),
+    use_hyetograph: int, storm_duration: wp.float64,
+    stage_times_qx: wp.array(dtype=wp.float64), stage_values_qx: wp.array(dtype=wp.float64), use_stage_qx: int,
+    stage_times_qy: wp.array(dtype=wp.float64), stage_values_qy: wp.array(dtype=wp.float64), use_stage_qy: int,
+):
+    """Sample current stages and a conservative rain bound before CFL."""
+    if control[DL_DONE] != wp.float64(0.0):
+        return
+    t=control[DL_TIME]
+    cap=control[DL_MAX_DT]
+    if use_stage_qx == 1:
+        if t < stage_times_qx[stage_times_qx.shape[0]-1]:
+            cap=wp.min(cap,_device_next_breakpoint(stage_times_qx,t)-t)
+        control[DL_STAGE_QX]=_device_piecewise_linear_interp(stage_times_qx,stage_values_qx,t,control)
+    if use_stage_qy == 1:
+        if t < stage_times_qy[stage_times_qy.shape[0]-1]:
+            cap=wp.min(cap,_device_next_breakpoint(stage_times_qy,t)-t)
+        control[DL_STAGE_QY]=_device_piecewise_linear_interp(stage_times_qy,stage_values_qy,t,control)
+    control[DL_MAX_DT]=cap
+    if use_hyetograph == 1:
+        rate=wp.float64(0.0)
+        if t < storm_duration:
+            rate=wp.max(_device_piecewise_linear_interp(hyeto_times,hyeto_rates,t,control),
+                _device_piecewise_linear_interp(hyeto_times,hyeto_rates,t+cap,control))
+        control[DL_RAIN_RATE]=rate
+
+
+@wp.kernel
 def device_loop_predict_depth_kernel(
     water_depth: wp.array2d(dtype=WP_FLOAT),
     rainfall_rate: wp.array2d(dtype=WP_FLOAT),
@@ -3140,6 +3229,15 @@ def _device_timestep_finalize_from_cfl(
         checkpoint_times, checkpoint_count
     )
 
+    if use_stage_qx == 1 and t < stage_times_qx[stage_times_qx.shape[0]-1]:
+        stage_cap=_device_next_breakpoint(stage_times_qx,t)-t
+        hard_max_dt=wp.min(hard_max_dt,stage_cap)
+        max_dt=wp.min(max_dt,stage_cap)
+    if use_stage_qy == 1 and t < stage_times_qy[stage_times_qy.shape[0]-1]:
+        stage_cap=_device_next_breakpoint(stage_times_qy,t)-t
+        hard_max_dt=wp.min(hard_max_dt,stage_cap)
+        max_dt=wp.min(max_dt,stage_cap)
+
     dt = max_dt
     # Stable timestep without the hard end/breakpoint cap (growth cap only).
     uncapped_dt = maximum_dt
@@ -3242,10 +3340,10 @@ def device_loop_stage_fill_kernel(
     """Write the sampled stage values to all SPECIFIED_STAGE faces."""
     j, i = wp.tid()
     if use_stage_qx == 1 and j < boundary_stage_qx.shape[0]:
-        if boundary_type_qx[j, i] == BOUNDARY_SPECIFIED_STAGE:
+        if boundary_type_qx[j, i] == BOUNDARY_SPECIFIED_STAGE or boundary_type_qx[j, i] == BOUNDARY_MASKED_WEST_STAGE or boundary_type_qx[j, i] == BOUNDARY_MASKED_EAST_STAGE:
             boundary_stage_qx[j, i] = STAGE_FLOAT(control[DL_STAGE_QX])
     if use_stage_qy == 1 and i < boundary_stage_qy.shape[1]:
-        if boundary_type_qy[j, i] == BOUNDARY_SPECIFIED_STAGE:
+        if boundary_type_qy[j, i] == BOUNDARY_SPECIFIED_STAGE or boundary_type_qy[j, i] == BOUNDARY_MASKED_NORTH_STAGE or boundary_type_qy[j, i] == BOUNDARY_MASKED_SOUTH_STAGE:
             boundary_stage_qy[j, i] = STAGE_FLOAT(control[DL_STAGE_QY])
 
 
@@ -3266,12 +3364,12 @@ def device_loop_conditioned_stage_fill_kernel(
     """Write datum-relative FP32 stage depths for conditioned mixed kernels."""
     j, i = wp.tid()
     if use_stage_qx == 1 and j < boundary_stage_depth_qx.shape[0]:
-        if boundary_type_qx[j, i] == BOUNDARY_SPECIFIED_STAGE:
+        if boundary_type_qx[j, i] == BOUNDARY_SPECIFIED_STAGE or boundary_type_qx[j, i] == BOUNDARY_MASKED_WEST_STAGE or boundary_type_qx[j, i] == BOUNDARY_MASKED_EAST_STAGE:
             stage = STAGE_FLOAT(control[DL_STAGE_QX])
             boundary_stage_qx[j, i] = stage
             boundary_stage_depth_qx[j, i] = WP_FLOAT(stage - boundary_stage_reference_qx[j, i])
     if use_stage_qy == 1 and i < boundary_stage_depth_qy.shape[1]:
-        if boundary_type_qy[j, i] == BOUNDARY_SPECIFIED_STAGE:
+        if boundary_type_qy[j, i] == BOUNDARY_SPECIFIED_STAGE or boundary_type_qy[j, i] == BOUNDARY_MASKED_NORTH_STAGE or boundary_type_qy[j, i] == BOUNDARY_MASKED_SOUTH_STAGE:
             stage = STAGE_FLOAT(control[DL_STAGE_QY])
             boundary_stage_qy[j, i] = stage
             boundary_stage_depth_qy[j, i] = WP_FLOAT(stage - boundary_stage_reference_qy[j, i])
@@ -3824,6 +3922,9 @@ def lts_conditioned_face_dt_x_kernel(
         elif btype == BOUNDARY_MASKED_WEST_STAGE:
             h_left = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qx[j, i])
             h_right = water_depth[j, i]
+        elif btype == BOUNDARY_MASKED_EAST_STAGE:
+            h_right = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qx[j, i])
+            h_left = water_depth[j, i - 1]
         elif btype == BOUNDARY_MASKED_WEST_FREE:
             h_right = water_depth[j, i]
         elif btype == BOUNDARY_MASKED_EAST_FREE:
@@ -3874,6 +3975,9 @@ def lts_conditioned_face_dt_y_kernel(
         elif btype == BOUNDARY_MASKED_NORTH_STAGE:
             h_up = water_depth[j - 1, i]
             h_down = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qy[j, i])
+        elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+            h_down = water_depth[j, i]
+            h_up = wp.max(WP_FLOAT(0.0), boundary_stage_depth_qy[j, i])
         elif btype == BOUNDARY_MASKED_SOUTH_FREE:
             h_down = water_depth[j, i]
         elif btype == BOUNDARY_MASKED_NORTH_FREE:
@@ -3934,6 +4038,13 @@ def lts_face_dt_x_kernel(
             eta_right = z_right + BED_FLOAT(h_right)
             eta_left = wp.max(boundary_stage_qx[j, i], z_left)
             h_left = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_left - z_left))
+        elif btype == BOUNDARY_MASKED_EAST_STAGE:
+            z_right = bed_elevation[j, i - 1]
+            z_left = z_right
+            h_left = water_depth[j, i - 1]
+            eta_right = z_right + BED_FLOAT(h_left)
+            eta_left = wp.max(boundary_stage_qx[j, i], z_left)
+            h_right = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_left - z_left))
         elif btype == BOUNDARY_MASKED_WEST_FREE:
             z_right = bed_elevation[j, i]
             z_left = z_right
@@ -4014,6 +4125,13 @@ def lts_face_dt_y_kernel(
             eta_up = z_up + BED_FLOAT(h_up)
             eta_down = wp.max(boundary_stage_qy[j, i], z_down)
             h_down = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_down - z_down))
+        elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+            z_up = bed_elevation[j, i]
+            z_down = z_up
+            h_down = water_depth[j, i]
+            eta_up = z_up + BED_FLOAT(h_down)
+            eta_down = wp.max(boundary_stage_qy[j, i], z_down)
+            h_up = WP_FLOAT(wp.max(BED_FLOAT(0.0), eta_down - z_down))
         elif btype == BOUNDARY_MASKED_SOUTH_FREE:
             z_down = bed_elevation[j, i]
             z_up = z_down
@@ -4350,6 +4468,8 @@ def lts_face_levels_x_kernel(
                 level = wp.min(left_level, right_level)
         elif btype == BOUNDARY_MASKED_WEST_STAGE:
             level = cell_levels[j, i]
+        elif btype == BOUNDARY_MASKED_EAST_STAGE:
+            level = cell_levels[j, i - 1]
         elif btype == BOUNDARY_MASKED_WEST_FREE:
             level = cell_levels[j, i]
         elif btype == BOUNDARY_MASKED_EAST_FREE:
@@ -4379,6 +4499,8 @@ def lts_face_levels_y_kernel(
                 level = wp.min(up_level, down_level)
         elif btype == BOUNDARY_MASKED_NORTH_STAGE:
             level = cell_levels[j - 1, i]
+        elif btype == BOUNDARY_MASKED_SOUTH_STAGE:
+            level = cell_levels[j, i]
         elif btype == BOUNDARY_MASKED_SOUTH_FREE:
             level = cell_levels[j, i]
         elif btype == BOUNDARY_MASKED_NORTH_FREE:
@@ -4919,7 +5041,7 @@ def lts_commit_qx_volume_indexed_kernel(
             wp.atomic_add(cumulative_totals, 3, volume)
         else:
             wp.atomic_add(cumulative_totals, 4, -volume)
-    elif btype == BOUNDARY_MASKED_EAST_FREE:
+    elif btype == BOUNDARY_MASKED_EAST_FREE or btype == BOUNDARY_MASKED_EAST_STAGE:
         wp.atomic_add(pending_flux_volume, j, i - 1, -volume)
         if volume <= wp.float64(0.0):
             wp.atomic_add(cumulative_totals, 3, -volume)
@@ -4970,7 +5092,7 @@ def lts_commit_qy_volume_indexed_kernel(
             wp.atomic_add(cumulative_totals, 3, -volume)
         else:
             wp.atomic_add(cumulative_totals, 4, volume)
-    elif btype == BOUNDARY_MASKED_SOUTH_FREE:
+    elif btype == BOUNDARY_MASKED_SOUTH_FREE or btype == BOUNDARY_MASKED_SOUTH_STAGE:
         wp.atomic_add(pending_flux_volume, j, i, volume)
         if volume >= wp.float64(0.0):
             wp.atomic_add(cumulative_totals, 3, volume)
@@ -5490,7 +5612,7 @@ def lts_transport_qx_indexed_kernel(
             wp.atomic_add(cumulative_totals, 3, volume)
         else:
             wp.atomic_add(cumulative_totals, 4, -volume)
-    elif btype == BOUNDARY_MASKED_EAST_FREE:
+    elif btype == BOUNDARY_MASKED_EAST_FREE or btype == BOUNDARY_MASKED_EAST_STAGE:
         wp.atomic_add(pending_flux_volume, j, i - 1, -volume)
         if volume <= wp.float64(0.0):
             wp.atomic_add(cumulative_totals, 3, -volume)
@@ -5538,7 +5660,7 @@ def lts_transport_qy_indexed_kernel(
             wp.atomic_add(cumulative_totals, 3, -volume)
         else:
             wp.atomic_add(cumulative_totals, 4, volume)
-    elif btype == BOUNDARY_MASKED_SOUTH_FREE:
+    elif btype == BOUNDARY_MASKED_SOUTH_FREE or btype == BOUNDARY_MASKED_SOUTH_STAGE:
         wp.atomic_add(pending_flux_volume, j, i, volume)
         if volume >= wp.float64(0.0):
             wp.atomic_add(cumulative_totals, 3, volume)
