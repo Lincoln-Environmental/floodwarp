@@ -99,3 +99,22 @@ steep-case default timestep sensitivity also remains a concern. Physical LI is
 not granted unrestricted hydraulic qualification by this review. No operator,
 solver activation threshold or default changed. Licensing, terrain provenance,
 FV1 coverage/limitations and experimental SGS status above remain unchanged.
+
+## Current LI engineering interpretation (v2)
+
+The [practical v2 assessment](../validation/li_review_v2/REPORT.md) supersedes
+the engineering interpretation in the preceding v1 section. Both LI profiles
+meet practical inundation/runoff budgets on all eight equivalent slope-FREE
+cases with the tested timestep caps. The strict 25/32 score and all numerical
+integrity requirements are unchanged. Marginal shallow-water classification,
+intentional infiltration timing and isolated centimetre transient differences
+no longer independently veto that bounded physical-LI use.
+
+Dry-exterior defaults versus slope-FREE references are explicitly non-equivalent,
+without hydraulic agreement verdicts. A same-boundary default timestep concern
+remains on steep terrain (23.56% hydrograph NRMSE, 46.26% peak difference versus
+the capped control), so unrestricted default temporal accuracy is not qualified.
+Recharge has a separate concern: the infiltration difference is 29.24% of
+reference infiltration despite only 0.823% of rainfall. Recharge-specific
+qualification needs independent source-law evidence. Licensing, terrain
+provenance, FV1 coverage/limitations and experimental SGS status remain unchanged.
