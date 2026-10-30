@@ -80,3 +80,22 @@ separately; the research environment was not upgraded.
 
 No public release tag or distribution upload has been created. The owner's
 requested GitHub push is a private review snapshot with these blockers visible.
+
+## Additive LI engineering review
+
+The [versioned LI review](../validation/li_review_v1/REPORT.md) establishes
+bitwise CPU FP64 extraction parity in 48 matched configurations and eight
+public-default controls. The original 25/32 strict result above is unchanged;
+none of its seven LI discrepancies is attributable to extraction in these runs.
+The 5 m ACC-compatible final extent miss is caused by micrometre-scale depth
+differences around 1 mm. ACC-compatible LI passes the separate bounded
+engineering screen in all eight retained scenarios.
+
+Physical LI retains material transient/partition differences, including a
+5 m transient point error of 11.38 mm and steep late-recession export difference
+of 24.19 m³. Its actual dry-exterior-head default conserves mass and matches
+Overlander, but cannot inherit qualification from slope-FREE references. Its
+steep-case default timestep sensitivity also remains a concern. Physical LI is
+not granted unrestricted hydraulic qualification by this review. No operator,
+solver activation threshold or default changed. Licensing, terrain provenance,
+FV1 coverage/limitations and experimental SGS status above remain unchanged.
