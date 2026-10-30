@@ -1,0 +1,82 @@
+# FloodWarp v0.1 candidate: release status
+
+Private standalone extraction from `Lincoln-Environmental/Overlander`, branch
+`dev`, baseline `ba503b8bde51d3f212199e81efc7038d9fffecc8`.
+The new repository contains no original Git history. It remains a
+`0.1.0.dev0` review candidate, not a qualified public v0.1 release.
+
+## Retained functionality
+
+43 runtime modules: public LI/FV1 classes and factory; their frozen kernels,
+reference operators, boundaries, numerical profiles, rainfall, infiltration,
+water accounting, structures, traditional SGS hypsometry, enhanced SGS
+geometry/reduction/preprocessing/stepping, complete checkpoints, and the new
+direct input/model helpers. [Extraction manifest](extraction.json) lists every
+retained baseline module and source hash. [Import graph](import_graph.json)
+includes lazy imports. [Numerical audit](numerical_integrity.json) confirms
+baseline-equivalent ASTs for ten core operator/profile modules after namespace
+and source-channel renaming; no numerical constants or formulas changed.
+
+The LI factory still resolves ordinary omission to physical_candidate; SGS
+omission retains default. FV1 still uses contact_hll and velocity_extrapolation
+with reflecting walls and endpoint speeds. SGS constructors warn visibly and
+diagnostics identify the selected formulation. No inclined SGS is included.
+
+## Removed dependencies and interfaces
+
+No FloodFM prepared-model loading, GIS conditioning/catchment delineation,
+DarcyWarp/RichardsWarp/SHANZ/HydroOne integration, groundwater adapters,
+nested exchange hooks, external exchange actuators, external solver binaries,
+kinematic/regional routing, semi-implicit solvers, neural surrogates, ensemble
+training, campaigns or archives. Source-channel names are standalone; ordinary
+surface sources, infiltration soil caps and their water ledgers are retained.
+NumPy/SciPy/Numba/Warp are the pinned hydraulic dependencies. Rasterio and
+Matplotlib are optional. No other HydroOne installation is required.
+
+## Acceptance evidence
+
+| Requirement | Outcome |
+|---|---|
+| Clean installation | Fresh isolated Python 3.14 venv; wheel built and installed with independently resolved dependencies; pip check passes |
+| Independent CPU suite | **800 passed, 515 skipped**, CUDA hidden; skips are not claimed as CPU coverage |
+| CPU/CUDA regression suite | **1328 passed, 24 skipped**, including opt-in FV1 CUDA and retained graph/fused/restart controls; original numerical tolerances retained |
+| Direct inputs | Array, raster alignment/orientation/nodata, partial stage opening, time-varying stages, mask interfaces and checkpoint drift tests pass |
+| SGS | Both modes operational with visible warnings, legacy physics and retained numerical regressions |
+| Purau | Real 40×40, 5 m crop plus 1 m underlying terrain; both solvers run in the clean CPU environment without prepared-model imports |
+| Synthetic installation example | LI and FV1 both run in clean CPU environment |
+| Independent comparisons | **25/32 applicable gates pass**; seven LI discrepancies retained; incomplete FV1 temporal/grid coverage reported |
+| Mass/restart/wet-dry/defaults | Covered by passing retained regressions and independent reference checks; no tolerance relaxation |
+| Original repository | Original HEAD remains the baseline on dev; tracked worktree and index unchanged; pre-existing untracked research work retained |
+
+Purau final residuals: LI 6.36824e-12 m³;
+FV1 -3.55271e-15 m³. Outflow volumes:
+LI 0.00266582 m³;
+FV1 0.00205645 m³. These are a short rainfall
+illustration, not a calibrated flood or full-event reference.
+
+[Validation report](../validation/REPORT.md) records all verdicts, native binary
+identities, boundary/interior diagnostics, grid and timestep sensitivity.
+[Verification summaries](evidence/) record installation, tests and example runs.
+The pure CPU installation and the validated research environment were tested
+separately; the research environment was not upgraded.
+
+## Outstanding release blockers and limits
+
+1. **Software redistribution rights/licence remain unconfirmed.** The source
+   had no top-level grant. LICENSE intentionally records pending status rather
+   than inventing MIT/BSD permissions. Keep the repository private.
+2. **Purau vertical-datum/per-pixel lineage remains incomplete.** All listed
+   upstream LINZ surveys are verified CC BY 4.0, and attribution is included.
+   The existing conditioned derivative does not record its datum or precise
+   survey per pixel. Absolute elevations are unchanged; external absolute-stage
+   use requires verification. No invented terrain or single-survey claim is made.
+3. **Independent validation is not universal parity.** Six physical-LI and one
+   ACC-compatible case fail frozen gates, principally wet/dry classification.
+   FV1 field/export gates pass on 16 controls, but independent FV1 grid refinement,
+   resolved temporal depths and instantaneous outlet hydrographs remain missing.
+4. SGS remains explicitly experimental. FV1's finite-velocity ghost closure
+   still has the documented supercritical/incoming-momentum limitations.
+   Time-varying FV1 stages use host stepping; constant-stage graphs are retained.
+
+No public release tag or distribution upload has been created. The owner's
+requested GitHub push is a private review snapshot with these blockers visible.
