@@ -44,8 +44,10 @@ training, external-model coupling or prepared-data workflows belong here.
 
 Record simultaneous fields separately from maximum-depth envelopes. Never
 sum cellwise event maxima as storage. Report failed gates and missing coverage.
-Keep this candidate private until the software redistribution licence and
-remaining release blockers are resolved.
+The v0.1 software release is authorised under AGPL-3.0-only. Preserve the
+Patrick Durney / Lincoln Agritech Ltd attribution and CC BY 4.0 elevation
+credits. The owner controls repository visibility. Research-grade release does
+not imply universal hydraulic qualification.
 
 ## Versioned LI review
 

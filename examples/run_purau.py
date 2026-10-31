@@ -1,4 +1,4 @@
-"""Real conditioned Purau crop; illustrative rainfall and artificial cut boundaries."""
+"""Orton Bradley Park 200 m installation crop; historical Purau file names."""
 import json
 from pathlib import Path
 

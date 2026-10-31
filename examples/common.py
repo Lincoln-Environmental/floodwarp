@@ -44,6 +44,9 @@ def plot_results(*, model, rows, depth, output):
     axes[0].set(xlabel='East from crop origin (m)', ylabel='North from crop origin (m)', title='Final depth')
     axes[1].plot([row['time_s'] for row in rows], [row['mean_outflow_m3_s'] for row in rows])
     axes[1].set(xlabel='Time (s)', ylabel='Interval mean outlet discharge (m³/s)')
+    provenance = model.terrain.metadata.get('provenance', {})
+    if provenance.get('name'):
+        figure.suptitle(provenance['name'] + ' — 200 m installation demonstration')
     figure.tight_layout()
     figure.savefig(output/'depth_and_hydrograph.png', dpi=150)
     plt.close(figure)

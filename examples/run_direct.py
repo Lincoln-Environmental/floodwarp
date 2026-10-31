@@ -11,7 +11,7 @@ from examples.common import run_example
 if __name__ == "__main__":
     terrain_path = Path('examples/purau/terrain.tif')
     roughness_path = None  # Or Path('my_manning.tif'), exactly aligned with terrain.
-    vertical_datum = 'Purau source elevations'  # Replace with your DEM's verified datum.
+    vertical_datum = 'NZVD2016'  # Replace with your DEM's verified datum.
     output_path = Path('outputs/direct')
     solver_method = 'li'
     manning_n = .035

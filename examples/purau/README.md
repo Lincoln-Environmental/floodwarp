@@ -1,41 +1,23 @@
-# Purau rainfall demonstration
+# Orton Bradley Park — 200 m installation demonstration
 
-Run `python -m examples.run_purau` from the checkout after installation with
-`.[plot]`. Both LI and FV1 run on CPU. No GIS library or prepared-model loader
-is needed for the NumPy example; `terrain.tif` is supplied for independent GIS
-inspection and the direct-raster example.
+Run `python -m examples.run_purau` after installation with `.[plot]`. Historical
+`purau` file identifiers are retained. This is a **40×40-cell, 200×200 m crop**,
+with 759 active cells, not the complete 1123×843 model. See the separate
+[full-domain Orton Bradley demonstration](../orton_bradley/README.md).
 
-The physical grid has 40×40 cells at 5 m (200×200 m), with 759 active cells.
-It crops the existing Purau terrain at north-first rows 112–151 and columns
-172–211. The original absolute elevations are retained; this is not synthetic
-terrain. The previously conditioned derivative is cropped and row-flipped,
-with an aligned 200×200 native 1 m terrain array for optional experimental SGS.
+The crop retains conditioned elevations at north-first rows 112–151 and columns
+172–211. Coordinates are NZTM2000 / EPSG:2193; elevations are metres NZVD2016,
+confirmed by the owner for v0.1. No elevation adjustment was applied. NumPy
+arrays are south-first; the GeoTIFF is north-first. The aligned 1 m underlying
+terrain remains available for experimental SGS.
 
-All north-facing active/exterior interfaces are FREE, including the irregular northern mask edge; all other domain/mask interfaces are
-closed. These artificial cut boundaries and absent upstream inflow make this
-a local rainfall demonstration, not a reconstruction of a full Purau flood.
-Rainfall rises to 20 mm/h, ends at 90 s, and is followed by recession to 120 s.
-Manning n=0.035 is illustrative, not calibrated. Infiltration is set to zero
-for a transparent surface-water balance. Change these controls in the runner.
+North-facing active/exterior interfaces are FREE; other mask interfaces are
+closed. Artificial cut boundaries, illustrative rainfall, zero infiltration
+and Manning n=0.035 make this an installation example, not a calibrated forecast.
+LI and FV1 run on CPU to 120 s with depths, hydrographs, balances and checkpoints.
 
-Outputs include sampled depths, a depth-map/hydrograph figure, interval mean
-outlet discharge, cumulative volumes, water-balance diagnostics and restart.
+Elevation data retain CC BY 4.0. `provenance.json` records original survey URLs,
+conditioning/crop history and exported hashes. Single-survey pixel lineage is
+not asserted. See [attribution](../../THIRD_PARTY_NOTICES.md).
 
-The data are attributed under CC BY 4.0. `provenance.json` contains checked
-LINZ catalogue URLs and hashes of the original derivative and exported files.
-The original local metadata lists multiple surveys rather than per-pixel
-lineage. A direct check against 2018–2019/2023 tiles did not establish exact
-pixel identity, consistent with conditioning/resampling or another listed
-source. No single-survey identity is asserted.
-
-**Datum limitation:** the derivative's vertical datum was not recorded.
-Banks Peninsula survey metadata specify NZVD2016, but the derivative cannot
-currently be certified as that datum. This example uses only relative terrain
-hydraulics and FREE boundaries. Verify the derivative datum before supplying
-external absolute stage data. No vertical shift has been applied.
-
-Verified CPU demonstration outputs:
-
-![LI depth and hydrograph](../../docs/evidence/purau_li.png)
-
-![FV1 depth and hydrograph](../../docs/evidence/purau_fv1.png)
+![FV1 installation crop](../../docs/evidence/purau_fv1.png)

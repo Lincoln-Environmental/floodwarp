@@ -1,12 +1,13 @@
 # Attribution and provenance
 
 FloodWarp's hydraulic code is extracted from Lincoln-Environmental/Overlander
-at `ba503b8bde51d3f212199e81efc7038d9fffecc8`. Author and contributor rights
-must be confirmed before selecting the software licence. No prior Git history
+at `ba503b8bde51d3f212199e81efc7038d9fffecc8`. Copyright Patrick Durney and
+Lincoln Agritech Ltd. The rights holders authorised release under
+**AGPL-3.0-only**; see LICENSE and COPYRIGHT. No prior Git history
 or archived research branches are copied. Per-module source hashes and
 extraction changes are in `docs/extraction.json` and `docs/numerical_integrity.json`.
 
-## Purau terrain
+## Orton Bradley Park terrain (historical dataset identifier: Purau)
 
 Contains data sourced from the LINZ Data Service licensed for reuse under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
@@ -18,12 +19,16 @@ The local derivative lists multiple source surveys; all their official STAC
 collection licences were checked as CC-BY-4.0. Exact catalogue URLs, provider
 roles, source hashes and modifications are in `examples/purau/provenance.json`.
 The derivative cannot be attributed to a single survey at pixel level.
-It had already been hydraulically conditioned. This extraction only crops and
-reorients its arrays. Attribution does not imply endorsement.
+It had already been hydraulically conditioned. The full-domain release exports
+the authoritative existing 5 m elevations unchanged, with the physical active
+mask. The small installation example crops and reorients the same model.
+Attribution does not imply endorsement.
 
-Official Banks Peninsula surveys use NZVD2016; the local derivative omitted its
-vertical datum, so that identity remains unverified for this crop. Elevations
-are retained without conversion, and the demonstration uses FREE boundaries.
+Horizontal coordinates are NZTM2000 / EPSG:2193; elevations are metres NZVD2016,
+as confirmed by the model owner for this release. No datum conversion or
+vertical adjustment was applied. Original metadata and internal dataset names
+remain preserved as historical provenance. The small crop uses FREE boundaries;
+the full matched benchmark uses its established stage-0 coastal contacts.
 
 ## Independent numerical references
 
