@@ -8,6 +8,7 @@ from floodwarp import enhanced_kernels
 from floodwarp.enhanced_geometry import component_volumes
 from floodwarp.rainfall import Hyetograph
 from tests.test_enhanced_production_state import create,STATE_RTOL,STATE_ATOL,VOLUME_ATOL
+from tests.forcing_helpers import prepare_stage_controller,stage_variation_cap
 
 
 @pytest.fixture(params=[('cpu',False),('cuda:0',False),('cuda:0',True)])
@@ -49,6 +50,7 @@ def run_host(*,model,duration,rain,stage,checkpoints):
     history=[];fields=[];volume=[];end=model.simulation_time+duration
     initial_rate=rain.rate_at(model.simulation_time);model.set_uniform_rainfall_rate(rainfall_rate=initial_rate)
     index=0
+    buffers=prepare_stage_controller(solver=model,series=stage)
     while model.simulation_time<end-1e-13:
         t=model.simulation_time;remaining=end-t
         if t<rain.duration_s:remaining=min(remaining,rain.next_breakpoint_after(t)-t)
@@ -60,14 +62,17 @@ def run_host(*,model,duration,rain,stage,checkpoints):
         cap=min(model.maximum_dt,remaining)
         if model.adaptive_dt_growth_factor is not None and model._adaptive_dt_reference>0.:
             cap=min(cap,model._adaptive_dt_reference*model.adaptive_dt_growth_factor)
+        variation_cap=stage_variation_cap(solver=model,series=stage,buffers=buffers,time=t,cap=cap)
+        boundary[types==3]=max(np.interp(t,*stage),np.interp(t+cap,*stage))
+        model.set_boundary_stage_qx(stage=boundary)
         bound=max(rain.rate_at(t),rain.rate_at(t+cap)) if t<rain.duration_s else 0.
         model.set_uniform_rainfall_rate(rainfall_rate=bound)
-        dt=model.calculate_stable_timestep(remaining_time=remaining)
+        dt=min(variation_cap,model.calculate_stable_timestep(remaining_time=remaining))
         sample=t if model.apply_sources_after_momentum else t+.5*dt
         rate=rain.rate_at(sample) if sample<rain.duration_s else 0.
         model.set_uniform_rainfall_rate(rainfall_rate=rate)
         boundary=model.boundary_stage_qx.numpy();types=model.boundary_type_qx.numpy()
-        boundary[types==3]=np.interp(t,*stage);model.set_boundary_stage_qx(stage=boundary)
+        boundary[types==3]=np.interp(t+.5*dt,*stage);model.set_boundary_stage_qx(stage=boundary)
         model.step(remaining_time=remaining,fixed_dt=dt);history.append(dt)
         if index<len(checkpoints) and abs(model.simulation_time-checkpoints[index])<1e-12:
             fields.append(model.get_water_depth().copy());volume.append(model.get_component_state()['volume_m3'].sum(dtype=np.float64));index+=1

@@ -29,8 +29,9 @@ def flat_model(*, device, method='li', **options):
 
 
 @pytest.mark.parametrize('graph',[False,None])
-def test_stage_pulse_is_sampled_before_cfl_and_nodes_are_visited(device,graph):
-    model=flat_model(device=device,explicit_maximum_dt=60.,adaptive_dt_growth_factor=None)
+@pytest.mark.parametrize('profile',[None,'lisflood_fp_acc'])
+def test_stage_pulse_is_sampled_before_cfl_and_nodes_are_visited(device,graph,profile):
+    model=flat_model(device=device,explicit_maximum_dt=60.,adaptive_dt_growth_factor=None,validation_profile=profile)
     solver=model.solver
     boundary=solver.boundary_type_qx.numpy().copy();boundary[:,0]=3
     solver.set_boundary_type_qx(boundary_type=boundary)
@@ -252,3 +253,20 @@ def test_fv1_free_does_not_generate_pressure_momentum(device):
     hu,hv=solver.get_momentum()
     assert np.max(np.abs(hu))<1e-8 and np.max(np.abs(hv))<1e-8
     assert abs(diagnostics(model=model)['residual_m3'])<1e-10
+
+
+@pytest.mark.parametrize('orientation',['west','east','north','south'])
+def test_masked_stage_cfl_uses_active_bed_datum(device,orientation):
+    solver=_build_orientation_solver(orientation=orientation,device=device,mode='coarse')
+    active=solver.active_mask.numpy().astype(bool)
+    solver.set_bed_elevation(bed_elevation=np.where(active,100.,0.))
+    codes={'west':(6,5),'east':(7,10),'south':(8,11),'north':(9,4)}
+    old,new=codes[orientation]
+    for axis in ('x','y'):
+        boundary=getattr(solver,'boundary_type_q'+axis).numpy().copy()
+        boundary[boundary==old]=new
+        getattr(solver,'set_boundary_type_q'+axis)(boundary_type=boundary)
+        getattr(solver,'set_boundary_stage_q'+axis)(stage=np.full(boundary.shape,100.6))
+    solver.maximum_dt=60.
+    expected=float(solver.cfl_number)*float(solver.dx)/np.sqrt(float(solver.gravity)*.6)
+    assert solver.calculate_cfl_dt()==pytest.approx(expected,rel=1e-5,abs=1e-6)

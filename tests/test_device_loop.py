@@ -15,6 +15,7 @@ from floodwarp.local_inertial_kernels import (
 )
 from floodwarp.local_inertial_solver import LocalInertialSolver
 from floodwarp.rainfall import Hyetograph
+from tests.forcing_helpers import prepare_stage_controller,stage_variation_cap
 
 
 def build_case(device, profile, seed=5):
@@ -60,6 +61,7 @@ def run_host_stepped(solver, duration, hyetograph, stage_series):
     end_time = solver.simulation_time + duration
     dt_sequence = []
     active_rate = None
+    stage_buffers=prepare_stage_controller(solver=solver,series=stage_series) if stage_series is not None else None
     while solver.simulation_time < end_time:
         t = solver.simulation_time
         remaining = end_time - t
@@ -73,13 +75,21 @@ def run_host_stepped(solver, duration, hyetograph, stage_series):
             stage=solver.boundary_stage_qx.numpy()
             stage[solver.boundary_type_qx.numpy()==BOUNDARY_SPECIFIED_STAGE]=np.interp(t,times,values)
             solver.set_boundary_stage_qx(stage=stage)
+        cap=min(remaining,solver.maximum_dt)
+        if solver.adaptive_dt_growth_factor is not None and solver._adaptive_dt_reference>0.:
+            cap=min(cap,solver._adaptive_dt_reference*solver.adaptive_dt_growth_factor)
+        variation_cap=cap
+        if stage_series is not None:
+            variation_cap=stage_variation_cap(solver=solver,series=stage_series,
+                buffers=stage_buffers,time=t,cap=cap)
+            stage=solver.boundary_stage_qx.numpy()
+            stage[solver.boundary_type_qx.numpy()==BOUNDARY_SPECIFIED_STAGE]=max(
+                np.interp(t,*stage_series),np.interp(t+cap,*stage_series))
+            solver.set_boundary_stage_qx(stage=stage)
         if hyetograph is not None:
-            cap=min(remaining,solver.maximum_dt)
-            if solver.adaptive_dt_growth_factor is not None and solver._adaptive_dt_reference>0.:
-                cap=min(cap,solver._adaptive_dt_reference*solver.adaptive_dt_growth_factor)
             bound=max(hyetograph.rate_at(t),hyetograph.rate_at(t+cap)) if t<hyetograph.duration_s else 0.
             solver.set_uniform_rainfall_rate(rainfall_rate=bound)
-        trial_dt = solver.calculate_stable_timestep(remaining_time=remaining)
+        trial_dt = min(variation_cap,solver.calculate_stable_timestep(remaining_time=remaining))
         if hyetograph is not None:
             # Hyetograph semantics: rainfall is zero outside the storm; the
             # sample must not clamp onto the terminal rate (device-loop parity).
@@ -93,7 +103,7 @@ def run_host_stepped(solver, duration, hyetograph, stage_series):
             )
             solver.set_uniform_rainfall_rate(rainfall_rate=rate)
         if stage_series is not None:
-            value = float(np.interp(t, *stage_series))
+            value = float(np.interp(t+.5*trial_dt, *stage_series))
             stage = solver.boundary_stage_qx.numpy()
             stage[solver.boundary_type_qx.numpy() == BOUNDARY_SPECIFIED_STAGE] = value
             solver.set_boundary_stage_qx(stage=stage)

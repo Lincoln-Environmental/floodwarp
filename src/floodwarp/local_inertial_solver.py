@@ -2191,6 +2191,10 @@ class LocalInertialSolver:
         dt_val = float(step_control[0])
         return min(self.maximum_dt, dt_val)
 
+    def _has_prescribed_stage_boundaries(self) -> bool:
+        return bool(np.isin(self.boundary_type_qx.numpy(),(3,5,10)).any()
+            or np.isin(self.boundary_type_qy.numpy(),(3,4,11)).any())
+
     def calculate_stable_timestep(self, remaining_time: float = None) -> float:
         """Return the source-aware adaptive global timestep without advancing state.
 
@@ -2222,11 +2226,16 @@ class LocalInertialSolver:
             else:
                 maximum_depth_m = self._lisflood_cached_maximum_depth_m
             self.last_timestep_max_depth_m = maximum_depth_m
-            if maximum_depth_m <= float(self.dry_depth):
-                return max_dt
-            lisflood_dt = float(self.cfl_number) * float(self.dx) / np.sqrt(
-                float(self.gravity) * maximum_depth_m
-            )
+            lisflood_dt=max_dt
+            if maximum_depth_m > float(self.dry_depth):
+                lisflood_dt = float(self.cfl_number) * float(self.dx) / np.sqrt(
+                    float(self.gravity) * maximum_depth_m
+                )
+            if self._has_prescribed_stage_boundaries():
+                wp.launch(kernel=predict_depth_for_cfl_kernel,dim=(self.ny,self.nx),
+                    inputs=[self.water_depth,self.rainfall_rate,self.other_source_rate,
+                        self.additional_source_rate,self.active_mask,WP_FLOAT(max_dt),self.cfl_depth],device=self.device)
+                lisflood_dt=min(lisflood_dt,self.calculate_cfl_dt(water_depth=self.cfl_depth))
             return min(max_dt, lisflood_dt)
         wp.launch(
             kernel=predict_depth_for_cfl_kernel,
@@ -3054,6 +3063,36 @@ class LocalInertialSolver:
         self.simulation_time += dt
         return dt
 
+    def _prepare_stage_variation_faces(self, *, use_x, use_y):
+        from floodwarp import stage_forcing
+        x_count=self.ny*(self.nx+1)
+        x=np.flatnonzero(np.isin(self.boundary_type_qx.numpy(),(3,5,10))) if use_x else np.zeros(0,dtype=int)
+        y=np.flatnonzero(np.isin(self.boundary_type_qy.numpy(),(3,4,11)))+x_count if use_y else np.zeros(0,dtype=int)
+        values=np.r_[x,y].astype(np.int32)
+        self._stage_variation_faces=wp.array(values,dtype=int,device=self.device)
+        self._stage_variation_face_count=len(values)
+
+    def _limit_stage_variation(self, *, control,minimum,times_x,values_x,use_x,times_y,values_y,use_y):
+        if not (use_x or use_y):return
+        from floodwarp import stage_forcing
+        common=[self.nx,self.ny*(self.nx+1),self.boundary_type_qx,self.boundary_type_qy,
+            times_x,values_x,use_x,times_y,values_y,use_y,control,minimum]
+        if self.hydraulic_geometry_mode=='enhanced':
+            if self._connection_count:
+                wp.launch(kernel=stage_forcing.limit_connections,dim=self._connection_count,
+                    inputs=[self._ec_face,self._ec_endpoints,self._ec_sill,self._ec_eta,*common[:2],
+                        self._ec_adjacency_offsets,self._ec_adjacency,self._ec_q,self._ec_area,*common[2:]],device=self.device)
+        elif self._stage_variation_face_count:
+            traditional=self.hydraulic_geometry_mode=='traditional'
+            wp.launch(kernel=stage_forcing.limit_faces,dim=self._stage_variation_face_count,
+                inputs=[self._stage_variation_faces,self.nx,self.ny*(self.nx+1),
+                    self.water_depth,self.bed_elevation,
+                    self._subgrid_face_z_min_x if traditional else self.bed_elevation,
+                    self._subgrid_face_z_min_y if traditional else self.bed_elevation,int(traditional),
+                    self.qx,self.qy,self.dx,self.dy,self._source_subgrid_cell_z,
+                    self._source_subgrid_cell_breakpoints,self._source_subgrid_cell_count,
+                    *common[2:]],device=self.device)
+
     @staticmethod
     def _validate_time_series(name: str, series) -> tuple[np.ndarray, np.ndarray]:
         """Validate a (times, values) node series for device-resident forcing."""
@@ -3110,12 +3149,11 @@ class LocalInertialSolver:
 
         Opt-in alternative to host ``step()`` looping: each window of
         ``sync_interval`` steps runs without any host synchronisation. The
-        adaptive timestep is selected on-device with the *identical* formula,
-        clamps (minimum_dt / maximum_dt), and remaining-time capping as the
-        host path, so the trajectory and dt sequence are bit-identical to host
-        stepping. Rainfall hyetograph nodes (piecewise-linear, matching
-        numpy.interp exactly) and uniform specified-stage series are sampled
-        on-device at the same step-start times as the host driver.
+        adaptive timestep uses the production CFL kernels with forcing-node
+        caps and a local head-variation bound for changing prescribed stages.
+        Host parity drivers apply these same forcing controls. Rainfall uses
+        the configured source-splitting sample; prescribed stages use midpoint
+        quadrature and a conservative trial head during CFL selection.
 
         The host syncs once per window to (a) check the device error flag and
         raise RuntimeError for a significant negative depth or a sub-minimum
@@ -3249,7 +3287,9 @@ class LocalInertialSolver:
         use_stage_qx = 1 if stage_series_qx is not None else 0
         use_stage_qy = 1 if stage_series_qy is not None else 0
         use_stage = use_stage_qx or use_stage_qy
+        if use_stage:self._prepare_stage_variation_faces(use_x=use_stage_qx,use_y=use_stage_qy)
         use_acc = 1 if self.use_lisflood_acc_timestep else 0
+        prescribed_stage_cfl = self.use_lisflood_acc_timestep and self._has_prescribed_stage_boundaries()
         sample_at_half_step = 0 if self.apply_sources_after_momentum else 1
 
         hyeto_times = wp.array(node_times, dtype=wp.float64, device=self.device)
@@ -3384,6 +3424,14 @@ class LocalInertialSolver:
                 inputs=[control,hyeto_times,hyeto_rates,use_hyetograph,wp.float64(storm_duration),
                         stage_times_qx_wp,stage_values_qx_wp,use_stage_qx,
                         stage_times_qy_wp,stage_values_qy_wp,use_stage_qy],device=self.device)
+            if use_stage:
+                from floodwarp import stage_forcing
+                self._limit_stage_variation(control=control,minimum=dt_min_scratch,
+                    times_x=stage_times_qx_wp,values_x=stage_values_qx_wp,use_x=use_stage_qx,
+                    times_y=stage_times_qy_wp,values_y=stage_values_qy_wp,use_y=use_stage_qy)
+                wp.launch(kernel=stage_forcing.forecast,dim=1,
+                    inputs=[control,stage_times_qx_wp,stage_values_qx_wp,use_stage_qx,
+                        stage_times_qy_wp,stage_values_qy_wp,use_stage_qy],device=self.device)
             if use_stage and USE_CONDITIONED_MIXED_KERNELS:
                 wp.launch(kernel=device_loop_conditioned_stage_fill_kernel,
                     dim=(self.ny+1,self.nx+1),
@@ -3396,7 +3444,7 @@ class LocalInertialSolver:
                 wp.launch(kernel=device_loop_stage_fill_kernel,dim=(self.ny+1,self.nx+1),
                     inputs=[self.boundary_type_qx,self.boundary_stage_qx,
                         self.boundary_type_qy,self.boundary_stage_qy,control,use_stage_qx,use_stage_qy],device=self.device)
-            if not self.use_lisflood_acc_timestep:
+            if not self.use_lisflood_acc_timestep or prescribed_stage_cfl:
                 wp.launch(
                     kernel=device_loop_predict_depth_kernel,
                     dim=(self.ny, self.nx),
@@ -3473,6 +3521,15 @@ class LocalInertialSolver:
                         checkpoint_times_wp, checkpoint_count],
                 device=self.device,
             )
+            if use_stage and USE_CONDITIONED_MIXED_KERNELS:
+                wp.launch(kernel=device_loop_conditioned_stage_fill_kernel,dim=(self.ny+1,self.nx+1),
+                    inputs=[self.boundary_type_qx,self.boundary_stage_qx,self.boundary_stage_depth_qx,
+                        self.boundary_stage_reference_qx,self.boundary_type_qy,self.boundary_stage_qy,
+                        self.boundary_stage_depth_qy,self.boundary_stage_reference_qy,control,use_stage_qx,use_stage_qy],device=self.device)
+            elif use_stage:
+                wp.launch(kernel=device_loop_stage_fill_kernel,dim=(self.ny+1,self.nx+1),
+                    inputs=[self.boundary_type_qx,self.boundary_stage_qx,self.boundary_type_qy,
+                        self.boundary_stage_qy,control,use_stage_qx,use_stage_qy],device=self.device)
             qx_old, qy_old = self.qx, self.qy
             qx_next, qy_next = self.qx_next, self.qy_next
             if not self.apply_sources_after_momentum:

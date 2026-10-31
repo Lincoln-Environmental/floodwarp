@@ -2972,6 +2972,14 @@ def _device_next_breakpoint(times: wp.array(dtype=wp.float64), t: wp.float64) ->
 
 
 @wp.func
+def _device_consume_completed_checkpoint(control: wp.array(dtype=wp.float64)):
+    """Advance output bookkeeping before any forecast of the next interval."""
+    if control[DL_RECORD_CHECKPOINT] != wp.float64(0.0):
+        control[DL_CHECKPOINT_INDEX] += wp.float64(1.0)
+        control[DL_RECORD_CHECKPOINT] = wp.float64(0.0)
+
+
+@wp.func
 def _device_hard_dt_cap(
     control: wp.array(dtype=wp.float64),
     end_time: wp.float64,
@@ -2983,6 +2991,7 @@ def _device_hard_dt_cap(
     checkpoint_count: int,
 ) -> wp.float64:
     """Return the hard end/forcing/maximum timestep cap."""
+    _device_consume_completed_checkpoint(control)
     t = control[DL_TIME]
     max_dt = wp.min(maximum_dt, end_time - t)
     if use_hyetograph == 1:
@@ -3202,11 +3211,9 @@ def _device_timestep_finalize_from_cfl(
          minimum was reduced over the source-predicted depth field. ``max_dt``
          includes the optional controlled-growth cap from the previous adaptive step.
     Also samples the rainfall rate (step start, or t + dt/2 when sources lead
-    momentum) and any specified-stage series at the step start time.
+    momentum) and specified-stage series at the accepted step midpoint.
     """
-    if control[DL_RECORD_CHECKPOINT] != wp.float64(0.0):
-        control[DL_CHECKPOINT_INDEX] = control[DL_CHECKPOINT_INDEX] + wp.float64(1.0)
-        control[DL_RECORD_CHECKPOINT] = wp.float64(0.0)
+    _device_consume_completed_checkpoint(control)
     if control[DL_DONE] != 0.0:
         control[DL_DT] = wp.float64(0.0)
         return
@@ -3252,6 +3259,10 @@ def _device_timestep_finalize_from_cfl(
             acc_dt = wp.float64(cfl_number) * wp.float64(dx) / wp.sqrt(wp.float64(gravity) * maximum_depth_m)
             dt = wp.min(max_dt, acc_dt)
             uncapped_dt = wp.min(uncapped_dt, acc_dt)
+        # Prescribed exterior heads can be wet while every active cell is
+        # dry. Their face CFL is a safety bound on the ACC depth controller.
+        dt = wp.min(dt,cfl_dt)
+        uncapped_dt = wp.min(uncapped_dt,cfl_dt)
     else:
         dt = wp.min(max_dt, wp.min(maximum_dt, cfl_dt))
         uncapped_dt = wp.min(uncapped_dt, cfl_dt)
@@ -3289,9 +3300,13 @@ def _device_timestep_finalize_from_cfl(
         else:
             control[DL_RAIN_RATE] = _device_piecewise_linear_interp(hyeto_times, hyeto_rates, t_sample, control)
     if use_stage_qx == 1:
-        control[DL_STAGE_QX] = _device_piecewise_linear_interp(stage_times_qx, stage_values_qx, t, control)
+        control[DL_INTERP_SCRATCH] = wp.float64(0.5)*dt
+        stage_time=t+control[DL_INTERP_SCRATCH]
+        control[DL_STAGE_QX] = _device_piecewise_linear_interp(stage_times_qx, stage_values_qx, stage_time, control)
     if use_stage_qy == 1:
-        control[DL_STAGE_QY] = _device_piecewise_linear_interp(stage_times_qy, stage_values_qy, t, control)
+        control[DL_INTERP_SCRATCH] = wp.float64(0.5)*dt
+        stage_time=t+control[DL_INTERP_SCRATCH]
+        control[DL_STAGE_QY] = _device_piecewise_linear_interp(stage_times_qy, stage_values_qy, stage_time, control)
 
 
 

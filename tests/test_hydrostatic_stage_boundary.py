@@ -14,7 +14,7 @@ from floodwarp.local_inertial_reference import step_local_inertial_numpy
 from floodwarp.local_inertial_solver import LocalInertialSolver
 
 
-def stage_case(*, side, device, bed, stage, depth, mode="coarse", fused=True):
+def stage_case(*, side, device, bed, stage, depth, mode="coarse", fused=True,minimum_dt=.001):
     if device.startswith("cuda") and not wp.is_cuda_available():
         pytest.skip("CUDA unavailable")
     shape = (1, 1)
@@ -36,7 +36,7 @@ def stage_case(*, side, device, bed, stage, depth, mode="coarse", fused=True):
         ny=shape[0], nx=shape[1], dx=2.0, dy=2.0,
         bed_elevation=terrain, manning_n=np.full(shape, 0.035),
         active_mask=active, device=device, maximum_dt=0.02,
-        hydraulic_geometry_mode=mode, use_fused_kernels=fused, **options,
+        hydraulic_geometry_mode=mode, use_fused_kernels=fused,minimum_dt=minimum_dt, **options,
     )
     axis = "x" if side in ("west", "east", "masked_west") else "y"
     index = (0, 0)
@@ -189,22 +189,20 @@ def test_resident_gpu_tidal_transition_agrees_with_cpu_steps():
         pytest.skip("CUDA unavailable")
     states = []
     stage_series = (np.array([0.0, 0.08, 0.16]), np.array([0.0, 1.3, 0.0]))
+    from tests.test_device_loop import run_host_stepped
     for device in ("cpu", "cuda:0"):
         solver, unused_axis, unused_index, unused_outward = stage_case(
             side="west", device=device, bed=1.0, stage=0.0, depth=0.0,
+            # The above-sill pulse rises 0.3 m in 18.5 ms. Resolving its
+            # head variation needs sub-ms steps; production defaults stay put.
+            minimum_dt=.0001,
         )
         solver.set_uniform_rainfall_rate(rainfall_rate=0.001)
         if device == "cpu":
-            history = []
-            while solver.simulation_time < 0.16:
-                stage = solver.boundary_stage_qx.numpy()
-                stage[0, 0] = np.interp(solver.simulation_time, *stage_series)
-                solver.set_boundary_stage_qx(stage=stage)
-                history.append(solver.step(remaining_time=0.16 - solver.simulation_time))
-            timesteps = np.asarray(history)
+            timesteps=run_host_stepped(solver=solver,duration=.16,hyetograph=None,stage_series=stage_series)
         else:
             result = solver.run_device_loop(duration=0.16, stage_series_qx=stage_series,
-                                           use_cuda_graph=True, dt_history_capacity=100)
+                                           use_cuda_graph=True, dt_history_capacity=10000)
             timesteps = result["dt_history"]
         states.append((solver.get_water_depth(), solver.get_qx(), timesteps))
         assert_conservation(solver=solver)

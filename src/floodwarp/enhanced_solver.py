@@ -904,6 +904,20 @@ class EnhancedSGSSolver(LocalInertialSolver):
         options=self._ec_trial_options
         wp.launch(kernel=trial.prepare,dim=1,inputs=[control,self._ec_trial_control,
             self._ec_trial_status,self._ec_trial_statistics],device=self.device)
+        if options['use_stage_qx'] or options['use_stage_qy']:
+            wp.launch(kernel=device_loop_timestep_cap_kernel,dim=1,
+                inputs=[self._ec_trial_control,self.dt_min_arr,wp.float64(options['end_time']),
+                    wp.float64(self.maximum_dt),wp.float64(self.adaptive_dt_growth_factor or 0.),
+                    options['hyeto_times'],options['use_hyetograph'],wp.float64(options['storm_duration']),
+                    options['checkpoint_times'],options['checkpoint_count']],device=self.device)
+            wp.launch(kernel=device_loop_prepare_forcing_kernel,dim=1,
+                inputs=[self._ec_trial_control,options['hyeto_times'],options['hyeto_rates'],
+                    options['use_hyetograph'],wp.float64(options['storm_duration']),
+                    options['stage_times_qx'],options['stage_values_qx'],options['use_stage_qx'],
+                    options['stage_times_qy'],options['stage_values_qy'],options['use_stage_qy']],device=self.device)
+            self._limit_stage_variation(control=self._ec_trial_control,minimum=self.dt_min_arr,
+                times_x=options['stage_times_qx'],values_x=options['stage_values_qx'],use_x=options['use_stage_qx'],
+                times_y=options['stage_times_qy'],values_y=options['stage_values_qy'],use_y=options['use_stage_qy'])
         wp.launch(kernel=kernels.device_finalize,dim=1,inputs=[self._ec_trial_control,
             wp.float64(options['end_time']),wp.float64(0.),wp.float64(self.maximum_dt),
             wp.float64(self.adaptive_dt_growth_factor or 0.),0,self.cfl_number,self.dx,self.gravity,self.dry_depth,
@@ -979,14 +993,21 @@ class EnhancedSGSSolver(LocalInertialSolver):
                 inputs=[control,hyeto_times,hyeto_rates,use_hyetograph,wp.float64(storm_duration),
                     stage_times_qx,stage_values_qx,use_stage_qx,
                     stage_times_qy,stage_values_qy,use_stage_qy],device=self.device)
-            if use_stage_qx or use_stage_qy:
-                wp.launch(kernel=device_loop_stage_fill_kernel,dim=(self.ny+1,self.nx+1),
-                    inputs=[self.boundary_type_qx,self.boundary_stage_qx,self.boundary_type_qy,
-                        self.boundary_stage_qy,control,use_stage_qx,use_stage_qy],device=self.device)
             wp.launch(kernel=kernels.prepare_device_timestep,dim=1,
                 inputs=[control,wp.float64(self.maximum_dt),hyeto_times,hyeto_rates,use_hyetograph,
                     self._ec_rain_bound,wp.float64(self.adaptive_dt_growth_factor or 0.),
                     wp.float64(storm_duration)],device=self.device)
+            if use_stage_qx or use_stage_qy:
+                from floodwarp import stage_forcing
+                self._limit_stage_variation(control=control,minimum=dt_min_scratch,
+                    times_x=stage_times_qx,values_x=stage_values_qx,use_x=use_stage_qx,
+                    times_y=stage_times_qy,values_y=stage_values_qy,use_y=use_stage_qy)
+                wp.launch(kernel=stage_forcing.forecast,dim=1,
+                    inputs=[control,stage_times_qx,stage_values_qx,use_stage_qx,
+                        stage_times_qy,stage_values_qy,use_stage_qy],device=self.device)
+                wp.launch(kernel=device_loop_stage_fill_kernel,dim=(self.ny+1,self.nx+1),
+                    inputs=[self.boundary_type_qx,self.boundary_stage_qx,self.boundary_type_qy,
+                        self.boundary_stage_qy,control,use_stage_qx,use_stage_qy],device=self.device)
             # Initialization, every accepted continuity update, and all public
             # volume exchanges already refresh eta/area. Sources have not changed
             # volume here; momentum still refreshes them AFTER accepted sources.
