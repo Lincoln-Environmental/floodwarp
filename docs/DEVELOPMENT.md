@@ -47,6 +47,19 @@ sum cellwise event maxima as storage. Report failed gates and missing coverage.
 Keep this candidate private until the software redistribution licence and
 remaining release blockers are resolved.
 
+## Experimental sparse uniform FV1 execution
+
+Call `solver.configure_execution(mode='sparse', tile_size=8)` on an FV1 solver
+to opt into exact-zero tile scheduling with dense storage. Use
+`solver.configure_execution(mode='dense')` to restore ordinary execution.
+`solver.execution_diagnostics()` performs an explicit host readback of work
+counts; the step loop keeps flags and lists on device. Sources, full-domain CFL,
+numerical settings and checkpoint identity are unchanged. Activity is rebuilt
+after every source update. Scheduling caches are reconstructed after restart.
+This mode can be slower at high occupancy; dense execution remains default.
+See [design and stage gates](SPARSE_FV1_DESIGN.md) and
+[measured qualification](../validation/sparse_review/REPORT.md).
+
 ## Versioned LI review
 
 The additive [LI parity and engineering review](../validation/li_review_v1/REPORT.md)
