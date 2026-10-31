@@ -62,6 +62,32 @@ This mode can be slower at high occupancy; dense execution remains default.
 See [design and stage gates](SPARSE_FV1_DESIGN.md) and
 [measured qualification](../validation/sparse_review/REPORT.md).
 
+The [matched 72-hour replay](../validation/sparse_review/FULL_EVENT.md) now
+retains exact hourly dense-state agreement and measured 1.161× hydraulic
+speedup. Widespread-runoff windows remain slower; dense execution is still
+the default. This research is on dev and excluded from the fixed v0.1.0 release.
+
+## Experimental fixed block FV1
+
+`floodwarp.static_fv1.StaticBlockFV1Solver.from_solver` constructs an opt-in
+two-level, fixed 2:1 forest from a configured native FV1 solver. Supply the
+block size, protected-feature mask and explicit surface/momentum/geometry/source
+tolerances. Fine geometry and source history remain persistent; shared fine
+subfaces and a single donor budget evolve nonoverlapping leaf volumes.
+Use the native solver's complete checkpoint methods for this experimental path.
+
+This initial representation requires fully wet representable or flat dry coarse
+states and homogeneous source/roughness fields. It rejects unsupported transfers
+and source changes. A later partly dry sloping coarse cell invalidates the run;
+restore its last complete checkpoint. Public face arrays represent resolved
+subfaces; transport internal to a coarse cell is unresolved.
+
+The [static controls and stage decision](../validation/static_review/REPORT.md)
+retain conservative/equilibrium/restart evidence and a 17–40% runtime regression
+on bounded controls. Static execution remains experimental; dynamic adaptation
+and sparse allocation are deferred at their measured stage gates. No sparse/AMR
+speedups are multiplied, and neither method changes the v0.1.0 tag/main.
+
 ## Versioned LI review
 
 The additive [LI parity and engineering review](../validation/li_review_v1/REPORT.md)
