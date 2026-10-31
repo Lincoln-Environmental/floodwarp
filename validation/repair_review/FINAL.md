@@ -5,6 +5,26 @@ All ten benchmark/control cases completed. Each full event reached exactly
 This establishes measured performance and bounded accuracy, not universal
 hydraulic qualification. Historical strict/v1/v2 evidence remains unchanged.
 
+## Final regression evidence
+
+| Pinned Python 3.14 run | Passed | Skipped | Failures |
+|---|---:|---:|---:|
+| Full CUDA, opt-in FV1 and external restart executable | 1535 | 24 | 0 |
+| Full CPU, CUDA hidden | 919 | 603 | 0 |
+| Additional FP32 CPU/CUDA forcing and stages | 68 | 3 | 0 |
+| Additional mixed CPU/CUDA forcing, stages and conditioning | 39 | 32 | 0 |
+| Mixed public auto graph and mutable LTS graph cache | 2 | 0 | 0 |
+
+[CUDA JUnit](final_integrated_cuda.xml), [CPU JUnit](final_integrated_cpu.xml),
+[FP32](final_fp32_cuda.xml), [mixed](final_mixed_cuda.xml),
+[mixed graph/cache](final_mixed_graph_cache.xml). CPU skips are not CPU
+coverage. Default-run skips include mixed-only controls, deliberately unsupported
+graph/trace combinations, CPU-only graph parameters and unavailable optional
+external CPU tools. Mixed SGS remains explicitly unsupported. The separate
+external moving-front restart test also passes. No engineering gate was relaxed
+to pass these suites. Analytical Stoker grid/timestep convergence, all initial
+repair regressions and frozen v1/v2 reproductions are retained beside this report.
+
 ## Matched 72-hour Purau event
 
 One measured run per solver, after warm-up, on the same RTX 4070 Ti SUPER.

@@ -39,9 +39,9 @@ recession with strict water accounting. This fix is pushed as `195ecb8`.
 
 ## Tests and preserved evidence
 
-- Full opt-in CUDA suite: **1,535 passed, 24 skipped**; includes the external
+- Final full opt-in CUDA suite: **1,535 passed, 24 skipped**; includes the external
   reference's continuous/restarted equivalence test and CPU/CUDA window/graph
-  benchmark restart tests. [JUnit evidence](final_full_cuda.xml).
+  benchmark restart tests. [Final JUnit evidence](final_integrated_cuda.xml).
 - Full CPU-only suite: **919 passed, 603 skipped**. CUDA skips are not CPU
   coverage. Numerical defaults, historical fixtures and strict/v1/v2 artifacts
   remain preserved. Earlier failed follow-up logs are retained in
@@ -50,6 +50,8 @@ recession with strict water accounting. This fix is pushed as `195ecb8`.
   [analytical controls](analytical_convergence.json), [sensitivity](sensitivity.json)
   and the existing strict review results. The seven retained strict discrepancies
   remain visible; engineering acceptance does not require bitwise equality.
+- Additional CUDA precision controls: FP32 **68 passed, 3 skipped**;
+  conditioned mixed **39 passed, 32 skipped**. Mixed SGS remains unsupported.
 
 ## SGS controller decision
 

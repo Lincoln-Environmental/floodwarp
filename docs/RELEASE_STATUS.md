@@ -33,11 +33,12 @@ direct checkpoints, enhanced-SGS state/rebuild safeguards, automatic public
 CUDA graph selection and LTS graph dependency tracking. Numerical defaults,
 reference fixtures and historical strict/v1/v2 evidence remain preserved.
 
-The final pinned Python 3.14 suite passed 1,534 tests with 25 skips using
-opt-in FV1 CUDA controls; the separately invoked adapted external-reference
-moving-front restart test passed (its missing executable setting accounts for
-one full-suite skip). The CPU-only run passed 919 with 603 skips. Earlier
-passing logs remain preserved.
+The final pinned Python 3.14 suite passed 1,535 tests with 24 skips using
+opt-in FV1 CUDA controls and the adapted external-reference executable,
+including its moving-front restart test. The CPU-only run passed 919 with
+603 skips. Additional FP32 controls passed 68 with 3 skips and mixed controls
+passed 39 with 32 unsupported-mode skips. Earlier passing and failure logs
+remain preserved.
 Additional focused checks and fresh validation evidence are recorded in
 `validation/repair_review`. Both frozen v1/v2 analyses reproduce exactly.
 The repaired retained comparison cases pass 25/32 strict gates; the seven
