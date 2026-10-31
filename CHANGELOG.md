@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — main
+
+- Promote the full-event-verified modified sparse FV1 default: released-tile
+  scratch clearing and fused post-source activity detection. All recorded
+  hydraulic fields and accepted steps match dense and prior sparse execution.
+  Hydraulic runtime is 1512.372 s, 7.89% below prior sparse and 20.66% below dense.
+  Dense override remains available. Existing release tags/assets are unchanged.
+
 ## v0.1.1
 
 - Exact-zero 8×8 sparse execution is now the FV1 default, with dense FP64

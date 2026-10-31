@@ -6,16 +6,15 @@ launches walk the list with a grid stride, including inside CUDA graphs.
 
 import warp as wp
 
-from floodwarp.full_swe_kernels import faces_at, draining_at, limit_faces_at, update_at
+from floodwarp.full_swe_kernels import faces_at, draining_at, limit_faces_at, update_at, apply_sources_at
 
 
-@wp.kernel
-def mark_tiles(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
+@wp.func
+def mark_cell(k: int, q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
                bed: wp.array(dtype=wp.float64), bx: wp.array(dtype=wp.int32),
                by: wp.array(dtype=wp.int32), sx: wp.array(dtype=wp.float64),
                sy: wp.array(dtype=wp.float64), flags: wp.array(dtype=wp.int32),
                nx: int, tile_size: int, tiles_x: int):
-    k = wp.tid()
     if active[k] == 0:
         return
     j = k / nx
@@ -33,8 +32,33 @@ def mark_tiles(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
 
 
 @wp.kernel
+def mark_tiles(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
+               bed: wp.array(dtype=wp.float64), bx: wp.array(dtype=wp.int32),
+               by: wp.array(dtype=wp.int32), sx: wp.array(dtype=wp.float64),
+               sy: wp.array(dtype=wp.float64), flags: wp.array(dtype=wp.int32),
+               nx: int, tile_size: int, tiles_x: int):
+    mark_cell(wp.tid(), q, active, bed, bx, by, sx, sy, flags, nx, tile_size, tiles_x)
+
+
+@wp.kernel
+def sources_and_activity(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
+        rain: wp.array(dtype=wp.float64), multiplier: wp.array(dtype=wp.float64),
+        infil: wp.array(dtype=wp.float64), f0: wp.array(dtype=wp.float64),
+        fd: wp.array(dtype=wp.float64), conductivity: wp.array(dtype=wp.float64),
+        soil: wp.array(dtype=wp.float64), rain_sum: wp.array(dtype=wp.float64),
+        ctrl: wp.array(dtype=wp.float64), bed: wp.array(dtype=wp.float64),
+        bx: wp.array(dtype=wp.int32), by: wp.array(dtype=wp.int32),
+        sx: wp.array(dtype=wp.float64), sy: wp.array(dtype=wp.float64),
+        flags: wp.array(dtype=wp.int32), nx: int, tile_size: int, tiles_x: int):
+    k = wp.tid()
+    apply_sources_at(k, q, active, rain, multiplier, infil, f0, fd, conductivity, soil, rain_sum, ctrl)
+    mark_cell(k, q, active, bed, bx, by, sx, sy, flags, nx, tile_size, tiles_x)
+
+
+@wp.kernel
 def compact_tiles(flags: wp.array(dtype=wp.int32), work: wp.array(dtype=wp.int32),
-                  count: wp.array(dtype=wp.int32), tiles_x: int, tiles_y: int):
+                  count: wp.array(dtype=wp.int32), tiles_x: int, tiles_y: int,
+                  needed: wp.array(dtype=wp.int32)):
     tile = wp.tid()
     row = tile / tiles_x
     column = tile % tiles_x
@@ -46,6 +70,7 @@ def compact_tiles(flags: wp.array(dtype=wp.int32), work: wp.array(dtype=wp.int32
             if j >= 0 and j < tiles_y and i >= 0 and i < tiles_x:
                 if flags[j * tiles_x + i] != 0:
                     include = True
+    needed[tile] = int(include)
     if include:
         slot = wp.atomic_add(count, 0, 1)
         work[slot] = tile
@@ -99,6 +124,37 @@ def clear_previous(fx: wp.array(dtype=wp.vec3d), fy: wp.array(dtype=wp.vec3d),
             if j == ny - 1:
                 fy[k + nx] = wp.vec3d(wp.float64(0.0))
                 py[k + nx] = wp.vec2d(wp.float64(0.0))
+
+
+@wp.kernel
+def clear_released(fx: wp.array(dtype=wp.vec3d), fy: wp.array(dtype=wp.vec3d),
+        px: wp.array(dtype=wp.vec2d), py: wp.array(dtype=wp.vec2d),
+        theta: wp.array(dtype=wp.float64), needed: wp.array(dtype=wp.int32),
+        previous: wp.array(dtype=wp.int32), count: wp.array(dtype=wp.int32),
+        nx: int, ny: int, tile_size: int, tiles_x: int, dense_cutoff: int):
+    tile = wp.tid()
+    current = needed[tile]
+    if count[0] >= dense_cutoff:
+        current = 1
+    if previous[tile] != 0 and current == 0:
+        for local in range(tile_size * tile_size):
+            j = (tile / tiles_x) * tile_size + local / tile_size
+            i = (tile % tiles_x) * tile_size + local % tile_size
+            if j < ny and i < nx:
+                k = j * nx + i
+                x = j * (nx + 1) + i
+                fx[x] = wp.vec3d(wp.float64(0.0))
+                fy[k] = wp.vec3d(wp.float64(0.0))
+                px[x] = wp.vec2d(wp.float64(0.0))
+                py[k] = wp.vec2d(wp.float64(0.0))
+                theta[k] = wp.float64(1.0)
+                if i == nx - 1:
+                    fx[x + 1] = wp.vec3d(wp.float64(0.0))
+                    px[x + 1] = wp.vec2d(wp.float64(0.0))
+                if j == ny - 1:
+                    fy[k + nx] = wp.vec3d(wp.float64(0.0))
+                    py[k + nx] = wp.vec2d(wp.float64(0.0))
+    previous[tile] = current
 
 
 @wp.kernel

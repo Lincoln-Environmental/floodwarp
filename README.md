@@ -1,6 +1,6 @@
 # FloodWarp
 
-**FloodWarp v0.1.1** is research-grade surface-water simulation software for
+**FloodWarp** is research-grade surface-water simulation software for
 CPU and NVIDIA CUDA. Copyright **Patrick Durney and Lincoln Agritech Ltd**.
 Software is **[GNU AGPL-3.0-only](LICENSE)**; attributed elevation data retain
 CC BY 4.0. FV1 is an independent FP64 first-order finite-volume full
@@ -8,6 +8,13 @@ shallow-water solver. LI is a reduced-complexity local-inertial alternative.
 Traditional and enhanced SGS modes remain explicitly experimental.
 Independent benchmark and analytical evidence do not establish universal
 hydraulic qualification.
+
+Current `main` defaults to the full-event-verified modified sparse FV1 path:
+**1512.37 s** hydraulic time versus **1641.96 s** for the v0.1.1 sparse path
+and **1906.11 s** dense, with identical recorded hydraulic results. See the
+[72-hour comparison](validation/sparse_modified_event_review/REPORT.md).
+Use `execution_mode='dense'` for the retained reference. The published v0.1.1
+tag and release assets are unchanged; this promotion is in the branch checkout.
 
 Read the **[disclaimer and responsible-use guidance](DISCLAIMER.md)** before
 interpreting results. Research demonstration only — not an official flood-hazard

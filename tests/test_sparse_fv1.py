@@ -210,3 +210,30 @@ def test_fully_infiltrating_rain_retains_source_aware_cfl(device):
     assert not sparse.get_water_depth().any()
     assert sparse.cumulative_infiltration_m().sum() > 0.
     assert_equivalent(dense=dense, sparse=sparse)
+
+
+@pytest.mark.parametrize('device', ('cpu', 'cuda:0'))
+def test_partial_tile_release_and_reactivation_preserve_other_wet_tiles(device):
+    if device != 'cpu' and not wp.is_cuda_available():
+        pytest.skip('CUDA unavailable')
+    dense = make_solver(device=device, case='front', mode='dense', tile_size=8, dense_fraction=.65)
+    sparse = make_solver(device=device, case='front', mode='sparse', tile_size=8, dense_fraction=.65)
+    depth = dense.get_water_depth().copy()
+    depth[5:8, 5:8] = .4
+    infiltration = np.zeros_like(depth)
+    infiltration[:16, :16] = 100.
+    rain = np.zeros_like(depth)
+    rain[5:8, 5:8] = .01
+    for solver in (dense, sparse):
+        solver.set_water_depth(depth=depth)
+        solver.run_device_loop(duration=.01)
+        solver.set_source_rates(infil=infiltration)
+        solver.run_device_loop(duration=.02)
+    assert_equivalent(dense=dense, sparse=sparse)
+    assert not sparse.get_water_depth()[:16, :16].any()
+    assert sparse.get_water_depth()[29:35, 37:43].max() > 0.
+    for solver in (dense, sparse):
+        solver.set_source_rates(infil=0., rain=rain)
+        solver.run_device_loop(duration=.03)
+    assert sparse.get_water_depth()[5:8, 5:8].max() > 0.
+    assert_equivalent(dense=dense, sparse=sparse)

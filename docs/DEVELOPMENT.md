@@ -51,6 +51,12 @@ not imply universal hydraulic qualification.
 
 ## Sparse uniform FV1 in v0.1.1
 
+Current main now uses the verified modified scheduler by default, clearing
+released tiles and fusing post-source activity with the unchanged source update.
+The [matched 72-hour event](../validation/sparse_modified_event_review/REPORT.md)
+retains all recorded fields and steps at 1512.372 s hydraulic runtime. The
+v0.1.1 tag retains the previous scheduler. Static AMR remains separate on dev.
+
 Native `FullSWESolver`, the solver factory and `create_model` select exact-zero
 sparse execution with `tile_size=8` and `dense_fraction=0.65` for FV1. Use
 `execution_mode='dense'` at construction or
