@@ -33,6 +33,10 @@ calibration against outlet discharge alone may conceal spatial inundation
 errors. This comparison is not an outlet-calibration experiment and does not
 isolate terrain or formulation as the sole cause of the differences.
 
+The current [formulation, resolution and limitations guide](https://github.com/Lincoln-Environmental/floodwarp/blob/main/README.md#model-formulations-resolution-and-limitations)
+includes the separate peak, hydrograph and spatial metrics. The released 5 m
+comparison does not establish grid convergence or observed-flood accuracy.
+
 The complete **1123×843, 5 m Orton Bradley Park dataset** is unchanged:
 EPSG:2193, NZVD2016 and 559,985 active cells. Use the versioned v0.1.0 assets:
 

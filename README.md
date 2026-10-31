@@ -149,6 +149,69 @@ The [LI comparison](examples/orton_bradley/figures/orton_bradley_li_comparison.p
 uses identical depth limits and full-range **linear** signed differences to
 show their prevalence without stretching small errors.
 
+## Model formulations, resolution and limitations
+
+FloodWarp supports two-dimensional hydraulic modelling using a first-order
+finite-volume solution of the full shallow-water equations (FV1), alongside an
+optional local-inertial (LI) formulation. LI neglects advective momentum,
+reducing computational complexity while retaining local acceleration,
+free-surface pressure gradients and friction. Its suitability depends on the
+hydraulic regime, terrain, spatial resolution and intended application; see
+[de Almeida and Bates (2013)](https://doi.org/10.1002/wrcr.20366).
+
+### What the comparisons show
+
+The uncalibrated 72-hour Orton Bradley Park simulation over steep terrain
+demonstrates that hydraulic formulation can materially influence maximum
+depths, inundation extents and discharge. At the common 5 m resolution,
+FloodWarp FV1 closely reproduces the independent LISFLOOD-FP FV1 implementation.
+LI produces substantially different maximum inundation, despite comparatively
+modest whole-event hydrograph differences and close overall water balances:
+
+- FV1 maximum-depth-envelope RMSE is **0.001435 m** relative to the FV1 reference.
+- LI envelope RMSE is **0.25638 m**, with isolated discrepancies above **6 m**.
+- LI peak outlet discharge is **12.81% higher**; hydrograph NRMSE is **1.88%**
+  of reference peak. These are separate criteria: a modest whole-event NRMSE
+  does not remove the peak error.
+- LI maximum-event inundation IoU is **0.4976 at 0.01 m** and **0.6972 at
+  0.10 m**, versus FV1 values of **0.9987** and **0.9958**.
+
+Mass conservation and acceptable outlet agreement alone do not establish
+accurate spatial flood-hazard predictions. Outlet-only calibration may conceal
+spatial inundation errors; this benchmark was not a calibration experiment.
+
+**Spatial resolution also matters.** Coarsening can alter represented terrain,
+channel widths, barriers, hydraulic connectivity and local storage, even with
+the full shallow-water equations. These effects must be assessed alongside
+equation choice; [Neal et al. (2012)](https://doi.org/10.1029/2012WR012514)
+demonstrate the importance of unresolved channel connectivity in coarse-grid
+inundation modelling. The released Orton Bradley comparison uses one common
+5 m grid: it does **not** quantify full-domain coarsening error or demonstrate
+grid convergence. The retained [bounded refinement controls](validation/repair_review/FINAL.md)
+have their own terrain-reconstruction and domain limitations and are not a
+replacement for an independent finer-terrain, full-domain resolution study.
+
+### Interpretation and appropriate use
+
+These models are uncalibrated. Independent FV1 agreement supports numerical
+consistency; it does not establish observed-flood accuracy, site calibration
+or grid convergence. LI can remain useful in suitable regimes, including
+friction-dominated flows or rapid screening, provided its approximation is
+validated for the application. Calibration may improve agreement with
+observations, but parameters compensating for simplified momentum physics
+may not transfer between events or hydraulic regimes.
+
+FV1 retains more complete momentum physics for steep or hydraulically complex
+flows. Adequate spatial resolution, suitable terrain and boundary
+representation, and calibration and validation against observations remain
+essential. **Greater equation complexity alone does not guarantee more
+accurate predictions: formulation, numerical resolution and physical terrain
+representation must be considered together.**
+
+See the [Orton Bradley benchmark](examples/orton_bradley/COMPARISON.md) for
+spatial error metrics and reproducible evidence, and the
+[disclaimer](DISCLAIMER.md) for responsible-use guidance.
+
 ## Reproduce and interpret
 
 The archive contains original conditioned inputs, complete FP64 fields,
