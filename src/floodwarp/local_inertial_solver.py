@@ -3735,6 +3735,11 @@ class LocalInertialSolver:
         graph_capture_seconds = 0.0
         if use_cuda_graph:
             capture_started = time.perf_counter()
+            if USE_CONDITIONED_MIXED_KERNELS:
+                # SGS is unsupported in mixed precision. Global eager loading
+                # also compiles its imported modules, even for a coarse run.
+                # Preload only the kernels used by this supported graph path.
+                wp.load_module(module="floodwarp.local_inertial_kernels", device=self.device)
             condition = wp.ones(1, dtype=wp.int32, device=self.device)
             progress_budget = wp.zeros(1, dtype=wp.float64, device=self.device)
             # Two explicit buffer swaps return Python handles to their initial
@@ -3752,9 +3757,9 @@ class LocalInertialSolver:
                 with wp.ScopedCapture(device=self.device,force_module_load=True) as loop:
                     wp.capture_while(condition,while_body=capture_body)
             else:
-                with wp.ScopedCapture(device=self.device, force_module_load=True) as body:
+                with wp.ScopedCapture(device=self.device, force_module_load=not USE_CONDITIONED_MIXED_KERNELS) as body:
                     capture_body()
-                with wp.ScopedCapture(device=self.device) as loop:
+                with wp.ScopedCapture(device=self.device, force_module_load=False if USE_CONDITIONED_MIXED_KERNELS else None) as loop:
                     wp.capture_while(condition, while_body=body.graph)
             graph = loop.graph
             graph_capture_seconds = time.perf_counter()-capture_started
@@ -4940,7 +4945,9 @@ class LocalInertialSolver:
         if cell_count <= 0:
             return False
 
-        with wp.ScopedCapture(device=self.device, force_module_load=True) as body_capture:
+        if USE_CONDITIONED_MIXED_KERNELS:
+            wp.load_module(module="floodwarp.local_inertial_kernels", device=self.device)
+        with wp.ScopedCapture(device=self.device, force_module_load=not USE_CONDITIONED_MIXED_KERNELS) as body_capture:
             if not self.apply_sources_after_momentum:
                 wp.launch(
                     kernel=lts_graph_apply_sources_indexed_kernel,

@@ -1,0 +1,540 @@
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4070 Ti SUPER" (16 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /home/patrickdurney/.cache/warp/1.17.0
+.ss.ss.ssFss........................ssssssss.ss.ss.ss.ssFssFssFssFss...  [100%]
+=================================== FAILURES ===================================
+_ test_output_checkpoint_does_not_change_next_cfl_forecast[cuda:0-None-coarse] _
+
+device = 'cuda:0', mode = 'coarse', graph = None
+
+    @pytest.mark.parametrize('mode',['coarse','traditional','enhanced'])
+    @pytest.mark.parametrize('graph',[False,None])
+    def test_output_checkpoint_does_not_change_next_cfl_forecast(device,mode,graph):
+        rain=Hyetograph(node_times_s=np.array([0.,30.,60.]),
+            node_rates_m_per_s=np.array([0.,0.,72./3.6e6]),storm_type='rising',metadata={})
+        traced=source_model(device=device,mode=mode)
+        plain=source_model(device=device,mode=mode)
+>       actual=traced.run_device_loop(duration=60.,rainfall_hyetograph=rain,use_cuda_graph=graph,
+            checkpoint_times_s=[30.],field_checkpoint_indices=[0],dt_history_capacity=10000)
+
+tests/test_forcing_interval.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/floodwarp/local_inertial_solver.py:3755: in run_device_loop
+    with wp.ScopedCapture(device=self.device, force_module_load=True) as body:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/utils.py:2004: in __enter__
+    wp.capture_begin(
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12797: in capture_begin
+    force_load(device)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12095: in force_load
+    m.load(d, block_dim=dim)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:4736: in load
+    raise e
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:4733: in load
+    compiled = self._compile(device, module_dir, output_name, output_arch, options=options)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:4495: in _compile
+    source_str, source_code_ext, meta, ltoir_values, fatbin_values = self._run_codegen(options, is_cpu)
+                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:1732: in locked_call
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:4365: in _run_codegen
+    builder = ModuleBuilder(
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:3121: in __init__
+    self.build_kernel(kernel)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:3240: in build_kernel
+    kernel.adj.build(self)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:1732: in locked_call
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:2200: in build
+    raise type(original_exc)(*new_args).with_traceback(original_exc.__traceback__) from None
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:2181: in build
+    adj.eval(adj.tree.body[0])
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:6075: in eval
+    return emit_node(adj, node)
+           ^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:3354: in emit_FunctionDef
+    adj.eval(f)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:6075: in eval
+    return emit_node(adj, node)
+           ^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:3402: in emit_If
+    adj.eval(stmt)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:6075: in eval
+    return emit_node(adj, node)
+           ^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:5123: in emit_Assign
+    rhs = adj.eval(node.value)
+          ^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:6075: in eval
+    return emit_node(adj, node)
+           ^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:4480: in emit_Call
+    out = adj.add_call(
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:2781: in add_call
+    adj.builder.build_function(func)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:3252: in build_function
+    func.build(self)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:684: in build
+    self.adj.build(builder, default_builder_options)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:1732: in locked_call
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:2200: in build
+    raise type(original_exc)(*new_args).with_traceback(original_exc.__traceback__) from None
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:2181: in build
+    adj.eval(adj.tree.body[0])
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:6075: in eval
+    return emit_node(adj, node)
+           ^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:3354: in emit_FunctionDef
+    adj.eval(f)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:6075: in eval
+    return emit_node(adj, node)
+           ^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:3425: in emit_If
+    adj.eval(stmt)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:6075: in eval
+    return emit_node(adj, node)
+           ^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:3402: in emit_If
+    adj.eval(stmt)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:6075: in eval
+    return emit_node(adj, node)
+           ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+adj = <warp._src.codegen.Adjoint object at 0x7a670b344cd0>
+node = Assign(targets=[Name(id='eta_L', ctx=Store())], value=Subscript(value=Name(id='boundary_stage_qx', ctx=Load(...)), slice=Tuple(elts=[Name(...), Name(...)], ctx=Load(...)), ctx=Load()), type_comment=None)
+
+    def emit_Assign(adj, node):
+        if len(node.targets) != 1:
+            raise WarpCodegenError("Assigning the same value to multiple variables is not supported")
+    
+        # Check if the rhs corresponds to an unsupported construct.
+        # Tuples are supported in the context of assigning multiple variables
+        # at once, but not for simple assignments like `x = (1, 2, 3)`.
+        # Therefore, we need to catch this specific case here instead of
+        # more generally in `adj.eval()`.
+        if isinstance(node.value, ast.List):
+            raise WarpCodegenError(
+                "List constructs are not supported in kernels. Use vectors like `wp.vec3()` for small fixed-size collections, or `wp.zeros(shape=N, dtype=...)` for stack-allocated arrays."
+            )
+    
+        lhs = node.targets[0]
+    
+        if isinstance(lhs, ast.Tuple) and isinstance(node.value, ast.Call):
+            # record the expected number of outputs on the node
+            # we do this so we can decide which function to
+            # call based on the number of expected outputs
+            node.value.expects = len(lhs.elts)
+    
+        # evaluate rhs
+        if isinstance(lhs, ast.Tuple) and isinstance(node.value, ast.Tuple):
+            rhs = [adj.eval(v) for v in node.value.elts]
+        else:
+            rhs = adj.eval(node.value)
+    
+        # handle the case where we are assigning multiple output variables
+        if isinstance(lhs, ast.Tuple):
+            subtype = getattr(rhs, "type", None)
+    
+            if isinstance(subtype, warp._src.types.tuple_t):
+                if len(rhs.type.types) != len(lhs.elts):
+                    raise WarpCodegenError(
+                        f"Invalid number of values to unpack (expected {len(lhs.elts)}, got {len(rhs.type.types)})."
+                    )
+                rhs = tuple(adj.add_builtin_call("extract", (rhs, adj.add_constant(i))) for i in range(len(lhs.elts)))
+    
+            names = []
+            for v in lhs.elts:
+                if isinstance(v, ast.Name):
+                    names.append(v.id)
+                else:
+                    raise WarpCodegenError(
+                        "Multiple return functions can only assign to simple variables, e.g.: x, y = func()"
+                    )
+    
+            if len(names) != len(rhs):
+                raise WarpCodegenError(
+                    f"Multiple return functions need to receive all their output values, incorrect number of values to unpack (expected {len(rhs)}, got {len(names)})"
+                )
+    
+            if any(name in adj.ref_params for name in names):
+                # Snapshot reference-valued RHS entries before binding or
+                # storing any ref target so tuple assignment keeps its
+                # simultaneous semantics, e.g. `old, x = x, 2.0`.
+                out = tuple(
+                    adj.load(value) if isinstance(value, Var) and is_reference(value.type) else value for value in rhs
+                )
+            else:
+                out = rhs
+    
+            for name, rhs in zip(names, out, strict=True):
+                # A tuple-unpack target that is a wp.ref[T] parameter mutates
+                # the referenced storage in place, like a scalar `name = rhs`
+                # assignment, rather than rebinding the symbol to a value of a
+                # different type (the parameter's type is Reference(T), not T).
+                if name in adj.ref_params:
+                    adj.store_ref_param_value(name, rhs)
+                    continue
+    
+                if name in adj.symbols:
+                    if isinstance(adj.symbols[name], warp._src.context.GradWrapper):
+                        raise WarpCodegenError(
+                            f"Cannot reassign local '{name}' after binding it to wp.grad(...). Warp treats "
+                            "wp.grad(...) results as static function handles; use a different local variable "
+                            "for the new value."
+                        )
+    
+                    # Sibling query-kind types may rebind over one another: a later
+                    # branch merge decays the symbol to their shared erased parent.
+                    if not types_equal(rhs.type, adj.symbols[name].type) and not type_erasure_join(
+                        rhs.type, adj.symbols[name].type
+                    ):
+                        raise WarpCodegenTypeError(
+                            f"Error, assigning to existing symbol {name} ({adj.symbols[name].type}) with different type ({rhs.type})"
+                        )
+    
+                adj.symbols[name] = rhs
+    
+        # handles the case where we are assigning to an array index (e.g.: arr[i] = 2.0)
+        elif isinstance(lhs, ast.Subscript):
+            if hasattr(lhs.value, "attr") and lhs.value.attr == "adjoint":
+                # handle adjoint of a variable, i.e. wp.adjoint[var]
+                lhs.slice.is_adjoint = True
+                src_var = adj.eval(lhs.slice)
+                var = Var(f"adj_{src_var.label}", type=src_var.type, constant=None, prefix=False)
+                adj.add_forward(f"{var.emit()} = {rhs.emit()};")
+                return
+    
+            # Fast path: array-rooted composite-component write -> single-slot
+            # store with a correct adjoint (the legacy path's adjoint is a no-op).
+            # wp.adjoint[var] is handled by the intercept above and never reaches here.
+            if adj._try_lower_array_slot_write(lhs, rhs):
+                return
+    
+            target, indices = adj.eval_subscript(lhs)
+            target_type = strip_reference(target.type)
+            indices = adj.eval_indices(target_type, indices)
+            adj._store_subscript(lhs, target, indices, rhs)
+    
+        elif isinstance(lhs, ast.Name):
+            # symbol name
+            name = lhs.id
+    
+            # If this name is a wp.ref[T] parameter, emit a direct mutation
+            # of the referenced storage rather than creating a new SSA variable.
+            if name in adj.ref_params:
+                adj.store_ref_param_value(name, rhs)
+                return
+    
+            # handle GradWrapper specially - just store it in symbols for later use
+            # this allows patterns like: func_handle = warp.grad(square); func_handle(x)
+            if isinstance(rhs, warp._src.context.GradWrapper):
+                adj.symbols[name] = rhs
+                return
+    
+            # handle Warp functions specially - bind the name directly to the function
+            # so later calls through the local resolve to it. This covers `f = my_func`,
+            # `f = mod.func`, and `f = wp.static(...)` returning a function. Without this the
+            # function would be routed through Var-shaped logic and miscompiled.
+            if isinstance(rhs, warp._src.context.Function):
+                if name in adj.symbols and isinstance(adj.symbols[name], warp._src.context.Function):
+                    if adj.symbols[name] is not rhs:
+                        raise WarpCodegenError(
+                            f"Error, rebinding function-valued local '{name}' to a different function is not "
+                            "supported. Warp does not have function pointers, so a local bound to a function "
+                            "must refer to the same function throughout the kernel."
+                        )
+                adj.symbols[name] = rhs
+                return
+    
+            # check type matches if symbol already defined
+            if name in adj.symbols:
+                # a local previously bound to a function cannot be reassigned to a value. Warp does
+                # not have function pointers, so a mixed function/value local has no codegen-able
+                # meaning. Guard here before the generic type check below, which would otherwise read
+                # `adj.symbols[name].type` and fail with an opaque AttributeError on the Function.
+                if isinstance(adj.symbols[name], warp._src.context.Function):
+                    raise WarpCodegenError(
+                        f"Error, rebinding function-valued local '{name}' to a non-function value is not "
+                        "supported. Warp does not have function pointers, so a local bound to a function "
+                        "must refer to a function throughout the kernel."
+                    )
+    
+                if isinstance(adj.symbols[name], warp._src.context.GradWrapper):
+                    raise WarpCodegenError(
+                        f"Cannot reassign local '{name}' after binding it to wp.grad(...). Warp treats "
+                        "wp.grad(...) results as static function handles; use a different local variable "
+                        "for the new value."
+                    )
+    
+                # Sibling query-kind types may rebind over one another: a later
+                # branch merge decays the symbol to their shared erased parent.
+                if not types_equal(strip_reference(rhs.type), adj.symbols[name].type) and not type_erasure_join(
+                    strip_reference(rhs.type), adj.symbols[name].type
+                ):
+>                   raise WarpCodegenTypeError(
+                        f"Error, assigning to existing symbol {name} ({adj.symbols[name].type}) with different type ({rhs.type})"
+                    )
+E                   warp._src.codegen.WarpCodegenTypeError: Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:568:
+E                               manning_face_mode, use_two_dimensional_friction, use_native_manning, factor,
+E                   ;Error while parsing function "_subgrid_update_qx_face" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:235:
+E                           eta_L = boundary_stage_qx[j, i]
+E                   ;Error, assigning to existing symbol eta_L (<class 'warp._src.types.float32'>) with different type (wp.ref[float64])
+
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/codegen.py:5265: WarpCodegenTypeError
+----------------------------- Captured stdout call -----------------------------
+Module warp.utils dd15119 load on device 'cuda:0' took 0.35 ms  (cached)
+Module warp._src.coloring 4f5e3b2 load on device 'cuda:0' took 0.31 ms  (cached)
+Module warp.math 4443472 load on device 'cuda:0' took 0.17 ms  (cached)
+Module warp.marching_cubes 67e455c load on device 'cuda:0' took 0.39 ms  (cached)
+Module floodwarp.subgrid_hypsometry 4443472 load on device 'cuda:0' took 0.18 ms  (cached)
+Module floodwarp.subgrid_kernels d59d323 load on device 'cuda:0' took 1.72 ms  (error)
+___________ test_rapid_stage_cpu_cuda_graph_parity[None-west-coarse] ___________
+
+mode = 'coarse', orientation = 'west', graph = None
+
+    @pytest.mark.parametrize('mode',['coarse','traditional','enhanced'])
+    @pytest.mark.parametrize('orientation',['west','east','south','north'])
+    @pytest.mark.parametrize('graph',[False,None])
+    def test_rapid_stage_cpu_cuda_graph_parity(mode,orientation,graph):
+        if not wp.is_cuda_available():pytest.skip('CUDA unavailable')
+        expected=simulate_stage(orientation=orientation,spacing=1.,maximum_dt=60.,rise_time=.05,mode=mode)
+>       actual=simulate_stage(orientation=orientation,spacing=1.,maximum_dt=60.,rise_time=.05,mode=mode,
+            device='cuda:0',graph=graph)
+
+tests/test_stage_variation.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_stage_variation.py:42: in simulate_stage
+    solver.run_device_loop(duration=float(target-solver.simulation_time),use_cuda_graph=graph,**options)
+src/floodwarp/local_inertial_solver.py:3755: in run_device_loop
+    with wp.ScopedCapture(device=self.device, force_module_load=True) as body:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/utils.py:2004: in __enter__
+    wp.capture_begin(
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12797: in capture_begin
+    force_load(device)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12095: in force_load
+    m.load(d, block_dim=dim)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:4681: in load
+    _raise_recorded_build_error(build_error)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+build_error = WarpCodegenTypeError('Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProj...Error, assigning to existing symbol eta_L (<class \'warp._src.types.float32\'>) with different type (wp.ref[float64])')
+
+    def _raise_recorded_build_error(build_error: Exception) -> NoReturn:
+        """Re-raise a build error recorded by an earlier failed build.
+    
+        Raising the recorded exception itself appends the current frames to its
+        ``__traceback__`` every time, so a kernel relaunched in a loop accumulates
+        one traceback per attempt. Building a fresh instance avoids that. If the
+        type cannot be rebuilt from its ``args``, re-raise the original and accept
+        the growing traceback, since reporting the real error matters more.
+        """
+        try:
+            replay = type(build_error)(*build_error.args)
+        except Exception:
+            raise build_error from None
+    
+>       raise replay from None
+E       warp._src.codegen.WarpCodegenTypeError: Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:568:
+E                   manning_face_mode, use_two_dimensional_friction, use_native_manning, factor,
+E       ;Error while parsing function "_subgrid_update_qx_face" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:235:
+E               eta_L = boundary_stage_qx[j, i]
+E       ;Error, assigning to existing symbol eta_L (<class 'warp._src.types.float32'>) with different type (wp.ref[float64])
+
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:3773: WarpCodegenTypeError
+___________ test_rapid_stage_cpu_cuda_graph_parity[None-east-coarse] ___________
+
+mode = 'coarse', orientation = 'east', graph = None
+
+    @pytest.mark.parametrize('mode',['coarse','traditional','enhanced'])
+    @pytest.mark.parametrize('orientation',['west','east','south','north'])
+    @pytest.mark.parametrize('graph',[False,None])
+    def test_rapid_stage_cpu_cuda_graph_parity(mode,orientation,graph):
+        if not wp.is_cuda_available():pytest.skip('CUDA unavailable')
+        expected=simulate_stage(orientation=orientation,spacing=1.,maximum_dt=60.,rise_time=.05,mode=mode)
+>       actual=simulate_stage(orientation=orientation,spacing=1.,maximum_dt=60.,rise_time=.05,mode=mode,
+            device='cuda:0',graph=graph)
+
+tests/test_stage_variation.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_stage_variation.py:42: in simulate_stage
+    solver.run_device_loop(duration=float(target-solver.simulation_time),use_cuda_graph=graph,**options)
+src/floodwarp/local_inertial_solver.py:3755: in run_device_loop
+    with wp.ScopedCapture(device=self.device, force_module_load=True) as body:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/utils.py:2004: in __enter__
+    wp.capture_begin(
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12797: in capture_begin
+    force_load(device)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12095: in force_load
+    m.load(d, block_dim=dim)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:4681: in load
+    _raise_recorded_build_error(build_error)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+build_error = WarpCodegenTypeError('Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProj...Error, assigning to existing symbol eta_L (<class \'warp._src.types.float32\'>) with different type (wp.ref[float64])')
+
+    def _raise_recorded_build_error(build_error: Exception) -> NoReturn:
+        """Re-raise a build error recorded by an earlier failed build.
+    
+        Raising the recorded exception itself appends the current frames to its
+        ``__traceback__`` every time, so a kernel relaunched in a loop accumulates
+        one traceback per attempt. Building a fresh instance avoids that. If the
+        type cannot be rebuilt from its ``args``, re-raise the original and accept
+        the growing traceback, since reporting the real error matters more.
+        """
+        try:
+            replay = type(build_error)(*build_error.args)
+        except Exception:
+            raise build_error from None
+    
+>       raise replay from None
+E       warp._src.codegen.WarpCodegenTypeError: Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:568:
+E                   manning_face_mode, use_two_dimensional_friction, use_native_manning, factor,
+E       ;Error while parsing function "_subgrid_update_qx_face" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:235:
+E               eta_L = boundary_stage_qx[j, i]
+E       ;Error, assigning to existing symbol eta_L (<class 'warp._src.types.float32'>) with different type (wp.ref[float64])
+
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:3773: WarpCodegenTypeError
+__________ test_rapid_stage_cpu_cuda_graph_parity[None-south-coarse] ___________
+
+mode = 'coarse', orientation = 'south', graph = None
+
+    @pytest.mark.parametrize('mode',['coarse','traditional','enhanced'])
+    @pytest.mark.parametrize('orientation',['west','east','south','north'])
+    @pytest.mark.parametrize('graph',[False,None])
+    def test_rapid_stage_cpu_cuda_graph_parity(mode,orientation,graph):
+        if not wp.is_cuda_available():pytest.skip('CUDA unavailable')
+        expected=simulate_stage(orientation=orientation,spacing=1.,maximum_dt=60.,rise_time=.05,mode=mode)
+>       actual=simulate_stage(orientation=orientation,spacing=1.,maximum_dt=60.,rise_time=.05,mode=mode,
+            device='cuda:0',graph=graph)
+
+tests/test_stage_variation.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_stage_variation.py:42: in simulate_stage
+    solver.run_device_loop(duration=float(target-solver.simulation_time),use_cuda_graph=graph,**options)
+src/floodwarp/local_inertial_solver.py:3755: in run_device_loop
+    with wp.ScopedCapture(device=self.device, force_module_load=True) as body:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/utils.py:2004: in __enter__
+    wp.capture_begin(
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12797: in capture_begin
+    force_load(device)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12095: in force_load
+    m.load(d, block_dim=dim)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:4681: in load
+    _raise_recorded_build_error(build_error)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+build_error = WarpCodegenTypeError('Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProj...Error, assigning to existing symbol eta_L (<class \'warp._src.types.float32\'>) with different type (wp.ref[float64])')
+
+    def _raise_recorded_build_error(build_error: Exception) -> NoReturn:
+        """Re-raise a build error recorded by an earlier failed build.
+    
+        Raising the recorded exception itself appends the current frames to its
+        ``__traceback__`` every time, so a kernel relaunched in a loop accumulates
+        one traceback per attempt. Building a fresh instance avoids that. If the
+        type cannot be rebuilt from its ``args``, re-raise the original and accept
+        the growing traceback, since reporting the real error matters more.
+        """
+        try:
+            replay = type(build_error)(*build_error.args)
+        except Exception:
+            raise build_error from None
+    
+>       raise replay from None
+E       warp._src.codegen.WarpCodegenTypeError: Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:568:
+E                   manning_face_mode, use_two_dimensional_friction, use_native_manning, factor,
+E       ;Error while parsing function "_subgrid_update_qx_face" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:235:
+E               eta_L = boundary_stage_qx[j, i]
+E       ;Error, assigning to existing symbol eta_L (<class 'warp._src.types.float32'>) with different type (wp.ref[float64])
+
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:3773: WarpCodegenTypeError
+__________ test_rapid_stage_cpu_cuda_graph_parity[None-north-coarse] ___________
+
+mode = 'coarse', orientation = 'north', graph = None
+
+    @pytest.mark.parametrize('mode',['coarse','traditional','enhanced'])
+    @pytest.mark.parametrize('orientation',['west','east','south','north'])
+    @pytest.mark.parametrize('graph',[False,None])
+    def test_rapid_stage_cpu_cuda_graph_parity(mode,orientation,graph):
+        if not wp.is_cuda_available():pytest.skip('CUDA unavailable')
+        expected=simulate_stage(orientation=orientation,spacing=1.,maximum_dt=60.,rise_time=.05,mode=mode)
+>       actual=simulate_stage(orientation=orientation,spacing=1.,maximum_dt=60.,rise_time=.05,mode=mode,
+            device='cuda:0',graph=graph)
+
+tests/test_stage_variation.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_stage_variation.py:42: in simulate_stage
+    solver.run_device_loop(duration=float(target-solver.simulation_time),use_cuda_graph=graph,**options)
+src/floodwarp/local_inertial_solver.py:3755: in run_device_loop
+    with wp.ScopedCapture(device=self.device, force_module_load=True) as body:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/utils.py:2004: in __enter__
+    wp.capture_begin(
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12797: in capture_begin
+    force_load(device)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:12095: in force_load
+    m.load(d, block_dim=dim)
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:4681: in load
+    _raise_recorded_build_error(build_error)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+build_error = WarpCodegenTypeError('Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProj...Error, assigning to existing symbol eta_L (<class \'warp._src.types.float32\'>) with different type (wp.ref[float64])')
+
+    def _raise_recorded_build_error(build_error: Exception) -> NoReturn:
+        """Re-raise a build error recorded by an earlier failed build.
+    
+        Raising the recorded exception itself appends the current frames to its
+        ``__traceback__`` every time, so a kernel relaunched in a loop accumulates
+        one traceback per attempt. Building a fresh instance avoids that. If the
+        type cannot be rebuilt from its ``args``, re-raise the original and accept
+        the growing traceback, since reporting the real error matters more.
+        """
+        try:
+            replay = type(build_error)(*build_error.args)
+        except Exception:
+            raise build_error from None
+    
+>       raise replay from None
+E       warp._src.codegen.WarpCodegenTypeError: Error while parsing function "subgrid_update_momentum_kernel" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:568:
+E                   manning_face_mode, use_two_dimensional_friction, use_native_manning, factor,
+E       ;Error while parsing function "_subgrid_update_qx_face" at /home/patrickdurney/PycharmProjects/floodwarp/src/floodwarp/subgrid_kernels.py:235:
+E               eta_L = boundary_stage_qx[j, i]
+E       ;Error, assigning to existing symbol eta_L (<class 'warp._src.types.float32'>) with different type (wp.ref[float64])
+
+/tmp/floodwarp-clean/lib/python3.14/site-packages/warp/_src/context.py:3773: WarpCodegenTypeError
+=============================== warnings summary ===============================
+tests/test_stage_variation.py: 24 warnings
+  tests/test_stage_variation.py:55: PytestWarning: record_property is incompatible with junit_family 'xunit2' (use 'legacy' or 'xunit1')
+    @pytest.mark.parametrize('orientation',['west','east','south','north'])
+
+tests/test_stage_variation.py::test_sgs_rapid_stage_refinement[west-traditional]
+tests/test_stage_variation.py::test_sgs_rapid_stage_refinement[west-enhanced]
+tests/test_stage_variation.py::test_sgs_rapid_stage_refinement[east-traditional]
+tests/test_stage_variation.py::test_sgs_rapid_stage_refinement[east-enhanced]
+tests/test_stage_variation.py::test_sgs_rapid_stage_refinement[south-traditional]
+tests/test_stage_variation.py::test_sgs_rapid_stage_refinement[south-enhanced]
+tests/test_stage_variation.py::test_sgs_rapid_stage_refinement[north-traditional]
+tests/test_stage_variation.py::test_sgs_rapid_stage_refinement[north-enhanced]
+  tests/test_stage_variation.py:80: PytestWarning: record_property is incompatible with junit_family 'xunit2' (use 'legacy' or 'xunit1')
+    @pytest.mark.parametrize('mode',['traditional','enhanced'])
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_forcing_interval.py::test_output_checkpoint_does_not_change_next_cfl_forecast[cuda:0-None-coarse]
+FAILED tests/test_stage_variation.py::test_rapid_stage_cpu_cuda_graph_parity[None-west-coarse]
+FAILED tests/test_stage_variation.py::test_rapid_stage_cpu_cuda_graph_parity[None-east-coarse]
+FAILED tests/test_stage_variation.py::test_rapid_stage_cpu_cuda_graph_parity[None-south-coarse]
+FAILED tests/test_stage_variation.py::test_rapid_stage_cpu_cuda_graph_parity[None-north-coarse]
+5 failed, 34 passed, 32 skipped, 32 warnings in 35.93s
