@@ -2,6 +2,11 @@
 
 ## 0.2.0.dev0 — development only
 
+- Retain independently measured released-tile scratch clearing and fused
+  source/activity detection. Six interleaved saved-state phases preserve all
+  fields and accepted steps; wet-phase hydraulic time falls about 7–8% versus
+  v0.1.1 sparse execution. Short dry replay is slightly slower. No new full-event
+  speedup is claimed, and forced early dense indexing remains rejected.
 - Merge v0.1.1 release fixes and formulation-interpretation guidance forward,
   preserving experimental static-mesh evidence and the production sparse FV1
   default. New performance and adaptive-resolution research remains on dev.

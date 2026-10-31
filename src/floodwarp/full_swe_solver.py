@@ -236,8 +236,11 @@ class FullSWESolver:
                 inputs=[self.q, f['active'], f['rain'], f['multiplier'], f['infil'], f['f0'], f['fd'],
                     f['conductivity'], f['soil'], f['bed'], f['types_x'], f['types_y'], f['stages_x'],
                     f['stages_y'], self.nx, self.ctrl, self.gravity, self.dry_depth], device=self.device)
-        wp.launch(kernels.apply_sources, dim=self.nx * self.ny,
-            inputs=[self.q, f["active"], f["rain"], f["multiplier"], f["infil"], f["f0"], f["fd"], f["conductivity"], f["soil"], f["rain_sum"], self.ctrl], device=self.device)
+        if self._sparse_execution is not None and getattr(self._sparse_execution, '_fuse_activity', False):
+            self._sparse_execution.enqueue_sources(solver=self)
+        else:
+            wp.launch(kernels.apply_sources, dim=self.nx * self.ny,
+                inputs=[self.q, f["active"], f["rain"], f["multiplier"], f["infil"], f["f0"], f["fd"], f["conductivity"], f["soil"], f["rain_sum"], self.ctrl], device=self.device)
 
     def _enqueue_hydraulics(self):
         if self._sparse_execution is not None:

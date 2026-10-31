@@ -5,18 +5,18 @@
     {
       "module": "full_swe_solver",
       "source_sha256": "929365165af2d265db1309267130f77228e011be3ddaf5fcc6258cdc1aebde44",
-      "extracted_ast_sha256": "83ee13d971efd414f24ec270457541acddb168fb43e9df3927a658e1c53f6eb7",
+      "extracted_ast_sha256": "1338690ad03f757523b6e6f17e5a6b4d44f4ab3e40ab8c075f735973145c1373",
       "matches_baseline_after_namespace_and_source_channel_rename": false,
       "baseline_extracted_ast_sha256": "e0cf0a01fe611a542665b30c908168b9b196c1a5fcd0bae2f41634765eaf2548",
-      "current_file_sha256": "317e72e78bedbffe2607814862fdd65a7cad39e8fb091c5a43b5a0d2c6e9d758"
+      "current_file_sha256": "12dcf11a57ae4e1c368d3e96c01229b3d07316eac754496631e2b76c834f68f1"
     },
     {
       "module": "full_swe_kernels",
       "source_sha256": "53be2fbb499732475b7dce2027120028791e2e3b5f88b57a848cb502741e0f2b",
-      "extracted_ast_sha256": "09d9297ff3b921462da3a1bd4bee60011b471c64af4badf0d28bb5523f013d7d",
+      "extracted_ast_sha256": "b7011c4c50c302b4f7efebe0d065bad8e7198376bc10046613245067a4324d9b",
       "matches_baseline_after_namespace_and_source_channel_rename": false,
       "baseline_extracted_ast_sha256": "f45b72e1a17ca2f5b1479e16f0af069b85b2d0d85c886cb516103005f3e7e400",
-      "current_file_sha256": "854e7777e2e471117a0b461496ebe063abd9ea559dd8a15488c96ae328706689"
+      "current_file_sha256": "f8e3c381b82756bfcc374bb10ebcda26e24e69dbb3e143b82eb60b484f3d0757"
     },
     {
       "module": "local_inertial_kernels",
@@ -112,7 +112,7 @@
     "change": "Preload only LI kernels for supported conditioned mixed-precision graphs, avoiding unrelated unsupported SGS modules in global eager loading. Applied to device-loop and LTS captures.",
     "benchmark_source_note": "FP64 graph preload choices and all hydraulic operators are unchanged; existing benchmark source snapshots retain their original identities."
   },
-  "sparse_execution_audit": "FV1 face/draining/limiting/update bodies extracted unchanged into shared indexed functions; dense and exact-sparse schedulers call the same operators. Full-domain source/CFL kernels unchanged. Default sparse tile_size=8, dense_fraction=0.65. See validation/sparse_review/FULL_EVENT.md and validation/release_v0.1.1/REPORT.md.",
+  "sparse_execution_audit": "Released uniform FV1 operators are retained. On dev only, source/activity bodies are extracted unchanged and fused after the full CFL scan; scratch clearing visits only released tiles. See validation/sparse_perf_review/operator_audit.json and REPORT.md. Frozen release audit source hashes remain historical.",
   "experimental_static_fv1_audit": {
     "scope": "Independent spatial approximation on fixed 2:1 leaf volumes. Dense/sparse uniform operators unchanged. Fine subface HLL reused; shared coarse donor budgets; immutable finest DEM; fine source history. Runtime gate failed, dynamic adaptation deferred.",
     "sources": {
@@ -149,5 +149,16 @@
       "mixed-precision FV1",
       "additional performance changes"
     ]
+  },
+  "sparse_performance_development_audit": {
+    "version": "0.2.0.dev0",
+    "sources": {
+      "full_swe_solver.py": "12dcf11a57ae4e1c368d3e96c01229b3d07316eac754496631e2b76c834f68f1",
+      "full_swe_kernels.py": "f8e3c381b82756bfcc374bb10ebcda26e24e69dbb3e143b82eb60b484f3d0757",
+      "sparse_fv1.py": "121fcb93dc67b3ea629b54b264de68c3ef7f815c64ca0ffe5e74bd0879c422c2",
+      "sparse_fv1_kernels.py": "5990a1296d93e2d3e2a47aca4557491c910c60af30e6d9cd133e69cdb8696992"
+    },
+    "evidence": "validation/sparse_perf_review/REPORT.md",
+    "full_event_requalification": false
   }
 }

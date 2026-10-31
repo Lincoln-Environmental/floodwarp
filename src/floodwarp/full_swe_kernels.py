@@ -410,14 +410,13 @@ def validate_characteristic(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=
                     wp.atomic_min(ctrl,7,wp.float64(-1.0))
 
 
-@wp.kernel
-def apply_sources(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
+@wp.func
+def apply_sources_at(k: int, q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
                   rain: wp.array(dtype=wp.float64), multiplier: wp.array(dtype=wp.float64),
                   infil: wp.array(dtype=wp.float64), f0: wp.array(dtype=wp.float64),
                   fd: wp.array(dtype=wp.float64), conductivity: wp.array(dtype=wp.float64),
                   soil: wp.array(dtype=wp.float64), rain_sum: wp.array(dtype=wp.float64),
                   ctrl: wp.array(dtype=wp.float64)):
-    k = wp.tid()
     if active[k] != 0 and ctrl[7] >= wp.float64(0.0):
         dt = ctrl[2]
         added = dt * (rain[k] + multiplier[k] * (ctrl[9] + wp.float64(0.5) * ctrl[11] * dt))
@@ -430,6 +429,16 @@ def apply_sources(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
         q[k] = wp.vec3d(available - removed, q[k][1] * scale, q[k][2] * scale)
         soil[k] += removed
         rain_sum[k] += added
+
+
+@wp.kernel
+def apply_sources(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
+                  rain: wp.array(dtype=wp.float64), multiplier: wp.array(dtype=wp.float64),
+                  infil: wp.array(dtype=wp.float64), f0: wp.array(dtype=wp.float64),
+                  fd: wp.array(dtype=wp.float64), conductivity: wp.array(dtype=wp.float64),
+                  soil: wp.array(dtype=wp.float64), rain_sum: wp.array(dtype=wp.float64),
+                  ctrl: wp.array(dtype=wp.float64)):
+    apply_sources_at(wp.tid(), q, active, rain, multiplier, infil, f0, fd, conductivity, soil, rain_sum, ctrl)
 
 
 @wp.func

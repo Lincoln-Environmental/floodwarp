@@ -72,6 +72,16 @@ speedup. Widespread-runoff windows remain slower. The validated sparse default
 is included in v0.1.1; the fixed v0.1.0 baseline is preserved. See the
 [promotion checks](../validation/sparse_review/DEFAULT_PROMOTION.md).
 
+On dev 0.2.0.dev0, subsequent measured changes clear scratch only in released
+tiles and fuse the unchanged source update with post-source activity detection.
+The full CFL scan still precedes sources. Interleaved saved-state controls
+show about 7–8% less wet-phase hydraulic time than released sparse execution,
+with exact field/step agreement; the short dry case is slightly slower.
+Forcing earlier dense indexing was rejected. See the
+[performance evidence](../validation/sparse_perf_review/REPORT.md).
+These changes are not in v0.1.1, have no new complete-event timing, and require
+full-event requalification before a later stable release.
+
 ## Experimental fixed block FV1
 
 `floodwarp.static_fv1.StaticBlockFV1Solver.from_solver` constructs an opt-in

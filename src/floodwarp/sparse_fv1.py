@@ -21,31 +21,52 @@ class SparseFV1Execution:
         self.dense_cutoff = max(1, int(np.ceil(dense_fraction * self.tile_count)))
         self.stride = min(self.tile_count * tile_size * tile_size, 65536)
         self.flags = wp.zeros(self.tile_count, dtype=wp.int32, device=solver.device)
+        self.needed = wp.zeros(self.tile_count, dtype=wp.int32, device=solver.device)
+        self.previous = wp.empty(self.tile_count, dtype=wp.int32, device=solver.device)
         self.work = wp.empty(self.tile_count, dtype=wp.int32, device=solver.device)
         self.count = wp.empty(1, dtype=wp.int32, device=solver.device)
+        self._clear_released_only = True
+        self._fuse_activity = True
         self.invalidate()
 
     def invalidate(self):
         # A fresh/restored dense checkpoint may contain scratch anywhere.
         # The first clear must therefore use dense indexing, without a list.
         self.count.fill_(self.tile_count)
+        self.previous.fill_(1)
+
+    def enqueue_sources(self, *, solver):
+        f = solver._fields
+        self.flags.zero_()
+        wp.launch(kernels.sources_and_activity, dim=solver.nx * solver.ny,
+            inputs=[solver.q, f['active'], f['rain'], f['multiplier'], f['infil'],
+                    f['f0'], f['fd'], f['conductivity'], f['soil'], f['rain_sum'], solver.ctrl,
+                    f['bed'], f['types_x'], f['types_y'], f['stages_x'], f['stages_y'],
+                    self.flags, solver.nx, self.tile_size, self.tiles_x], device=solver.device)
 
     def enqueue(self, *, solver):
         f = solver._fields
         common = [solver.nx, solver.ny]
         tail = [self.work, self.count, self.tile_size, self.tiles_x, self.dense_cutoff, self.stride]
-        wp.launch(kernels.clear_previous, dim=self.stride,
-            inputs=[f['flux_x'], f['flux_y'], f['pressure_x'], f['pressure_y'], f['theta'],
-                    self.work, self.count, *common, self.tile_size, self.tiles_x,
-                    self.dense_cutoff, self.stride], device=solver.device)
-        self.flags.zero_()
+        if not self._clear_released_only:
+            wp.launch(kernels.clear_previous, dim=self.stride,
+                inputs=[f['flux_x'], f['flux_y'], f['pressure_x'], f['pressure_y'], f['theta'],
+                        self.work, self.count, *common, self.tile_size, self.tiles_x,
+                        self.dense_cutoff, self.stride], device=solver.device)
         self.count.zero_()
-        wp.launch(kernels.mark_tiles, dim=solver.nx * solver.ny,
-            inputs=[solver.q, f['active'], f['bed'], f['types_x'], f['types_y'],
-                    f['stages_x'], f['stages_y'], self.flags, solver.nx,
-                    self.tile_size, self.tiles_x], device=solver.device)
+        if not self._fuse_activity:
+            self.flags.zero_()
+            wp.launch(kernels.mark_tiles, dim=solver.nx * solver.ny,
+                inputs=[solver.q, f['active'], f['bed'], f['types_x'], f['types_y'],
+                        f['stages_x'], f['stages_y'], self.flags, solver.nx,
+                        self.tile_size, self.tiles_x], device=solver.device)
         wp.launch(kernels.compact_tiles, dim=self.tile_count,
-            inputs=[self.flags, self.work, self.count, self.tiles_x, self.tiles_y], device=solver.device)
+            inputs=[self.flags, self.work, self.count, self.tiles_x, self.tiles_y, self.needed], device=solver.device)
+        if self._clear_released_only:
+            wp.launch(kernels.clear_released, dim=self.tile_count,
+                inputs=[f['flux_x'], f['flux_y'], f['pressure_x'], f['pressure_y'], f['theta'],
+                        self.needed, self.previous, self.count, *common, self.tile_size,
+                        self.tiles_x, self.dense_cutoff], device=solver.device)
         for axis, index in (('x', 0), ('y', 1)):
             wp.launch(kernels.sparse_faces, dim=self.stride,
                 inputs=[solver.q, f['bed'], f['active'], f['types_' + axis], f['stages_' + axis],
@@ -84,5 +105,5 @@ class SparseFV1Execution:
                     seed_tiles=int(np.count_nonzero(self.flags.numpy())), work_tiles=count,
                     total_tiles=self.tile_count, dense_fallback=fallback,
                     evaluated_cells=cells, evaluated_faces_x=fx, evaluated_faces_y=fy,
-                    scheduling_bytes=sum(array.capacity for array in (self.flags, self.work, self.count)),
+                    scheduling_bytes=sum(array.capacity for array in (self.flags, self.work, self.count, self.needed, self.previous)),
                     storage='dense', resolution='uniform')
