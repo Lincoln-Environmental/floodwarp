@@ -1,0 +1,35 @@
+--- upstream/cuda/fv1/cuda_fv1_solver.cu
++++ retained-adapter/cuda/fv1/cuda_fv1_solver.cu
+@@ -1,3 +1,4 @@
++#include "purau_adapter.cuh"
+ #include "cuda_fv1_solver.cuh"
+ #include "cuda_boundary.cuh"
+ #include "cuda_hll.cuh"
+@@ -428,7 +429,18 @@
+ 				U_pos = Uold[j*cuda::pitch + i];
+ 				Ustar_pos = U_pos.star(Z_pos, Zstar_s);
+ 
+-				// this hack appears necessary to prevent some unknown
++				// Original embedded north coastal contacts, using the upstream HLL
++                // Riemann solver with exterior stage 0 and extrapolated momentum.
++                // Port sill was set to the unchanged active 5 m bed before stepping.
++                if (purau::port(j*cuda::pitch+i)) {
++                    Ustar_pos = Ustar_neg;
++                    Ustar_pos.H = FMAX(C(0.0), -Zstar_s);
++                    if (Ustar_pos.H <= cuda::solver_params.DepthThresh) {
++                        Ustar_pos.HU = C(0.0);
++                        Ustar_pos.HV = C(0.0);
++                    }
++                }
++                // this hack appears necessary to prevent some unknown
+ 				// compiler optimisation from causing a bug seen in
+ 				// EA test 4
+ 				//Ustar_pos.H = Ustar_pos.H*C(2.0)/C(2.0);
+@@ -447,6 +459,7 @@
+ 				Hstar[threadIdx.y][threadIdx.x] = Ustar_neg.H;
+ 
+ 				F_s = HLL::y(Ustar_neg, Ustar_pos);
++                if (threadIdx.y != 0) purau::record_port(j*cuda::pitch+i,F_s.H);
+ 				F[threadIdx.y][threadIdx.x] = F_s;
+ 				update_mass_stats_y(mass_stats, F_s.H, i, j);
+ 			}

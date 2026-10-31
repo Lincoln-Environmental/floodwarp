@@ -7,7 +7,8 @@ The new repository contains no original Git history. It remains a
 
 ## Retained functionality
 
-43 runtime modules: public LI/FV1 classes and factory; their frozen kernels,
+43 extracted runtime modules plus the audited stage-forcing controller:
+public LI/FV1 classes and factory; their baseline kernels,
 reference operators, boundaries, numerical profiles, rainfall, infiltration,
 water accounting, structures, traditional SGS hypsometry, enhanced SGS
 geometry/reduction/preprocessing/stepping, complete checkpoints, and the new
@@ -32,14 +33,18 @@ direct checkpoints, enhanced-SGS state/rebuild safeguards, automatic public
 CUDA graph selection and LTS graph dependency tracking. Numerical defaults,
 reference fixtures and historical strict/v1/v2 evidence remain preserved.
 
-The pinned Python 3.14 suite passed 1,421 tests with 24 skips using opt-in
-FV1 CUDA controls; the separate CPU-only run passed 853 with 555 skips.
+The follow-up pinned Python 3.14 suite passed 1,535 tests with 24 skips using
+opt-in FV1 CUDA controls and the adapted external reference; the separate
+CPU-only run passed 919 with 603 skips. Earlier passing logs remain preserved.
 Additional focused checks and fresh validation evidence are recorded in
 `validation/repair_review`. Both frozen v1/v2 analyses reproduce exactly.
 The repaired retained comparison cases pass 25/32 strict gates; the seven
 discrepancies remain visible and are assessed separately for engineering
-significance. The full-domain 72-hour independent FV1 GPU comparison and
-performance profiling are still in progress at this repair commit.
+significance. Retained full-domain 72-hour hydraulic results now exist for all
+three solvers, including a checkpoint recovery after FV1's rainfall coverage
+error. Recovered timing is separate from the new minute-sampled benchmark
+protocol. See [follow-up qualification](../validation/repair_review/FOLLOWUP.md)
+for completed measurements, experimental SGS limits and pending work.
 
 ## Removed dependencies and interfaces
 

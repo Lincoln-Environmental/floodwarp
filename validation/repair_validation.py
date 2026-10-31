@@ -11,6 +11,7 @@ from validation.li_replay import replay
 from validation.li_assess import assess_runs
 from validation.li_engineering_v2 import assess, depth_assessment, extent_assessment
 from validation.gpu_benchmark import write_json
+from validation.sensitivity import assess as assess_sensitivity
 
 
 def reproduce_reviews(*, roots, fixtures, output, thresholds, bands, percentiles, engineering, criteria):
@@ -70,7 +71,7 @@ def assess_repairs(*, fixtures, frozen_roots, output, profiles, closures, histor
 
 
 def validate(*, fixtures, output, frozen_roots, profiles, closures, history_capacity, thresholds,
-             bands, percentiles, engineering, criteria, evidence):
+             bands, percentiles, engineering, criteria, evidence, cfl_values):
     protected={str(path):hashlib.sha256(path.read_bytes()).hexdigest()
         for directory in (fixtures,Path('validation/li_review_v1'),Path('validation/li_review_v2'))
         for path in directory.rglob('*') if path.is_file()}
@@ -79,6 +80,8 @@ def validate(*, fixtures, output, frozen_roots, profiles, closures, history_capa
         bands=bands,percentiles=percentiles,engineering=engineering,criteria=criteria)
     report=run_comparisons(fixtures=fixtures,output=output/'strict_comparisons',device='cpu',
         profiles=('physical_candidate','lisflood_fp_acc'))
+    assess_sensitivity(fixtures=fixtures,results=output/'strict_comparisons',output=output/'sensitivity.json',
+        profiles=('physical_candidate','lisflood_fp_acc'),cfl_values=cfl_values)
     repaired=assess_repairs(fixtures=fixtures,frozen_roots=frozen_roots,output=output,profiles=profiles,
         closures=closures,history_capacity=history_capacity,thresholds=thresholds,bands=bands,
         percentiles=percentiles,engineering=engineering,criteria=criteria)
@@ -86,7 +89,7 @@ def validate(*, fixtures, output, frozen_roots, profiles, closures, history_capa
         raise AssertionError('Protected fixture/review changed')
     evidence.mkdir(parents=True,exist_ok=True)
     for source in (output/'strict_comparisons/report.json',output/'strict_repair_differences.json',
-                   output/'current_v2_depth_extent.json',output/'current_v1/engineering_results.json'):
+                   output/'current_v2_depth_extent.json',output/'current_v1/engineering_results.json',output/'sensitivity.json'):
         shutil.copyfile(src=source,dst=evidence/(source.parent.name+'_'+source.name))
     write_json(path=evidence/'validation.json',value=dict(frozen_reviews_reproduced=original,
         protected_sha256=protected,strict_comparisons_passed=report['passed'],strict_comparisons_total=report['total'],
@@ -106,6 +109,7 @@ if __name__ == "__main__":
     profiles=('physical_candidate','lisflood_fp_acc',None)
     closures=('local_or_prescribed_slope',None)
     history_capacity=200000
+    cfl_values=(.4,.2,.1,.05)
     thresholds=(.0001,.001,.005,.01,.05,.1)
     bands=(.000001,.00001,.0001,.001)
     percentiles=(50,90,95,99)
@@ -117,4 +121,4 @@ if __name__ == "__main__":
         peak_fraction=.1,timing_fraction=.05,volume_fraction=.05,recharge_fraction=.1)
     validate(fixtures=fixtures,output=output,frozen_roots=frozen_roots,profiles=profiles,closures=closures,
         history_capacity=history_capacity,thresholds=thresholds,bands=bands,percentiles=percentiles,
-        engineering=engineering,criteria=criteria,evidence=evidence)
+        engineering=engineering,criteria=criteria,evidence=evidence,cfl_values=cfl_values)
