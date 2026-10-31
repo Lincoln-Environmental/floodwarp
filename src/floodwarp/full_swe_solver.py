@@ -64,6 +64,7 @@ class FullSWESolver:
         self.initial_volume = 0.
         self.steps = 0
         self._graph = None
+        self._sparse_execution = None
         self._fields = {}
         shape = (self.ny, self.nx)
         self._shape = shape
@@ -185,7 +186,31 @@ class FullSWESolver:
     def set_boundary_stage_qy(self, *, stage):
         self._boundary(axis="y", values=stage, stage=True)
 
-    def _enqueue_step(self):
+    def configure_execution(self, *, mode, tile_size=16, dense_fraction=.65):
+        """Choose dense or experimental exact-zero sparse uniform execution.
+
+        This changes scheduling only, so checkpoints remain portable between
+        execution modes. Dense state, sources and the full CFL scan are retained.
+        """
+        if mode not in ('dense', 'sparse'):
+            raise ValueError("FV1 execution mode must be 'dense' or 'sparse'")
+        if mode == 'sparse':
+            from floodwarp.sparse_fv1 import SparseFV1Execution
+            self._sparse_execution = SparseFV1Execution(
+                solver=self, tile_size=tile_size, dense_fraction=dense_fraction)
+        else:
+            self._sparse_execution = None
+        self._graph = None
+
+    def execution_diagnostics(self):
+        if self._sparse_execution is not None:
+            return self._sparse_execution.diagnostics(solver=self)
+        return dict(execution='dense_uniform', storage='dense', resolution='uniform',
+                    evaluated_cells=self.nx * self.ny,
+                    evaluated_faces_x=self.ny * (self.nx + 1),
+                    evaluated_faces_y=(self.ny + 1) * self.nx, scheduling_bytes=0)
+
+    def _enqueue_sources(self):
         f = self._fields
         common = [self.nx, self.ny]
         wp.launch(kernels.begin_step, dim=1, inputs=[self.ctrl, self._rain_times, self._rain_rates, len(self._times)], device=self.device)
@@ -207,6 +232,13 @@ class FullSWESolver:
                     f['stages_y'], self.nx, self.ctrl, self.gravity, self.dry_depth], device=self.device)
         wp.launch(kernels.apply_sources, dim=self.nx * self.ny,
             inputs=[self.q, f["active"], f["rain"], f["multiplier"], f["infil"], f["f0"], f["fd"], f["conductivity"], f["soil"], f["rain_sum"], self.ctrl], device=self.device)
+
+    def _enqueue_hydraulics(self):
+        if self._sparse_execution is not None:
+            self._sparse_execution.enqueue(solver=self)
+            return
+        f = self._fields
+        common = [self.nx, self.ny]
         for axis, index in (("x", 0), ("y", 1)):
             wp.launch(kernels.faces, dim=f["flux_" + axis].size,
                 inputs=[self.q, f["bed"], f["active"], f["types_" + axis], f["stages_" + axis], f["flux_" + axis], f["pressure_" + axis], *common, index, self.gravity, self.dry_depth,self._stage_momentum_mode,self.ctrl,self._flux_mode], device=self.device)
@@ -217,7 +249,12 @@ class FullSWESolver:
                 inputs=[f["flux_" + axis], f["theta"], f["active"], f["volume_" + axis], self.ctrl, *common, index, width], device=self.device)
         wp.launch(kernels.update, dim=self.nx * self.ny,
             inputs=[self.q, f["flux_x"], f["flux_y"], f["pressure_x"], f["pressure_y"], f["active"], f["manning"], f["maximum"], f["inflow"], f["outflow"], self.ctrl, *common, self.dx, self.dy, self.gravity, self.dry_depth], device=self.device)
-        wp.launch(kernels.finish_step, dim=1, inputs=[self.ctrl, self.condition, f["dt_histogram"], self.minimum_dt], device=self.device)
+
+    def _enqueue_step(self):
+        self._enqueue_sources()
+        self._enqueue_hydraulics()
+        wp.launch(kernels.finish_step, dim=1,
+            inputs=[self.ctrl, self.condition, self._fields["dt_histogram"], self.minimum_dt], device=self.device)
 
     def run_device_loop(self, *, duration, use_cuda_graph=None, max_steps=10000000):
         """Run to an exact requested time; CUDA uses a device conditional loop.
@@ -243,6 +280,9 @@ class FullSWESolver:
         self.condition.fill_(1)
         began = perf_counter()
         wp.load_module(module=kernels, device=self.device)
+        if self._sparse_execution is not None:
+            from floodwarp import sparse_fv1_kernels
+            wp.load_module(module=sparse_fv1_kernels, device=self.device)
         compilation = perf_counter() - began
         capture_seconds = 0.
         graph = use_cuda_graph is not False and self.device.is_cuda
@@ -384,6 +424,8 @@ class FullSWESolver:
             self._fields[name].assign(values)
         self.ctrl.assign(state["control"])
         self.time, self.steps, self.initial_volume = state["time"], state["steps"], state["initial_volume"]
+        if self._sparse_execution is not None:
+            self._sparse_execution.invalidate()
 
     def save_checkpoint(self, *, path: Path):
         state = self.capture_state()
