@@ -104,6 +104,11 @@ maximum-event IoU, false-positive/negative areas, export/infiltration difference
 independent peak magnitude/timing errors and water balances. Full machine-readable
 metrics and benchmark signatures are in the archive.
 
+The [formulation and resolution guide](../../README.md#model-formulations-resolution-and-limitations)
+explains the governing-equation choices and the limits of outlet-only
+validation. This released event uses one common 5 m grid and does not establish
+full-domain grid convergence or accuracy against observed flooding.
+
 The 72-hour event uses the established 48-hour HIRDS v4 100-year historical
 design rainfall and 24-hour recession, spatial rainfall multipliers, Manning
 roughness and exponential f0/fd/k infiltration with finite water availability.
