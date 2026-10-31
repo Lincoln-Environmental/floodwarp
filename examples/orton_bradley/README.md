@@ -48,6 +48,15 @@ is verified against original georeferencing; no interpolation or resampling occu
 
 ## GIS products
 
+The local example directory is `examples/orton_bradley/outputs/`: it contains
+all 14 aligned GeoTIFFs, including the DEM, FV1/LI/reference maximum depths,
+signed differences and extent classifications, plus the hydrograph CSV,
+boundaries, provenance and checksums. Generated data directories are ignored
+by Git; the downloadable release archive supplies these files for a fresh clone.
+After extracting the archive, copy its `outputs/` contents into this example's
+`outputs/` directory to use the same layout. Keep the archive's complete
+`inputs/` and `results/` alongside it when regenerating products.
+
 Individual files are also available on the [release page](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.0):
 
 - [Full conditioned DEM](https://github.com/Lincoln-Environmental/floodwarp/releases/download/v0.1.0/orton_bradley_dem_5m.tif).
