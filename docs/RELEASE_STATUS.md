@@ -1,5 +1,10 @@
 # FloodWarp v0.1.1 release status
 
+Current main includes the subsequently verified modified sparse FV1 default
+(1512.372 s matched-event hydraulic runtime; identical recorded state/history).
+This branch promotion does not alter the published v0.1.1 tag or assets.
+The following v0.1.1 release record remains historical.
+
 The rights holders authorised this research-grade release under **GNU AGPL
 version 3 only**, credited to **Patrick Durney and Lincoln Agritech Ltd**.
 LICENSE contains the complete text; package metadata uses `AGPL-3.0-only`.

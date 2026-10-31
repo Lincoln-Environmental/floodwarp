@@ -1,5 +1,8 @@
 # Development
 
+The verified modified sparse FV1 path is now the default on both main and dev.
+Dense execution remains selectable; static AMR stays separate on dev.
+
 Work on dev. main receives ordinary validated merges/fast-forwards. This
 repository has independent history; do not change the original Overlander
 research checkout as part of FloodWarp maintenance.

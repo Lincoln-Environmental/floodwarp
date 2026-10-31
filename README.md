@@ -1,5 +1,8 @@
 # FloodWarp
 
+The verified modified sparse FV1 path is now the default on both main and dev.
+Dense execution remains selectable; static AMR stays separate on dev.
+
 **FloodWarp 0.2.0.dev0 — development checkout.** The stable release is
 [v0.1.1](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.1).
 FloodWarp is research-grade surface-water simulation software for

@@ -2,6 +2,8 @@
 
 ## 0.2.0.dev0 — development only
 
+- The full-event-verified modified sparse FV1 default is now promoted on both
+  main and dev. Static AMR remains separate on dev; release tags are unchanged.
 - Complete matched 72-hour verification of the modified sparse path: 1512.372 s
   hydraulic time versus 1641.957 s released sparse and 1906.106 s dense;
   all hourly fields, accepted steps and final released-sparse checkpoint arrays agree.
