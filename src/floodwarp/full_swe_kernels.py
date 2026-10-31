@@ -473,6 +473,12 @@ def faces(q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64),
         al = active[left] != 0
     if right >= 0:
         ar = active[right] != 0
+    # Inactive pairs have the exact zero Riemann solution. Clear both
+    # outputs, including pressure retained from a preceding wet step.
+    if not al and not ar:
+        flux[k] = wp.vec3d(wp.float64(0.0))
+        pressure[k] = wp.vec2d(wp.float64(0.0))
+        return
     ql = wp.vec3d(wp.float64(0.0))
     qr = wp.vec3d(wp.float64(0.0))
     zl = wp.float64(0.0)
@@ -511,6 +517,13 @@ def faces(q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64),
     top = wp.max(zl, zr)
     ls = reconstruct(ql, zl, top, dry)
     rs = reconstruct(qr, zr, top, dry)
+    # Apply this only after constructing boundary ghosts: a wet prescribed
+    # stage can inundate an otherwise dry pair. No dry-depth tolerance is
+    # used; every nonzero reconstructed depth retains the full HLL operator.
+    if ls[0] == wp.float64(0.0) and rs[0] == wp.float64(0.0):
+        flux[k] = wp.vec3d(wp.float64(0.0))
+        pressure[k] = wp.vec2d(wp.float64(0.0))
+        return
     f = hll(ls, rs, g, dry, flux_mode)
     if wall:
         f = wp.vec3d(wp.float64(0.0), f[1], wp.float64(0.0))

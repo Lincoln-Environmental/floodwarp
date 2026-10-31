@@ -12,6 +12,7 @@ from floodwarp.boundary_conditions import BOUNDARY_FREE_OUTFLOW, BOUNDARY_SPECIF
 from floodwarp.config import WP_FLOAT
 from floodwarp.local_inertial_kernels import (
     _device_piecewise_linear_interp,
+    _device_next_breakpoint,
 )
 from floodwarp.local_inertial_solver import LocalInertialSolver
 from floodwarp.rainfall import Hyetograph
@@ -293,6 +294,35 @@ def _interp_probe_kernel(
     out: wp.array(dtype=wp.float64),
 ):
     out[0] = _device_piecewise_linear_interp(times, values, sample, scratch)
+
+
+@wp.kernel
+def _forcing_search_probe_kernel(times: wp.array(dtype=wp.float64),values: wp.array(dtype=wp.float64),
+    sample: wp.float64,scratch: wp.array(dtype=wp.float64),out: wp.array(dtype=wp.float64)):
+    out[0]=_device_piecewise_linear_interp(times,values,sample,scratch)
+    out[1]=_device_next_breakpoint(times,sample)
+
+
+@pytest.mark.parametrize('device',['cpu','cuda:0'])
+@pytest.mark.parametrize('node_count',[2,4097])
+def test_long_forcing_search_preserves_exact_nodes_and_rounding(device,node_count):
+    if device!='cpu' and not wp.is_cuda_available():pytest.skip('CUDA unavailable')
+    rng=np.random.default_rng(seed=818)
+    times=np.r_[0.,np.cumsum(rng.uniform(.1,2.,size=node_count-1))]
+    values=rng.normal(size=node_count)
+    selected=times[np.array([0,1,node_count//2,node_count-2,node_count-1])]
+    samples=np.r_[np.nextafter(selected,-np.inf),selected,np.nextafter(selected,np.inf),
+        np.linspace(-1.,times[-1]+1.,10)]
+    times_wp=wp.array(times,dtype=wp.float64,device=device)
+    values_wp=wp.array(values,dtype=wp.float64,device=device)
+    scratch=wp.zeros(18,dtype=wp.float64,device=device)
+    out=wp.zeros(2,dtype=wp.float64,device=device)
+    for sample in samples:
+        wp.launch(kernel=_forcing_search_probe_kernel,dim=1,
+            inputs=[times_wp,values_wp,wp.float64(sample),scratch,out],device=device)
+        actual=out.numpy()
+        assert actual[0]==float(np.interp(sample,times,values))
+        assert actual[1]==times[min(int(np.searchsorted(times,sample,side='right')),node_count-1)]
 
 
 def test_device_interp_matches_numpy_interp_bit_exact():

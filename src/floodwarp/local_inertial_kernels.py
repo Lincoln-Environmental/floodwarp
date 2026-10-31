@@ -2951,9 +2951,18 @@ def _device_piecewise_linear_interp(
         return values[0]
     if t >= times[n - 1]:
         return values[n - 1]
-    idx = int(0)
-    while idx < n - 2 and times[idx + 1] <= t:
-        idx += 1
+    # Search only for the segment; retain the original interpolation
+    # arithmetic and rounding barrier below. Long event series otherwise
+    # spend a linear number of dependent GPU loads on every timestep.
+    lo = int(0)
+    hi = n - 1
+    while lo + 1 < hi:
+        mid = (lo + hi) // 2
+        if times[mid] <= t:
+            lo = mid
+        else:
+            hi = mid
+    idx = lo
     slope = (values[idx + 1] - values[idx]) / (times[idx + 1] - times[idx])
     # Route the product through memory so the compiler cannot contract
     # mul+add into an FMA; np.interp rounds the multiply and add separately.
@@ -2965,10 +2974,15 @@ def _device_piecewise_linear_interp(
 def _device_next_breakpoint(times: wp.array(dtype=wp.float64), t: wp.float64) -> wp.float64:
     """Match Hyetograph.next_breakpoint_after (searchsorted side='right')."""
     n = times.shape[0]
-    idx = int(0)
-    while idx < n - 1 and times[idx] <= t:
-        idx += 1
-    return times[idx]
+    lo = int(0)
+    hi = n
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if times[mid] <= t:
+            lo = mid + 1
+        else:
+            hi = mid
+    return times[wp.min(lo, n - 1)]
 
 
 @wp.func

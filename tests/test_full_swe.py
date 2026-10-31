@@ -140,6 +140,57 @@ def test_step_after_storm_uses_zero_rain():
     np.testing.assert_allclose(solver.get_water_depth(), before, atol=1e-12, rtol=1e-10)
 
 
+def test_exactly_dry_faces_clear_flux_and_pressure_buffers():
+    import warp as wp
+    active=np.ones((3,4),dtype=bool);active[1,1]=False
+    solver=FullSWESolver(ny=3,nx=4,dx=1.,dy=1.,bed_elevation=np.zeros((3,4)),
+        manning_n=.035,active_mask=active,maximum_dt=.1)
+    for axis in ('x','y'):
+        solver._fields['flux_'+axis].fill_(wp.vec3d(2.,3.,4.))
+        solver._fields['pressure_'+axis].fill_(wp.vec2d(5.,6.))
+    solver.run_device_loop(duration=.1)
+    np.testing.assert_allclose(solver.get_conservative_state(),0.,atol=1e-12,rtol=0.)
+    for axis in ('x','y'):
+        np.testing.assert_allclose(solver._fields['flux_'+axis].numpy(),0.,atol=1e-12,rtol=0.)
+        np.testing.assert_allclose(solver._fields['pressure_'+axis].numpy(),0.,atol=1e-12,rtol=0.)
+    boundary=np.zeros((3,5),dtype=np.int32);boundary[:,0]=3
+    solver.set_boundary_type_qx(boundary_type=boundary)
+    solver.set_boundary_stage_qx(stage=np.full((3,5),.2))
+    solver.run_device_loop(duration=.1)
+    assert solver.cumulative_accounting()['boundary_inflow']>0.
+    assert solver.get_water_depth()[:,0].min()>0.
+
+
+@pytest.mark.parametrize('device',['cpu','cuda:0'])
+@pytest.mark.parametrize('scheme',['legacy_hll','contact_hll','star_hll','star_contact_hll'])
+def test_dry_reconstructed_faces_preserve_numpy_operator(device,scheme):
+    import warp as wp
+    if device!='cpu' and not wp.is_cuda_available():pytest.skip('CUDA unavailable')
+    rng=np.random.default_rng(seed=931)
+    shape=(4,7)
+    active=np.ones(shape,dtype=bool);active[1:3,2:4]=False
+    bed=rng.uniform(-.1,.4,shape)
+    depth=rng.choice(np.array([0.,.02,.3]),size=shape)
+    solver=FullSWESolver(ny=shape[0],nx=shape[1],dx=1.,dy=1.,bed_elevation=bed,
+        manning_n=.035,active_mask=active,device=device,maximum_dt=.1,
+        stage_boundary_momentum='discharge_extrapolation',flux_scheme=scheme)
+    solver.set_water_depth(depth=depth)
+    depth=solver.get_water_depth().copy()
+    solver.set_momentum(hu=rng.uniform(-.1,.1,shape)*depth,hv=rng.uniform(-.1,.1,shape)*depth)
+    initial=solver.get_conservative_state().copy()
+    expected,_=numpy_step(state=initial,bed=bed,active=active,manning=np.full(shape,.035),
+        dx=1.,dy=1.,gravity=9.81,dry_depth=.0001,dt=.001,
+        stage_boundary_momentum='discharge_extrapolation',flux_scheme=scheme,
+        boundary_type_x=np.zeros((shape[0],shape[1]+1),dtype=np.int32),
+        boundary_type_y=np.zeros((shape[0]+1,shape[1]),dtype=np.int32),
+        boundary_stage_x=np.zeros((shape[0],shape[1]+1)),
+        boundary_stage_y=np.zeros((shape[0]+1,shape[1])),
+        rain_rate=np.zeros(shape),infiltration_rate=np.zeros(shape))
+    solver.step(fixed_dt=.001)
+    np.testing.assert_allclose(solver.get_conservative_state(),expected,atol=1e-12,rtol=1e-10)
+    assert abs(solver.cumulative_accounting()['residual'])<1e-12
+
+
 def test_vector_manning_decay_in_oblique_flow():
     shape = (9, 11)
     solver = build_solver(bed=np.zeros(shape), depth=np.ones(shape), hu=np.full(shape, .3),
