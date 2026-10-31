@@ -79,8 +79,9 @@ show about 7–8% less wet-phase hydraulic time than released sparse execution,
 with exact field/step agreement; the short dry case is slightly slower.
 Forcing earlier dense indexing was rejected. See the
 [performance evidence](../validation/sparse_perf_review/REPORT.md).
-These changes are not in v0.1.1, have no new complete-event timing, and require
-full-event requalification before a later stable release.
+These changes are not in v0.1.1.
+
+The modified sparse FV1 path has now completed the matched 72-hour Orton Bradley event in **1512.372 s hydraulic time**, versus **1641.957 s** for released sparse and **1906.106 s** dense. All 72 hourly numerical-field checks and 1,570,053 accepted steps agree; final native checkpoint arrays directly match released sparse. This is one candidate run against retained same-device controls, not interleaved event repetitions. See [complete results](../validation/sparse_modified_event_review/REPORT.md).
 
 ## Experimental fixed block FV1
 

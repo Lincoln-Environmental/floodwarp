@@ -54,6 +54,13 @@ failed runtime gate. It is separate from the stable v0.1.1 release; dynamic AMR
 is not enabled. The production sparse default and explicit dense reference
 remain available in both branches.
 
+The modified dev sparse path now completes the same 72-hour event in **1512.37 s hydraulic time**
+versus 1641.96 s released sparse and 1906.11 s dense, with exact
+recorded hourly fields and accepted-step agreement. See the
+[full-event comparison](validation/sparse_modified_event_review/REPORT.md).
+This is one new run against retained same-device controls; stable release
+artifacts and geospatial datasets are unchanged.
+
 ## Orton Bradley Park — complete 5 m model domain
 
 **Orton Bradley Park, Banks Peninsula, Canterbury, New Zealand**: the entire

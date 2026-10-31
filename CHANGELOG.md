@@ -2,6 +2,10 @@
 
 ## 0.2.0.dev0 — development only
 
+- Complete matched 72-hour verification of the modified sparse path: 1512.372 s
+  hydraulic time versus 1641.957 s released sparse and 1906.106 s dense;
+  all hourly fields, accepted steps and final released-sparse checkpoint arrays agree.
+  Timing is one new event against retained controls, not interleaved repetitions.
 - Larger static controls and curved-terrain reconstruction diagnostics retain
   the original failed small-case evidence. Broad 512×512 controls improve
   accuracy/runtime cost; the protected channel and real-terrain representation
@@ -11,7 +15,8 @@
   source/activity detection. Six interleaved saved-state phases preserve all
   fields and accepted steps; wet-phase hydraulic time falls about 7–8% versus
   v0.1.1 sparse execution. Short dry replay is slightly slower. No new full-event
-  speedup is claimed, and forced early dense indexing remains rejected.
+  speedup was claimed at that stage; subsequent full-event verification is recorded above.
+  Forced early dense indexing remains rejected.
 - Merge v0.1.1 release fixes and formulation-interpretation guidance forward,
   preserving experimental static-mesh evidence and the production sparse FV1
   default. New performance and adaptive-resolution research remains on dev.

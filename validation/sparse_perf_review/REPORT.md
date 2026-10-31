@@ -30,3 +30,5 @@ Operator_audit.json verifies the original source and activity bodies are unchang
 ## Stage decision and limits
 
 Retain the measured combined improvement on dev; keep explicit dense execution and the 0.65 fallback. No new complete 72-hour event has been run for this candidate. The published 1641.957 s sparse event timing continues to describe the frozen v0.1.1 implementation, not this investigation. A complete matched event and isolated peak-memory audit remain gates before a subsequent stable release. CPU speedup and other GPU models are not demonstrated. Next bottlenecks are full-domain CFL/sources, initial invalidation clearing, and high-occupancy scheduling/indirection. Source/runtime snapshots and unsuccessful configurations are preserved.
+
+Subsequent matched 72-hour verification is now recorded in the [full-event comparison](../sparse_modified_event_review/REPORT.md); the original measurements and scope above are preserved.
