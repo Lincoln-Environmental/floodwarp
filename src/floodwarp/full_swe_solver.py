@@ -229,8 +229,6 @@ class FullSWESolver:
         if not np.isfinite(duration) or duration < 0 or max_steps < 1:
             raise ValueError("Finite nonnegative duration and positive step budget required")
         target = self.time + duration
-        if target > self._times[-1]:
-            raise ValueError("Rainfall forcing does not cover requested interval")
         if duration == 0:
             return dict(steps=0, time_s=self.time, loop_seconds=0., compilation_seconds=0., graph_capture_seconds=0.)
         ctrl = np.zeros(self.ctrl.size, dtype=np.float64)
@@ -291,7 +289,7 @@ class FullSWESolver:
         cap = self.maximum_dt if fixed_dt is None else float(fixed_dt)
         if remaining_time is not None:
             cap = min(cap, remaining_time)
-        if not np.isfinite(cap) or cap <= 0 or self.time + cap > self._times[-1]:
+        if not np.isfinite(cap) or cap <= 0:
             raise ValueError("Positive step duration required")
         ctrl = np.zeros(self.ctrl.size, dtype=np.float64)
         ctrl[0:3] = [self.time, self.time + cap, 0.]

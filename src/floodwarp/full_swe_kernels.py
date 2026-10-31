@@ -136,6 +136,15 @@ def hll(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, flux_mo
 @wp.kernel
 def begin_step(ctrl: wp.array(dtype=wp.float64), times: wp.array(dtype=wp.float64),
                rates: wp.array(dtype=wp.float64), count: int):
+    # A hyetograph has finite support.  The final node terminates the storm,
+    # including when its rate is nonzero; recession must add no more rain.
+    # Steps before that node are still capped there for exact quadrature.
+    if ctrl[0] >= times[count - 1]:
+        ctrl[9] = wp.float64(0.0)
+        ctrl[11] = wp.float64(0.0)
+        ctrl[12] = wp.float64(0.0)
+        ctrl[2] = wp.max(wp.float64(0.0), wp.min(ctrl[8], ctrl[1] - ctrl[0]))
+        return
     index = int(ctrl[10])
     while index < count - 2 and ctrl[0] >= times[index + 1]:
         index += 1

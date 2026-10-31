@@ -108,6 +108,38 @@ def test_mask_and_exact_source_integral():
     assert np.count_nonzero(solver.get_water_depth()[~active]) == 0
 
 
+@pytest.mark.parametrize('terminal_rate', [0., .002])
+@pytest.mark.parametrize('segmented', [False, True])
+def test_finite_storm_allows_zero_rain_recession(terminal_rate, segmented):
+    shape = (2, 3)
+    solver = build_solver(bed=np.zeros(shape), depth=np.zeros(shape), cap=.12)
+    times = np.array([0., .37, .81, 1.])
+    rates = np.array([0., .001, .002, terminal_rate])
+    solver.set_rainfall_hyetograph(times_s=times, rates_m_s=rates)
+    if segmented:
+        solver.run_device_loop(duration=1.)
+        rain_at_end = solver.cumulative_accounting()['rain']
+        solver.run_device_loop(duration=1.37)
+        assert solver.cumulative_accounting()['rain'] == pytest.approx(rain_at_end, abs=1e-14)
+    else:
+        solver.run_device_loop(duration=2.37)
+    expected_depth = float(np.trapezoid(rates, times))
+    np.testing.assert_allclose(solver.get_water_depth(), expected_depth, atol=1e-12, rtol=1e-10)
+    ledger = solver.cumulative_accounting()
+    assert ledger['rain'] == pytest.approx(expected_depth * np.prod(shape), abs=1e-12)
+    assert abs(ledger['residual']) < 1e-12
+    assert solver.time == pytest.approx(2.37, abs=1e-12)
+
+
+def test_step_after_storm_uses_zero_rain():
+    solver = build_solver(bed=np.zeros((2, 3)), depth=np.zeros((2, 3)), cap=.1)
+    solver.set_rainfall_hyetograph(times_s=np.array([0., .2]), rates_m_s=np.array([.001, .002]))
+    solver.run_device_loop(duration=.2)
+    before = solver.get_water_depth().copy()
+    solver.step(fixed_dt=.1)
+    np.testing.assert_allclose(solver.get_water_depth(), before, atol=1e-12, rtol=1e-10)
+
+
 def test_vector_manning_decay_in_oblique_flow():
     shape = (9, 11)
     solver = build_solver(bed=np.zeros(shape), depth=np.ones(shape), hu=np.full(shape, .3),
