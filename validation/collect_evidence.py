@@ -74,6 +74,28 @@ def tool_versions(*,commands,output,profiler_download,profiler_url):
     publish_json(path=output,value=values)
 
 
+def archive_completed(*,root,destination,field_cases):
+    """Keep original checksummed scalar records and selected field bytes."""
+    from validation.qualification_report import load_records
+    destination.mkdir(parents=True,exist_ok=True)
+    manifest=[]
+    for summary in sorted(root.glob('*/summary.json')):
+        directory=summary.parent
+        records=load_records(case_directory=directory)
+        for method,rows in records.items():
+            for index,_ in enumerate(rows):
+                run=directory/(method+'_'+str(index))
+                names=('record.json','fields.npz') if directory.name in field_cases else ('record.json',)
+                for name in names:
+                    source=run/name
+                    archive=destination/(directory.name+'-'+run.name+'-'+name+'.gz')
+                    with source.open('rb') as stream,gzip.GzipFile(filename=str(archive),mode='wb',mtime=0) as target:
+                        shutil.copyfileobj(fsrc=stream,fdst=target)
+                    manifest.append(dict(source=str(source),source_sha256=digest_file(path=source),
+                        archive=archive.name,archive_sha256=digest_file(path=archive)))
+    publish_json(path=destination/'manifest.json',value=manifest)
+
+
 if __name__ == "__main__":
     output=Path('validation/repair_review')
     sgs_summaries=((Path('outputs/sgs_qualification_cpu_final/summary.json'),output/'sgs_qualification_cpu.json'),
@@ -100,9 +122,12 @@ if __name__ == "__main__":
         nsight_systems=['/tmp/nsight-systems-2026/opt/nvidia/nsight-systems-cli/2026.5.1/target-linux-x64/nsys','--version'])
     profiler_download=Path('/tmp/nsight-systems-cli-2026.deb')
     profiler_url='https://developer.nvidia.com/nsight-systems/get-started'
+    completed_root=Path('outputs/qualification_optimized')
+    field_cases=('purau_event_72h',)
     for source,destination in sgs_summaries:compact_sgs(source=source,destination=destination)
     collect_profiles(pairs=pairs,csv_files=csv_files,destination=output/'profiles')
     for source,destination in performance_files:shutil.copyfile(src=source,dst=destination)
     retain_failures(paths=failures,destination=output/'failures')
     measure_shared_inputs(directory=input_directory,repeats=input_repeats,output=output/'shared_input_preparation.json')
     tool_versions(commands=commands,output=output/'toolchain.json',profiler_download=profiler_download,profiler_url=profiler_url)
+    archive_completed(root=completed_root,destination=output/'completed_runs',field_cases=field_cases)

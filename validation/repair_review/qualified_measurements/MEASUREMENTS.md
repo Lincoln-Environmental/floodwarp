@@ -1,6 +1,6 @@
 # Completed GPU measurements
 
-Status: partial. Pending cases: purau_event_72h.
+Status: complete. Pending cases: none.
 
 Median hydraulic runtime uses three short-case repetitions and one 72-hour event. Ratios use external LISFLOOD-FP FV1 GPU.
 
@@ -30,6 +30,9 @@ Median hydraulic runtime uses three short-case repetitions and one 72-hour event
 | purau_event | reference | 4.24057 | 5.88828 | 1 | 3600 | 1 | 182.173 | 182.173 |
 | purau_event | li | 4.25102 | 6.09029 | 1.002 | 3600 | 1 | 614.152 | 303.465 |
 | purau_event | fv1 | 3.00315 | 4.65022 | 0.7082 | 3600 | 1 | 234.859 | 234.858 |
+| purau_event_72h | reference | 1403.56 | 1493.19 | 1 | 816514 | 0.317447 | 182.173 | 182.173 |
+| purau_event_72h | li | 1019.46 | 1136.46 | 0.7263 | 694389 | 0.373278 | 614.152 | 303.465 |
+| purau_event_72h | fv1 | 1906.11 | 2015.52 | 1.358 | 1570053 | 0.16509 | 234.859 | 234.858 |
 | rain_infiltration | reference | 0.0137572 | 0.242218 | 1 | 60 | 1 | 0.078 | 0.078 |
 | rain_infiltration | li | 0.00685813 | 0.128802 | 0.4985 | 60 | 1 | 0.159 | 0.078 |
 | rain_infiltration | fv1 | 0.00329258 | 0.0933919 | 0.2393 | 60 | 1 | 0.066 | 0.066 |

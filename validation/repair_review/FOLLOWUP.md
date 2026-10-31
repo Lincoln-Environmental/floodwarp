@@ -1,9 +1,10 @@
 # Follow-up repair and qualification
 
-Status: hydraulic repairs pass the full pinned CPU/CUDA suites. The new
-restartable benchmark protocol has completed short cases and the full-domain
-one-hour case. Long benchmark and profiling qualification remain in progress;
-no pending measurement is an acceptance pass.
+Status: all ten benchmark/control cases have completed, including the three
+full-domain 72-hour runs and bounded 2.5 m/CFL controls. Hydraulic repairs
+pass the pinned CPU/CUDA suites. Completed measurements, physical disagreements
+and experimental SGS limitations are reported separately in
+[the final assessment](FINAL.md); completion does not imply hydraulic agreement.
 
 ## Controller and forcing repairs
 
@@ -43,7 +44,8 @@ recession with strict water accounting. This fix is pushed as `195ecb8`.
   benchmark restart tests. [JUnit evidence](final_full_cuda.xml).
 - Full CPU-only suite: **919 passed, 603 skipped**. CUDA skips are not CPU
   coverage. Numerical defaults, historical fixtures and strict/v1/v2 artifacts
-  remain preserved. Earlier failed follow-up logs are retained locally.
+  remain preserved. Earlier failed follow-up logs are retained in
+  [checksummed compressed archives](failures/manifest.json).
 - Analytical timestep/grid convergence and historical review reproductions:
   [analytical controls](analytical_convergence.json), [sensitivity](sensitivity.json)
   and the existing strict review results. The seven retained strict discrepancies
@@ -70,7 +72,7 @@ storage controller also reaches its configured minimum-step failure threshold
 in the ratio-2 coastal case at all three caps; that limitation is retained.
 Neither controller is declared generally qualified from speed or completion.
 
-## Retained 72-hour physical results
+## Historical recovered 72-hour physical results
 
 All three solvers reached 259,200 s on the same RTX 4070 Ti SUPER, 5 m terrain,
 domain, rainfall, exponential soil fields, roughness and coastal ports. The
@@ -92,6 +94,8 @@ splitting and timestep/grid effects require assessment; they are not excused
 as rounding. FV1's pre-interruption scalar samples are incomplete, so no
 whole-event FV1 peak-discharge/timing claim is made from this recovered run.
 LI's historical hourly hydrograph is identified as hourly evidence only.
+The fresh minute-sampled results in FINAL.md supersede these values for the
+primary performance and hydrograph comparison. Historical results remain intact.
 
 ## New benchmark protocol
 
@@ -143,7 +147,12 @@ not be compared across solvers as equivalent hydraulic workloads.
 prefixes directly from checkpoints, checking the physical inputs and controls.
 [Saved prefix comparison](progress_speed_comparison.json) records the measured
 gain and the changed hourly/minute output cadence, including extra accepted
-steps. Full-event gains are reported only when the requested event finishes.
+steps. The completed LI event used 1019.460 s versus 1071.396 s previously
+(4.85% less hydraulic time). This is an observed whole-event change, with
+minute instead of hourly scalar output and 694389 versus 692533 accepted
+steps; the controlled 10.7% workload comparison above isolates the optimisation.
+The old FV1 recovered timing includes a separately resumed tail and is not
+used as a clean before/after whole-event speed measurement.
 
 The [measurement tables](qualified_measurements/MEASUREMENTS.md) and their JSON
 record source snapshots, input signatures, repetition ranges and publication
@@ -171,3 +180,15 @@ to the bed precision before subtraction; the cast is an identity in FP64.
 Test volume tolerances now include state-precision roundoff scaled by supplied
 m³, while retaining the original FP64 bound. Mixed SGS remains unsupported by
 the existing constructors and is explicitly skipped rather than simulated.
+Conditioned mixed CUDA graphs now preload their LI kernel module explicitly,
+avoiding global eager compilation of imported, unsupported SGS modules. This
+also applies to spatial-LTS capture. Five coarse graph tests originally failed
+with an SGS type error; the same focused suite now passes 39 tests with 32
+unsupported-mode skips. The failure log is retained beside the passing evidence.
+
+[Original completed records](completed_runs/manifest.json) retain each short
+repetition and all minute scalar samples, source signatures and timing statistics
+as lossless gzip archives. Full-event final-depth and maximum-depth arrays are
+also archived byte-for-byte. Unpack a run's record and fields into their original
+names to reproduce its recorded checksums; large restart generations remain in
+the ignored local output directories.

@@ -33,18 +33,25 @@ direct checkpoints, enhanced-SGS state/rebuild safeguards, automatic public
 CUDA graph selection and LTS graph dependency tracking. Numerical defaults,
 reference fixtures and historical strict/v1/v2 evidence remain preserved.
 
-The follow-up pinned Python 3.14 suite passed 1,535 tests with 24 skips using
-opt-in FV1 CUDA controls and the adapted external reference; the separate
-CPU-only run passed 919 with 603 skips. Earlier passing logs remain preserved.
+The final pinned Python 3.14 suite passed 1,534 tests with 25 skips using
+opt-in FV1 CUDA controls; the separately invoked adapted external-reference
+moving-front restart test passed (its missing executable setting accounts for
+one full-suite skip). The CPU-only run passed 919 with 603 skips. Earlier
+passing logs remain preserved.
 Additional focused checks and fresh validation evidence are recorded in
 `validation/repair_review`. Both frozen v1/v2 analyses reproduce exactly.
 The repaired retained comparison cases pass 25/32 strict gates; the seven
 discrepancies remain visible and are assessed separately for engineering
-significance. Retained full-domain 72-hour hydraulic results now exist for all
-three solvers, including a checkpoint recovery after FV1's rainfall coverage
-error. Recovered timing is separate from the new minute-sampled benchmark
-protocol. See [follow-up qualification](../validation/repair_review/FOLLOWUP.md)
-for completed measurements, experimental SGS limits and pending work.
+significance. All three fresh full-domain 72-hour runs now complete with
+minute hydrographs, validated accounting and source/checksum-bound records.
+Hydraulic times are 1403.559 s for external LISFLOOD-FP FV1, 1906.106 s for
+FloodWarp FV1 and 1019.460 s for LI on the same RTX 4070 Ti SUPER. FV1 final
+depth RMSE is 0.241 mm; LI final RMSE is 3.616 mm and its maximum-envelope
+RMSE is 0.256 m, a material limitation. The bounded 2.5 m/CFL controls and
+restart tests are complete; no full-domain 2.5 m event is claimed. See
+[the final assessment](../validation/repair_review/FINAL.md) for physical,
+runtime, memory, experimental SGS and reproducibility evidence. Historical
+recovered timings and hourly outputs remain separately identified.
 
 ## Removed dependencies and interfaces
 
@@ -95,9 +102,12 @@ separately; the research environment was not upgraded.
    survey per pixel. Absolute elevations are unchanged; external absolute-stage
    use requires verification. No invented terrain or single-survey claim is made.
 3. **Independent validation is not universal parity.** Six physical-LI and one
-   ACC-compatible case fail frozen gates, principally wet/dry classification.
-   FV1 field/export gates pass on 16 controls, but independent FV1 grid refinement,
-   resolved temporal depths and instantaneous outlet hydrographs remain missing.
+   ACC-compatible historical case fail frozen gates, principally wet/dry
+   classification. New bounded FV1 grid/CFL controls and minute interval-mean
+   outlet hydrographs extend the original 16 controls. Instantaneous discharge,
+   fine temporal depth fields and a full-domain 2.5 m event remain missing.
+   LI has material peak/max-depth differences on the fresh Purau event; its
+   faster runtime is not a hydraulic-accuracy pass.
 4. SGS remains explicitly experimental. FV1's finite-velocity ghost closure
    still has the documented supercritical/incoming-momentum limitations.
    Time-varying FV1 stages use host stepping; constant-stage graphs are retained.
