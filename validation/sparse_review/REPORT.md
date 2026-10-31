@@ -69,6 +69,12 @@ slowdown and unsuccessful 32-cell configurations are retained. Short-window
 ratios are not an event speedup claim. A complete matched event is a separate
 qualification task; no sparse/AMR speedup multiplication is valid.
 
+The subsequent [complete 72-hour event](FULL_EVENT.md) now passes all 72 hourly
+field checks exactly, with 1,570,053 accepted steps and 1,641.957 s hydraulic
+time versus the retained 1,906.106 s dense control (1.161×). The full record,
+restart proof, phase costs, timing-scope limitations and runtime sources are
+retained separately; the original short-window evidence above is unchanged.
+
 Sparse storage and static multiresolution are separate stage decisions. A
 conservative-state-only pool could save at most a small fraction of total
 allocation during widespread runoff; face scratch is the more substantial

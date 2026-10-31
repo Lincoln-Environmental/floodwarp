@@ -133,3 +133,20 @@ def test_execution_options_reject_invalid_settings():
         solver.configure_execution(mode='sparse', tile_size=4)
     with pytest.raises(ValueError, match='dense_fraction'):
         solver.configure_execution(mode='sparse', dense_fraction=0.)
+
+
+@pytest.mark.parametrize('device', ('cpu', 'cuda:0'))
+def test_fully_infiltrating_rain_retains_source_aware_cfl(device):
+    if device != 'cpu' and not wp.is_cuda_available():
+        pytest.skip('CUDA unavailable')
+    dense = make_solver(device=device, case='infiltrating', mode='dense', tile_size=8, dense_fraction=.65)
+    sparse = make_solver(device=device, case='infiltrating', mode='sparse', tile_size=8, dense_fraction=.65)
+    dense.maximum_dt = 100.
+    sparse.maximum_dt = 100.
+    dt = dense.step()
+    assert dt == sparse.step()
+    assert dt < 1.
+    assert sparse.execution_diagnostics()['work_tiles'] == 0
+    assert not sparse.get_water_depth().any()
+    assert sparse.cumulative_infiltration_m().sum() > 0.
+    assert_equivalent(dense=dense, sparse=sparse)
