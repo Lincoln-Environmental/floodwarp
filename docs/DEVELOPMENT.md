@@ -49,6 +49,27 @@ Patrick Durney / Lincoln Agritech Ltd attribution and CC BY 4.0 elevation
 credits. The owner controls repository visibility. Research-grade release does
 not imply universal hydraulic qualification.
 
+## Sparse uniform FV1 in v0.1.1
+
+Native `FullSWESolver`, the solver factory and `create_model` select exact-zero
+sparse execution with `tile_size=8` and `dense_fraction=0.65` for FV1. Use
+`execution_mode='dense'` at construction or
+`solver.configure_execution(mode='dense')` for the retained reference.
+`solver.configure_execution(mode='sparse', tile_size=8)` restores sparse
+scheduling. Both retain dense state, unchanged sources, full-domain CFL and
+portable checkpoints. Activity is rebuilt after every source update. At high
+work-tile occupancy the scheduler uses dense indexing; explicit dense mode
+also removes scheduling overhead. `execution_diagnostics()` explicitly reads
+device work counts; the step loop does not read them back.
+
+The [completed event](../validation/sparse_review/FULL_EVENT.md) retained every
+hourly field and 1,570,053 steps while using 1641.957 s hydraulic time versus
+1906.106 s for the retained same-device dense run. This is one full candidate
+run, not repeated interleaved events. High-occupancy windows can be slower.
+Static/dynamic AMR, wavelets, sparse allocation, mixed-precision FV1 and new
+performance experiments belong on dev and are excluded from v0.1.1. Neither
+the v0.1.0 tag nor its immutable datasets are changed.
+
 ## Versioned LI review
 
 The additive [LI parity and engineering review](../validation/li_review_v1/REPORT.md)

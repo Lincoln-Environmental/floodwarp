@@ -1,6 +1,6 @@
 # FloodWarp
 
-**FloodWarp v0.1.0** is research-grade surface-water simulation software for
+**FloodWarp v0.1.1** is research-grade surface-water simulation software for
 CPU and NVIDIA CUDA. Copyright **Patrick Durney and Lincoln Agritech Ltd**.
 Software is **[GNU AGPL-3.0-only](LICENSE)**; attributed elevation data retain
 CC BY 4.0. FV1 is an independent FP64 first-order finite-volume full
@@ -8,6 +8,10 @@ shallow-water solver. LI is a reduced-complexity local-inertial alternative.
 Traditional and enhanced SGS modes remain explicitly experimental.
 Independent benchmark and analytical evidence do not establish universal
 hydraulic qualification.
+
+Read the **[disclaimer and responsible-use guidance](DISCLAIMER.md)** before
+interpreting results. Research demonstration only — not an official flood-hazard
+assessment. Independent site-specific validation is required before decision-making.
 
 ## Install and quick start
 
@@ -33,6 +37,11 @@ installation or external solver executable is required.
 
 Use `solver_method='fv1'` or `'li'` with `create_model`. FV1 defaults to contact
 HLL, velocity-extrapolated stages and FP64; LI defaults to the physical profile.
+FV1 now uses exact-zero sparse execution with 8×8 tiles and `dense_fraction=0.65`.
+It retains dense uniform-grid state, full-domain sources and CFL, all numerical
+operators and accounting. Pass `execution_mode='dense'` through either factory
+or the native constructor for the retained dense reference. Scheduling can
+switch without changing the numerical configuration or checkpoint identity.
 The [input guide](docs/INPUTS.md) covers arrays, rainfall, infiltration, boundaries,
 raster datum/mask handling and restart. [run_direct.py](examples/run_direct.py)
 is an editable GeoTIFF example. The historical `run_purau` command is a separate
@@ -47,6 +56,9 @@ model-domain measurements, not a claim of complete geographical catchment
 coverage. Coordinates are NZTM2000 / EPSG:2193; elevations are metres NZVD2016.
 
 ![Orton Bradley Park — 5 m model terrain](examples/orton_bradley/figures/orton_bradley_dem.png)
+
+*Research demonstration only — not an official flood-hazard assessment.
+Independent site-specific validation is required before decision-making.*
 
 Download the [complete data and reproduction archive](https://github.com/Lincoln-Environmental/floodwarp/releases/download/v0.1.0/orton_bradley_v0.1.0.tar.gz),
 [full DEM GeoTIFF](https://github.com/Lincoln-Environmental/floodwarp/releases/download/v0.1.0/orton_bradley_dem_5m.tif),
@@ -67,6 +79,9 @@ conversion error.
 
 ![Full-domain maximum-depth and extent comparison](examples/orton_bradley/figures/orton_bradley_fv1_comparison_001m.png)
 
+*Research demonstration only — not an official flood-hazard assessment.
+Independent site-specific validation is required before decision-making.*
+
 FV1 maximum-envelope RMSE is **0.001435 m**, maximum absolute difference is
 **0.119908 m**, and maximum-event extent IoU is **0.998711 at 0.01 m** and
 **0.995776 at 0.10 m**. Final-depth RMSE is 0.0002405 m; final wet-union RMSE
@@ -78,6 +93,9 @@ extrema, false-positive/negative areas, source/export differences and balances.
 ## Full-event hydrographs
 
 ![Full 72-hour hydrographs and peak detail](examples/orton_bradley/figures/orton_bradley_hydrographs_72h.png)
+
+*Research demonstration only — not an official flood-hazard assessment.
+Independent site-specific validation is required before decision-making.*
 
 | Completed matched run | LISFLOOD-FP FV1 | FloodWarp FV1 | FloodWarp LI |
 |---|---:|---:|---:|
@@ -93,6 +111,17 @@ normalised by reference peak; peak magnitude error is −0.192%, timing error +6
 End-to-end component timing includes diagnostics/checkpoints but excludes some
 publication overhead. These are single completed runs, not a repeated hardware
 performance survey.
+
+The separate completed exact-sparse replay used **1641.957 s hydraulic time**
+versus **1906.106 s** dense, a **13.9% runtime reduction** on the same device.
+It retained **1,570,053 accepted steps** and zero numerical field differences
+at all 72 recorded hourly comparisons, including sources, face volumes and
+maxima. This was **one candidate event run against the retained same-device
+dense benchmark**, not repeated interleaved full events. Short saved-state
+controls had warm-up and three repetitions. Widespread-runoff windows can be
+slower; dense indexing fallback and explicit dense execution remain available.
+See [complete evidence and phase timings](validation/sparse_review/FULL_EVENT.md).
+The versioned v0.1.0 numerical datasets and original timing table are unchanged.
 
 LI is faster here but has **0.25638 m maximum-envelope RMSE**, maximum-event
 IoU **0.497596 at 0.01 m**, and a peak 12.81% higher and 240 s earlier.
@@ -118,7 +147,8 @@ use velocity extrapolation. Established design rainfall lasts 48 hours, with
 recession to 72 hours. Manning and exponential-soil mappings are assumptions
 requiring site calibration. Reference agreement is numerical context, not a
 calibrated flood forecast or qualification of every closure/scenario. SGS is
-experimental. Sparse FV1, AMR and mixed-precision FV1 are outside v0.1.
+experimental. Static/dynamic AMR, wavelets and mixed-precision FV1 are excluded
+from v0.1.1 and remain separate development research.
 
 See [release status](docs/RELEASE_STATUS.md), [numerical assessment](validation/repair_review/FINAL.md),
 [changelog](CHANGELOG.md), [attribution](THIRD_PARTY_NOTICES.md) and

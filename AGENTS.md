@@ -17,4 +17,6 @@ Avoid argparse, lambdas and path injection. Keep source provenance current.
 The rights holders authorised the v0.1 AGPL-3.0-only public release. Retain
 Patrick Durney / Lincoln Agritech Ltd attribution and separate CC BY 4.0 data
 credits. Research-grade release does not imply universal hydraulic qualification.
-Sparse FV1, AMR and further optimisation are outside the v0.1 release scope.
+v0.1.1 includes validated exact-sparse uniform FV1 with dense override.
+Static/dynamic AMR, wavelets, mixed-precision FV1 and further optimisation
+remain separate research on dev and are excluded from this release.

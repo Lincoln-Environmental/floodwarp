@@ -23,7 +23,18 @@ def load_forcing(*, path):
     return times, rates, values
 
 
+def sample_targets(*, duration, interval):
+    """Include the exact requested final time, without duplicates or overshoot."""
+    if not np.isfinite([duration, interval]).all() or min(duration, interval) <= 0.:
+        raise ValueError('Positive finite duration and sample interval required')
+    interior = np.arange(1, int(np.floor(duration / interval)) + 1, dtype=np.float64) * interval
+    return np.r_[interior[interior < duration], float(duration)]
+
+
 def run(*, directory, output, method, device, duration, sample_interval, maximum_dt):
+    targets = sample_targets(duration=duration, interval=sample_interval)
+    if output.exists() and any(output.iterdir()):
+        raise ValueError('Replay starts fresh; use an empty output directory. Checkpoint restoration is explicit.')
     terrain = read_terrain(path=directory / 'outputs/orton_bradley_dem_5m.tif', vertical_datum='NZVD2016')
     times, rates, fields = load_forcing(path=directory / 'inputs/inputs_f64.bin')
     np.testing.assert_array_equal(actual=fields[0].astype(bool), desired=terrain.active)
@@ -52,13 +63,14 @@ def run(*, directory, output, method, device, duration, sample_interval, maximum
     model.solver.set_rainfall_spatial_multiplier(multiplier=fields[1])
     output.mkdir(parents=True, exist_ok=True)
     ledger = []
-    for target in np.arange(sample_interval, duration + sample_interval / 2., sample_interval):
-        advance(model=model, end_time=min(float(target), duration))
+    for target in targets:
+        advance(model=model, end_time=float(target))
         ledger.append(diagnostics(model=model))
         if target % 3600. == 0. or target >= duration:
             save_checkpoint(model=model, path=output / 'restart.npz')
             (output / 'ledger.json').write_text(json.dumps(ledger, indent=2) + '\n')
     np.savez_compressed(file=output / 'fields.npz', depth=model.solver.get_water_depth(), maximum=model.solver.get_max_water_depth())
+    return model
 
 
 if __name__ == "__main__":

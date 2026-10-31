@@ -35,6 +35,16 @@ walls, finite-velocity stages and contact-upwind HLL. Historical
 Factory timestep defaults remain 0.001–60 s; the native FV1 class retains its
 own 0–1 s defaults. Minimum timestep guards never authorise exceeding CFL.
 
+v0.1.1 FV1 defaults to exact-zero sparse execution on the same uniform grid,
+with dense FP64 state, 8×8 tiles and a 0.65 dense-indexing fallback fraction.
+Native and factory constructors accept `execution_mode='dense'` to use the
+retained reference without scheduling overhead. `tile_size` (8, 16 or 32)
+and `dense_fraction` tune scheduling only. Existing uniform solvers can switch
+with `solver.configure_execution(mode='dense'|'sparse', tile_size=8)`.
+Full-domain source/soil updates and CFL remain unchanged, including dry cells
+where rain infiltrates. Positive shallow water is retained exactly. Checkpoints
+are portable in both directions and reconstruct scheduling caches after restore.
+
 ## Forcing and infiltration
 
 `rainfall` accepts a constant or spatial rate field. `rainfall_series=(times,
