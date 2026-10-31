@@ -40,4 +40,15 @@ An affine free-surface diagnostic preserves parent volume, nonnegative represent
 
 ## Stage decision and measured bottlenecks
 
+Separate allocation probes cover every larger-case/block configuration.
+Static additional live allocator peaks range from 76,906,396 to 78,981,788 B;
+memory.json reports persistent bytes, the resident dense source-model bytes and
+whole-process allocator peaks separately. CUDA context/code/reserved memory is
+excluded. These probes are independent of timing and profiling.
+
+For B=4, instrumented restriction/projection costs approximately 79.4 µs/step
+in the lake, 72.3 µs in the front and 80.3 µs in the protected channel; unchanged
+fine CFL/source work costs another 124.0, 108.4 and 109.1 µs respectively.
+These are host-launch CUDA-event attributions, not graph throughput timings.
+
 Static research remains experimental. Larger broad-water controls pass their bounded accuracy/runtime budgets, while narrow-channel runtime and real-terrain representability/source screens remain substantive limitations. Fine restriction/projection and fine source work are separately profiled; leaf-native hydraulics with persistent fine soil/history is the next representation task. Further work needs topology/connectivity safeguards, positivity-preserving surface-gradient transfers and matching coarse/fine subface and donor-budget controls. Fine source availability beneath a coarse state is a separate numerical choice, not parameter averaging. No full-domain static event or dynamic adaptation is promoted. Sparse storage, mixed precision and temporal subcycling remain separate gates.
