@@ -2,6 +2,11 @@
 
 ## 0.2.0.dev0 — development only
 
+- Larger static controls and curved-terrain reconstruction diagnostics retain
+  the original failed small-case evidence. Broad 512×512 controls improve
+  accuracy/runtime cost; the protected channel and real-terrain representation
+  remain limitations. Affine free-surface screening is diagnostic only.
+  Static methods remain experimental and dynamic AMR is not enabled.
 - Retain independently measured released-tile scratch clearing and fused
   source/activity detection. Six interleaved saved-state phases preserve all
   fields and accepted steps; wet-phase hydraulic time falls about 7–8% versus

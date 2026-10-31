@@ -104,6 +104,18 @@ and sparse allocation are deferred at their measured stage gates. No sparse/AMR
 speedups are multiplied. Static/adaptive research does not change the stable
 v0.1.1 tag/main; dev uses the distinct version 0.2.0.dev0.
 
+The subsequent [reconstruction investigation](../validation/static_reconstruction_review/REPORT.md)
+adds 512×512 controls: broad coarsenable water gives 1.12–1.44× speedup, while
+the protected narrow channel remains slightly slower. The original failed
+64×64 results are preserved. A smooth curved-lake control remains in equilibrium
+when an explicit small affine-fit tolerance admits it. Saved Orton Bradley
+states show that constant-surface reconstruction and the current source/history
+vetoes still prevent useful qualified coarsening. An affine-surface diagnostic
+improves representability, but requires additional degrees of freedom and
+separate connectivity/source/interface validation. It is not implemented in
+the static solver. Dynamic AMR remains deferred; no production mask uses these
+offline screens or future inundation fields.
+
 ## Versioned LI review
 
 The additive [LI parity and engineering review](../validation/li_review_v1/REPORT.md)
