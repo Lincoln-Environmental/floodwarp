@@ -1,5 +1,10 @@
 # Orton Bradley Park — complete 5 m model demonstration
 
+**Research demonstration only — not an official flood-hazard assessment.
+Independent site-specific validation is required before decision-making.**
+See the [software disclaimer](../../DISCLAIMER.md) and
+[notice accompanying all geospatial products and figures](OUTPUT_NOTICE.md).
+
 Orton Bradley Park, Banks Peninsula, Canterbury, New Zealand. This is the
 **entire established model raster**, 1123 north–south rows × 843 east–west
 columns at 5 m: 23.667225 km² raster footprint, 559,985 active hydraulic cells
@@ -48,14 +53,13 @@ is verified against original georeferencing; no interpolation or resampling occu
 
 ## GIS products
 
-The local example directory is `examples/orton_bradley/outputs/`: it contains
-all 14 aligned GeoTIFFs, including the DEM, FV1/LI/reference maximum depths,
-signed differences and extent classifications, plus the hydrograph CSV,
-boundaries, provenance and checksums. Generated data directories are ignored
-by Git; the downloadable release archive supplies these files for a fresh clone.
-After extracting the archive, copy its `outputs/` contents into this example's
-`outputs/` directory to use the same layout. Keep the archive's complete
-`inputs/` and `results/` alongside it when regenerating products.
+The local example directory is `examples/orton_bradley/outputs/`. Its 14 aligned
+GeoTIFFs, hydrographs, boundaries, provenance and checksums are supplied in the
+unchanged v0.1.0 release archive. Generated data are Git-ignored; copy the
+archive's `outputs/` contents here for a fresh checkout. Keep its complete
+`inputs/` and `results/` alongside them when regenerating figures and tables.
+v0.1.1 links these immutable products without rewriting their values or metadata;
+OUTPUT_NOTICE.md accompanies their interpretation.
 
 Individual files are also available on the [release page](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.0):
 
@@ -86,6 +90,15 @@ maxima are not simultaneous water storage.
 
 ## Interpretation and controls
 
+The Orton Bradley demonstration compares uncalibrated local-inertial and full
+shallow-water formulations over steep terrain. Both conserve mass within their
+recorded numerical tolerances, yet substantial differences occur in predicted
+maximum inundation depths and extents. These results highlight limitations of
+relying on reduced-complexity hydraulics in rapidly varying terrain, where
+calibration against outlet discharge alone may conceal spatial inundation
+errors. This comparison is not an outlet-calibration experiment and does not
+isolate terrain or formulation as the sole cause of the differences.
+
 See [COMPARISON.md](COMPARISON.md) for active-domain RMSE, wet-union errors,
 maximum-event IoU, false-positive/negative areas, export/infiltration differences,
 independent peak magnitude/timing errors and water balances. Full machine-readable
@@ -109,6 +122,19 @@ dependency or bundled implementation.
 after installing FloodWarp. Its default is the substantial full 72-hour FV1
 simulation on CUDA, with minute diagnostics and hourly checkpoints. It is
 deliberately separate from `reproduce.py` and normal installation tests.
+
+v0.1.1 uses exact-sparse scheduling for FV1; the original v0.1.0 demonstration
+remains the dense numerical reference. The replay reaches the exact requested
+end time even if its duration is shorter than or not divisible by the output
+interval, and always saves the final checkpoint and diagnostic ledger.
+
+The standalone replay **starts fresh and does not resume automatically**.
+It refuses a nonempty output directory. To recover an interrupted simulation,
+explicitly restore its checkpoint with `floodwarp.model.load_checkpoint` into
+an identically configured model, including sources and soil parameters, before
+calling `advance` with the desired absolute end time. The native FV1 checkpoint
+is portable between sparse and dense execution; changing scheduling does not
+change restart identity. The standalone script has no resume option.
 
 Elevation data credit and licence: [DATA_LICENSE.md](DATA_LICENSE.md).
 Software copyright Patrick Durney and Lincoln Agritech Ltd, AGPL-3.0-only.

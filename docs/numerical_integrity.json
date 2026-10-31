@@ -112,7 +112,7 @@
     "change": "Preload only LI kernels for supported conditioned mixed-precision graphs, avoiding unrelated unsupported SGS modules in global eager loading. Applied to device-loop and LTS captures.",
     "benchmark_source_note": "FP64 graph preload choices and all hydraulic operators are unchanged; existing benchmark source snapshots retain their original identities."
   },
-  "sparse_execution_audit": "FV1 face/draining/limiting/update bodies extracted unchanged into shared indexed functions; dense wrappers and experimental sparse scheduler call the same operators. Full-domain source/CFL kernels unchanged. See validation/sparse_review/REPORT.md.",
+  "sparse_execution_audit": "FV1 face/draining/limiting/update bodies extracted unchanged into shared indexed functions; dense and exact-sparse schedulers call the same operators. Full-domain source/CFL kernels unchanged. Default sparse tile_size=8, dense_fraction=0.65. See validation/sparse_review/FULL_EVENT.md and validation/release_v0.1.1/REPORT.md.",
   "experimental_static_fv1_audit": {
     "scope": "Independent spatial approximation on fixed 2:1 leaf volumes. Dense/sparse uniform operators unchanged. Fine subface HLL reused; shared coarse donor budgets; immutable finest DEM; fine source history. Runtime gate failed, dynamic adaptation deferred.",
     "sources": {
@@ -131,5 +131,23 @@
     },
     "evidence": "validation/sparse_review/DEFAULT_PROMOTION.md",
     "timing_provenance": "Existing matched 72-hour replay and source snapshots remain unchanged; no new full-event timing is claimed."
+  },
+  "sparse_default_release_audit": {
+    "version": "0.1.1",
+    "sources": {
+      "full_swe_solver.py": "317e72e78bedbffe2607814862fdd65a7cad39e8fb091c5a43b5a0d2c6e9d758",
+      "full_swe_kernels.py": "854e7777e2e471117a0b461496ebe063abd9ea559dd8a15488c96ae328706689",
+      "sparse_fv1.py": "9f06962486f977750e1b00e5bd2c8209802beacb4ae112804f43bdea6a48b6ae",
+      "sparse_fv1_kernels.py": "eca693d8e9d79bb1a0ad3c77e21d98d8a17bf0387b22d973866767d6cfdb7334"
+    },
+    "evidence": "validation/release_v0.1.1/REPORT.md",
+    "baseline": "v0.1.0 and all immutable benchmark/data records preserved",
+    "exclusions": [
+      "static_fv1",
+      "dynamic AMR",
+      "wavelets",
+      "mixed-precision FV1",
+      "additional performance changes"
+    ]
   }
 }

@@ -6,6 +6,7 @@ import tomllib
 import numpy as np
 import pytest
 
+from floodwarp import __version__
 rasterio = pytest.importorskip('rasterio')
 pytest.importorskip('matplotlib')
 from rasterio.transform import Affine
@@ -17,7 +18,8 @@ def test_public_license_and_version_metadata():
     root = Path(__file__).resolve().parents[1]
     project = tomllib.loads((root / 'pyproject.toml').read_text())['project']
     assert project['license'] == 'AGPL-3.0-only'
-    assert project['version'] == '0.1.0'
+    assert project['version'] == __version__
+    assert 'DISCLAIMER.md' in project['license-files']
     assert {author['name'] for author in project['authors']} == {'Patrick Durney', 'Lincoln Agritech Ltd'}
     license_text = (root / 'LICENSE').read_text()
     assert 'GNU AFFERO GENERAL PUBLIC LICENSE' in license_text

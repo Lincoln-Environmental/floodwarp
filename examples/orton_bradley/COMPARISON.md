@@ -1,5 +1,18 @@
 # Orton Bradley Park — complete 5 m, 72-hour comparison
 
+**Research demonstration only — not an official flood-hazard assessment.
+Independent site-specific validation is required before decision-making.**
+See the [developer disclaimer](../../DISCLAIMER.md).
+
+The Orton Bradley demonstration compares uncalibrated local-inertial and full
+shallow-water formulations over steep terrain. Both conserve mass within their
+recorded numerical tolerances, yet substantial differences occur in predicted
+maximum inundation depths and extents. These results highlight limitations of
+relying on reduced-complexity hydraulics in rapidly varying terrain, where
+calibration against outlet discharge alone may conceal spatial inundation
+errors. This comparison is not an outlet-calibration experiment and does not
+isolate terrain or formulation as the sole cause of the differences.
+
 Maximum inundation is calculated directly from each pointwise maximum-depth envelope. Δh_max is FloodWarp FV1 maximum minus LISFLOOD-FP FV1 maximum; it is not a maximum instantaneous difference.
 
 Grid: 1123 × 843 at 5 m; 559,985 physical cells; active area 13.999625 km²; raster footprint 23.667225 km². The model domain is not asserted to contain the entire geographical catchment.

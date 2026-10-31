@@ -1,14 +1,33 @@
 # Changelog
 
-## Unreleased — dev
+## 0.2.0.dev0 — development only
 
-- Default FV1 execution now uses validated exact-zero 8×8 sparse scheduling
-  with dense FP64 storage and the existing uniform-grid numerical methods.
-  The matched 72-hour Orton Bradley event retained all hourly fields exactly
-  and reduced hydraulic runtime by 13.9% on RTX 4070 Ti SUPER. High-occupancy
-  windows can be slower; `execution_mode='dense'` selects the retained reference.
-- CPU/CUDA native and factory defaults, dense opt-in and cross-mode restart
-  are covered by regressions. Static multiresolution remains experimental.
+- Merge v0.1.1 release fixes and formulation-interpretation guidance forward,
+  preserving experimental static-mesh evidence and the production sparse FV1
+  default. New performance and adaptive-resolution research remains on dev.
+- Agent instruction files remain ignored and local; production release tags
+  and immutable benchmark datasets are preserved.
+
+## v0.1.1
+
+- Exact-zero 8×8 sparse execution is now the FV1 default, with dense FP64
+  storage, the existing uniform-grid numerical formulation and explicit
+  `execution_mode='dense'` reference/fallback. Full-domain sources and CFL,
+  conservative transport, maxima and restart identity are preserved.
+- The complete matched 72-hour event retained 1,570,053 steps and all recorded
+  hourly fields. Hydraulic time was 1641.957 s versus 1906.106 s dense on the
+  same RTX 4070 Ti SUPER, a 13.9% reduction. This is one candidate event against
+  a retained dense run; high-occupancy windows can be slower.
+- Research-software disclaimer and responsible-use guidance, accompanying
+  geospatial/figure notice and inclusion in built distributions. AGPL-3.0-only
+  and separate elevation-data terms are unchanged.
+- Standalone replay includes the exact final time for short and non-divisible
+  durations, saves the final checkpoint and refuses to overwrite a prior run.
+  Checkpoint restoration remains explicit; no automatic-resume claim is made.
+- Original v0.1.0 tag, data assets, numerical arrays and source snapshots are
+  preserved. Static/dynamic AMR, wavelets and mixed-precision FV1 are excluded.
+- Agent instruction files remain local and are excluded from tracked release
+  contents and distributions.
 
 ## v0.1.0
 

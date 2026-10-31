@@ -77,3 +77,11 @@ storage or AMR. The original gate and reports above describe the staged
 investigation. The [promotion record](../validation/sparse_review/DEFAULT_PROMOTION.md)
 records current defaults and regression checks; original timed source snapshots
 and the fixed v0.1.0 release are preserved.
+
+## v0.1.1 release scope
+
+The release ports the validated exact-sparse uniform implementation and its
+evidence from dev without the experimental static mesh. The same 8×8/0.65
+configuration is the release default, with explicit dense override and portable
+checkpoints. The fixed v0.1.0 baseline and datasets remain unchanged. Additional
+performance changes and all adaptive-resolution research stay on dev.

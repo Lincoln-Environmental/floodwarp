@@ -57,10 +57,16 @@ def test_default_sparse_matches_explicit_dense_and_restart(device, entrypoint, t
     restarted = make_public_solver(entrypoint=entrypoint, device=device,
         execution_options=dict(execution_mode='dense'))
     restarted.load_checkpoint(path=checkpoint)
-    for solver in (default, dense, restarted):
+    dense_checkpoint = tmp_path / 'dense.npz'
+    dense.save_checkpoint(path=dense_checkpoint)
+    restarted_default = make_public_solver(entrypoint=entrypoint, device=device, execution_options={})
+    restarted_default.load_checkpoint(path=dense_checkpoint)
+    for solver in (default, dense, restarted, restarted_default):
         solver.run_device_loop(duration=.1)
+        assert solver.time == .2
     assert_equivalent(dense=dense, sparse=default)
     assert_equivalent(dense=restarted, sparse=default)
+    assert_equivalent(dense=dense, sparse=restarted_default)
 
 
 def make_solver(*, device, case, mode, tile_size, dense_fraction):

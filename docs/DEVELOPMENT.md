@@ -68,8 +68,8 @@ See [design and stage gates](SPARSE_FV1_DESIGN.md) and
 
 The [matched 72-hour replay](../validation/sparse_review/FULL_EVENT.md) now
 retains exact hourly dense-state agreement and measured 1.161× hydraulic
-speedup. Widespread-runoff windows remain slower. The default promotion is
-on dev and excluded from the fixed v0.1.0 release. See the
+speedup. Widespread-runoff windows remain slower. The validated sparse default
+is included in v0.1.1; the fixed v0.1.0 baseline is preserved. See the
 [promotion checks](../validation/sparse_review/DEFAULT_PROMOTION.md).
 
 ## Experimental fixed block FV1
@@ -91,7 +91,8 @@ The [static controls and stage decision](../validation/static_review/REPORT.md)
 retain conservative/equilibrium/restart evidence and a 17–40% runtime regression
 on bounded controls. Static execution remains experimental; dynamic adaptation
 and sparse allocation are deferred at their measured stage gates. No sparse/AMR
-speedups are multiplied, and neither method changes the v0.1.0 tag/main.
+speedups are multiplied. Static/adaptive research does not change the stable
+v0.1.1 tag/main; dev uses the distinct version 0.2.0.dev0.
 
 ## Versioned LI review
 
