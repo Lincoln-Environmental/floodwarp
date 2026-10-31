@@ -1,4 +1,4 @@
-"""Experimental execution-only scheduling with persistent dense FV1 fields."""
+"""Exact-zero execution scheduling with persistent dense uniform FV1 fields."""
 
 import numpy as np
 import warp as wp
@@ -80,7 +80,7 @@ class SparseFV1Execution:
             cells = int(np.sum(heights * widths))
             fx = int(cells + np.sum(heights[columns + widths == solver.nx]))
             fy = int(cells + np.sum(widths[rows + heights == solver.ny]))
-        return dict(execution='experimental_sparse_uniform', tile_size=self.tile_size,
+        return dict(execution='sparse_uniform', tile_size=self.tile_size,
                     seed_tiles=int(np.count_nonzero(self.flags.numpy())), work_tiles=count,
                     total_tiles=self.tile_count, dense_fallback=fallback,
                     evaluated_cells=cells, evaluated_faces_x=fx, evaluated_faces_y=fy,

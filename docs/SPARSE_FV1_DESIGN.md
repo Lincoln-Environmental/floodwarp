@@ -67,3 +67,13 @@ The first implementation adds scheduling memory; it makes no sparse-storage clai
 No completed maximum-depth or future inundation field may determine a production
 activity/refinement mask. Retained checkpoints are only initial replay states
 and measurement inputs.
+
+## Default promotion on dev
+
+After the matched 72-hour replay and explicit user authorisation, the uniform
+FV1 default is now 8×8 sparse execution with dense fallback at 65% tile
+occupancy. This fulfils the first execution gate; it does not qualify sparse
+storage or AMR. The original gate and reports above describe the staged
+investigation. The [promotion record](../validation/sparse_review/DEFAULT_PROMOTION.md)
+records current defaults and regression checks; original timed source snapshots
+and the fixed v0.1.0 release are preserved.

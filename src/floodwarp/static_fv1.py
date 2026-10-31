@@ -95,7 +95,8 @@ class StaticBlockFV1Solver(FullSWESolver):
             surface_tolerance=surface_tolerance, momentum_tolerance=momentum_tolerance,
             geometry_tolerance=geometry_tolerance, source_tolerance=source_tolerance, requested_roots=requested_roots)
         result = cls(**solver._configuration(), bed_elevation=solver._fields['bed'].numpy().reshape(solver._shape),
-            manning_n=solver._fields['manning'].numpy().reshape(solver._shape), active_mask=solver._active, device=solver.device)
+            manning_n=solver._fields['manning'].numpy().reshape(solver._shape), active_mask=solver._active,
+            device=solver.device, execution_mode='dense')
         result.restore_state(state=state)
         configuration = dict(block_size=block_size, surface_tolerance=surface_tolerance,
             momentum_tolerance=momentum_tolerance, geometry_tolerance=geometry_tolerance,
@@ -110,7 +111,7 @@ class StaticBlockFV1Solver(FullSWESolver):
         result._fields['maximum'].assign(np.maximum(state['arrays']['maximum'], projected[:, 0]))
         return result
 
-    def configure_execution(self, *, mode, tile_size=16, dense_fraction=.65):
+    def configure_execution(self, *, mode, tile_size=8, dense_fraction=.65):
         if mode != 'dense':
             raise ValueError('Combined static/sparse execution is not qualified')
         super().configure_execution(mode=mode, tile_size=tile_size, dense_fraction=dense_fraction)

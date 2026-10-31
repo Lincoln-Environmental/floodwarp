@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — dev
+
+- Default FV1 execution now uses validated exact-zero 8×8 sparse scheduling
+  with dense FP64 storage and the existing uniform-grid numerical methods.
+  The matched 72-hour Orton Bradley event retained all hourly fields exactly
+  and reduced hydraulic runtime by 13.9% on RTX 4070 Ti SUPER. High-occupancy
+  windows can be slower; `execution_mode='dense'` selects the retained reference.
+- CPU/CUDA native and factory defaults, dense opt-in and cross-mode restart
+  are covered by regressions. Static multiresolution remains experimental.
+
 ## v0.1.0
 
 Research-grade standalone CPU/CUDA LI and FP64 full shallow-water FV1, copyright

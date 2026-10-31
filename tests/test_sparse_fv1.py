@@ -6,7 +6,61 @@ import numpy as np
 import pytest
 import warp as wp
 
+from floodwarp import create_overland_solver
 from floodwarp.full_swe_solver import FullSWESolver
+from floodwarp.inputs import terrain_from_array
+from floodwarp.model import create_model
+
+
+def make_public_solver(*, entrypoint, device, execution_options):
+    shape = (73, 91)
+    bed = np.zeros(shape=shape)
+    if entrypoint == 'model':
+        terrain = terrain_from_array(elevation=bed, dx=1., dy=1.3,
+            row_order='south_to_north', vertical_datum='local')
+        solver = create_model(terrain=terrain, solver_method='fv1', device=device,
+            explicit_minimum_dt=0., explicit_maximum_dt=.1, **execution_options).solver
+    else:
+        common = dict(ny=shape[0], nx=shape[1], dx=1., dy=1.3, bed_elevation=bed,
+            manning_n=.03, active_mask=np.ones(shape=shape, dtype=bool), device=device)
+        if entrypoint == 'native':
+            solver = FullSWESolver(**common, maximum_dt=.1, **execution_options)
+        else:
+            solver = create_overland_solver(solver_method='fv1', **common,
+                explicit_minimum_dt=0., explicit_maximum_dt=.1, **execution_options)
+    depth = np.zeros(shape=shape)
+    depth[29:35, 37:43] = .7
+    depth[38, 47] = 1.e-10
+    solver.set_water_depth(depth=depth)
+    return solver
+
+
+@pytest.mark.parametrize('device', ('cpu', 'cuda:0'))
+@pytest.mark.parametrize('entrypoint', ('native', 'factory', 'model'))
+def test_default_sparse_matches_explicit_dense_and_restart(device, entrypoint, tmp_path):
+    if device != 'cpu' and not wp.is_cuda_available():
+        pytest.skip('CUDA unavailable')
+    default = make_public_solver(entrypoint=entrypoint, device=device, execution_options={})
+    dense = make_public_solver(entrypoint=entrypoint, device=device,
+        execution_options=dict(execution_mode='dense'))
+    assert dense.execution_diagnostics()['execution'] == 'dense_uniform'
+    for solver in (default, dense):
+        solver.run_device_loop(duration=.1)
+    activity = default.execution_diagnostics()
+    assert activity['execution'] == 'sparse_uniform'
+    assert activity['tile_size'] == 8
+    assert not activity['dense_fallback']
+    assert activity['evaluated_cells'] < default.nx * default.ny
+    assert_equivalent(dense=dense, sparse=default)
+    checkpoint = tmp_path / 'default.npz'
+    default.save_checkpoint(path=checkpoint)
+    restarted = make_public_solver(entrypoint=entrypoint, device=device,
+        execution_options=dict(execution_mode='dense'))
+    restarted.load_checkpoint(path=checkpoint)
+    for solver in (default, dense, restarted):
+        solver.run_device_loop(duration=.1)
+    assert_equivalent(dense=dense, sparse=default)
+    assert_equivalent(dense=restarted, sparse=default)
 
 
 def make_solver(*, device, case, mode, tile_size, dense_fraction):
@@ -27,8 +81,8 @@ def make_solver(*, device, case, mode, tile_size, dense_fraction):
         active[15:55, 45:49] = False
         active[:4] = False
     solver = FullSWESolver(ny=shape[0], nx=shape[1], dx=1., dy=1.3,
-        bed_elevation=bed, manning_n=.03, active_mask=active, device=device, maximum_dt=.1)
-    solver.configure_execution(mode=mode, tile_size=tile_size, dense_fraction=dense_fraction)
+        bed_elevation=bed, manning_n=.03, active_mask=active, device=device, maximum_dt=.1,
+        execution_mode=mode, tile_size=tile_size, dense_fraction=dense_fraction)
     solver.set_water_depth(depth=depth)
     if case in ('front', 'masked', 'heterogeneous'):
         hu = .3 * depth

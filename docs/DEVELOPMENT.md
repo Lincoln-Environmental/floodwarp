@@ -49,23 +49,28 @@ Patrick Durney / Lincoln Agritech Ltd attribution and CC BY 4.0 elevation
 credits. The owner controls repository visibility. Research-grade release does
 not imply universal hydraulic qualification.
 
-## Experimental sparse uniform FV1 execution
+## Default sparse uniform FV1 execution
 
-Call `solver.configure_execution(mode='sparse', tile_size=8)` on an FV1 solver
-to opt into exact-zero tile scheduling with dense storage. Use
-`solver.configure_execution(mode='dense')` to restore ordinary execution.
+FV1 defaults to exact-zero scheduling with 8×8 tiles and dense storage. Native
+`FullSWESolver`, `create_overland_solver(solver_method='fv1', ...)` and
+`create_model(solver_method='fv1', ...)` accept `execution_mode='dense'` for
+the retained reference path. Use `solver.configure_execution(mode='dense')`
+or `solver.configure_execution(mode='sparse', tile_size=8)` to switch an
+existing uniform solver. The sparse path uses dense indexing when its work
+set reaches 65% of all raster tiles; explicit dense mode also omits scheduling.
 `solver.execution_diagnostics()` performs an explicit host readback of work
 counts; the step loop keeps flags and lists on device. Sources, full-domain CFL,
 numerical settings and checkpoint identity are unchanged. Activity is rebuilt
 after every source update. Scheduling caches are reconstructed after restart.
-This mode can be slower at high occupancy; dense execution remains default.
+This mode can be slower at high occupancy; explicit dense mode remains available.
 See [design and stage gates](SPARSE_FV1_DESIGN.md) and
 [measured qualification](../validation/sparse_review/REPORT.md).
 
 The [matched 72-hour replay](../validation/sparse_review/FULL_EVENT.md) now
 retains exact hourly dense-state agreement and measured 1.161× hydraulic
-speedup. Widespread-runoff windows remain slower; dense execution is still
-the default. This research is on dev and excluded from the fixed v0.1.0 release.
+speedup. Widespread-runoff windows remain slower. The default promotion is
+on dev and excluded from the fixed v0.1.0 release. See the
+[promotion checks](../validation/sparse_review/DEFAULT_PROMOTION.md).
 
 ## Experimental fixed block FV1
 

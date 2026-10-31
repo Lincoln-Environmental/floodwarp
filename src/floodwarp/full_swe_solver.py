@@ -21,7 +21,8 @@ class FullSWESolver:
     def __init__(self, *, ny, nx, dx, dy, bed_elevation, manning_n, active_mask,
                  device="cpu", gravity=9.81, dry_depth=1.e-4, cfl=.4,
                  maximum_dt=1., minimum_dt=0., stage_boundary_momentum='velocity_extrapolation',
-                 flux_scheme='contact_hll'):
+                 flux_scheme='contact_hll', execution_mode='sparse', tile_size=8,
+                 dense_fraction=.65):
         """Prescribed stages use an explicitly selected ghost momentum closure.
 
         Finite-velocity extrapolation is the default. Historical discharge
@@ -38,6 +39,10 @@ class FullSWESolver:
         contact_hll retains endpoint HLL mass/normal fluxes and upwinds the
         transverse velocity. legacy_hll is exact historical compatibility;
         star_hll and star_contact_hll are explicit diagnostic alternatives.
+
+        Exact-zero sparse execution with 8x8 tiles is the default. Select
+        execution_mode='dense' for the retained dense reference. Scheduling
+        does not change the uniform grid, FP64 state, sources or CFL policy.
         """
         modes = ('discharge_extrapolation','velocity_extrapolation','characteristic')
         if stage_boundary_momentum not in modes:
@@ -91,6 +96,7 @@ class FullSWESolver:
         self.ctrl = wp.zeros(15, dtype=wp.float64, device=self.device)
         self.condition = wp.ones(1, dtype=wp.int32, device=self.device)
         self.set_rainfall_hyetograph(times_s=np.array([0., 1.e100]), rates_m_s=np.zeros(2))
+        self.configure_execution(mode=execution_mode, tile_size=tile_size, dense_fraction=dense_fraction)
 
     def _field(self, *, values, nonnegative=True):
         array = np.broadcast_to(np.asarray(values, dtype=np.float64), self._shape).copy()
@@ -186,8 +192,8 @@ class FullSWESolver:
     def set_boundary_stage_qy(self, *, stage):
         self._boundary(axis="y", values=stage, stage=True)
 
-    def configure_execution(self, *, mode, tile_size=16, dense_fraction=.65):
-        """Choose dense or experimental exact-zero sparse uniform execution.
+    def configure_execution(self, *, mode, tile_size=8, dense_fraction=.65):
+        """Choose dense or exact-zero sparse uniform execution.
 
         This changes scheduling only, so checkpoints remain portable between
         execution modes. Dense state, sources and the full CFL scan are retained.

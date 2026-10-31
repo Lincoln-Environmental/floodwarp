@@ -5,10 +5,10 @@
     {
       "module": "full_swe_solver",
       "source_sha256": "929365165af2d265db1309267130f77228e011be3ddaf5fcc6258cdc1aebde44",
-      "extracted_ast_sha256": "d707faf27df80f1a48acdec93f568e6cb52a33fdc1479348846f8f09b86bcd30",
+      "extracted_ast_sha256": "83ee13d971efd414f24ec270457541acddb168fb43e9df3927a658e1c53f6eb7",
       "matches_baseline_after_namespace_and_source_channel_rename": false,
       "baseline_extracted_ast_sha256": "e0cf0a01fe611a542665b30c908168b9b196c1a5fcd0bae2f41634765eaf2548",
-      "current_file_sha256": "86a3df78e165c87ffd570a11b92301d1c2b91707ede4857aa3644adaf58f1802"
+      "current_file_sha256": "317e72e78bedbffe2607814862fdd65a7cad39e8fb091c5a43b5a0d2c6e9d758"
     },
     {
       "module": "full_swe_kernels",
@@ -116,10 +116,20 @@
   "experimental_static_fv1_audit": {
     "scope": "Independent spatial approximation on fixed 2:1 leaf volumes. Dense/sparse uniform operators unchanged. Fine subface HLL reused; shared coarse donor budgets; immutable finest DEM; fine source history. Runtime gate failed, dynamic adaptation deferred.",
     "sources": {
-      "static_fv1": "bb041ddb97aba8c940c85b6da63b40ae06f9466d30cd1f27788d725afb93a2fb",
+      "static_fv1": "1af895bd72a8640c5bbcff2ffab69c23b36e35a3fd7c83e4779581a5d0d8ff7b",
       "static_fv1_kernels": "43102b15d256321027024c9de57164f06b10c4e532f71f4a878a05efe4346bed",
       "static_fv1_mesh": "44daf55b79b21496a9c043779ca1b5e2d511915d4a5f90fe5541082e25a0b6a5"
     },
     "evidence": "validation/static_review/REPORT.md"
+  },
+  "default_sparse_fv1_audit": {
+    "scope": "Default uniform FV1 scheduling promoted to exact-zero 8x8 sparse execution with dense fallback fraction 0.65. Dense storage, numerical operators, source order, FP64 and full-domain CFL remain unchanged. Explicit dense reference and portable checkpoints retained. Static constructor explicitly requests dense scheduling; benchmark reference selection stays explicit.",
+    "sources": {
+      "full_swe_solver": "317e72e78bedbffe2607814862fdd65a7cad39e8fb091c5a43b5a0d2c6e9d758",
+      "sparse_fv1": "9f06962486f977750e1b00e5bd2c8209802beacb4ae112804f43bdea6a48b6ae",
+      "static_fv1": "1af895bd72a8640c5bbcff2ffab69c23b36e35a3fd7c83e4779581a5d0d8ff7b"
+    },
+    "evidence": "validation/sparse_review/DEFAULT_PROMOTION.md",
+    "timing_provenance": "Existing matched 72-hour replay and source snapshots remain unchanged; no new full-event timing is claimed."
   }
 }

@@ -42,7 +42,7 @@ def build_control(*, name, shape, device, options):
         protected[:, shape[1] // 2 - 2:shape[1] // 2 + 2] = True
     solver = FullSWESolver(ny=shape[0], nx=shape[1], dx=options['spacing'], dy=options['spacing'],
         bed_elevation=bed, manning_n=options['manning'], active_mask=np.ones(shape=shape, dtype=bool),
-        device=device, maximum_dt=options['maximum_dt'])
+        device=device, maximum_dt=options['maximum_dt'], execution_mode='dense')
     solver.set_water_depth(depth=depth)
     if name == 'front':
         solver.set_momentum(hu=options['velocity_x'] * depth, hv=options['velocity_y'] * depth)

@@ -38,6 +38,16 @@ raster datum/mask handling and restart. [run_direct.py](examples/run_direct.py)
 is an editable GeoTIFF example. The historical `run_purau` command is a separate
 200 m installation crop, not the full-domain demonstration below.
 
+On `dev`, FV1 now defaults to exact-zero sparse execution with 8×8 tiles.
+The complete 72-hour Orton Bradley replay matched every retained hourly dense
+field and used **1641.96 s hydraulic time versus 1906.11 s** on the same GPU
+(13.9% less runtime). This preserves the uniform grid, dense FP64 state,
+sources and CFL policy. Widespread-runoff windows can still be slower.
+Pass `execution_mode='dense'` when constructing an FV1 solver/model for the
+retained dense path. See [validation and limits](validation/sparse_review/DEFAULT_PROMOTION.md).
+The fixed v0.1.0 release and its benchmark results below are unchanged;
+static AMR remains experimental.
+
 ## Orton Bradley Park — complete 5 m model domain
 
 **Orton Bradley Park, Banks Peninsula, Canterbury, New Zealand**: the entire

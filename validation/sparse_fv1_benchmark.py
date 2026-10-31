@@ -29,8 +29,8 @@ def load_solver(*, path, device, mode, tile_size, dense_fraction):
         config = metadata['configuration']
         shape = (config['ny'], config['nx'])
         solver = FullSWESolver(**config, bed_elevation=saved['bed'].reshape(shape),
-            manning_n=saved['manning'].reshape(shape), active_mask=saved['active'].reshape(shape), device=device)
-    solver.configure_execution(mode=mode, tile_size=tile_size, dense_fraction=dense_fraction)
+            manning_n=saved['manning'].reshape(shape), active_mask=saved['active'].reshape(shape), device=device,
+            execution_mode=mode, tile_size=tile_size, dense_fraction=dense_fraction)
     solver.load_checkpoint(path=path)
     return solver
 
