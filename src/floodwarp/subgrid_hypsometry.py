@@ -17,7 +17,7 @@ def subgrid_stage_from_storage(
     if storage <= WP_FLOAT(0.0):
         return cell_z[j, i, 0]
     eta = cell_z[j, i, subgrid_cell_count - 1] + BED_FLOAT(
-        storage - cell_storage_breakpoints[j, i, subgrid_cell_count - 1]
+        BED_FLOAT(storage) - cell_storage_breakpoints[j, i, subgrid_cell_count - 1]
     )
     # Breakpoints can contain last-bit nonmonotonicity on equal-height
     # plateaus. Preserve the original first-match arithmetic exactly.
@@ -26,7 +26,7 @@ def subgrid_stage_from_storage(
     while m < subgrid_cell_count - 1 and found == 0:
         if BED_FLOAT(storage) <= cell_storage_breakpoints[j, i, m + 1]:
             eta = cell_z[j, i, m] + BED_FLOAT(
-                (storage - cell_storage_breakpoints[j, i, m])
+                (BED_FLOAT(storage) - cell_storage_breakpoints[j, i, m])
                 * BED_FLOAT(subgrid_cell_count)
                 / BED_FLOAT(m + 1)
             )

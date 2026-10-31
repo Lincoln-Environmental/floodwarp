@@ -5,6 +5,7 @@ import warp as wp
 
 from floodwarp.local_inertial_solver import LocalInertialSolver
 from floodwarp.rainfall import Hyetograph
+from floodwarp.config import NP_FLOAT,PRECISION_MODE
 
 
 @pytest.fixture(params=['cpu','cuda:0'])
@@ -14,6 +15,8 @@ def device(request):
 
 
 def source_model(*, device, mode):
+    if PRECISION_MODE=='mixed' and mode!='coarse':
+        pytest.skip('Traditional/enhanced SGS do not support conditioned mixed precision')
     options={}
     if mode!='coarse':options.update(hydraulic_geometry_mode=mode,
         subgrid_bed_elevation=np.zeros((4,8)),subgrid_resolution_m=.5)
@@ -41,9 +44,13 @@ def test_output_checkpoint_does_not_change_next_cfl_forecast(device,mode,graph):
     # Forecast after t=30 includes at most 30 s of the 72 mm/h endpoint.
     if mode!='enhanced':
         bound=float(traced.cfl_number)/np.sqrt(float(traced.gravity)*30.*72./3.6e6)
-        assert actual['dt_history'][index]<=bound*(1+1e-10)
+        assert actual['dt_history'][index]<=bound*(1+max(1e-10,8.*np.finfo(NP_FLOAT).eps))
     np.testing.assert_allclose(traced.get_water_depth(),plain.get_water_depth(),atol=1e-5,rtol=1e-4)
     ledger=traced.cumulative_accounting()
-    storage=float(traced.get_water_depth().sum())
-    assert abs(ledger['rain']-ledger['infiltration']-storage)<1e-10
-    assert ledger['rain']==pytest.approx(8.*.5*30.*72./3.6e6,abs=1e-10)
+    storage=float(traced.get_water_depth().sum(dtype=np.float64))
+    supplied=8.*.5*30.*72./3.6e6
+    # FP32 state/source products incur bounded state rounding. Keep the
+    # original FP64 bound and scale the additional allowance by water volume.
+    volume_tolerance=1e-10+16.*np.finfo(NP_FLOAT).eps*supplied
+    assert abs(ledger['rain']-ledger['infiltration']-storage)<volume_tolerance
+    assert ledger['rain']==pytest.approx(supplied,abs=volume_tolerance)

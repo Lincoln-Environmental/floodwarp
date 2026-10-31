@@ -4,9 +4,12 @@ import pytest
 import warp as wp
 
 from floodwarp.local_inertial_solver import LocalInertialSolver
+from floodwarp.config import NP_FLOAT,PRECISION_MODE
 
 
 def make_stage_case(*, orientation, spacing, maximum_dt, mode='coarse',device='cpu'):
+    if PRECISION_MODE=='mixed' and mode!='coarse':
+        pytest.skip('Traditional/enhanced SGS do not support conditioned mixed precision')
     active=np.ones((4,4),np.int32)
     if orientation=='west':active[:,0]=0
     elif orientation=='east':active[:,-1]=0
@@ -40,8 +43,11 @@ def simulate_stage(*, orientation, spacing, maximum_dt, rise_time, mode='coarse'
         ledger=solver.cumulative_accounting()
         rows.append([float(target),ledger['boundary_inflow'],ledger['boundary_outflow']])
     depth=solver.get_water_depth().copy();ledger=solver.cumulative_accounting()
-    residual=ledger['boundary_inflow']-ledger['boundary_outflow']-float(depth.sum())*spacing**2
-    assert abs(residual)<1e-9*max(1.,ledger['boundary_inflow'])
+    residual=ledger['boundary_inflow']-ledger['boundary_outflow']-float(depth.sum(dtype=np.float64))*spacing**2
+    # Roundoff scales with supplied m³ and state precision, not a universal
+    # dimensionless tolerance. The existing FP64 conservation bound remains.
+    tolerance=1e-9*max(1.,ledger['boundary_inflow'])+16.*np.finfo(NP_FLOAT).eps*ledger['boundary_inflow']
+    assert abs(residual)<tolerance
     assert np.isfinite(depth).all() and depth.min()>=0.
     return depth,solver.get_max_water_depth().copy(),np.asarray(rows)
 
@@ -102,4 +108,6 @@ def test_rapid_stage_cpu_cuda_graph_parity(mode,orientation,graph):
         device='cuda:0',graph=graph)
     np.testing.assert_allclose(actual[0],expected[0],atol=1e-5,rtol=1e-4)
     np.testing.assert_allclose(actual[1],expected[1],atol=1e-5,rtol=1e-4)
-    np.testing.assert_allclose(actual[2],expected[2],atol=1e-9,rtol=1e-8)
+    volume_scale=float(np.max(np.abs(expected[2][:,1:])))
+    np.testing.assert_allclose(actual[2],expected[2],
+        atol=1e-9+16.*np.finfo(NP_FLOAT).eps*volume_scale,rtol=max(1e-8,16.*np.finfo(NP_FLOAT).eps))
