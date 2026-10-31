@@ -12,6 +12,7 @@ FV1 defaults: `execution_mode="sparse"`, `tile_size=8`, `dense_fraction=0.65`. N
 - Focused release controls: **75 passed**; the same **75 passed** against the installed wheel outside the checkout.
 - Actual v0.1.1 wheel installed non-editably in a fresh external environment. Synthetic LI/FV1 and 200 m crop examples completed; pip check passed. Runtime module hashes match the checkout.
 - Wheel/source archive contain DISCLAIMER.md and AGPL-3.0-only metadata. Static modules are absent. Generated example GIS files are excluded from the source archive; immutable data remain release assets.
+- Agent instruction files are untracked/local and excluded from distributions. Historical v0.1.0 assets and Git history remain preserved.
 - Standalone FV1/LI replay controls include shorter-than-interval and non-divisible durations, exact final time, final fields/checkpoint/ledger and refusal to overwrite a previous run. No automatic resume is claimed.
 
 ## Current saved-state controls

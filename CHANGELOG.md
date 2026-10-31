@@ -18,6 +18,8 @@
   Checkpoint restoration remains explicit; no automatic-resume claim is made.
 - Original v0.1.0 tag, data assets, numerical arrays and source snapshots are
   preserved. Static/dynamic AMR, wavelets and mixed-precision FV1 are excluded.
+- Agent instruction files remain local and are excluded from tracked release
+  contents and distributions.
 
 ## v0.1.0
 
