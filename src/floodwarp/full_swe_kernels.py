@@ -441,13 +441,14 @@ def reconstruct(q: wp.vec3d, z: wp.float64, top: wp.float64, dry: wp.float64):
     return wp.vec3d(depth, q[1] * scale, q[2] * scale)
 
 
-@wp.func
-def faces_at(k: int, q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64),
+@wp.kernel
+def faces(q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64),
           active: wp.array(dtype=wp.int32), types: wp.array(dtype=wp.int32),
           stages: wp.array(dtype=wp.float64), flux: wp.array(dtype=wp.vec3d),
           pressure: wp.array(dtype=wp.vec2d), nx: int, ny: int, axis: int,
           g: wp.float64, dry: wp.float64, stage_momentum_mode: int,
           ctrl: wp.array(dtype=wp.float64), flux_mode: int):
+    k = wp.tid()
     if ctrl[7] < wp.float64(0.0):
         return
     left = int(-1)
@@ -540,19 +541,10 @@ def faces_at(k: int, q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64
 
 
 @wp.kernel
-def faces(q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64),
-          active: wp.array(dtype=wp.int32), types: wp.array(dtype=wp.int32),
-          stages: wp.array(dtype=wp.float64), flux: wp.array(dtype=wp.vec3d),
-          pressure: wp.array(dtype=wp.vec2d), nx: int, ny: int, axis: int,
-          g: wp.float64, dry: wp.float64, stage_momentum_mode: int,
-          ctrl: wp.array(dtype=wp.float64), flux_mode: int):
-    faces_at(wp.tid(), q, bed, active, types, stages, flux, pressure, nx, ny, axis, g, dry, stage_momentum_mode, ctrl, flux_mode)
-
-
-@wp.func
-def draining_at(k: int, q: wp.array(dtype=wp.vec3d), fx: wp.array(dtype=wp.vec3d),
+def draining(q: wp.array(dtype=wp.vec3d), fx: wp.array(dtype=wp.vec3d),
              fy: wp.array(dtype=wp.vec3d), theta: wp.array(dtype=wp.float64),
              ctrl: wp.array(dtype=wp.float64), nx: int, dx: wp.float64, dy: wp.float64):
+    k = wp.tid()
     if ctrl[7] < wp.float64(0.0):
         return
     j = k / nx
@@ -566,16 +558,10 @@ def draining_at(k: int, q: wp.array(dtype=wp.vec3d), fx: wp.array(dtype=wp.vec3d
 
 
 @wp.kernel
-def draining(q: wp.array(dtype=wp.vec3d), fx: wp.array(dtype=wp.vec3d),
-             fy: wp.array(dtype=wp.vec3d), theta: wp.array(dtype=wp.float64),
-             ctrl: wp.array(dtype=wp.float64), nx: int, dx: wp.float64, dy: wp.float64):
-    draining_at(wp.tid(), q, fx, fy, theta, ctrl, nx, dx, dy)
-
-
-@wp.func
-def limit_faces_at(k: int, flux: wp.array(dtype=wp.vec3d), theta: wp.array(dtype=wp.float64),
+def limit_faces(flux: wp.array(dtype=wp.vec3d), theta: wp.array(dtype=wp.float64),
                 active: wp.array(dtype=wp.int32), volume: wp.array(dtype=wp.float64),
                 ctrl: wp.array(dtype=wp.float64), nx: int, ny: int, axis: int, width: wp.float64):
+    k = wp.tid()
     if ctrl[7] < wp.float64(0.0):
         return
     donor = int(-1)
@@ -600,19 +586,13 @@ def limit_faces_at(k: int, flux: wp.array(dtype=wp.vec3d), theta: wp.array(dtype
 
 
 @wp.kernel
-def limit_faces(flux: wp.array(dtype=wp.vec3d), theta: wp.array(dtype=wp.float64),
-                active: wp.array(dtype=wp.int32), volume: wp.array(dtype=wp.float64),
-                ctrl: wp.array(dtype=wp.float64), nx: int, ny: int, axis: int, width: wp.float64):
-    limit_faces_at(wp.tid(), flux, theta, active, volume, ctrl, nx, ny, axis, width)
-
-
-@wp.func
-def update_at(k: int, q: wp.array(dtype=wp.vec3d), fx: wp.array(dtype=wp.vec3d), fy: wp.array(dtype=wp.vec3d),
+def update(q: wp.array(dtype=wp.vec3d), fx: wp.array(dtype=wp.vec3d), fy: wp.array(dtype=wp.vec3d),
            px: wp.array(dtype=wp.vec2d), py: wp.array(dtype=wp.vec2d),
            active: wp.array(dtype=wp.int32), manning: wp.array(dtype=wp.float64),
            maximum: wp.array(dtype=wp.float64), inflow: wp.array(dtype=wp.float64),
            outflow: wp.array(dtype=wp.float64), ctrl: wp.array(dtype=wp.float64),
            nx: int, ny: int, dx: wp.float64, dy: wp.float64, g: wp.float64, dry: wp.float64):
+    k = wp.tid()
     if active[k] != 0 and ctrl[7] >= wp.float64(0.0):
         j = k / nx
         i = k % nx
@@ -665,16 +645,6 @@ def update_at(k: int, q: wp.array(dtype=wp.vec3d), fx: wp.array(dtype=wp.vec3d),
             d = fy[n][0] * dx * dt
         outflow[k] += wp.max(a, wp.float64(0.0)) + wp.max(b, wp.float64(0.0)) + wp.max(c, wp.float64(0.0)) + wp.max(d, wp.float64(0.0))
         inflow[k] -= wp.min(a, wp.float64(0.0)) + wp.min(b, wp.float64(0.0)) + wp.min(c, wp.float64(0.0)) + wp.min(d, wp.float64(0.0))
-
-
-@wp.kernel
-def update(q: wp.array(dtype=wp.vec3d), fx: wp.array(dtype=wp.vec3d), fy: wp.array(dtype=wp.vec3d),
-           px: wp.array(dtype=wp.vec2d), py: wp.array(dtype=wp.vec2d),
-           active: wp.array(dtype=wp.int32), manning: wp.array(dtype=wp.float64),
-           maximum: wp.array(dtype=wp.float64), inflow: wp.array(dtype=wp.float64),
-           outflow: wp.array(dtype=wp.float64), ctrl: wp.array(dtype=wp.float64),
-           nx: int, ny: int, dx: wp.float64, dy: wp.float64, g: wp.float64, dry: wp.float64):
-    update_at(wp.tid(), q, fx, fy, px, py, active, manning, maximum, inflow, outflow, ctrl, nx, ny, dx, dy, g, dry)
 
 
 @wp.kernel
