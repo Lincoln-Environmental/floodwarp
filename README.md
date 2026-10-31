@@ -128,6 +128,16 @@ IoU **0.497596 at 0.01 m**, and a peak 12.81% higher and 240 s earlier.
 The median envelope difference is only 2.8 mm, and 97.34% of active cells
 differ by less than 0.10 m. Larger discrepancies are spatially concentrated;
 the retained LI channel maxima warrant investigation.
+
+The Orton Bradley demonstration compares uncalibrated local-inertial and full
+shallow-water formulations over steep terrain. Both conserve mass within their
+recorded numerical tolerances, yet substantial differences occur in predicted
+maximum inundation depths and extents. These results highlight limitations of
+relying on reduced-complexity hydraulics in rapidly varying terrain, where
+calibration against outlet discharge alone may conceal spatial inundation
+errors. This comparison is not an outlet-calibration experiment and does not
+isolate terrain or formulation as the sole cause of the differences.
+
 The [LI comparison](examples/orton_bradley/figures/orton_bradley_li_comparison.png)
 uses identical depth limits and full-range **linear** signed differences to
 show their prevalence without stretching small errors.

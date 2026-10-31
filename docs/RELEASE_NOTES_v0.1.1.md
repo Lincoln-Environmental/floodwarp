@@ -24,6 +24,15 @@ Independent site-specific validation is required before decision-making.**
 This guidance adds no AGPL restriction. Software copyright Patrick Durney and
 Lincoln Agritech Ltd; AGPL-3.0-only. Elevation data retain CC BY 4.0 attribution.
 
+The Orton Bradley demonstration compares uncalibrated local-inertial and full
+shallow-water formulations over steep terrain. Both conserve mass within their
+recorded numerical tolerances, yet substantial differences occur in predicted
+maximum inundation depths and extents. These results highlight limitations of
+relying on reduced-complexity hydraulics in rapidly varying terrain, where
+calibration against outlet discharge alone may conceal spatial inundation
+errors. This comparison is not an outlet-calibration experiment and does not
+isolate terrain or formulation as the sole cause of the differences.
+
 The complete **1123×843, 5 m Orton Bradley Park dataset** is unchanged:
 EPSG:2193, NZVD2016 and 559,985 active cells. Use the versioned v0.1.0 assets:
 

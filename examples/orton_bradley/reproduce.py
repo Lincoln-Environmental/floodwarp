@@ -379,6 +379,12 @@ def hydrograph_figure(*, times, series, statistics, output, dpi):
 
 def report_markdown(*, statistics, provenance, path):
     lines = ['# Orton Bradley Park — complete 5 m, 72-hour comparison', '',
+        '**Research demonstration only — not an official flood-hazard assessment. '
+        'Independent site-specific validation is required before decision-making.**', '',
+        'The Orton Bradley demonstration compares uncalibrated local-inertial and full shallow-water formulations over steep terrain. '
+        'Both conserve mass within their recorded numerical tolerances, yet substantial differences occur in predicted maximum inundation depths and extents. '
+        'These results highlight limitations of relying on reduced-complexity hydraulics in rapidly varying terrain, where calibration against outlet discharge alone '
+        'may conceal spatial inundation errors. This comparison is not an outlet-calibration experiment and does not isolate terrain or formulation as the sole cause of the differences.', '',
         'Maximum inundation is calculated directly from each pointwise maximum-depth envelope. '
         'Δh_max is FloodWarp FV1 maximum minus LISFLOOD-FP FV1 maximum; it is not a maximum instantaneous difference.', '',
         f'Grid: 1123 × 843 at 5 m; {provenance["grid"]["active_cells"]:,} physical cells; '

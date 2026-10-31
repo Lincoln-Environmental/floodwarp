@@ -90,6 +90,15 @@ maxima are not simultaneous water storage.
 
 ## Interpretation and controls
 
+The Orton Bradley demonstration compares uncalibrated local-inertial and full
+shallow-water formulations over steep terrain. Both conserve mass within their
+recorded numerical tolerances, yet substantial differences occur in predicted
+maximum inundation depths and extents. These results highlight limitations of
+relying on reduced-complexity hydraulics in rapidly varying terrain, where
+calibration against outlet discharge alone may conceal spatial inundation
+errors. This comparison is not an outlet-calibration experiment and does not
+isolate terrain or formulation as the sole cause of the differences.
+
 See [COMPARISON.md](COMPARISON.md) for active-domain RMSE, wet-union errors,
 maximum-event IoU, false-positive/negative areas, export/infiltration differences,
 independent peak magnitude/timing errors and water balances. Full machine-readable
