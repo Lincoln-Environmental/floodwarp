@@ -102,3 +102,13 @@ diagnostics, same-boundary timestep sensitivity, and recharge-specific concerns.
 Run `python -m validation.li_engineering_audit` after validation to bind v2
 outputs and test logs to preserved v1, strict benchmark and runtime hashes.
 Inspect its guard for the test-log destination before reproducing the audit.
+
+## v0.1.2 local interface and packaging
+
+High-level factories now default to FV1; LI/SGS examples must select LI
+explicitly. Use `python -m floodwarp.ui` after installing `.[ui]` for the local
+rainfall interface. See [UI guide](UI.md). `floodwarp.sampling.sample_targets`
+shares exact-final-time output targets with the small public examples; the
+standalone full-domain replay retains its own identical helper.
+The release baseline's modified sparse kernels and numerical controls are
+unchanged. See [current evidence index](../validation/README.md).

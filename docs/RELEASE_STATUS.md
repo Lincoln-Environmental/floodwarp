@@ -1,4 +1,12 @@
-# FloodWarp v0.1.1 release status
+# FloodWarp v0.1.2 local publication preparation
+
+The current candidate adds the optional local rainfall UI, FV1 high-level default
+and exact-final-time small examples to the verified main baseline. See
+[verification and publication handoff](../validation/release_v0.1.2/REPORT.md)
+for the artifact source, actual checks, checksums and owner publication steps.
+No remote publication is performed by this preparation.
+
+## Historical v0.1.1 release status
 
 Current main includes the subsequently verified modified sparse FV1 default
 (1512.372 s matched-event hydraulic runtime; identical recorded state/history).

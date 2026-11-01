@@ -1,7 +1,18 @@
 # Changelog
 
-## Unreleased — main
+## v0.1.2 — local publication candidate
 
+- Add an optional localhost rainfall UI (`python -m floodwarp.ui`) with real
+  worker-process FV1 execution, domain/rainfall previews, exact final sampling,
+  atomic checkpoints, georeferenced outputs and checksummed run provenance.
+- Default high-level factories to FV1 deliberately; retain explicit LI/native
+  construction, sparse FV1 default and explicit dense execution. SGS selects LI.
+- Share exact-final-time sampling in small public examples and the UI runner;
+  the downloadable full-domain replay keeps its standalone equivalent.
+- Intersect binary domains with valid DEM cells. Add installed synthetic UI
+  inputs, optional geospatial dependencies and built-wheel installation CI.
+- Transfer historical sparse-performance drivers, snapshots, profiles, memory
+  records and publication verification from dev without static-mesh research.
 - Promote the full-event-verified modified sparse FV1 default: released-tile
   scratch clearing and fused post-source activity detection. All recorded
   hydraulic fields and accepted steps match dense and prior sparse execution.

@@ -24,7 +24,8 @@ Rasterio is imported only when these IO functions are called.
 ## Solvers and initial state
 
 `create_model(terrain=..., solver_method='li'|'fv1', ...)` uses the supported
-factory. `initial_depth` or `initial_stage` accepts a scalar or spatial field;
+factory, with FV1 as the omitted-method default since v0.1.2. Explicit LI
+selection and native LI construction remain available. `initial_depth` or `initial_stage` accepts a scalar or spatial field;
 they are mutually exclusive. Stages require `stage_datum` matching terrain.
 Native `LocalInertialSolver` and `FullSWESolver` remain public for advanced
 array control. LI's ordinary omitted profile resolves to `physical_candidate`.
@@ -129,3 +130,12 @@ Historical numerical profiles remain available, and FV1 legacy checkpoint
 identity handling is unchanged. Use `FLOODWARP_PRECISION` before import;
 FP64 is the default and required for FV1. FP32/mixed LI research settings do
 not acquire new qualification from this extraction.
+
+## Local rainfall interface
+
+See [UI inputs and execution](UI.md) for polygon CRS/rasterisation, binary mask
+intersection, the hours/mm-per-hour rainfall CSV, dimensionless scaling maps,
+FREE exterior interfaces versus enclosed holes, and complete output provenance.
+The UI deliberately requires a final zero rainfall node and extends it with
+zero recession; the ordinary API retains its explicit forcing-coverage contract.
+`floodwarp.sampling.sample_targets` includes the exact requested end time once.
