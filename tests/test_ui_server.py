@@ -58,6 +58,8 @@ def test_local_requests_and_duplicate_start(tmp_path, monkeypatch):
         with pytest.raises(HTTPError):
             request_json(url=url+'/run', data=asdict(config), token=boot['token'])
         assert len(list(tmp_path.glob('floodwarp-*'))) == 1
+        (Path(first['output'])/'checkpoint.npz.incomplete.npz').write_bytes(b'incomplete')
+        assert 'checkpoint.npz.incomplete.npz' not in request_json(url=url+'/status')['files']
         assert request_json(url=url+'/status')['output'] == first['output']
         assert request_json(url=url+'/bootstrap')['validated'] is not None
     finally:

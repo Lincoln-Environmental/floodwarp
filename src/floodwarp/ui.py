@@ -72,8 +72,12 @@ class LocalApplication:
             elif status['state'] == 'running':
                 status.update(state='failed', error=f'Worker exited with code {code}; inspect run.log')
                 write_json(path=self.output/'status.json', value=status)
-        status['files'] = [path.name for path in self.output.iterdir()
-            if path.is_file() and path.suffix in ('.tif', '.csv', '.json', '.npz', '.log', '.png')]
+        # An interrupted atomic checkpoint write may leave a temporary NPZ.
+        # Offer only complete, named products rather than every matching suffix.
+        products = ('maximum_depth.tif', 'final_depth.tif', 'water_balance.csv',
+            'boundary_flow.csv', 'checkpoint.npz', 'run_config.json',
+            'diagnostics.json', 'maximum_depth.png', 'run.log')
+        status['files'] = [name for name in products if (self.output/name).is_file()]
         return status
 
 

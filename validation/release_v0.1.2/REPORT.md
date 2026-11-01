@@ -41,7 +41,10 @@ Validate and Run clicks, terrain/rainfall/maximum-depth previews, file selector,
 refresh without restart and an invalid-input message. Chromium completed the
 run but its compositor stalled during capture in this environment; Firefox
 provided the completed screenshot. These interface checks are distinct from
-headless runner tests. Browser tooling is a development-only dependency.
+headless runner tests. Browser tooling is a development-only dependency. A deliberately terminated
+installed worker also verifies failed status/log access and retention of its
+complete checkpoint. Incomplete atomic-write temporary archives are excluded
+from result links; the checkpoint serializer itself remains unchanged.
 The reproducible browser driver is `validation/ui_browser.py` (install
 Playwright and its Firefox binary separately). It uses real control clicks;
 forced clicks bypass this host's stalled animation-frame stability check.
