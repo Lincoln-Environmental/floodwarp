@@ -1,6 +1,10 @@
 # v0.1.2 local publication candidate
 
-Release baseline: main `bce98b103beca066cd0c9afdeec0fc330576182a`.
+Release hydraulic baseline: `bce98b103beca066cd0c9afdeec0fc330576182a`.
+Live main also includes owner commits through
+`731cf6d1c3a69eb1267875c90f67965e9f72c193`, changing only README/COPYRIGHT.
+Both commits are preserved in candidate history; the updated holder is
+Lincoln Agritech Ltd, with Patrick Durney development attribution retained.
 This release adds the optional local rainfall interface, deliberate FV1 factory
 default, exact-final-time example sampling, package/CI checks and public guides.
 The full-SWE and sparse kernels/solvers are byte-identical to that baseline.
