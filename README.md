@@ -2,8 +2,8 @@
 
 FloodWarp simulates rainfall-driven surface flooding on CPU and NVIDIA CUDA.
 The primary solver is FP64, uniform-grid FV1, an independent first-order
-finite-volume implementation of the full shallow-water equations. Copyright
-**Patrick Durney and Lincoln Agritech Ltd**. Software is
+finite-volume implementation of the full shallow-water equations. Developed
+by **Patrick Durney**. Copyright **Lincoln Agritech Ltd**. Software is
 [AGPL-3.0-only](LICENSE); attributed elevation data retain CC BY 4.0.
 
 | Method | Interface | Status and scope |
