@@ -35,7 +35,7 @@ def test_array_rain_mass_and_disk_restart(method, tmp_path):
 
 @pytest.mark.parametrize('mode', ['traditional', 'enhanced'])
 def test_sgs_warning_mass_and_restart(mode, tmp_path):
-    options = dict(terrain=terrain(), hydraulic_geometry_mode=mode,
+    options = dict(terrain=terrain(), solver_method='li', hydraulic_geometry_mode=mode,
         subgrid_bed_elevation=np.zeros((8, 10)), subgrid_resolution_m=1.,
         rainfall=.001, explicit_maximum_dt=.01)
     with pytest.warns(ExperimentalSGSWarning, match=mode):

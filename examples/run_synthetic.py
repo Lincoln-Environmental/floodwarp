@@ -5,6 +5,7 @@ import numpy as np
 from floodwarp.inputs import terrain_from_array, boundary_faces
 from floodwarp.model import create_model
 from examples.common import run_example
+from floodwarp.sampling import sample_targets
 
 
 def synthetic_terrain(*, shape, dx, dy, slope):
@@ -18,7 +19,7 @@ if __name__ == "__main__":
     dx = 5.
     dy = 5.
     slope = .01
-    methods = ('li', 'fv1')
+    methods = ('fv1', 'li')
     manning_n = .035
     rainfall_m_s = 20./3.6e6
     duration_s = 10.
@@ -37,5 +38,5 @@ if __name__ == "__main__":
             rainfall=rainfall_m_s, device=device, boundary_qx=qx, boundary_qy=qy,
             explicit_maximum_dt=maximum_dt_s)
         run_example(model=model, output=output_root/method,
-            sample_times=np.arange(sample_interval_s, duration_s+sample_interval_s/2, sample_interval_s),
+            sample_times=sample_targets(duration=duration_s, interval=sample_interval_s),
             make_plots=make_plots, use_cuda_graph=use_cuda_graph)

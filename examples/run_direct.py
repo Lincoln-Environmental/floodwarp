@@ -1,11 +1,10 @@
 """Edit paths and parameters below for your own projected metre GeoTIFF."""
 from pathlib import Path
 
-import numpy as np
-
 from floodwarp.inputs import read_terrain, read_aligned_field, boundary_faces
 from floodwarp.model import create_model
 from examples.common import run_example
+from floodwarp.sampling import sample_targets
 
 
 if __name__ == "__main__":
@@ -13,7 +12,7 @@ if __name__ == "__main__":
     roughness_path = None  # Or Path('my_manning.tif'), exactly aligned with terrain.
     vertical_datum = 'NZVD2016'  # Replace with your DEM's verified datum.
     output_path = Path('outputs/direct')
-    solver_method = 'li'
+    solver_method = 'fv1'
     manning_n = .035
     rainfall_m_s = 20./3.6e6
     infiltration_m_s = 0.
@@ -33,5 +32,5 @@ if __name__ == "__main__":
         rainfall=rainfall_m_s, infiltration=infiltration_m_s, initial_depth=initial_depth_m,
         boundary_qx=qx, boundary_qy=qy, device=device, explicit_maximum_dt=maximum_dt_s)
     run_example(model=model, output=output_path,
-        sample_times=np.arange(sample_interval_s, duration_s+sample_interval_s/2, sample_interval_s),
+        sample_times=sample_targets(duration=duration_s, interval=sample_interval_s),
         make_plots=make_plots, use_cuda_graph=use_cuda_graph)

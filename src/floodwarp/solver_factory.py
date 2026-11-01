@@ -3,7 +3,7 @@ from floodwarp.local_inertial_solver import LocalInertialSolver
 from floodwarp.full_swe_solver import FullSWESolver
 
 
-def create_overland_solver(*, solver_method="explicit", ny, nx, dx, dy,
+def create_overland_solver(*, solver_method="fv1", ny, nx, dx, dy,
                            bed_elevation, manning_n, active_mask, device="cpu",
                            validation_profile=None, explicit_minimum_dt=1.e-3,
                            explicit_maximum_dt=60., adaptive_dt_growth_factor=1.5,

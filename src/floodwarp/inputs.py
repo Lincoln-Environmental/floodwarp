@@ -164,4 +164,4 @@ def read_active_mask(*, path: Path, terrain: Terrain):
         valid = dataset.read_masks(1)[::-1] > 0
         if not np.isin(values[valid], (0, 1)).all():
             raise ValueError("Domain mask raster must contain only 0/1 or nodata")
-        return with_active_mask(terrain=terrain, active=valid & (values == 1))
+        return with_active_mask(terrain=terrain, active=terrain.active & valid & (values == 1))

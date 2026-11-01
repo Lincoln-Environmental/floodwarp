@@ -40,7 +40,7 @@ def stage_field(*, value, shape):
     return np.broadcast_to(array, shape).copy()
 
 
-def create_model(*, terrain: Terrain, solver_method="li", manning_n=.03,
+def create_model(*, terrain: Terrain, solver_method="fv1", manning_n=.03,
                  initial_depth=None, initial_stage=None, rainfall=0., rainfall_series=None,
                  infiltration=0., boundary_qx=None, boundary_qy=None,
                  stage_qx=0., stage_qy=0., stage_series_qx=None, stage_series_qy=None,
