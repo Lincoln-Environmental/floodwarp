@@ -7,5 +7,5 @@ from floodwarp.full_swe_solver import FullSWESolver
 from floodwarp.solver_factory import create_overland_solver
 from floodwarp.experimental import ExperimentalSGSWarning
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __all__ = ["LocalInertialSolver", "FullSWESolver", "create_overland_solver", "ExperimentalSGSWarning"]

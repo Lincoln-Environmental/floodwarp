@@ -1,0 +1,1 @@
+Synthetic installation inputs, not a real catchment. DEM elevations: local metres. Grid: EPSG:2193, 5 m. Rainfall CSV: hours and mm/h, piecewise linear; 72 s event. Example run duration: 120 s. Domain GeoTIFF includes an enclosed hole. Spatial multiplier ranges from 0 to 2; it is dimensionless. No terrain conditioning or resampling.

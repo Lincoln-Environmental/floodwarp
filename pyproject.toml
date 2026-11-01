@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "floodwarp"
-version = "0.1.1"
+version = "0.1.2"
 description = "Standalone Warp hydraulic solvers: local inertia and finite-volume shallow water"
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -15,6 +15,7 @@ requires-python = ">=3.14"
 dependencies = ["numpy==2.3.5", "scipy==1.16.3", "numba==0.67.0", "warp-lang==1.17.0"]
 
 [project.optional-dependencies]
+ui = ["rasterio>=1.4", "matplotlib>=3.10", "pyogrio>=0.13", "shapely>=2.2", "pyproj>=3.8"]
 raster = ["rasterio>=1.4"]
 plot = ["matplotlib>=3.10"]
 test = ["pytest==9.1.1"]
@@ -28,6 +29,9 @@ Issues = "https://github.com/Lincoln-Environmental/floodwarp/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+floodwarp = ["ui_assets/*", "ui_assets/example/*", "_build_info.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
