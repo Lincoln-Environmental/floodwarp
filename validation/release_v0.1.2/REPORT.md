@@ -103,3 +103,38 @@ and grid convergence remain different; the UI adds no calibration claim.
 
 Anonymous download checks can only be completed after the owner publishes;
 they are not a blocker to local preparation and are not claimed as passed.
+
+
+## Final local verification
+
+Artifact source is **`fae1b0e2cbc88daec426b6a0744217677827696e`**. The subsequent evidence-only commit
+adds this record and logs; it changes no release Python source. See
+[verification.json](verification.json) and [artifact audit](artifact_audit.json).
+
+| Check | Actual result |
+|---|---|
+| Exact candidate CPU suite | 1,005 passed, 634 skipped, 350 warnings |
+| Exact candidate focused CUDA/graph/sparse/restart/UI controls | 274 passed, no skips |
+| Fresh core wheel, UI-extra wheel and source-archive installation | FV1/LI controls and all three pip checks passed outside checkout |
+| Installed UI command + worker | Completed 73 s; installed-example browser Run completed 120 s |
+| Installed browser failure | Deliberately interrupted worker reported failed, log linked, valid initial checkpoint restored; temporary archives hidden |
+| Separate dev `ea388580988f` | 1,024 CPU passes, 642 skips; 64 focused CUDA/integration passes; development version retained |
+
+CPU skips include unavailable/opt-in CUDA and external-reference controls.
+Relevant CUDA checks were run separately; no new external LISFLOOD event,
+observed-event validation, grid-convergence study or 72-hour replay is claimed.
+GitHub CI was edited locally, not triggered remotely. All runtime source bytes
+in both distributions match the stamped candidate. Their 70/547 file members
+contain no accidental local workspace/cache/static-research files. The documented
+high-confidence text scan found no sensitive-content candidates.
+
+Completed example: `/home/patrickdurney/PycharmProjects/floodwarp/outputs/ui-v0.1.2/floodwarp-20261101T232303Z-cpx17ob_`.
+Artifacts: `/home/patrickdurney/PycharmProjects/floodwarp/outputs/release/v0.1.2/dist`. Local checksums are in `../SHA256SUMS`
+when checking from the dist directory. Wheel SHA-256:
+`b1f463a9a40307587b3b0a7f7b311d39204cced59f60dc61de2d94e6f2afde7d`. Source archive SHA-256:
+`9bc9a60f386f76299740f55b4581a4c33cd506a670aee3f64596d063e8be5a1e`.
+
+Local preparation has no remaining blocker. Publication and subsequent anonymous
+checks remain owner actions. The final branch tips are recorded in the local
+artifact directory's `handoff.json`; they include evidence-only integration
+commits after the artifact source.
