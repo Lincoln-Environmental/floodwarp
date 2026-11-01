@@ -1,7 +1,7 @@
 # FloodWarp
 
 **FloodWarp** is research-grade surface-water simulation software for
-CPU and NVIDIA CUDA. Copyright **Patrick Durney and Lincoln Agritech Ltd**.
+CPU and NVIDIA CUDA. Developed by **Patrick Durney** and Copyright **Lincoln Agritech Ltd**.
 Software is **[GNU AGPL-3.0-only](LICENSE)**; attributed elevation data retain
 CC BY 4.0. FV1 is an independent FP64 first-order finite-volume full
 shallow-water solver. LI is a reduced-complexity local-inertial alternative.
