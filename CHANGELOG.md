@@ -2,6 +2,9 @@
 
 ## 0.2.0.dev0 — development only
 
+- Carry the v0.1.2 ordinary FV1 defaults, local rainfall UI, exact sampling and
+  packaging/documentation fixes forward while retaining this development version.
+
 - The full-event-verified modified sparse FV1 default is now promoted on both
   main and dev. Static AMR remains separate on dev; release tags are unchanged.
 - Complete matched 72-hour verification of the modified sparse path: 1512.372 s
@@ -24,6 +27,25 @@
   default. New performance and adaptive-resolution research remains on dev.
 - Agent instruction files remain ignored and local; production release tags
   and immutable benchmark datasets are preserved.
+
+## v0.1.2 — local publication candidate
+
+- Add an optional localhost rainfall UI (`python -m floodwarp.ui`) with real
+  worker-process FV1 execution, domain/rainfall previews, exact final sampling,
+  atomic checkpoints, georeferenced outputs and checksummed run provenance.
+- Default high-level factories to FV1 deliberately; retain explicit LI/native
+  construction, sparse FV1 default and explicit dense execution. SGS selects LI.
+- Share exact-final-time sampling in small public examples and the UI runner;
+  the downloadable full-domain replay keeps its standalone equivalent.
+- Intersect binary domains with valid DEM cells. Add installed synthetic UI
+  inputs, optional geospatial dependencies and built-wheel installation CI.
+- Transfer historical sparse-performance drivers, snapshots, profiles, memory
+  records and publication verification from dev without static-mesh research.
+- Promote the full-event-verified modified sparse FV1 default: released-tile
+  scratch clearing and fused post-source activity detection. All recorded
+  hydraulic fields and accepted steps match dense and prior sparse execution.
+  Hydraulic runtime is 1512.372 s, 7.89% below prior sparse and 20.66% below dense.
+  Dense override remains available. Existing release tags/assets are unchanged.
 
 ## v0.1.1
 

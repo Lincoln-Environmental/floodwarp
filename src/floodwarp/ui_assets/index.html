@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FloodWarp · Local rainfall simulation</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body><main>
+<header><span class="brand">FloodWarp</span><span class="badge">LOCAL · FV1 · FP64</span><h1>Rainfall-driven inundation</h1><p>Choose your terrain, domain and rainfall hyetograph. Results stay on this computer.</p></header>
+<fieldset id="controls" disabled>
+<div class="actions"><button id="example" type="button">Load small synthetic example</button><span>Included inputs · 120 s rainfall and recession run</span></div>
+<form id="run-form">
+<div class="grid">
+<section class="card"><h2>1. Terrain &amp; domain</h2>
+<label for="dem">DEM · projected-metre GeoTIFF</label><div class="path"><input id="dem" name="dem" required placeholder="/path/to/terrain.tif"><button type="button" data-browse="dem">Browse</button></div>
+<label for="vertical_datum">Elevation datum · metres</label><input id="vertical_datum" name="vertical_datum" required value="local"><small>Enter the recorded datum, e.g. NZVD2016. “local” explicitly asserts an unrecorded local datum.</small>
+<label for="domain_mode">Model domain</label><select id="domain_mode" name="domain_mode"><option value="all">Use all valid DEM cells</option><option value="raster">Aligned binary mask GeoTIFF</option><option value="polygon">Polygon · GeoPackage / GeoJSON</option></select>
+<div id="domain-field" hidden><label for="domain">Domain path</label><div class="path"><input id="domain" name="domain"><button type="button" data-browse="domain">Browse</button></div><small>One polygon layer with a declared CRS; rasterised on cell centres. Enclosed holes remain closed.</small></div>
+</section>
+<section class="card"><h2>2. Rainfall &amp; run</h2>
+<label for="rainfall_csv">Rainfall hyetograph · CSV</label><div class="path"><input id="rainfall_csv" name="rainfall_csv" required placeholder="/path/to/rainfall.csv"><button type="button" data-browse="rainfall_csv">Browse</button></div><small><a href="/example.csv">Download example CSV</a> · time_h,rainfall_mm_h · linear nodes starting at zero; end intensity must be zero. Rain stays zero through recession.</small>
+<label for="distribution">Rainfall distribution</label><select id="distribution" name="distribution"><option value="uniform">Uniform · multiplier 1</option><option value="map">Spatial scaling map · dimensionless</option></select>
+<div id="multiplier-field" hidden><label for="multiplier">Aligned multiplier GeoTIFF</label><div class="path"><input id="multiplier" name="multiplier"><button type="button" data-browse="multiplier">Browse</button></div><small>Local rainfall = hyetograph × multiplier. Finite, non-negative values; zero is valid. No normalisation.</small></div>
+<label for="duration_s">Total simulation duration · seconds</label><input id="duration_s" name="duration_s" type="number" min="0.000001" step="any" value="120" required><small>Include the full rainfall event and any recession.</small>
+<label for="output_parent">Output parent directory</label><div class="path"><input id="output_parent" name="output_parent" required><button type="button" data-browse="output_parent">Browse</button></div><small>Each run creates a distinct directory inside this location.</small>
+</section></div>
+<details class="card"><summary>Model settings</summary><div class="settings">
+<div><label for="manning_n">Uniform Manning n · s/m⅓</label><input id="manning_n" name="manning_n" type="number" step="any" min="0.000001" value="0.03" required></div>
+<div><label for="infiltration_mm_h">Constant infiltration capacity · mm/h</label><input id="infiltration_mm_h" name="infiltration_mm_h" type="number" step="any" min="0" value="0" required></div>
+<div><label for="device">Device</label><select id="device" name="device"><option value="auto">Automatic</option></select></div>
+<div><label for="boundary">Boundary preset</label><select id="boundary" name="boundary"><option value="free">FREE / outflow · exterior domain edges</option><option value="closed">Closed · all domain interfaces</option></select></div>
+<div><label for="interval_s">Diagnostics &amp; checkpoint interval · s</label><input id="interval_s" name="interval_s" type="number" step="any" min="0.000001" value="60" required></div>
+</div><p class="hint">FREE opens interfaces to exterior-connected inactive cells and active raster edges. Enclosed NoData holes stay closed. No stage boundaries are inferred. Sparse execution, CFL, timestep and CUDA-graph defaults come from the supported solver.</p></details>
+<div class="actions"><button id="validate" type="button">Validate &amp; preview</button><button id="run" class="primary" type="submit">Run</button><span id="message" role="alert"></span></div>
+</form>
+</fieldset>
+<section id="review" class="card" hidden><h2>Run summary</h2><p id="summary"></p><div class="grid"><img id="terrain-preview" alt="Active terrain and model domain"><div><h3>Rainfall hyetograph</h3><svg id="rain-chart" viewBox="0 0 500 270" role="img" aria-label="Rainfall intensity in millimetres per hour against time in hours"></svg><p id="rain-label"></p></div></div></section>
+<section id="progress" class="card" hidden><h2 id="state">Ready</h2><progress id="bar" value="0" max="1"></progress><p id="timing"></p><p id="output"></p><p id="run-error" role="alert"></p><div id="downloads"></div><img id="maximum-preview" alt="Maximum water depth in metres" hidden></section>
+<footer>Completion reports a numerical run. It does not establish calibration or independent observed-event validation. Initial interface: rainfall-driven uniform-grid FV1, uniform constant infiltration and FREE/closed boundaries. LI and experimental SGS are available through Python.</footer>
+</main>
+<dialog id="picker"><h2>Select a local path</h2><div class="path"><input id="browse-path" aria-label="Directory"><button id="browse-go" type="button">Go</button></div><p id="browse-error" role="alert"></p><div id="entries"></div><div class="actions"><button id="choose-directory" type="button">Use this directory</button><button id="close-picker" type="button">Cancel</button></div></dialog>
+</body></html>

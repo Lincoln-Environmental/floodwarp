@@ -7,6 +7,7 @@ import numpy as np
 from floodwarp.inputs import terrain_from_array
 from floodwarp.model import create_model
 from examples.common import run_example
+from floodwarp.sampling import sample_targets
 
 
 def load_inputs(*, directory: Path):
@@ -24,7 +25,7 @@ def load_inputs(*, directory: Path):
 if __name__ == "__main__":
     input_directory = Path('examples/purau')
     output_root = Path('outputs/purau')
-    methods = ('li', 'fv1')
+    methods = ('fv1', 'li')
     manning_n = .035
     infiltration_m_s = 0.
     duration_s = 120.
@@ -40,5 +41,5 @@ if __name__ == "__main__":
             infiltration=infiltration_m_s, rainfall_series=rainfall_series, device=device,
             boundary_qx=qx, boundary_qy=qy, explicit_maximum_dt=maximum_dt_s)
         run_example(model=model, output=output_root/method,
-            sample_times=np.arange(sample_interval_s, duration_s+sample_interval_s/2, sample_interval_s),
+            sample_times=sample_targets(duration=duration_s, interval=sample_interval_s),
             make_plots=make_plots, use_cuda_graph=use_cuda_graph)

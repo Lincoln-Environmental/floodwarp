@@ -32,3 +32,16 @@ Operator_audit.json verifies the original source and activity bodies are unchang
 Retain the measured combined improvement on dev; keep explicit dense execution and the 0.65 fallback. No new complete 72-hour event has been run for this candidate. The published 1641.957 s sparse event timing continues to describe the frozen v0.1.1 implementation, not this investigation. A complete matched event and isolated peak-memory audit remain gates before a subsequent stable release. CPU speedup and other GPU models are not demonstrated. Next bottlenecks are full-domain CFL/sources, initial invalidation clearing, and high-occupancy scheduling/indirection. Source/runtime snapshots and unsuccessful configurations are preserved.
 
 Subsequent matched 72-hour verification is now recorded in the [full-event comparison](../sparse_modified_event_review/REPORT.md); the original measurements and scope above are preserved.
+
+## Release v0.1.2 status note
+
+This historical investigation was copied from dev at
+`90f5b9893afc1ac87e725788ec0431f38adb7834`, together with its reproduction drivers,
+source snapshots, profiles, memory measurements and test logs. Its original
+identities, timings and pending-event statement above are retained. The later
+[completed-event report](../sparse_modified_event_review/REPORT.md) supersedes
+that pending conclusion: main already carried the verified combined scheduling
+at `bce98b103beca066cd0c9afdeec0fc330576182a`. These files do not bring static-mesh
+research or an additional runtime optimisation into v0.1.2. Drivers still need
+the separately retained full-domain checkpoints at the editable paths in their
+execution guards; those large checkpoints are not bundled in the wheel.

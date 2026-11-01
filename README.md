@@ -1,68 +1,163 @@
 # FloodWarp
 
-The verified modified sparse FV1 path is now the default on both main and dev.
-Dense execution remains selectable; static AMR stays separate on dev.
+**Development checkout: 0.2.0.dev0.** Local main carries the prepared v0.1.2
+release; publication remains with the owner. Experimental fixed-block FV1 and
+its reconstruction investigations remain on dev, with their original evidence
+and limitations. They are excluded from the v0.1.2 artifacts. See
+[development scope](docs/DEVELOPMENT.md), [static controls](validation/static_review/REPORT.md)
+and [reconstruction investigation](validation/static_reconstruction_review/REPORT.md).
 
-**FloodWarp 0.2.0.dev0 — development checkout.** The stable release is
-[v0.1.1](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.1).
-FloodWarp is research-grade surface-water simulation software for
-CPU and NVIDIA CUDA. Copyright **Patrick Durney and Lincoln Agritech Ltd**.
-Software is **[GNU AGPL-3.0-only](LICENSE)**; attributed elevation data retain
-CC BY 4.0. FV1 is an independent FP64 first-order finite-volume full
-shallow-water solver. LI is a reduced-complexity local-inertial alternative.
-Traditional and enhanced SGS modes remain explicitly experimental.
-Independent benchmark and analytical evidence do not establish universal
-hydraulic qualification.
+FloodWarp simulates rainfall-driven surface flooding on CPU and NVIDIA CUDA.
+The primary solver is FP64, uniform-grid FV1, an independent first-order
+finite-volume implementation of the full shallow-water equations. Developed
+by **Patrick Durney**. Copyright **Lincoln Agritech Ltd**. Software is
+[AGPL-3.0-only](LICENSE); attributed elevation data retain CC BY 4.0.
 
-Read the **[disclaimer and responsible-use guidance](DISCLAIMER.md)** before
-interpreting results. Research demonstration only — not an official flood-hazard
-assessment. Independent site-specific validation is required before decision-making.
+| Method | Interface | Status and scope |
+|---|---|---|
+| FV1 | Local UI, Python factories, native class | Ordinary high-level default; exact sparse scheduling with dense storage; explicit dense override |
+| LI | Explicit `solver_method="li"`, native class | Reduced-complexity local-inertial alternative; ordinary LI physical profile retained |
+| Traditional SGS | Explicit LI Python configuration | Experimental common-stage subgrid geometry |
+| Enhanced SGS | Explicit LI Python configuration | Experimental component-aware subgrid geometry |
 
-## Install and quick start
+Static-mesh FV1, dynamic AMR, wavelets, mixed-precision FV1, surrogate and
+coupled-model research are excluded. Numerical agreement with an independent
+solver does not establish observed-event validation or grid convergence.
+Read the [responsible-use guidance](DISCLAIMER.md) when interpreting results.
 
-Use Python 3.14 and a fresh environment, from a checkout of this release:
+## Installation and tested environment
+
+Use **Python 3.14** in a fresh virtual environment. From the release checkout:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install ".[test,raster,plot]"
+python -m pip install '.[ui]'
 python -m pip check
-python -m examples.run_synthetic
-python -m examples.run_purau
-python -m pytest -q
 ```
 
-`pip install .` installs the CPU core. Numerical dependencies are pinned:
-NumPy 2.3.5, SciPy 1.16.3, Numba 0.67.0 and Warp 1.17.0. Rasterio adds GeoTIFF
-IO; Matplotlib adds figures. Set `device='cuda:0'` for compatible NVIDIA hardware
-and drivers; ordinary wheel use does not need a system CUDA toolkit. Release
-validation covers Linux x86-64 CPU and RTX 4070 Ti SUPER. Other platforms require
-compatible Python 3.14 wheels and local validation. No Overlander/prepared-model
-installation or external solver executable is required.
+For the supplied wheel, use `python -m pip install './floodwarp-0.1.2-py3-none-any.whl[ui]'`.
+`python -m pip install .` installs just the numerical core. UI and raster/plot
+packages are optional; ordinary solver imports do not require them. Numerical
+pins remain NumPy 2.3.5, SciPy 1.16.3, Numba 0.67.0 and Warp 1.17.0.
 
-Use `solver_method='fv1'` or `'li'` with `create_model`. FV1 defaults to contact
-HLL, velocity-extrapolated stages and FP64; LI defaults to the physical profile.
-FV1 now uses exact-zero sparse execution with 8×8 tiles and `dense_fraction=0.65`.
-It retains dense uniform-grid state, full-domain sources and CFL, all numerical
-operators and accounting. Pass `execution_mode='dense'` through either factory
-or the native constructor for the retained dense reference. Scheduling can
-switch without changing the numerical configuration or checkpoint identity.
-The [input guide](docs/INPUTS.md) covers arrays, rainfall, infiltration, boundaries,
-raster datum/mask handling and restart. [run_direct.py](examples/run_direct.py)
-is an editable GeoTIFF example. The historical `run_purau` command is a separate
-200 m installation crop, not the full-domain demonstration below.
+Release testing covers Linux x86-64, Python 3.14.7, CPU and NVIDIA RTX 4070 Ti
+SUPER. Other platforms require compatible Python 3.14 dependencies and local
+validation. CUDA wheel use needs a compatible NVIDIA driver, not a separate
+system CUDA toolkit. No prepared-model installation or external solver
+executable is required. See [development guidance](docs/DEVELOPMENT.md).
 
-This development checkout retains experimental static-mesh research and its
-failed runtime gate. It is separate from the stable v0.1.1 release; dynamic AMR
-is not enabled. The production sparse default and explicit dense reference
-remain available in both branches.
+## Launch the local interface
 
-The modified dev sparse path now completes the same 72-hour event in **1512.37 s hydraulic time**
-versus 1641.96 s released sparse and 1906.11 s dense, with exact
-recorded hourly fields and accepted-step agreement. See the
-[full-event comparison](validation/sparse_modified_event_review/REPORT.md).
-This is one new run against retained same-device controls; stable release
-artifacts and geospatial datasets are unchanged.
+```bash
+python -m floodwarp.ui
+```
+
+Open **http://127.0.0.1:8765**. Choose local files using Browse or enter their
+paths; select an existing output parent and press **Validate & preview**, then
+**Run**. Execution happens in a worker process. The page shows simulated and
+wall time, status, logs, outputs and a maximum-depth preview. Refreshing does
+not start another run.
+
+![Local FV1 rainfall interface after a completed synthetic run](docs/ui.png)
+
+The initial UI supports rainfall-driven FV1, uniform Manning roughness,
+uniform constant infiltration in mm/h, CPU/automatic/specific CUDA devices,
+and explicit FREE/outflow or Closed boundaries. FREE opens exterior-connected
+domain interfaces; enclosed NoData holes remain closed. No coastal stages are
+inferred. Sparse execution and CUDA-graph defaults remain unchanged.
+[Detailed UI guide](docs/UI.md) explains inputs, boundaries and replay.
+
+## Prepare inputs
+
+- **DEM:** single-band, north-up projected-metre GeoTIFF; metre elevations and
+  an explicit vertical datum. Elevations and resolution are preserved.
+- **Domain:** all valid DEM cells, an aligned binary GeoTIFF, or valid polygons
+  in one GeoPackage layer / declared-CRS GeoJSON. Polygons are transformed to
+  DEM CRS and rasterised on its grid with `all_touched=False`. Intersect with
+  valid DEM cells; empty domains fail. No terrain resampling or conditioning.
+- **Rainfall hyetograph:** CSV headed `time_h,rainfall_mm_h`, at least two finite
+  increasing nodes starting at zero, non-negative intensities and a final zero
+  node. Linear interpolation; zero rainfall throughout any recession. Duration
+  must cover the entire event. River discharge is not rainfall.
+- **Distribution:** uniform multiplier 1 or an aligned dimensionless spatial
+  scaling GeoTIFF. Local rainfall = hyetograph × multiplier. Finite non-negative
+  active-cell values are required; zero is valid. No normalisation.
+
+Raster fields must match DEM CRS, transform, shape and cell size and cover the
+active domain. The [input guide](docs/INPUTS.md) covers row orientation, datum,
+forcing, infiltration, boundaries and checkpoint identity.
+
+## Run a small example and find results
+
+In the UI, click **Load small synthetic example**, choose an output parent and
+Run. The installed distribution includes a tiny DEM, binary domain, polygon,
+scaling map and rainfall CSV. Its 120 s run includes a 72 s event and recession.
+`python -m floodwarp.ui_example` copies those inputs to `floodwarp-example` for
+editing. The UI creates a distinct `floodwarp-<timestamp>-<suffix>` directory.
+
+Results include `maximum_depth.tif`, `final_depth.tif`, `water_balance.csv`,
+`boundary_flow.csv`, `checkpoint.npz`, detailed logs and `run_config.json` with
+input checksums and resolved numerical/device/source provenance. GeoTIFFs
+preserve the DEM grid, CRS, mask and metre units. Boundary-flow time series are
+**aggregate boundary flows**, not a selected river outlet. Maximum-event maps
+are distinct from simultaneous final depth. Checkpoints are saved after each
+completed diagnostic interval; full depth snapshots are not accumulated.
+
+From a source checkout, `python -m examples.run_synthetic` runs explicit FV1
+and LI controls. `python -m examples.run_purau` is the historical **200 m Orton
+Bradley installation crop**; the name does not identify the actual Purau
+catchment. [run_direct.py](examples/run_direct.py) is the editable own-DEM FV1
+example. These examples write to `outputs/` and reach their exact final time.
+
+## Equivalent Python API
+
+The same reusable runner works without the browser:
+
+```python
+from pathlib import Path
+from floodwarp.ui_runner import RunConfig, create_run_directory, execute_run
+
+
+if __name__ == "__main__":
+    output_parent = Path("outputs")  # Create or choose an existing directory.
+    config = RunConfig(
+        dem="floodwarp-example/dem.tif",
+        domain_mode="raster", domain="floodwarp-example/domain.tif",
+        rainfall_csv="floodwarp-example/rainfall.csv",
+        output_parent=str(output_parent), vertical_datum="local",
+        duration_s=120., interval_s=30., device="cpu", boundary="free",
+    )
+    output_parent.mkdir(parents=True, exist_ok=True)
+    output = create_run_directory(parent=output_parent)
+    execute_run(config=config, output=output)
+```
+
+`prepare_run` and `create_run_model` expose the resolved inputs and ordinary
+`floodwarp.model` object. `create_model(terrain=terrain)` and
+`create_overland_solver(...)` now default to FV1 deliberately in v0.1.2.
+Pass `solver_method="li"` for LI, or use native `LocalInertialSolver`.
+FV1 defaults to exact sparse execution; `execution_mode="dense"` retains the
+reference. Existing checkpoints retain their formulation identity; incompatible
+loads fail. SGS callers must explicitly select LI.
+
+## Validation and performance evidence
+
+The [current evidence index](validation/README.md) separates analytical controls,
+independent FV1 comparisons, sparse/dense parity, restart tests and scientific
+limitations. [v0.1.2 verification](validation/release_v0.1.2/REPORT.md) distinguishes
+new interface/default/packaging checks from retained numerical evidence.
+Run source regressions with `python -m pip install '.[test,ui]'` then
+`python -m pytest -q`. Opt-in FV1 CUDA tests use the retained
+`OVERLANDER_TEST_FULL_SWE_CUDA=1` flag.
+
+The release baseline already contained the verified modified sparse FV1 path:
+**1512.372 s** hydraulic time versus **1641.957 s** released sparse and
+**1906.106 s** dense in the matched 72-hour Orton Bradley event, with all 72
+hourly state checks and 1,570,053 accepted steps agreeing. These are single
+completed-event timings, distinct from repeated short saved-state controls.
+[Complete comparison](validation/sparse_modified_event_review/REPORT.md).
+Historical tags, assets, checksums and numerical datasets are preserved.
 
 ## Orton Bradley Park — complete 5 m model domain
 
@@ -238,7 +333,7 @@ recession to 72 hours. Manning and exponential-soil mappings are assumptions
 requiring site calibration. Reference agreement is numerical context, not a
 calibrated flood forecast or qualification of every closure/scenario. SGS is
 experimental. Static/dynamic AMR, wavelets and mixed-precision FV1 are excluded
-from v0.1.1 and remain separate development research.
+from v0.1.2 and remain separate development research.
 
 See [release status](docs/RELEASE_STATUS.md), [numerical assessment](validation/repair_review/FINAL.md),
 [changelog](CHANGELOG.md), [attribution](THIRD_PARTY_NOTICES.md) and
