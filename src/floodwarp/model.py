@@ -22,6 +22,7 @@ class Model:
     stage_series_x: tuple | None
     stage_series_y: tuple | None
     identity: dict
+    rainfall_end_behavior: str = 'require_coverage'
 
 
 def series_values(*, series, name):
@@ -44,7 +45,11 @@ def create_model(*, terrain: Terrain, solver_method="fv1", manning_n=.03,
                  initial_depth=None, initial_stage=None, rainfall=0., rainfall_series=None,
                  infiltration=0., boundary_qx=None, boundary_qy=None,
                  stage_qx=0., stage_qy=0., stage_series_qx=None, stage_series_qy=None,
-                 stage_datum=None, device="cpu", **solver_options):
+                 stage_datum=None, device="cpu", rainfall_end_behavior='require_coverage', **solver_options):
+    if rainfall_end_behavior not in ('require_coverage', 'finite_support'):
+        raise ValueError('Rainfall end behavior must be require_coverage or finite_support')
+    if rainfall_end_behavior == 'finite_support' and solver_method != 'fv1':
+        raise ValueError('Explicit finite-support continuation is supported here for FV1 only')
     if initial_depth is not None and initial_stage is not None:
         raise ValueError("Specify initial depth or initial stage, never both")
     boundaries = boundary_faces(terrain=terrain)
@@ -112,7 +117,10 @@ def create_model(*, terrain: Terrain, solver_method="fv1", manning_n=.03,
     identity['fields'] = {name: hashlib.sha256(value.tobytes()).hexdigest() for name, value in fields.items()}
     identity['forcing'] = dict(rainfall=None if hyetograph is None else [times.tolist(), rates.tolist()],
         stage_x=None if tx is None else [a.tolist() for a in tx], stage_y=None if ty is None else [a.tolist() for a in ty])
-    return Model(solver=solver, terrain=terrain, rainfall=hyetograph, stage_series_x=tx, stage_series_y=ty, identity=identity)
+    if rainfall_end_behavior != 'require_coverage':
+        identity['rainfall_end_behavior'] = rainfall_end_behavior
+    return Model(solver=solver, terrain=terrain, rainfall=hyetograph, stage_series_x=tx, stage_series_y=ty,
+                 identity=identity, rainfall_end_behavior=rainfall_end_behavior)
 
 
 def model_time(*, model):
@@ -127,7 +135,8 @@ def advance(*, model, end_time, use_cuda_graph=None):
     for series in (model.stage_series_x, model.stage_series_y):
         if series is not None and end_time > series[0][-1]:
             raise ValueError("Stage series must cover the entire simulation")
-    if model.rainfall is not None and end_time > model.rainfall.duration_s:
+    if (model.rainfall is not None and end_time > model.rainfall.duration_s and
+            model.rainfall_end_behavior != 'finite_support'):
         raise ValueError("Rainfall series must cover simulation, including explicit zero-rain recession")
     if isinstance(solver, FullSWESolver):
         if model.stage_series_x is not None or model.stage_series_y is not None:
