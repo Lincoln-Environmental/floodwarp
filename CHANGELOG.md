@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.3 — spatial local UI on main
+
+- Add aligned spatial Manning roughness, constant-capacity and exponential
+  infiltration maps using existing FV1 fields and setters.
+- Add explicit Closed/FREE/constant-stage face CSVs with absolute datum checks,
+  templates and visible coastal contacts. Reject ambiguous surplus CSV values.
+- Load and preview the complete original Orton Bradley setup when available;
+  preserve exact FP64 inputs, all 212 coastal contacts and explicit matched
+  numerical settings. Never launch its 72-hour simulation automatically.
+- Add bundled Leaflet and streamed OpenStreetMap with local terrain, maximum
+  and final-depth overlays. Map reprojection is display-only.
+- Expose native finite-support rainfall continuation explicitly while preserving
+  the default coverage guard, restart identity and all hydraulic operators.
+- Separate checkpoint cadence from diagnostics for practical full-domain IO.
+  Keep original v0.1.2 artifacts and all historical evidence unchanged.
+
 ## v0.1.2 — local publication candidate
 
 - Add an optional localhost rainfall UI (`python -m floodwarp.ui`) with real

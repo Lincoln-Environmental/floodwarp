@@ -29,7 +29,7 @@ python -m pip install '.[ui]'
 python -m pip check
 ```
 
-For the supplied wheel, use `python -m pip install './floodwarp-0.1.2-py3-none-any.whl[ui]'`.
+For the supplied wheel, use `python -m pip install './floodwarp-0.1.3-py3-none-any.whl[ui]'`.
 `python -m pip install .` installs just the numerical core. UI and raster/plot
 packages are optional; ordinary solver imports do not require them. Numerical
 pins remain NumPy 2.3.5, SciPy 1.16.3, Numba 0.67.0 and Warp 1.17.0.
@@ -52,14 +52,22 @@ paths; select an existing output parent and press **Validate & preview**, then
 wall time, status, logs, outputs and a maximum-depth preview. Refreshing does
 not start another run.
 
-![Local FV1 rainfall interface after a completed synthetic run](docs/ui.png)
+![Orton Bradley terrain and explicit coastal stage contacts on OpenStreetMap](docs/ui-orton-map.png)
 
-The initial UI supports rainfall-driven FV1, uniform Manning roughness,
-uniform constant infiltration in mm/h, CPU/automatic/specific CUDA devices,
-and explicit FREE/outflow or Closed boundaries. FREE opens exterior-connected
-domain interfaces; enclosed NoData holes remain closed. No coastal stages are
-inferred. Sparse execution and CUDA-graph defaults remain unchanged.
-[Detailed UI guide](docs/UI.md) explains inputs, boundaries and replay.
+The UI supports rainfall-driven FV1 with uniform or spatial Manning roughness,
+uniform/spatial constant-capacity or spatial exponential infiltration,
+CPU/automatic/specific CUDA devices and Closed/FREE/explicit constant-stage
+boundaries. OpenStreetMap streams the viewed basemap behind local terrain,
+domain and maximum/final-depth overlays. No coastal stages are inferred.
+Sparse execution and CUDA-graph defaults remain unchanged.
+[Current UI guide](docs/UI_SPATIAL.md) explains spatial inputs, boundary face
+CSVs, map behaviour and replay; [the earlier guide](docs/UI.md) records v0.1.2.
+
+When the extracted original Orton Bradley archive is present, the UI loads its
+complete 5 m setup by default: spatial roughness, original exponential soils,
+rainfall scaling and 212 explicit coastal contacts. It previews the setup and
+waits for Run; the 72-hour event never starts automatically. Otherwise choose
+the archive directory with Browse. The small synthetic control remains available.
 
 ## Prepare inputs
 
@@ -71,17 +79,33 @@ inferred. Sparse execution and CUDA-graph defaults remain unchanged.
   valid DEM cells; empty domains fail. No terrain resampling or conditioning.
 - **Rainfall hyetograph:** CSV headed `time_h,rainfall_mm_h`, at least two finite
   increasing nodes starting at zero, non-negative intensities and a final zero
-  node. Linear interpolation; zero rainfall throughout any recession. Duration
+  node by default. An explicit finite-support option ends the event at its last
+  node even if nonzero, retaining the native zero-rain recession. Linear
+  interpolation within the event is unchanged. Duration
   must cover the entire event. River discharge is not rainfall.
 - **Distribution:** uniform multiplier 1 or an aligned dimensionless spatial
   scaling GeoTIFF. Local rainfall = hyetograph × multiplier. Finite non-negative
   active-cell values are required; zero is valid. No normalisation.
+
+- **Roughness/infiltration:** uniform values or aligned spatial GeoTIFFs.
+  Manning n is positive; capacity/f0/k are non-negative, fd is positive and
+  f0 ≥ k. Rate-map units are explicitly mm/h or m/s; fd is metres.
+- **Boundaries:** Closed/FREE presets, or a CSV `axis,row,col,type,stage_m`
+  selecting exact domain faces. Absolute stages require the DEM vertical datum;
+  unlisted interfaces stay closed. Download a closed-face template after validation.
 
 Raster fields must match DEM CRS, transform, shape and cell size and cover the
 active domain. The [input guide](docs/INPUTS.md) covers row orientation, datum,
 forcing, infiltration, boundaries and checkpoint identity.
 
 ## Run a small example and find results
+
+The Orton Bradley preset selects the matched benchmark profile explicitly:
+original SI rainfall nodes and finite event support, spatial exponential soil,
+absolute coastal stage 0 m NZVD2016 and discharge-extrapolated stage momentum.
+These differ from ordinary defaults. It is a substantial 72-hour design event,
+not observed-event calibration. Hourly checkpoints avoid minute-by-minute full
+restart IO; diagnostics remain at 60 s.
 
 In the UI, click **Load small synthetic example**, choose an output parent and
 Run. The installed distribution includes a tiny DEM, binary domain, polygon,
@@ -136,6 +160,8 @@ loads fail. SGS callers must explicitly select LI.
 
 ## Validation and performance evidence
 
+The [spatial UI verification](validation/ui_spatial_review/MAIN.md) records the
+promoted main source and its checks separately from the retained dev results.
 The [current evidence index](validation/README.md) separates analytical controls,
 independent FV1 comparisons, sparse/dense parity, restart tests and scientific
 limitations. [v0.1.2 verification](validation/release_v0.1.2/REPORT.md) distinguishes

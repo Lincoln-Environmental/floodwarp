@@ -113,7 +113,7 @@ standalone full-domain replay retains its own identical helper.
 The release baseline's modified sparse kernels and numerical controls are
 unchanged. See [current evidence index](../validation/README.md).
 
-## Spatial local UI on dev
+## Spatial local UI on main (v0.1.3)
 
 The [current spatial UI](UI_SPATIAL.md) uses ordinary FV1 with aligned roughness
 and infiltration maps, explicit face CSVs and a faithful full Orton Bradley

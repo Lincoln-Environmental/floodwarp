@@ -140,7 +140,7 @@ The UI deliberately requires a final zero rainfall node and extends it with
 zero recession; the ordinary API retains its explicit forcing-coverage contract.
 `floodwarp.sampling.sample_targets` includes the exact requested end time once.
 
-## Development UI spatial inputs and finite-support FV1 events
+## Spatial UI inputs and finite-support FV1 events
 
 The [spatial UI guide](UI_SPATIAL.md) documents aligned Manning/constant and
 exponential infiltration maps, explicit Closed/FREE/constant-stage faces, exact

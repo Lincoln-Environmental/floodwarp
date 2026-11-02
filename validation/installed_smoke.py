@@ -33,7 +33,7 @@ def verify_installation(*, expected_version, duration, rainfall):
 
 
 if __name__ == "__main__":
-    expected_version = '0.1.2'
+    expected_version = '0.1.3'
     duration = .2
     rainfall = .001
     verify_installation(expected_version=expected_version, duration=duration, rainfall=rainfall)

@@ -1,6 +1,6 @@
 # Local rainfall interface — v0.1.2
 
-For the current development UI with spatial coefficients, explicit stage faces,
+For the current v0.1.3 UI with spatial coefficients, explicit stage faces,
 Orton Bradley and OpenStreetMap, see [the spatial UI guide](UI_SPATIAL.md).
 The following records the prepared v0.1.2 interface.
 
