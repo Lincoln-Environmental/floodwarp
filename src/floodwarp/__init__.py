@@ -1,4 +1,5 @@
-"""FloodWarp surface hydraulics. Copyright Patrick Durney and Lincoln Agritech Ltd.
+"""FloodWarp surface hydraulics. Copyright Lincoln Agritech Ltd.
+Developed by Patrick Durney.
 
 SPDX-License-Identifier: AGPL-3.0-only
 """

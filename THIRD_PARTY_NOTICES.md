@@ -1,8 +1,7 @@
 # Attribution and provenance
 
 FloodWarp's hydraulic code is extracted from Lincoln-Environmental/Overlander
-at `ba503b8bde51d3f212199e81efc7038d9fffecc8`. Copyright Patrick Durney and
-Lincoln Agritech Ltd. The rights holders authorised release under
+at `ba503b8bde51d3f212199e81efc7038d9fffecc8`. Copyright Lincoln Agritech Ltd. Developed by Patrick Durney. The rights holders authorised release under
 **AGPL-3.0-only**; see LICENSE and COPYRIGHT. No prior Git history
 or archived research branches are copied. Per-module source hashes and
 extraction changes are in `docs/extraction.json` and `docs/numerical_integrity.json`.
