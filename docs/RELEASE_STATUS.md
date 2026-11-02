@@ -1,4 +1,4 @@
-# FloodWarp v0.1.3 main preparation
+# FloodWarp v0.1.3 release status
 
 ## Published release versus current source
 
@@ -6,29 +6,33 @@ Checked **2 November 2026**:
 
 | Item | Version and source | Status |
 |---|---|---|
-| [GitHub Latest](https://github.com/Lincoln-Environmental/floodwarp/releases/latest) | v0.1.1, tag target `92aaab7d6167980ddc3ee334f677e01b007e137e` | Published; original tag and assets preserved |
-| `main` | Prepared v0.1.3; implementation/evidence through `2cf3b9ffd5b294f0d4d282caf41b699ee370aa41` | Pushed source; no v0.1.3 tag or published release |
-| Current local distributions | v0.1.3, built from `6a67851189d377aa894ec05304f62065a072fb23` | `outputs/release/v0.1.3-metrics/dist/`; [checksums and verification](../validation/run_metrics_review/REPORT.md#updated-local-artifacts) |
+| [GitHub Latest](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3) | v0.1.3, tag target `6a67851189d377aa894ec05304f62065a072fb23` | Released within the private repository; wheel, source archive and SHA256SUMS uploaded |
+| `main` | Released v0.1.3 implementation with later evidence/documentation commits | Pushed source; runtime matches the artifact/tag source |
+| Release distributions | v0.1.3, built from `6a67851189d377aa894ec05304f62065a072fb23` | Also retained locally in `outputs/release/v0.1.3-metrics/dist/`; [checksums and verification](../validation/run_metrics_review/REPORT.md#updated-local-artifacts) |
+| Historical v0.1.1 | Tag target `92aaab7d6167980ddc3ee334f677e01b007e137e` | Original release, tag and assets preserved |
 | Earlier v0.1.2 candidate | Prepared source/artifacts | Historical local snapshot; never published as a GitHub release |
 
-The GitHub **Latest** label refers to a published release, not the current
-main branch or package version. A branch push leaves the existing release
-title, tag target and downloadable files unchanged. The v0.1.1 label is therefore
-correct for that historical release; it does not describe the current UI.
+The owner authorised creating v0.1.3 as Latest inside the private repository,
+superseding the earlier instruction to leave release publication and asset
+uploads untouched. Repository visibility remains private. The release tag
+matches the exact source used by the existing distributions; later branch
+commits contain evidence and documentation only.
 
-[Prepared v0.1.3 release notes](RELEASE_NOTES_v0.1.3.md) describe the new source.
-Installation and UI instructions in the current README apply to main/prepared
-v0.1.3. The owner will publish the chosen tag/release and matching artifacts.
-This documentation clarification introduces no runs, tests or artifact rebuilds.
+[v0.1.3 release notes](RELEASE_NOTES_v0.1.3.md) describe the released source.
+[Private release metadata](../validation/run_metrics_review/private_release.json)
+records the release identity and server-reported asset digests. No models,
+tests or builds were run for this metadata/upload/documentation update.
+Anonymous download/install checks remain for the owner after making the
+repository public.
 
-## Current prepared capabilities
+## Current released capabilities
 
 Main includes spatial roughness/infiltration, explicit constant-stage boundary
 faces, the original full Orton Bradley setup and OpenStreetMap overlays.
 See [the current UI guide](UI_SPATIAL.md) and [main verification](../validation/ui_spatial_review/MAIN.md).
 Only ordinary supported FV1 adapters/UI changes were promoted; static-mesh
-research remains on dev. No visibility change, GitHub release or asset upload
-is part of this update. The original v0.1.2 artifacts and source identity remain
+research remains on dev. The private release adds its own assets and tag;
+visibility remains unchanged. The original v0.1.2 artifacts and source identity remain
 unchanged and are documented below as a previous prepared snapshot.
 
 ## Historical v0.1.2 local publication preparation

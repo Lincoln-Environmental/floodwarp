@@ -7,11 +7,12 @@ by **Patrick Durney**. Copyright **Lincoln Agritech Ltd**. Software is
 [AGPL-3.0-only](LICENSE); attributed elevation data retain CC BY 4.0.
 
 **Release status (2 November 2026):** GitHub's latest published release is
-[v0.1.1](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.1),
-at `92aaab7`. The `main` branch contains **prepared v0.1.3**, including the
-local UI and spatial inputs described below. Pushing main does not update a
-published release or its download assets. See [release status](docs/RELEASE_STATUS.md)
-and [prepared v0.1.3 release notes](docs/RELEASE_NOTES_v0.1.3.md).
+[v0.1.3](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3),
+at `6a67851`, with the local UI and spatial inputs described below. The wheel
+and source archive match that tag; main includes later evidence/documentation
+updates. The repository remains private. Historical v0.1.0/v0.1.1 releases are
+preserved. See [release status](docs/RELEASE_STATUS.md) and
+[v0.1.3 release notes](docs/RELEASE_NOTES_v0.1.3.md).
 
 | Method | Interface | Status and scope |
 |---|---|---|
@@ -27,8 +28,8 @@ Read the [responsible-use guidance](DISCLAIMER.md) when interpreting results.
 
 ## Installation and tested environment
 
-Use **Python 3.14** in a fresh virtual environment. From the `main` checkout
-(prepared v0.1.3):
+Use **Python 3.14** in a fresh virtual environment. From the v0.1.3 tag or
+the `main` checkout:
 
 ```bash
 python -m venv .venv
@@ -37,8 +38,9 @@ python -m pip install '.[ui]'
 python -m pip check
 ```
 
-For the locally prepared v0.1.3 wheel, use `python -m pip install './floodwarp-0.1.3-py3-none-any.whl[ui]'`.
-That wheel is not yet a published GitHub release asset; v0.1.1 downloads do not include this UI.
+Download the wheel from the [v0.1.3 release](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3),
+then use `python -m pip install './floodwarp-0.1.3-py3-none-any.whl[ui]'`.
+Private-repository downloads require authorised access. Historical v0.1.1 downloads do not include this UI.
 `python -m pip install .` installs just the numerical core. UI and raster/plot
 packages are optional; ordinary solver imports do not require them. Numerical
 pins remain NumPy 2.3.5, SciPy 1.16.3, Numba 0.67.0 and Warp 1.17.0.

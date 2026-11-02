@@ -1,9 +1,10 @@
 # Changelog
 
-## v0.1.3 — prepared on main, not yet published
+## v0.1.3 — local rainfall UI and spatial inputs
 
-Prepared release notes: [local rainfall UI and spatial inputs](docs/RELEASE_NOTES_v0.1.3.md).
-GitHub's latest published release remains v0.1.1 until the owner publishes a new release.
+Released 2 November 2026 as Latest within the private repository, at `6a67851`.
+[Release notes](docs/RELEASE_NOTES_v0.1.3.md) and [assets](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3).
+Publication uses the existing prepared artifacts; no new models, tests or builds were run.
 
 - Display and save actual accepted steps, timestep min/mean/max/RMS and separately
   scoped native hydraulic, advance/setup, checkpoint/output and worker wall times.
