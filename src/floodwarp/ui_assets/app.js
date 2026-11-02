@@ -79,6 +79,8 @@ async function refresh() {
     byId('state').textContent = s.state.charAt(0).toUpperCase()+s.state.slice(1);
     byId('bar').max = s.end_time_s; byId('bar').value = s.time_s;
     byId('timing').textContent = `Simulated ${s.time_s} / ${s.end_time_s} s · elapsed ${s.elapsed_s.toFixed(1)} s`;
+    const m=s.metrics;
+    byId('run-metrics').textContent=m ? `${Number(m.accepted_steps).toLocaleString()} accepted steps · hydraulic ${m.hydraulic_seconds.toFixed(3)} s · worker wall ${m.worker_wall_seconds.toFixed(3)} s` + (m.dt_mean_s===null?'':` · dt min/mean/max ${m.dt_min_s.toPrecision(5)} / ${m.dt_mean_s.toPrecision(5)} / ${m.dt_max_s.toPrecision(5)} s`) : '';
     byId('output').textContent = s.output;
     byId('run-error').textContent = s.error || '';
     byId('downloads').replaceChildren();

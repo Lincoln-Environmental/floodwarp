@@ -18,6 +18,7 @@ from floodwarp.inputs import (boundary_faces, read_active_mask, read_aligned_fie
                              read_terrain, with_active_mask, write_raster)
 from floodwarp.model import advance, create_model, diagnostics, model_time, save_checkpoint
 from floodwarp.sampling import sample_targets
+from floodwarp.run_metrics import new_run_metrics, accumulate_advance, finish_run_metrics
 from floodwarp.ui_fields import aligned_coefficient, active_range, rate_factor, read_boundary_csv, numerical_options
 
 
@@ -373,6 +374,7 @@ def execute_run(*, config, output, expected_inputs=None):
     status = dict(state='running', time_s=0., end_time_s=config.duration_s,
         elapsed_s=0., output=str(output), error=None)
     output.mkdir(parents=True, exist_ok=True)
+    metrics = None
     write_json(path=output/'status.json', value=status)
     try:
         prepared = prepare_run(config=config)
@@ -383,21 +385,43 @@ def execute_run(*, config, output, expected_inputs=None):
             numerical=model.solver.numerical_configuration(), version=__version__,
             source=source_identity(), checkpoint='checkpoint.npz', use_cuda_graph=None,
             graph_policy='Existing solver default; no UI override', actual_final_time_s=None)
+        metrics = new_run_metrics(version=__version__, source=resolved['source'], duration_s=config.duration_s,
+            device=prepared.summary['device'], numerical_profile=config.numerical_profile)
+        metrics['preparation_seconds'] = time.monotonic()-started
+        resolved['metrics_file'] = 'metrics.json'
         write_json(path=output/'run_config.json', value=resolved)
+        checkpoint_started = time.monotonic()
         save_checkpoint(model=model, path=output/'checkpoint.npz')
+        metrics['checkpoint_seconds'] += time.monotonic()-checkpoint_started
         rows = []
         last_checkpoint = 0.
         previous = dict(time_s=0., boundary_outflow=0., boundary_inflow=0.)
-        with (output/'water_balance.csv').open('w', newline='') as balance, (output/'boundary_flow.csv').open('w', newline='') as flow:
+        with (output/'water_balance.csv').open('w', newline='') as balance, (output/'boundary_flow.csv').open('w', newline='') as flow, (output/'runtime.csv').open('w', newline='') as runtime:
             balance_writer = csv.DictWriter(balance, fieldnames=['time_s', 'storage_m3', 'residual_m3',
                 'rain', 'infiltration', 'boundary_inflow', 'boundary_outflow'], extrasaction='ignore')
             flow_writer = csv.DictWriter(flow, fieldnames=['time_s', 'interval_s',
                 'aggregate_boundary_outflow_m3_s', 'aggregate_boundary_inflow_m3_s'])
+            runtime_writer = csv.DictWriter(runtime, fieldnames=['time_s', 'accepted_steps', 'steps_interval',
+                'hydraulic_seconds_interval', 'hydraulic_seconds_cumulative', 'advance_wall_seconds_interval',
+                'dt_min_s', 'dt_mean_s', 'dt_max_s', 'dt_rms_s', 'compilation_seconds', 'graph_capture_seconds'])
+            runtime_writer.writeheader()
             balance_writer.writeheader()
             flow_writer.writeheader()
             for target in sample_targets(duration=config.duration_s, interval=config.interval_s):
-                advance(model=model, end_time=float(target))
+                advance_started = time.monotonic()
+                stats = advance(model=model, end_time=float(target))
+                advance_wall = time.monotonic()-advance_started
+                accumulate_advance(metrics=metrics, stats=stats, wall_seconds=advance_wall)
+                diagnostic_started = time.monotonic()
                 row = diagnostics(model=model)
+                row['accepted_steps'] = metrics['accepted_steps']
+                runtime_writer.writerow(dict(time_s=row['time_s'], accepted_steps=metrics['accepted_steps'],
+                    steps_interval=stats['steps'], hydraulic_seconds_interval=stats['loop_seconds'],
+                    hydraulic_seconds_cumulative=metrics['hydraulic_seconds'], advance_wall_seconds_interval=advance_wall,
+                    dt_min_s=stats['dt_min_s'], dt_mean_s=stats['dt_mean_s'], dt_max_s=stats['dt_max_s'],
+                    dt_rms_s=stats['dt_rms_s'], compilation_seconds=stats['compilation_seconds'],
+                    graph_capture_seconds=stats['graph_capture_seconds']))
+                runtime.flush()
                 dt = row['time_s'] - previous['time_s']
                 balance_writer.writerow(row)
                 flow_writer.writerow(dict(time_s=row['time_s'], interval_s=dt,
@@ -407,12 +431,18 @@ def execute_run(*, config, output, expected_inputs=None):
                 flow.flush()
                 rows.append(row)
                 previous = row
+                metrics['diagnostics_seconds'] += time.monotonic()-diagnostic_started
                 if (config.checkpoint_interval_s == 0. or row['time_s']-last_checkpoint >= config.checkpoint_interval_s or
                         row['time_s'] >= config.duration_s):
+                    checkpoint_started = time.monotonic()
                     save_checkpoint(model=model, path=output/'checkpoint.npz')
+                    metrics['checkpoint_seconds'] += time.monotonic()-checkpoint_started
                     last_checkpoint = row['time_s']
-                status.update(time_s=row['time_s'], elapsed_s=time.monotonic()-started)
+                finish_run_metrics(metrics=metrics, wall_seconds=time.monotonic()-started, complete=False)
+                write_json(path=output/'metrics.json', value=metrics)
+                status.update(time_s=row['time_s'], elapsed_s=time.monotonic()-started, metrics=metrics)
                 write_json(path=output/'status.json', value=status)
+        output_started = time.monotonic()
         write_raster(path=output/'maximum_depth.tif', terrain=prepared.terrain,
             values=model.solver.get_max_water_depth(), quantity='maximum_water_depth')
         write_raster(path=output/'final_depth.tif', terrain=prepared.terrain,
@@ -424,10 +454,19 @@ def execute_run(*, config, output, expected_inputs=None):
         write_json(path=output/'diagnostics.json', value=rows)
         resolved['actual_final_time_s'] = model_time(model=model)
         write_json(path=output/'run_config.json', value=resolved)
-        status.update(state='completed', time_s=model_time(model=model), elapsed_s=time.monotonic()-started)
+        metrics['output_seconds'] += time.monotonic()-output_started
+        finish_run_metrics(metrics=metrics, wall_seconds=time.monotonic()-started, complete=True)
+        if metrics['accepted_steps'] != model.solver.steps:
+            raise ArithmeticError('Recorded step total differs from the native solver')
+        write_json(path=output/'metrics.json', value=metrics)
+        status.update(state='completed', time_s=model_time(model=model), elapsed_s=time.monotonic()-started, metrics=metrics)
         write_json(path=output/'status.json', value=status)
         return resolved
     except Exception as error:
+        if metrics is not None:
+            finish_run_metrics(metrics=metrics, wall_seconds=time.monotonic()-started, complete=False)
+            write_json(path=output/'metrics.json', value=metrics)
+            status['metrics'] = metrics
         status.update(state='failed', error=f'{type(error).__name__}: {error}', elapsed_s=time.monotonic()-started)
         write_json(path=output/'status.json', value=status)
         raise

@@ -73,7 +73,17 @@ def test_runner_direct_api_and_exact_final_time(inputs, tmp_path, duration):
     fresh = create_run_model(prepared=prepared)
     load_checkpoint(model=fresh, path=output/'checkpoint.npz')
     np.testing.assert_array_equal(actual=fresh.solver.get_water_depth(), desired=direct.solver.get_water_depth())
-    assert json.loads((output/'status.json').read_text())['state'] == 'completed'
+    status = json.loads((output/'status.json').read_text())
+    assert status['state'] == 'completed'
+    metrics = json.loads((output/'metrics.json').read_text())
+    assert metrics['accepted_steps'] == direct.solver.steps
+    assert metrics['actual_time_s'] == duration
+    assert metrics['dt_mean_s'] == pytest.approx(duration/direct.solver.steps)
+    assert 0. < metrics['dt_min_s'] <= metrics['dt_mean_s'] <= metrics['dt_max_s']
+    assert metrics['hydraulic_seconds'] <= metrics['advance_wall_seconds'] <= metrics['worker_wall_seconds']
+    assert status['metrics']['accepted_steps'] == metrics['accepted_steps']
+    assert metrics['complete']
+    assert (output/'runtime.csv').is_file()
 
 
 def test_uniform_equals_ones_and_spatial_mass(inputs, tmp_path):
@@ -196,6 +206,8 @@ def test_failure_preserves_last_checkpoint(inputs, tmp_path, monkeypatch):
         execute_run(config=replace(inputs, interval_s=1.), output=output)
     status = json.loads((output/'status.json').read_text())
     assert status['state'] == 'failed' and status['time_s'] == 1.
+    metrics = json.loads((output/'metrics.json').read_text())
+    assert not metrics['complete'] and metrics['actual_time_s'] == 1.
     assert 'deliberate' in status['error']
     fresh = create_run_model(prepared=prepare_run(config=replace(inputs, interval_s=1.)))
     load_checkpoint(model=fresh, path=output/'checkpoint.npz')

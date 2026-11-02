@@ -15,9 +15,17 @@ isolate terrain or formulation as the sole cause of the differences.
 
 Maximum inundation is calculated directly from each pointwise maximum-depth envelope. Δh_max is FloodWarp FV1 maximum minus LISFLOOD-FP FV1 maximum; it is not a maximum instantaneous difference.
 
+The table below preserves the original dense/reference comparison. Current
+main uses the subsequently measured modified-sparse FV1 implementation:
+retained hydraulic runtime 1512.372 s, recorded component runtime 1599.164 s,
+1,570,053 steps. These are historical measurements of the unchanged runtime,
+not a fresh v0.1.3 UI run. [Runtime/timestep provenance](../../docs/RUN_METRICS.md)
+and [completed sparse event](../../validation/sparse_modified_event_review/REPORT.md)
+identify its source, scopes and full numerical parity.
+
 Grid: 1123 × 843 at 5 m; 559,985 physical cells; active area 13.999625 km²; raster footprint 23.667225 km². The model domain is not asserted to contain the entire geographical catchment.
 
-| Metric | LISFLOOD-FP FV1 | FloodWarp FV1 | FloodWarp LI |
+| Historical metric | LISFLOOD-FP FV1 | FloodWarp FV1 dense | FloodWarp LI |
 |---|---:|---:|---:|
 | Hydraulic runtime [s] | 1403.55942 | 1906.1062 | 1019.46035 |
 | End-to-end component runtime [s] | 1486.86521 | 2007.81904 | 1126.94604 |
@@ -58,4 +66,4 @@ Timing records describe one completed matched run per solver on the GPU named in
 
 Elevation credit: Contains data sourced from the LINZ Data Service licensed for reuse under CC BY 4.0. Environment Canterbury; Christchurch City Council where applicable; surveys by Aerial Surveys, Landpro and AAM NZ; hosted/processed by Toitu Te Whenua Land Information New Zealand.
 
-Software: Copyright Patrick Durney and Lincoln Agritech Ltd; AGPL-3.0-only. Elevation data retain CC BY 4.0. Full source hashes, original conditioning provenance, numerical identities and hardware are in provenance.json and the checksummed records.
+Software: Copyright Lincoln Agritech Ltd; developed by Patrick Durney; AGPL-3.0-only. Elevation data retain CC BY 4.0. Full source hashes, original conditioning provenance, numerical identities and hardware are in provenance.json and the checksummed records.
