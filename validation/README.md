@@ -47,3 +47,13 @@ No additional 72-hour event is required for these orchestration, metadata and
 packaging changes: kernel bodies, precision, CFL, source integration, boundary
 closures and checkpoint serializers are unchanged, and focused accepted-time,
 forcing, parity and restart controls cover the new scheduling path.
+
+## Development spatial UI
+
+The separate [spatial UI review](ui_spatial_review/REPORT.md) records current
+dev checks for spatial roughness and constant/exponential infiltration,
+explicit constant-stage domain faces, original-input Orton Bradley preparation,
+finite-support rainfall continuation and OpenStreetMap display overlays.
+It includes actual browser/live-tile checks and a bounded 2 s full-domain
+original-input comparison, not a new 72-hour event or qualification claim.
+Prepared v0.1.2 artifacts and their recorded release evidence remain unchanged.
