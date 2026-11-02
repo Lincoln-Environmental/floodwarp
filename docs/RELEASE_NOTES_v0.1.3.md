@@ -1,9 +1,11 @@
 # FloodWarp v0.1.3 — local rainfall UI and spatial inputs
 
-**Prepared release notes; not yet published.** GitHub's latest published release
-remains [v0.1.1](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.1)
-at `92aaab7`. Current main contains v0.1.3; v0.1.2 was an intermediate local
-candidate. [Release status](RELEASE_STATUS.md) separates branch, tag and artifact identities.
+**Released 2 November 2026 as Latest within the private repository.**
+[v0.1.3](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3)
+points to `6a67851189d377aa894ec05304f62065a072fb23`, matching the prepared
+wheel and source archive. Main includes later evidence/documentation commits.
+Historical v0.1.1 is preserved; v0.1.2 was an intermediate local candidate.
+[Release status](RELEASE_STATUS.md) separates branch, tag and artifact identities.
 
 Developed by **Patrick Durney**. Copyright **Lincoln Agritech Ltd**.
 Software remains AGPL-3.0-only; original LINZ elevation/data credits retain CC BY 4.0.
@@ -46,12 +48,13 @@ Use Python 3.14 and the existing pinned numerical dependencies. The
 [README](../README.md), [spatial UI guide](UI_SPATIAL.md) and [input guide](INPUTS.md)
 describe inputs, examples, defaults and limitations.
 
-## Evidence and prepared files
+## Evidence and release files
 
 The [metrics review](../validation/run_metrics_review/REPORT.md) records prior
 source-bound CPU/CUDA checks, actual browser actions and installed-wheel checks.
-It also identifies the current local distributions and SHA-256 checksums under
+It also identifies the released distributions and SHA-256 checksums, retained under
 `outputs/release/v0.1.3-metrics/dist/`, built from `6a67851189d377aa894ec05304f62065a072fb23`.
+The wheel, source archive and SHA256SUMS are assets on the private v0.1.3 release.
 Later evidence/documentation commits do not relabel that artifact source.
 
 The retained modified-sparse full event measured 1,512.372 s hydraulic runtime
@@ -61,6 +64,8 @@ v0.1.3 timings. No new simulation or test accompanies this documentation tidy-up
 Numerical agreement does not establish observed-event validation or grid convergence.
 
 Historical release tags, datasets, assets and numerical records remain intact.
-Before publication, select the matching prepared artifacts and follow the
-[publication handoff](../validation/run_metrics_review/REPORT.md#updated-local-artifacts),
-including anonymous download/install checks after the owner makes the repository public.
+The owner authorised publishing v0.1.3 within the private repository using the
+existing prepared files. No models, tests or builds were run for that step.
+The [publication handoff](../validation/run_metrics_review/REPORT.md#updated-local-artifacts)
+retains the earlier preparation record. Anonymous download/install checks
+remain for the owner after making the repository public.
