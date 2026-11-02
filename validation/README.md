@@ -12,6 +12,7 @@ No static-mesh or adaptive runtime is part of this release.
 
 | Evidence | Scope |
 |---|---|
+| [Current run metrics review](run_metrics_review/REPORT.md) | Main v0.1.3 per-run accepted steps/dt/runtime, actual browser and installed-wheel checks; source audit of retained completed-event timings |
 | [Frozen acceptance protocol](ACCEPTANCE.md) | Meaningful depth, extent, discharge and conservation gates; unchanged |
 | Source `tests/test_full_swe.py`, `test_still_water.py`, `test_cfl.py`, `test_rotation.py`, source/infiltration tests | Analytical and invariant controls, accepted-step/CFL and conservation regressions |
 | [Orton Bradley completed comparison](../examples/orton_bradley/COMPARISON.md) | Independent FloodWarp FV1 / LISFLOOD-FP FV1, matched 5 m full-domain 72-hour event |
