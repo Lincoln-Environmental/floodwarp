@@ -105,7 +105,7 @@ def test_explicit_boundary_stage_and_map_coordinates(spatial_inputs, tmp_path):
 
 @pytest.mark.parametrize('rows', ['qx,-1,0,free,\n', 'qx,0,99,free,\n', 'qx,0,1,free,\n',
     'qy,3,2,stage,\n', 'qy,3,2,stage,nan\n', 'qy,3,2,free,1\n',
-    'qy,3,2,free,\nqy,3,2,closed,\n'])
+    'qy,3,2,free,\nqy,3,2,closed,\n', 'qy,3,2,stage,0,1\n'])
 def test_boundary_rules_rejected(spatial_inputs, tmp_path, rows):
     path = tmp_path/'boundary.csv'
     path.write_text('axis,row,col,type,stage_m\n'+rows)
