@@ -35,7 +35,10 @@
 - Agent instruction files remain ignored and local; production release tags
   and immutable benchmark datasets are preserved.
 
-## v0.1.3 — spatial local UI on main
+## v0.1.3 — prepared on main, not yet published
+
+Prepared release notes: [local rainfall UI and spatial inputs](docs/RELEASE_NOTES_v0.1.3.md).
+GitHub's latest published release remains v0.1.1 until the owner publishes a new release.
 
 - Display and save actual accepted steps, timestep min/mean/max/RMS and separately
   scoped native hydraulic, advance/setup, checkpoint/output and worker wall times.
