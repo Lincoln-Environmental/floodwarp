@@ -424,7 +424,7 @@ def report_markdown(*, statistics, provenance, path):
         'diagnostic/checkpoint work and exclude some manifest/checksum publication and shared input loading; they are not independent fresh wall-clock repetitions. '
         'No full simulations were rerun to create this release.', '',
         'Elevation credit: ' + provenance['elevation_attribution'], '',
-        'Software: Copyright Patrick Durney and Lincoln Agritech Ltd; AGPL-3.0-only. Elevation data retain CC BY 4.0. '
+        'Software: Copyright Lincoln Agritech Ltd; developed by Patrick Durney; AGPL-3.0-only. Elevation data retain CC BY 4.0. '
         'Full source hashes, original conditioning provenance, numerical identities and hardware are in provenance.json and the checksummed records.', ''])
     path.write_text('\n'.join(lines))
 

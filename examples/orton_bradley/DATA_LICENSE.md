@@ -21,8 +21,8 @@ provenance.json. Original source rainfall grids, land-cover and soil vector
 datasets are not bundled. The numerical outputs are products of the credited
 FloodWarp and independent LISFLOOD-FP runs, not observed flood measurements.
 
-FloodWarp software and reproduction scripts: copyright Patrick Durney and
-Lincoln Agritech Ltd, **AGPL-3.0-only**. See LICENSE, COPYRIGHT and
+FloodWarp software and reproduction scripts: copyright Lincoln Agritech Ltd;
+developed by Patrick Durney. **AGPL-3.0-only**. See LICENSE, COPYRIGHT and
 THIRD_PARTY_NOTICES.md for software, dependencies and independent reference
 provenance. AGPL software terms do not replace the separate CC BY 4.0 elevation
 attribution requirements.

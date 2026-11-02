@@ -142,4 +142,4 @@ is portable between sparse and dense execution; changing scheduling does not
 change restart identity. The standalone script has no resume option.
 
 Elevation data credit and licence: [DATA_LICENSE.md](DATA_LICENSE.md).
-Software copyright Patrick Durney and Lincoln Agritech Ltd, AGPL-3.0-only.
+Software copyright Lincoln Agritech Ltd; developed by Patrick Durney. AGPL-3.0-only.
