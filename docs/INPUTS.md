@@ -139,3 +139,14 @@ FREE exterior interfaces versus enclosed holes, and complete output provenance.
 The UI deliberately requires a final zero rainfall node and extends it with
 zero recession; the ordinary API retains its explicit forcing-coverage contract.
 `floodwarp.sampling.sample_targets` includes the exact requested end time once.
+
+## Development UI spatial inputs and finite-support FV1 events
+
+The [spatial UI guide](UI_SPATIAL.md) documents aligned Manning/constant and
+exponential infiltration maps, explicit Closed/FREE/constant-stage faces, exact
+Orton Bradley input conversion and display-only OpenStreetMap overlays.
+The explicit FV1 option `rainfall_end_behavior='finite_support'` permits
+continuation beyond the final supplied rainfall node using the native zero-rain
+recession law. The existing default still requires full forcing coverage.
+Non-default forcing end semantics enter checkpoint identity; no hydraulic
+operator, source law, precision, CFL or checkpoint serializer is changed.

@@ -16,17 +16,24 @@ from urllib.parse import parse_qs, urlsplit
 
 from floodwarp.ui_runner import (RunConfig, available_devices, create_run_directory,
     prepare_run, terrain_preview, write_json)
+from floodwarp.ui_fields import boundary_template
+from floodwarp.ui_maps import map_overlay, boundary_features
+from floodwarp.ui_presets import find_orton_archive, prepare_orton_bradley, preset_catalog
 
 
 class LocalApplication:
     def __init__(self, *, initial_directory):
         self.token = secrets.token_urlsafe(32)
         self.initial_directory = initial_directory
+        self.default_output_parent = initial_directory/'outputs' if (initial_directory/'outputs').is_dir() else initial_directory
         self.lock = threading.RLock()
         self.process = None
         self.output = None
         self.started = None
         self.validated = None
+        self.default_config = None
+        self.template = None
+        self.preset_cache = {}
 
     def validate(self, *, config):
         with self.lock:
@@ -36,8 +43,24 @@ class LocalApplication:
         prepared = prepare_run(config=config)
         result = dict(summary=prepared.summary,
             terrain_png=base64.b64encode(terrain_preview(prepared=prepared)).decode('ascii'))
+        result['terrain_map'] = map_overlay(terrain=prepared.terrain, values=prepared.terrain.elevation, label='Terrain elevation (m)')
+        result['boundary_geojson'] = boundary_features(terrain=prepared.terrain, qx=prepared.qx, qy=prepared.qy)
+        self.template = boundary_template(terrain=prepared.terrain)
+        self.default_config = asdict(config)
         self.validated = dict(config=asdict(config), result=result)
         return result
+
+    def load_orton(self, *, directory, output_parent):
+        with self.lock:
+            source, parent = Path(directory).expanduser().resolve(), Path(output_parent).expanduser().resolve()
+            if not parent.is_dir():
+                raise ValueError('Choose an existing output parent directory for the prepared input set')
+            key = (str(source), str(parent))
+            if key not in self.preset_cache:
+                self.preset_cache[key] = prepare_orton_bradley(directory=source, output_parent=parent)
+            result = self.preset_cache[key]
+            self.default_config = result['config']
+            return result
 
     def start(self, *, config):
         with self.lock:
@@ -76,7 +99,7 @@ class LocalApplication:
         # Offer only complete, named products rather than every matching suffix.
         products = ('maximum_depth.tif', 'final_depth.tif', 'water_balance.csv',
             'boundary_flow.csv', 'checkpoint.npz', 'run_config.json',
-            'diagnostics.json', 'maximum_depth.png', 'run.log')
+            'diagnostics.json', 'maximum_depth.png', 'run.log', 'map.json', 'maximum_map.png', 'final_map.png', 'terrain_map.png')
         status['files'] = [name for name in products if (self.output/name).is_file()]
         return status
 
@@ -104,7 +127,7 @@ class LocalHandler(BaseHTTPRequestHandler):
         self.send_header(keyword='Content-Length', value=str(len(body)))
         self.send_header(keyword='Cache-Control', value='no-store')
         self.send_header(keyword='X-Content-Type-Options', value='nosniff')
-        self.send_header(keyword='Content-Security-Policy', value="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'")
+        self.send_header(keyword='Content-Security-Policy', value="default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'")
         if download:
             self.send_header(keyword='Content-Disposition', value=f'attachment; filename="{download}"')
         self.end_headers()
@@ -136,19 +159,25 @@ class LocalHandler(BaseHTTPRequestHandler):
             parsed = urlsplit(self.path)
             app = self.server.app
             assets = Path(__file__).with_name('ui_assets')
-            if parsed.path in ('/', '/app.js', '/style.css'):
+            if parsed.path in ('/', '/app.js', '/style.css', '/map.js', '/leaflet.js', '/leaflet.css'):
                 name = 'index.html' if parsed.path == '/' else parsed.path[1:]
                 self.respond(data=(assets/name).read_bytes(), content_type=mimetypes.guess_type(name)[0])
             elif parsed.path == '/bootstrap':
-                defaults = asdict(RunConfig(dem='', rainfall_csv='', output_parent=str(app.initial_directory), vertical_datum='local'))
-                if app.validated is not None:
-                    defaults = app.validated['config']
+                defaults = asdict(RunConfig(dem='', rainfall_csv='', output_parent=str(app.default_output_parent), vertical_datum='local'))
+                ordinary_defaults = dict(defaults)
+                if app.default_config is not None:
+                    defaults = app.default_config
                 example = assets/'example'
                 self.respond(data=dict(token=app.token, directory=str(app.initial_directory),
-                    defaults=defaults, devices=available_devices(),
+                    defaults=defaults, ordinary_defaults=ordinary_defaults, devices=available_devices(), has_configuration=app.default_config is not None,
+                    orton_directory=find_orton_archive(directory=app.initial_directory), orton_catalog=preset_catalog(),
                     validated=None if app.validated is None else app.validated['result'],
                     example=dict(dem=str(example/'dem.tif'), domain=str(example/'domain.tif'),
                         rainfall_csv=str(example/'rainfall.csv'), multiplier=str(example/'multiplier.tif'))))
+            elif parsed.path == '/boundary-template':
+                if app.template is None:
+                    raise ValueError('Validate the terrain/domain before downloading its face template')
+                self.respond(data=app.template.encode(), content_type='text/csv', download='boundary_faces.csv')
             elif parsed.path == '/status':
                 self.respond(data=app.status())
             elif parsed.path == '/example.csv':
@@ -175,6 +204,8 @@ class LocalHandler(BaseHTTPRequestHandler):
             request = json.loads(self.rfile.read(length))
             if self.path == '/browse':
                 result = directory_listing(path=Path(request['path']))
+            elif self.path == '/preset/orton':
+                result = self.server.app.load_orton(directory=request['directory'], output_parent=request['output_parent'])
             elif self.path == '/validate':
                 result = self.server.app.validate(config=RunConfig(**request))
             elif self.path == '/run':

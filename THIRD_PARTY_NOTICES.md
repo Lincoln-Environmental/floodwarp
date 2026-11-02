@@ -45,3 +45,18 @@ redistribution rights from these comparisons.
 NumPy, SciPy, Numba, Warp, optional Rasterio and Matplotlib are installed as
 separate distributions. Their licences and notices remain in those installed
 distributions; their source trees and binaries are not vendored here.
+
+## Leaflet and OpenStreetMap (development local interface)
+
+Leaflet 1.9.4 is vendored in `src/floodwarp/ui_assets/leaflet.js` and
+`leaflet.css`. Copyright (c) 2010–2023 Volodymyr Agafonkin and
+Copyright (c) 2010–2011 CloudMade. BSD-2-Clause terms are retained verbatim in
+`src/floodwarp/ui_assets/leaflet-LICENSE.txt`. Upstream:
+https://github.com/Leaflet/Leaflet/tree/v1.9.4 .
+
+The optional online basemap uses OpenStreetMap tiles. © OpenStreetMap
+contributors; data are available under the Open Database License. Visible
+attribution links to https://www.openstreetmap.org/copyright . Tile service
+use follows https://operations.osmfoundation.org/policies/tiles/ . Basemap
+images are display context; they do not supply hydraulic terrain or forcing.
+The documented map screenshot retains visible OpenStreetMap attribution.

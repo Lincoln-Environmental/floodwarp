@@ -112,3 +112,13 @@ shares exact-final-time output targets with the small public examples; the
 standalone full-domain replay retains its own identical helper.
 The release baseline's modified sparse kernels and numerical controls are
 unchanged. See [current evidence index](../validation/README.md).
+
+## Spatial local UI on dev
+
+The [current spatial UI](UI_SPATIAL.md) uses ordinary FV1 with aligned roughness
+and infiltration maps, explicit face CSVs and a faithful full Orton Bradley
+preset. Run `python src/floodwarp/ui.py` in the editable UI environment.
+Leaflet is vendored; only optional basemap tiles require internet. Display
+reprojection never alters hydraulic inputs or outputs. Keep the matched
+benchmark profile explicit and preserve v0.1.2 artifacts. Focused controls are
+`python -m pytest -q tests/test_ui_spatial_inputs.py tests/test_ui_runner.py tests/test_ui_server.py`.
