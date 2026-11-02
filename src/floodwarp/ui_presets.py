@@ -17,10 +17,21 @@ def preset_catalog():
 
 
 def find_orton_archive(*, directory):
-    for candidate in (directory/'outputs/release/orton_bradley_v0.1.0', directory/'orton_bradley_v0.1.0', directory):
-        if (candidate/'inputs/inputs_f64.bin').is_file() and (candidate/'outputs/orton_bradley_dem_5m.tif').is_file():
-            return str(candidate.resolve())
+    directory = directory.expanduser().resolve()
+    for parent in (directory, *directory.parents):
+        for candidate in (parent/'outputs/release/orton_bradley_v0.1.0', parent/'orton_bradley_v0.1.0', parent):
+            if (candidate/'inputs/inputs_f64.bin').is_file() and (candidate/'outputs/orton_bradley_dem_5m.tif').is_file():
+                return str(candidate.resolve())
     return ''
+
+
+def ui_start_directory(*, directory):
+    """Anchor checkout launches at their project, including IDE script directories."""
+    directory = directory.expanduser().resolve()
+    for parent in (directory, *directory.parents):
+        if (parent/'pyproject.toml').is_file() and (parent/'src/floodwarp/ui.py').is_file():
+            return parent
+    return directory
 
 
 def read_orton_packet(*, path):
@@ -52,6 +63,10 @@ def write_field(*, path, terrain, values, units, quantity):
 
 def convert_orton_inputs(*, directory, output, expected_digests):
     """Inputs are read-only; publish a complete derived setup in a separate directory."""
+    missing = [name for name in expected_digests if not (directory/name).is_file()]
+    if missing:
+        raise ValueError('Select the extracted Orton Bradley v0.1.0 archive folder, not the Python source folder. '
+            'It must contain inputs/, outputs/ and DATA_LICENSE.md. Missing: '+', '.join(missing))
     source = {}
     for name, expected in expected_digests.items():
         identity = file_identity(path=directory/name)

@@ -18,6 +18,11 @@ No numerical dependency pins changed.
 When the extracted original `orton_bradley_v0.1.0` archive is present in
 `outputs/release/orton_bradley_v0.1.0`, `orton_bradley_v0.1.0`, or the launch
 directory itself, the interface loads and previews that full-domain setup.
+IDE launches from `src/floodwarp` are anchored at the checkout root, so the
+archive and normal `outputs/` directory are found there too. An empty or wrong
+archive folder produces a selection error rather than a missing Python-source
+licence path.
+
 It **does not start a simulation automatically**. Otherwise select the extracted
 archive directory using Browse. The page links the existing authorised data
 archive; it does not silently download the large dataset. The small synthetic
