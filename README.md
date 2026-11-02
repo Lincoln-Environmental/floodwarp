@@ -10,7 +10,7 @@ by **Patrick Durney**. Copyright **Lincoln Agritech Ltd**. Software is
 [v0.1.3](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3),
 at `6a67851`, with the local UI and spatial inputs described below. The wheel
 and source archive match that tag; main includes later evidence/documentation
-updates. The repository remains private. Historical v0.1.0/v0.1.1 releases are
+updates. The repository is public. Historical v0.1.0/v0.1.1 releases are
 preserved. See [release status](docs/RELEASE_STATUS.md) and
 [v0.1.3 release notes](docs/RELEASE_NOTES_v0.1.3.md).
 
@@ -40,7 +40,7 @@ python -m pip check
 
 Download the wheel from the [v0.1.3 release](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3),
 then use `python -m pip install './floodwarp-0.1.3-py3-none-any.whl[ui]'`.
-Private-repository downloads require authorised access. Historical v0.1.1 downloads do not include this UI.
+Release downloads are publicly accessible. Historical v0.1.1 downloads do not include this UI.
 `python -m pip install .` installs just the numerical core. UI and raster/plot
 packages are optional; ordinary solver imports do not require them. Numerical
 pins remain NumPy 2.3.5, SciPy 1.16.3, Numba 0.67.0 and Warp 1.17.0.
@@ -207,8 +207,7 @@ Download the [complete data and reproduction archive](https://github.com/Lincoln
 [FV1 maximum-depth GeoTIFF](https://github.com/Lincoln-Environmental/floodwarp/releases/download/v0.1.0/orton_bradley_floodwarp_fv1_max_depth_5m.tif)
 and [checksums](https://github.com/Lincoln-Environmental/floodwarp/releases/download/v0.1.0/SHA256SUMS).
 The [demonstration guide](examples/orton_bradley/README.md) links reference,
-LI, signed-difference, extent and hydrograph products. Assets need authenticated
-access until the owner changes repository visibility to public.
+LI, signed-difference, extent and hydrograph products. Release assets are publicly accessible.
 
 ## Maximum inundation and independent comparison
 
