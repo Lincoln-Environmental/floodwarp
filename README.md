@@ -1,7 +1,7 @@
 # FloodWarp
 
-**Development checkout: 0.2.0.dev0.** Local main carries the prepared v0.1.3
-release; publication remains with the owner. Experimental fixed-block FV1 and
+**Development checkout: 0.2.0.dev0.** Main carries the v0.1.3 release within
+the private repository; visibility remains with the owner. Experimental fixed-block FV1 and
 its reconstruction investigations remain on dev, with their original evidence
 and limitations. They are excluded from the main release artifacts. See
 [development scope](docs/DEVELOPMENT.md), [static controls](validation/static_review/REPORT.md)
