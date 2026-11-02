@@ -44,6 +44,8 @@ def read_boundary_csv(*, path, terrain, stage_datum):
             raise ValueError('Boundary CSV header must be axis,row,col,type,stage_m')
         for line, row in enumerate(reader, start=2):
             try:
+                if set(row) != set(reader.fieldnames):
+                    raise ValueError('Unexpected columns; use decimal points for stage elevations')
                 axis = row['axis'].strip().lower()
                 index = (int(row['row']), int(row['col']))
                 name = row['type'].strip().lower()
