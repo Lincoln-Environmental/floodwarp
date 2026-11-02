@@ -37,6 +37,12 @@
 
 ## v0.1.3 — spatial local UI on main
 
+- Display and save actual accepted steps, timestep min/mean/max/RMS and separately
+  scoped native hydraulic, advance/setup, checkpoint/output and worker wall times.
+  Keep historical dense/sparse event measurements labelled by implementation.
+- Correct current attribution to copyright Lincoln Agritech Ltd; developed by
+  Patrick Durney. Historical datasets/source identities remain unchanged.
+
 - Add aligned spatial Manning roughness, constant-capacity and exponential
   infiltration maps using existing FV1 fields and setters.
 - Add explicit Closed/FREE/constant-stage face CSVs with absolute datum checks,

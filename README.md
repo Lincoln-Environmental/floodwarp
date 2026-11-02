@@ -231,14 +231,40 @@ recomputed from checksummed arrays. The [0.10 m map](examples/orton_bradley/figu
 and [quantitative report](examples/orton_bradley/COMPARISON.md) include signed
 extrema, false-positive/negative areas, source/export differences and balances.
 
-## Full-event hydrographs
+## Current FV1 runtime and timestep metrics
+
+The native modified-sparse FV1 implementation used by v0.1.3 matches the
+retained measured runtime modules byte-for-byte. The following is **retained
+completed-event evidence**, not a new timing run of the UI or latest package:
+
+| Matched 72-hour FV1 implementation | Hydraulic [s] | Recorded component [s] | Accepted steps |
+|---|---:|---:|---:|
+| Modified sparse — implementation used by current main | **1512.372** | **1599.164** | **1,570,053** |
+| Released v0.1.1 sparse — historical | 1641.957 | 1742.796 | 1,570,053 |
+| Dense reference — historical | 1906.106 | 2007.819 | 1,570,053 |
+| Independent LISFLOOD-FP FV1 — historical | 1403.559 | 1486.865 | 816,514 |
+
+For the retained modified-sparse run, accepted dt min/mean/max is
+**0.0000648312 / 0.1650899683 / 1.0 s**. Actual final time is **259,200 s**.
+The source identity and exact values are recomputed from the frozen lossless
+record in [current metric provenance](docs/RUN_METRICS.md). All 72 hourly
+comparisons and final native arrays match the retained dense/sparse controls.
+
+These are single completed events on RTX 4070 Ti SUPER. Component timers have
+different diagnostic/checkpoint scopes and are not directly interchangeable
+with UI worker wall time. There is no new full-event timing or speedup claim.
+New UI runs now expose their **own** accepted steps, timestep min/mean/max,
+hydraulic time and separately measured worker wall time, saving `metrics.json`
+and streamed interval statistics in `runtime.csv`.
+
+## Historical full-event hydrographs
 
 ![Full 72-hour hydrographs and peak detail](examples/orton_bradley/figures/orton_bradley_hydrographs_72h.png)
 
 *Research demonstration only — not an official flood-hazard assessment.
 Independent site-specific validation is required before decision-making.*
 
-| Completed matched run | LISFLOOD-FP FV1 | FloodWarp FV1 | FloodWarp LI |
+| Original retained matched run | LISFLOOD-FP FV1 | FloodWarp FV1 dense | FloodWarp LI |
 |---|---:|---:|---:|
 | Hydraulic runtime [s] | 1403.56 | 1906.11 | 1019.46 |
 | End-to-end component runtime [s] | 1486.87 | 2007.82 | 1126.95 |

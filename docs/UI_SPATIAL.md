@@ -154,3 +154,32 @@ The run summary/configuration, source checksums, sampled balances, aggregate
 boundary flows and atomic restart checkpoint remain available as before. Maximum
 maps and simultaneous final depth are separate quantities. Numerical completion
 does not establish observed-event accuracy, calibration or grid convergence.
+
+
+## Runtime and timestep statistics
+
+Each run writes `metrics.json` and streams `runtime.csv` at its diagnostic
+interval. The page reports accepted steps and dt min/mean/max in seconds,
+hydraulic time and worker wall time. Metrics record the actual software
+version/source, resolved device/profile, final time and whether the run completed.
+The native step count is checked against the accumulated interval count.
+
+Hydraulic time is the sum of the existing native `loop_seconds` measurements.
+It excludes module loading and graph capture, which are recorded separately.
+Advance wall time includes the complete successful `advance` calls. Worker wall
+time starts at `execute_run` entry: it includes preparation, diagnostics,
+checkpoint IO and output creation, but excludes Python process startup and
+browser validation. Separate preparation/checkpoint/diagnostic/output timings
+make these scopes explicit; they are not an exhaustive profiler partition.
+
+Cumulative dt mean is simulated time divided by accepted steps. Dt min/max
+come from accepted native steps; RMS is step-count-weighted across intervals.
+No extra solver advances, state snapshots or CFL changes are introduced to
+measure them. On failure, completed-interval statistics and flushed CSV rows
+remain available with `complete=false`; the existing last complete checkpoint
+is preserved. These partial hydraulic totals do not cover a failed advance.
+
+The displayed run is a measurement of its own device and workload, not a
+promise of the retained benchmark timing. Basemap/server/browser time and
+other applications can affect user experience. [Metric provenance](RUN_METRICS.md)
+keeps historical full-event evidence separate from new small controls.

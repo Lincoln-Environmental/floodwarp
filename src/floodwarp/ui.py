@@ -100,7 +100,7 @@ class LocalApplication:
         # Offer only complete, named products rather than every matching suffix.
         products = ('maximum_depth.tif', 'final_depth.tif', 'water_balance.csv',
             'boundary_flow.csv', 'checkpoint.npz', 'run_config.json',
-            'diagnostics.json', 'maximum_depth.png', 'run.log', 'map.json', 'maximum_map.png', 'final_map.png', 'terrain_map.png')
+            'diagnostics.json', 'maximum_depth.png', 'run.log', 'map.json', 'maximum_map.png', 'final_map.png', 'terrain_map.png', 'metrics.json', 'runtime.csv')
         status['files'] = [name for name in products if (self.output/name).is_file()]
         return status
 
