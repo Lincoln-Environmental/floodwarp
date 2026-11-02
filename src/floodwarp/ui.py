@@ -18,11 +18,12 @@ from floodwarp.ui_runner import (RunConfig, available_devices, create_run_direct
     prepare_run, terrain_preview, write_json)
 from floodwarp.ui_fields import boundary_template
 from floodwarp.ui_maps import map_overlay, boundary_features
-from floodwarp.ui_presets import find_orton_archive, prepare_orton_bradley, preset_catalog
+from floodwarp.ui_presets import find_orton_archive, prepare_orton_bradley, preset_catalog, ui_start_directory
 
 
 class LocalApplication:
     def __init__(self, *, initial_directory):
+        initial_directory = ui_start_directory(directory=initial_directory)
         self.token = secrets.token_urlsafe(32)
         self.initial_directory = initial_directory
         self.default_output_parent = initial_directory/'outputs' if (initial_directory/'outputs').is_dir() else initial_directory
@@ -51,6 +52,8 @@ class LocalApplication:
 
     def load_orton(self, *, directory, output_parent):
         with self.lock:
+            if not directory.strip():
+                raise ValueError('Choose the extracted Orton Bradley v0.1.0 archive directory using Browse')
             source, parent = Path(directory).expanduser().resolve(), Path(output_parent).expanduser().resolve()
             if not parent.is_dir():
                 raise ValueError('Choose an existing output parent directory for the prepared input set')
