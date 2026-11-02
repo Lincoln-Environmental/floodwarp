@@ -33,7 +33,6 @@ class LocalApplication:
         self.validated = None
         self.default_config = None
         self.template = None
-        self.preset_cache = {}
 
     def validate(self, *, config):
         with self.lock:
@@ -55,10 +54,9 @@ class LocalApplication:
             source, parent = Path(directory).expanduser().resolve(), Path(output_parent).expanduser().resolve()
             if not parent.is_dir():
                 raise ValueError('Choose an existing output parent directory for the prepared input set')
-            key = (str(source), str(parent))
-            if key not in self.preset_cache:
-                self.preset_cache[key] = prepare_orton_bradley(directory=source, output_parent=parent)
-            result = self.preset_cache[key]
+            # An explicit reload verifies checksums even when the form was
+            # previously loaded. Existing prepared fields are not decoded again.
+            result = prepare_orton_bradley(directory=source, output_parent=parent)
             self.default_config = result['config']
             return result
 
