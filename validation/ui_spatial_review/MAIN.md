@@ -1,5 +1,10 @@
 # Spatial UI on main — v0.1.3
 
+The [later runtime metrics update](../run_metrics_review/REPORT.md) records
+current per-run reporting checks and fresh local distributions under
+`outputs/release/v0.1.3-metrics/dist/`. The earlier artifacts and measurements
+below are retained with their original identities.
+
 The later [IDE directory correction](DIRECTORY_FIX.md) records the current
 fix and corrected local distributions. The measurements below retain their
 original source/artifact identity.
