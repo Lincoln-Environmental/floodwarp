@@ -39,5 +39,5 @@ def build_candidate(*, root, output):
 
 if __name__ == "__main__":
     root = Path.cwd()
-    output = root/'outputs/release/v0.1.2'
+    output = root/'outputs/release/v0.1.3'
     build_candidate(root=root, output=output)

@@ -1,4 +1,14 @@
-# FloodWarp v0.1.2 local publication preparation
+# FloodWarp v0.1.3 main preparation
+
+Main includes spatial roughness/infiltration, explicit constant-stage boundary
+faces, the original full Orton Bradley setup and OpenStreetMap overlays.
+See [the current UI guide](UI_SPATIAL.md) and [main verification](../validation/ui_spatial_review/MAIN.md).
+Only ordinary supported FV1 adapters/UI changes were promoted; static-mesh
+research remains on dev. No visibility change, GitHub release or asset upload
+is part of this update. The original v0.1.2 artifacts and source identity remain
+unchanged and are documented below as a previous prepared snapshot.
+
+## Historical v0.1.2 local publication preparation
 
 The current candidate adds the optional local rainfall UI, FV1 high-level default
 and exact-final-time small examples to the verified main baseline. See

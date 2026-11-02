@@ -1,7 +1,7 @@
 # Spatial inputs, Orton Bradley and the map view
 
-These additions are on **dev / 0.2.0.dev0**. The prepared v0.1.2 distributions
-and their verification records are unchanged. Use the local development install
+These features are on **main / v0.1.3**. The prepared v0.1.2 distributions
+and their verification records are unchanged. Install the current checkout
 for this interface:
 
 ```bash
