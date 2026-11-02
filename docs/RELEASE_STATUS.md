@@ -1,5 +1,28 @@
 # FloodWarp v0.1.3 main preparation
 
+## Published release versus current source
+
+Checked **2 November 2026**:
+
+| Item | Version and source | Status |
+|---|---|---|
+| [GitHub Latest](https://github.com/Lincoln-Environmental/floodwarp/releases/latest) | v0.1.1, tag target `92aaab7d6167980ddc3ee334f677e01b007e137e` | Published; original tag and assets preserved |
+| `main` | Prepared v0.1.3; implementation/evidence through `2cf3b9ffd5b294f0d4d282caf41b699ee370aa41` | Pushed source; no v0.1.3 tag or published release |
+| Current local distributions | v0.1.3, built from `6a67851189d377aa894ec05304f62065a072fb23` | `outputs/release/v0.1.3-metrics/dist/`; [checksums and verification](../validation/run_metrics_review/REPORT.md#updated-local-artifacts) |
+| Earlier v0.1.2 candidate | Prepared source/artifacts | Historical local snapshot; never published as a GitHub release |
+
+The GitHub **Latest** label refers to a published release, not the current
+main branch or package version. A branch push leaves the existing release
+title, tag target and downloadable files unchanged. The v0.1.1 label is therefore
+correct for that historical release; it does not describe the current UI.
+
+[Prepared v0.1.3 release notes](RELEASE_NOTES_v0.1.3.md) describe the new source.
+Installation and UI instructions in the current README apply to main/prepared
+v0.1.3. The owner will publish the chosen tag/release and matching artifacts.
+This documentation clarification introduces no runs, tests or artifact rebuilds.
+
+## Current prepared capabilities
+
 Main includes spatial roughness/infiltration, explicit constant-stage boundary
 faces, the original full Orton Bradley setup and OpenStreetMap overlays.
 See [the current UI guide](UI_SPATIAL.md) and [main verification](../validation/ui_spatial_review/MAIN.md).
@@ -10,7 +33,7 @@ unchanged and are documented below as a previous prepared snapshot.
 
 ## Historical v0.1.2 local publication preparation
 
-The current candidate adds the optional local rainfall UI, FV1 high-level default
+The v0.1.2 candidate added the optional local rainfall UI, FV1 high-level default
 and exact-final-time small examples to the verified main baseline. See
 [verification and publication handoff](../validation/release_v0.1.2/REPORT.md)
 for the artifact source, actual checks, checksums and owner publication steps.
