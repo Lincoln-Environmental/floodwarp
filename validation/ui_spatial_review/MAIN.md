@@ -1,5 +1,9 @@
 # Spatial UI on main — v0.1.3
 
+The later [IDE directory correction](DIRECTORY_FIX.md) records the current
+fix and corrected local distributions. The measurements below retain their
+original source/artifact identity.
+
 Source tested and used to build the distributions: **`72770048f93aeec14bbca3c95d381f625295d245`**.
 The following commit records this evidence only. The spatial input/boundary/
 map implementation is byte-identical to the previously tested dev implementation;
