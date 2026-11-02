@@ -2,6 +2,13 @@
 
 ## 0.2.0.dev0 — development only
 
+- Extend the local FV1 UI with spatial roughness, constant/exponential soil maps,
+  explicit face/constant-stage boundary CSVs, the checksum-verified complete
+  Orton Bradley setup, independent checkpoint cadence and OpenStreetMap overlays.
+- Expose native FV1 finite-support rainfall continuation explicitly; retain the
+  ordinary coverage guard and bind the non-default convention to restart identity.
+  No hydraulic kernels, numerical defaults or v0.1.2 artifacts change.
+
 - Carry the v0.1.2 ordinary FV1 defaults, local rainfall UI, exact sampling and
   packaging/documentation fixes forward while retaining this development version.
 

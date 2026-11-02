@@ -7,6 +7,11 @@ and limitations. They are excluded from the v0.1.2 artifacts. See
 [development scope](docs/DEVELOPMENT.md), [static controls](validation/static_review/REPORT.md)
 and [reconstruction investigation](validation/static_reconstruction_review/REPORT.md).
 
+The development UI now accepts spatial roughness and infiltration, explicit
+constant-stage boundary faces, the original full Orton Bradley setup and
+OpenStreetMap terrain/result overlays. See the [spatial UI guide](docs/UI_SPATIAL.md).
+These additions are separate from the frozen v0.1.2 distributions below.
+
 FloodWarp simulates rainfall-driven surface flooding on CPU and NVIDIA CUDA.
 The primary solver is FP64, uniform-grid FV1, an independent first-order
 finite-volume implementation of the full shallow-water equations. Developed

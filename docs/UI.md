@@ -1,4 +1,8 @@
-# Local rainfall interface
+# Local rainfall interface — v0.1.2
+
+For the current development UI with spatial coefficients, explicit stage faces,
+Orton Bradley and OpenStreetMap, see [the spatial UI guide](UI_SPATIAL.md).
+The following records the prepared v0.1.2 interface.
 
 Install on Python 3.14 with `python -m pip install 'floodwarp[ui]'`, or use
 `python -m pip install '.[ui]'` from this source checkout. Launch with
