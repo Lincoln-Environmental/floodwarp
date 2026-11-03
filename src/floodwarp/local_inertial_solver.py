@@ -44,7 +44,6 @@ from floodwarp.local_inertial_kernels import (
     update_qx_kernel,
     update_qy_kernel,
     update_momentum_kernel,
-    override_free_outflow_arithmetic_kernel,
     update_conditioned_qx_kernel,
     update_conditioned_qy_kernel,
     update_conditioned_momentum_kernel,
@@ -70,7 +69,6 @@ from floodwarp.local_inertial_kernels import (
     device_loop_conditioned_stage_fill_kernel,
     device_loop_apply_sources_kernel,
     device_loop_update_momentum_kernel,
-    device_loop_override_free_outflow_arithmetic_kernel,
     device_loop_update_conditioned_qx_kernel,
     device_loop_update_conditioned_qy_kernel,
     device_loop_apply_outflow_limiter_kernel,
@@ -181,13 +179,6 @@ from floodwarp.structure_kernels import (
 )
 
 
-FREE_OUTFLOW_ARITHMETIC_MODES = {
-    "native": 1,
-    "lisflood_float_surface": 2,
-    "lisflood_float_operator": 3,
-    "lisflood_fp64_operator": 4,
-}
-
 class LocalInertialSolver:
     def __new__(cls,*args,**kwargs):
         if cls is LocalInertialSolver:
@@ -219,7 +210,6 @@ class LocalInertialSolver:
         maximum_dt: float = 60.0,
         adaptive_dt_growth_factor: float | None = 1.5,
         free_outflow_limiter_mode: int | None = None,
-        free_outflow_arithmetic_mode: str = "native",
         hydraulic_geometry_mode: str = "coarse",
         subgrid_bed_elevation: np.ndarray | None = None,
         subgrid_resolution_m: float | None = None,
@@ -338,34 +328,12 @@ class LocalInertialSolver:
             raise ValueError(f"free_outflow_closure must be one of {tuple(closures)}")
         resolved_free_mode = (int(profile.free_outflow_mode) if free_outflow_closure is None
                               else closures[free_outflow_closure])
-        if free_outflow_arithmetic_mode not in FREE_OUTFLOW_ARITHMETIC_MODES:
-            raise ValueError(
-                "free_outflow_arithmetic_mode must be one of "
-                f"{tuple(FREE_OUTFLOW_ARITHMETIC_MODES)}"
-            )
-        if (
-            free_outflow_arithmetic_mode != "native"
-            and resolved_free_mode != 1
-        ):
-            raise ValueError(
-                "LISFLOOD float FREE arithmetic requires the lisflood_fp_acc "
-                "or lisflood_fp_acc_parity validation profile"
-            )
-        if free_outflow_arithmetic_mode != "native" and USE_CONDITIONED_MIXED_KERNELS:
-            raise ValueError(
-                "LISFLOOD float FREE arithmetic is currently defined only for "
-                "the unconditioned FP64/FP32 boundary path"
-            )
-        self.free_outflow_arithmetic_mode = free_outflow_arithmetic_mode
         self.free_outflow_mode = resolved_free_mode
         if hydraulic_geometry_mode not in HYDRAULIC_GEOMETRY_MODES:
             raise ValueError(
                 "hydraulic_geometry_mode must be one of "
                 f"{HYDRAULIC_GEOMETRY_MODES}, got {hydraulic_geometry_mode!r}"
             )
-        self.free_outflow_arithmetic_mode_code = FREE_OUTFLOW_ARITHMETIC_MODES[
-            free_outflow_arithmetic_mode
-        ]
         resolved_limiter_mode = (
             int(profile.free_outflow_limiter_mode)
             if free_outflow_limiter_mode is None
@@ -413,11 +381,6 @@ class LocalInertialSolver:
                     "native free-outflow convention (validation profile "
                     "'default'); the LISFLOOD parity profiles test the "
                     "coarse formulation"
-                )
-            if free_outflow_arithmetic_mode != "native":
-                raise ValueError(
-                    "hydraulic_geometry_mode='subgrid' supports only the "
-                    "native free-outflow arithmetic mode"
                 )
             self._subgrid_geometry = build_subgrid_geometry(
                 ny=ny,
@@ -945,7 +908,7 @@ class LocalInertialSolver:
                 self.boundary_type_qx, self.boundary_type_qy,
                 self.boundary_stage_qx, self.boundary_stage_qy,
                 self.dx, self.dy, WP_FLOAT(self.current_dt), self.gravity,
-                self.depth_epsilon, self.free_outflow_arithmetic_mode_code,
+                self.depth_epsilon,
                 self._free_outlet_trace_stats,
             ],
             device=self.device,
@@ -2884,22 +2847,6 @@ class LocalInertialSolver:
                 device=self.device,
             )
 
-        if self.free_outflow_arithmetic_mode_code > FREE_OUTFLOW_ARITHMETIC_MODES["native"]:
-            wp.launch(
-                kernel=override_free_outflow_arithmetic_kernel,
-                dim=(self.ny + 1, self.nx + 1),
-                inputs=[
-                    qx_next, qy_next, qx_old, qy_old, self.water_depth,
-                    self.bed_elevation, self.manning_n, self.boundary_type_qx,
-                    self.boundary_stage_qx, self.boundary_type_qy,
-                    self.boundary_stage_qy, self.dx, self.dy, dt_wp,
-                    self.gravity, self.dry_depth, self.depth_epsilon,
-                    self.free_outflow_arithmetic_mode_code,
-                ],
-                device=self.device,
-            )
-
-
         if self.use_fused_limiter:
             wp.launch(
                 kernel=apply_outflow_limiter_kernel,
@@ -3601,20 +3548,6 @@ class LocalInertialSolver:
                             self.dx, self.dy, control, self.gravity, self.dry_depth,
                             self.depth_epsilon, self.manning_face_mode,
                             self.use_two_dimensional_friction, self.free_outflow_mode],
-                    device=self.device,
-                )
-            if self.free_outflow_arithmetic_mode_code > FREE_OUTFLOW_ARITHMETIC_MODES["native"]:
-                wp.launch(
-                    kernel=device_loop_override_free_outflow_arithmetic_kernel,
-                    dim=(self.ny + 1, self.nx + 1),
-                    inputs=[
-                        qx_next, qy_next, qx_old, qy_old, self.water_depth,
-                        self.bed_elevation, self.manning_n, self.boundary_type_qx,
-                        self.boundary_stage_qx, self.boundary_type_qy,
-                        self.boundary_stage_qy, self.dx, self.dy, control,
-                        self.gravity, self.dry_depth, self.depth_epsilon,
-                        self.free_outflow_arithmetic_mode_code,
-                    ],
                     device=self.device,
                 )
             wp.launch(

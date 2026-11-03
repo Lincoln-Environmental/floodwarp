@@ -35,9 +35,12 @@ Validation arrays are outputs of independent LISFLOOD-FP ACC/FV1 runs, not
 FloodWarp-generated targets. `validation/fixtures/manifest.json` records their
 source paths, binary hashes, version, controls and file hashes. No LISFLOOD
 source or executable is included, linked into the package, or required to run
-its tests. The source project's inspected upstream distribution did not
-establish the main LISFLOOD software licence; do not infer executable/source
-redistribution rights from these comparisons.
+its tests. LISFLOOD-FP 8.3 has a GNU GPLv3 LICENSE; its executable and source are not
+redistributed here. The validation-only `validation/lisflood_fp_free_boundary.py`
+explicitly re-expresses the FREE1 boundary equation from LISFLOOD-FP 8.3
+`source/boundary.cpp`, including numerical operation ordering, for direct
+reference comparisons. The oracle is not imported into any FloodWarp
+production hydraulic module. Source: https://github.com/ihaseeburrehman/LISFLOOD-FP-8.3 .
 
 ## Dependencies
 

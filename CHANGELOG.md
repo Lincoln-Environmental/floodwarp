@@ -2,6 +2,12 @@
 
 ## 0.2.0.dev0 — development only
 
+- Isolate LISFLOOD-FP 8.3 GPLv3 FREE-boundary numerical behaviour in a
+  validation-only NumPy oracle, with explicit float32/FP64 tests.
+  Remove production arithmetic compatibility overrides and API modes while
+  preserving native FREE hydraulic operators and ACC validation profiles.
+
+
 - Extend the local FV1 UI with spatial roughness, constant/exponential soil maps,
   explicit face/constant-stage boundary CSVs, the checksum-verified complete
   Orton Bradley setup, independent checkpoint cadence and OpenStreetMap overlays.

@@ -32,6 +32,15 @@ FLOODWARP_FLOAT. Existing OVERLANDER_* tuning flags remain for reproducible
 kernel/test controls; they do not imply a dependency on another installation.
 CPU getters may return views: copy arrays before retaining sampled output.
 
+## External numerical behaviour reference
+
+`validation/lisflood_fp_free_boundary.py` contains a validation-only NumPy
+re-expression of LISFLOOD-FP 8.3's GPLv3 FREE1 boundary recurrence.
+Production `LocalInertialSolver` exposes no LISFLOOD-specific float
+arithmetic modes and no reference-only Warp kernels. The mathematical
+`lisflood_fp_acc` validation profile remains distinct and available.
+The reference module is excluded from the production import graph.
+
 ## Numerical constraints
 
 Preserve physical LI defaults, FV1 contact_hll/velocity_extrapolation, FP64,
