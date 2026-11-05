@@ -91,3 +91,54 @@ def test_static_server_delivers_data_without_a_solver_endpoint(tmp_path):
         server.shutdown()
         thread.join(timeout=5)
         server.server_close()
+
+
+def test_pycharm_launcher_finds_dataset_from_another_working_directory(tmp_path):
+    """Exercise direct file execution and the real HTTP response, as in an IDE."""
+    import selectors
+    import subprocess
+    import sys
+    from pathlib import Path
+    from examples.orton_bradley import serve_interactive
+
+    checkout = tmp_path / 'checkout'
+    script = checkout / 'examples/orton_bradley/serve_interactive.py'
+    script.parent.mkdir(parents=True)
+    # Change only the editable port to request a private ephemeral test port.
+    source = Path(serve_interactive.__file__).read_text()
+    script.write_text(source.replace("    port = 8766", "    port = 0"))
+    import shutil
+    shutil.copyfile(src=Path(serve_interactive.__file__).with_name('remote_rendering.py'),
+                    dst=script.with_name('remote_rendering.py'))
+    data = checkout / 'outputs/orton_bradley_interactive/data'
+    data.mkdir(parents=True)
+    (data / 'manifest.json').write_text(json.dumps(dict(site='Orton Bradley path regression')))
+    with subprocess.Popen(args=[sys.executable, str(script)], cwd=script.parent,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
+        try:
+            with selectors.DefaultSelector() as selector:
+                selector.register(fileobj=process.stdout, events=selectors.EVENT_READ)
+                assert selector.select(timeout=10), 'Launcher did not start'
+            line = process.stdout.readline()
+            assert line.startswith('FloodWarp 3D viewer:'), process.stderr.read()
+            base = line.rsplit(' ', 1)[-1].strip()
+            with urlopen(url=base + '/data/manifest.json', timeout=5) as response:
+                assert json.load(fp=response) == dict(site='Orton Bradley path regression')
+        finally:
+            process.terminate()
+            process.communicate(timeout=5)
+
+
+@pytest.mark.parametrize('query', [dict(frame=['865']), dict(frame=['.5']), dict(width=['99999']),
+    dict(distance=['nan']), dict(elevation=['0']), dict(frame=['1','2']), dict(path=['/tmp'])])
+def test_remote_view_rejects_invalid_or_unbounded_requests(query):
+    from examples.orton_bradley.remote_rendering import parse_view
+    with pytest.raises(ValueError):
+        parse_view(query=query, frame_count=865, maximum_width=1600, maximum_height=1200)
+
+
+def test_remote_view_preserves_requested_native_frame_and_camera():
+    from examples.orton_bradley.remote_rendering import parse_view
+    view=parse_view(query=dict(frame=['294'], azimuth=['480'], opacity=['.9']),
+        frame_count=865, maximum_width=1600, maximum_height=1200)
+    assert view['frame']==294 and view['azimuth']==120. and view['opacity']==.9

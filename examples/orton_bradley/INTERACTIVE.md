@@ -17,11 +17,18 @@ From the repository root, on `dev`:
 .venv/bin/python -m examples.orton_bradley.serve_interactive
 ```
 
-Open **http://127.0.0.1:8766/**. Stop the server with Ctrl+C. The default is
+Open **http://127.0.0.1:8766/**. Stop the server with Ctrl+C.
+In PyCharm, open `serve_interactive.py` and run it directly with the project
+`.venv` interpreter. Its dataset path is anchored to the script’s checkout, so
+PyCharm’s working directory does not need to be changed. The default is
 loopback only. The host, port and directory are editable under the script's
 execution guard. No account, CDN, external tiles or running model is needed.
-Use a current browser with WebGL2 and gzip-stream support; the checked browser
-was Chromium with software WebGL. Runtime browser requests stay local.
+The viewer detects unavailable WebGL and uses server-rendered 3D automatically.
+For a remote desktop, explicitly select http://127.0.0.1:8766/?render=server if
+needed. Restart the Python launcher after updating it, then refresh the page.
+The initial view has a loading message; subsequent camera/timestep changes keep
+the current image visible while the replacement arrives, without a popup.
+The checked browser was Chromium, including a run with WebGL fully disabled. Runtime browser requests stay local.
 
 The viewer initially shows the peak-flow frame at 24:30. Controls include:
 
@@ -70,8 +77,15 @@ configuration is rejected; use a separate destination and preserve existing
 results. Application files can be refreshed by rerunning the same build,
 without recompressing completed frame payloads.
 
-The output directory is a static website and can be served by an ordinary HTTP
-server. ES modules need HTTP; opening `index.html` with `file://` is insufficient.
+The output directory is a static website for client WebGL rendering and can
+be served by an ordinary HTTP server. The remote-desktop fallback requires
+`serve_interactive.py`, the retained native FP64 dataset and the existing
+PyVista/VTK rendering requirements. It renders genuine terrain/water meshes
+on a dedicated software-EGL thread, then sends ordinary PNG images. Rotation,
+pan, zoom and the hydrograph still control the same 3D camera and result time.
+Only the latest pending view is kept; this is slower than local WebGL and
+playback speed is limited by rendering/transfer latency. There is no model
+execution endpoint or hydraulic rerun. ES modules need HTTP; opening `index.html` with `file://` is insufficient.
 No hosting, publication or changes to the existing FloodWarp UI are performed.
 Future hosting must retain binary assets, metadata and credits together; no
 public deployment is included here.

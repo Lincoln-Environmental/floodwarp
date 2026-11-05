@@ -8,7 +8,97 @@ let canvasWidth = 1, canvasHeight = 1, modelBounds;
 const frameInterval = 300;
 const chartPadding = { left: 34, right: 9, top: 8, bottom: 23 };
 
+function createBrowserRenderer() {
+  if (new URLSearchParams(location.search).get('render') === 'server') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('webgl2', { antialias: true, alpha: true, preserveDrawingBuffer: true });
+    if (!context) return false;
+    renderer = new THREE.WebGLRenderer({ canvas, context, antialias: true, alpha: true,
+      preserveDrawingBuffer: true, reversedDepthBuffer: true, logarithmicDepthBuffer: true });
+    return true;
+  } catch (error) { return false; }
+}
+function setupRemoteScene() {
+  state.remote = { view: { azimuth: 120, elevation: 35, distance: 10500, east: 0, north: 0, opacity: Number(element('opacity').value) }, renders: 0, triangles: 0, wantedIndex: manifest.initial_frame, pointers: new Map() };
+  const image = document.createElement('img');
+  image.className = 'remote-scene'; image.alt = 'Server-rendered 3D terrain and instantaneous flood surface';
+  image.draggable = false;
+  state.remote.image = image;
+  element('scene').appendChild(image);
+  element('render-mode').hidden = false;
+  element('render-mode').textContent = 'Remote desktop mode · server-rendered 3D';
+  const container = element('scene');
+  const remember = (event) => ({ x: event.clientX, y: event.clientY });
+  container.addEventListener('contextmenu', (event) => event.preventDefault());
+  container.addEventListener('pointerdown', (event) => {
+    event.preventDefault(); container.setPointerCapture(event.pointerId);
+    state.remote.pointers.set(event.pointerId, remember(event));
+    state.remote.pan = event.button === 2 || event.shiftKey;
+  });
+  container.addEventListener('pointermove', (event) => {
+    const old = state.remote.pointers.get(event.pointerId); if (!old) return;
+    const view = state.remote.view, width = container.clientWidth, height = container.clientHeight;
+    const dx = event.clientX - old.x, dy = event.clientY - old.y;
+    if (state.remote.pointers.size === 2) {
+      const other = Array.from(state.remote.pointers.entries()).find(([id]) => id !== event.pointerId)[1];
+      const previous = Math.hypot(old.x - other.x, old.y - other.y);
+      const next = Math.hypot(event.clientX - other.x, event.clientY - other.y);
+      if (next > 0) view.distance = Math.max(30, Math.min(25000, view.distance * previous / next));
+    } else if (state.remote.pan) {
+      const azimuth = view.azimuth * Math.PI / 180, scale = view.distance * .7 / height;
+      view.east = Math.max(-20000, Math.min(20000, view.east + scale * (dx * Math.sin(azimuth) - dy * Math.cos(azimuth))));
+      view.north = Math.max(-20000, Math.min(20000, view.north - scale * (dx * Math.cos(azimuth) + dy * Math.sin(azimuth))));
+    } else {
+      view.azimuth = (view.azimuth - dx / width * 180 + 360) % 360;
+      view.elevation = Math.max(5, Math.min(89.5, view.elevation + dy / height * 100));
+    }
+    state.remote.pointers.set(event.pointerId, remember(event)); scheduleRemoteView();
+  });
+  const release = (event) => { state.remote.pointers.delete(event.pointerId); if (container.hasPointerCapture(event.pointerId)) container.releasePointerCapture(event.pointerId); };
+  container.addEventListener('pointerup', release); container.addEventListener('pointercancel', release);
+  container.addEventListener('wheel', (event) => { event.preventDefault(); state.remote.view.distance = Math.max(30, Math.min(25000, state.remote.view.distance * Math.exp(event.deltaY * .001))); scheduleRemoteView(); }, { passive: false });
+  new ResizeObserver(() => { if (state.frame) scheduleRemoteView(); }).observe(container);
+}
+function scheduleRemoteView() {
+  clearTimeout(state.remote.timer);
+  state.remote.timer = setTimeout(() => selectFrame(state.remote.wantedIndex), 80);
+}
+async function loadRemoteFrame(index, request, signal) {
+  const bounds = element('scene').getBoundingClientRect();
+  const renderedView = { ...state.remote.view };
+  const query = new URLSearchParams({ frame: index, ...renderedView,
+    width: Math.max(160, Math.min(1600, Math.round(bounds.width))),
+    height: Math.max(160, Math.min(1200, Math.round(bounds.height))) });
+  const response = await fetch(`./api/scene?${query}`, { signal });
+  if (response.status === 409) {
+    if (request === state.request) scheduleRemoteView();
+    return false;
+  }
+  if (!response.ok) {
+    let message = 'Restart serve_interactive.py to enable remote-desktop rendering';
+    try { const error = await response.json(); message = error.error || message; } catch (error) { /* static servers have no render endpoint */ }
+    throw new Error(message);
+  }
+  if (Number(response.headers.get('X-FloodWarp-Frame')) !== index ||
+      Number(response.headers.get('X-FloodWarp-Time')) !== manifest.frames[index].time_s) throw new Error('Server image timestamp differs');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob), decoded = new Image();
+  decoded.src = url;
+  try { await decoded.decode(); } catch (error) { URL.revokeObjectURL(url); throw error; }
+  if (request !== state.request) { URL.revokeObjectURL(url); return false; }
+  const old = state.remote.url;
+  state.remote.image.src = url; state.remote.url = url;
+  if (old) URL.revokeObjectURL(old);
+  state.remote.renderedView = renderedView;
+  state.remote.renders++;
+  state.remote.triangles = Number(response.headers.get('X-FloodWarp-Wet-Triangles'));
+  element('north-arrow').style.transform = `rotate(${renderedView.azimuth - 90}deg)`;
+  return true;
+}
+
 function setLoading(message) {
+  if (state.ready && message) { element('loading').hidden = true; return; }
   element('loading').textContent = message;
   element('loading').hidden = !message;
 }
@@ -16,7 +106,7 @@ function fail(error) {
   console.error(error);
   setLoading('');
   element('fatal').hidden = false;
-  element('fatal').textContent = `The viewer could not load this data. ${error.message}. Use a current browser with WebGL2 and start the local HTTP viewer.`;
+  element('fatal').textContent = `The viewer could not load this data. ${error.message}. Restart serve_interactive.py. Remote-desktop mode uses server-rendered 3D and does not require WebGL in the browser.`;
 }
 async function loadBinary(resource, signal) {
   const response = await fetch(resource.path, { signal });
@@ -107,7 +197,6 @@ function setupScene(buffer) {
   water = new THREE.Mesh(waterGeometry, waterMaterial);
   water.frustumCulled = false;
   scene.add(water);
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true, reversedDepthBuffer: true, logarithmicDepthBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setClearColor(0x000000, 0);
   element('scene').appendChild(renderer.domElement);
@@ -122,10 +211,11 @@ function setupScene(buffer) {
   resetView(false);
   new ResizeObserver(resizeScene).observe(element('scene'));
   renderer.setAnimationLoop(() => { if (controls.update()) drawScene(); });
-  renderer.domElement.addEventListener('webglcontextlost', (event) => { event.preventDefault(); fail(new Error('WebGL context lost; reload the viewer')); });
+  renderer.domElement.addEventListener('webglcontextlost', (event) => { event.preventDefault(); const target=new URL(location.href);target.searchParams.set('render','server');location.replace(target); });
   resizeScene();
 }
 function resetView(plan) {
+  if (state.remote) { state.remote.view = { azimuth: 120, elevation: plan ? 89.5 : 35, distance: 10500, east: 0, north: 0, opacity: Number(element('opacity').value) }; scheduleRemoteView(); return; }
   const elevation = manifest.elevation_range_m;
   const target = new THREE.Vector3(0, elevation[0] + .2 * (elevation[1] - elevation[0]), 0);
   controls.target.copy(target);
@@ -144,6 +234,7 @@ function resizeScene() {
   if (state.frame) drawCharts(state.frame.time_s);
 }
 function drawScene() {
+  if (state.remote) return;
   const distance = camera.position.distanceTo(modelBounds.center);
   camera.near = Math.max(.1, distance - modelBounds.radius * 1.05);
   camera.far = Math.max(camera.near + 100, distance + modelBounds.radius * 1.05);
@@ -196,9 +287,10 @@ function drawCharts(seconds) {
 }
 async function selectFrame(index) {
   index = Math.max(0, Math.min(manifest.frames.length - 1, Math.round(index)));
+  if (state.remote) state.remote.wantedIndex = index;
   const request = ++state.request;
   if (state.abort) state.abort.abort();
-  if (index === state.index && state.frame) {
+  if (!state.remote && index === state.index && state.frame) {
     element('time').value = String(index);
     element('hours').value = Number((state.frame.time_s / 3600).toFixed(6));
     setLoading('');
@@ -208,6 +300,9 @@ async function selectFrame(index) {
   const record = manifest.frames[index];
   setLoading(`Loading ${formatClock(record.time_s)}…`);
   try {
+    if (state.remote) {
+      if (!await loadRemoteFrame(index, request, state.abort.signal)) return false;
+    } else {
     let buffer = state.cache.get(index);
     if (!buffer) buffer = await loadBinary(record, state.abort.signal);
     if (request !== state.request) return false;
@@ -220,6 +315,7 @@ async function selectFrame(index) {
     const length = buildWaterIndices(wet);
     water.geometry.index.needsUpdate = true;
     water.geometry.setDrawRange(0, length);
+    }
     state.index = index; state.frame = record;
     const second = record.time_s, diagnostic = Math.round(second / 60);
     element('clock').textContent = formatClock(second);
@@ -277,9 +373,9 @@ function bindControls() {
   element('play').addEventListener('click', () => { if (state.playing) pause(); else { state.playing = true; element('play').textContent = 'Ⅱ Pause'; element('play').setAttribute('aria-label', 'Pause the event'); if (state.index === manifest.frames.length - 1) selectFrame(0).then(playback); else playback(); } });
   element('reset').addEventListener('click', () => resetView(false));
   element('overhead').addEventListener('click', () => resetView(true));
-  const zoom = (factor) => { camera.position.sub(controls.target).multiplyScalar(factor).add(controls.target); controls.update(); drawScene(); };
+  const zoom = (factor) => { if (state.remote) { state.remote.view.distance = Math.max(30, Math.min(25000, state.remote.view.distance * factor)); scheduleRemoteView(); return; } camera.position.sub(controls.target).multiplyScalar(factor).add(controls.target); controls.update(); drawScene(); };
   element('zoom-in').addEventListener('click', () => zoom(.8)); element('zoom-out').addEventListener('click', () => zoom(1.25));
-  element('opacity').addEventListener('input', (event) => { water.material.uniforms.opacity.value = Number(event.target.value); drawScene(); });
+  element('opacity').addEventListener('input', (event) => { if (state.remote) { state.remote.view.opacity = Number(event.target.value); scheduleRemoteView(); return; } water.material.uniforms.opacity.value = Number(event.target.value); drawScene(); });
   element('fullscreen').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (error) { console.warn(error); } });
   bindChart('hydrograph'); bindChart('hyetograph');
 }
@@ -303,9 +399,12 @@ async function start() {
   const response = await fetch('./data/manifest.json');
   if (!response.ok) throw new Error('Build the browser dataset before starting the viewer');
   manifest = await response.json();
-  const terrain = await loadBinary(manifest.terrain);
-  setupScene(terrain); bindControls(); setupLegend();
-  element('precision').textContent = `Measured maximum browser depth rounding: ${manifest.maximum_display_depth_error_m.toExponential(2)} m. Native FP64 wet/dry classification is preserved.`;
+  if (createBrowserRenderer()) {
+    const terrain = await loadBinary(manifest.terrain);
+    setupScene(terrain);
+  } else setupRemoteScene();
+  bindControls(); setupLegend();
+  element('precision').textContent = state.remote ? 'Server-rendered 3D uses the native FP64 results; no hydraulic simulation is run for view changes.' : `Measured maximum browser depth rounding: ${manifest.maximum_display_depth_error_m.toExponential(2)} m. Native FP64 wet/dry classification is preserved.`;
   element('data-credit').textContent = manifest.attribution;
   const bookmark = new URLSearchParams(location.hash.slice(1)).get('t');
   const initial = bookmark !== null && Number.isFinite(Number(bookmark)) ? Number(bookmark) / frameInterval : manifest.initial_frame;
@@ -313,6 +412,6 @@ async function start() {
   state.ready = true;
   document.documentElement.dataset.viewerReady = 'true';
   // Read-only diagnostics support repeatable browser QA without exposing solver actions.
-  window.floodwarpViewer = { inspect: () => ({ ready: state.ready, index: state.index, time_s: state.frame?.time_s, wet_triangles: water.geometry.drawRange.count / 3, cached_frames: state.cache.size, camera: camera.position.toArray(), target: controls.target.toArray(), rendered_frames: renderer.info.render.frame, depth_buffer: renderer.capabilities.reversedDepthBuffer ? 'reversed' : 'logarithmic' }) };
+  window.floodwarpViewer = { inspect: () => ({ ready: state.ready, index: state.index, time_s: state.frame?.time_s, backend: state.remote ? 'server' : 'webgl', wet_triangles: state.remote ? state.remote.triangles : water.geometry.drawRange.count / 3, cached_frames: state.cache.size, camera: state.remote ? [(state.remote.renderedView||state.remote.view).azimuth,(state.remote.renderedView||state.remote.view).elevation,(state.remote.renderedView||state.remote.view).distance] : camera.position.toArray(), target: state.remote ? [(state.remote.renderedView||state.remote.view).east,(state.remote.renderedView||state.remote.view).north,0] : controls.target.toArray(), rendered_frames: state.remote ? state.remote.renders : renderer.info.render.frame, depth_buffer: state.remote ? 'server-software' : renderer.capabilities.reversedDepthBuffer ? 'reversed' : 'logarithmic' }) };
 }
 start().catch(fail);
