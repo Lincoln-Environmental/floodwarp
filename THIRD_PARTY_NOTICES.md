@@ -68,3 +68,13 @@ MIT terms are retained verbatim in `LICENSE.txt` beside the source. The original
 npm archive URL and SHA256 values for the archive and retained files are in
 that directory's `provenance.json`. These are browser rendering dependencies;
 they introduce no hydraulic operators or solver dependency.
+
+## Orton Bradley aerial colour layer
+
+The local 3D viewer uses Canterbury 0.3m Rural Aerial Photos (2023), published
+in LINZ's open NZ Imagery catalogue under CC BY 4.0. Credit Environment
+Canterbury (licensor), Landpro (producer), and Toitū Te Whenua Land Information
+New Zealand (host/processor). Source URLs, dates and checksums are recorded in
+the generated `data/aerial.json`. The imagery is resampled for colour display
+on the unchanged 5 m model terrain; it supplies no hydraulic elevations or
+forcing. No Google imagery is bundled or requested.

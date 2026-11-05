@@ -24,7 +24,7 @@ def make_mesh(*, points, triangles):
 
 def parse_view(*, query, frame_count, maximum_width, maximum_height):
     defaults = dict(frame=0, width=1200, height=800, azimuth=120., elevation=35.,
-                    distance=10500., east=0., north=0., opacity=.9)
+                    distance=10500., east=0., north=0., opacity=.9, aerial=1)
     if set(query) - set(defaults):
         raise ValueError('Unknown render parameter')
     values = {}
@@ -35,14 +35,14 @@ def parse_view(*, query, frame_count, maximum_width, maximum_height):
         value = float(supplied[0])
         if not math.isfinite(value):
             raise ValueError('Render parameters must be finite')
-        if name in ('frame', 'width', 'height'):
+        if name in ('frame', 'width', 'height', 'aerial'):
             if value != int(value):
                 raise ValueError('Frame and image dimensions must be integers')
             value = int(value)
         values[name] = value
     bounds = dict(frame=(0, frame_count - 1), width=(160, maximum_width),
         height=(160, maximum_height), elevation=(5., 89.5), distance=(30., 25000.),
-        east=(-20000., 20000.), north=(-20000., 20000.), opacity=(.15, 1.))
+        east=(-20000., 20000.), north=(-20000., 20000.), opacity=(.15, 1.), aerial=(0,1))
     for name, (minimum, maximum) in bounds.items():
         if not minimum <= values[name] <= maximum:
             raise ValueError('Render parameter out of range: ' + name)
@@ -96,7 +96,9 @@ def create_render_state(*, dataset, directory, width, height):
     centre = (lower + upper) / 2.
     centre[2] = lower[2] + .2 * (upper[2] - lower[2])
     return dict(plotter=plotter, points=points, triangles=triangles, active=active,
-        manifest=manifest, centre=centre, frame=None, opacity=None, triangle_count=0)
+        manifest=manifest, centre=centre, frame=None, opacity=None, triangle_count=0,
+        terrain=terrain, base_colours=terrain['rgb'].copy(), aerial_colours=None, aerial_mode=None,
+        aerial_path=directory / 'data/aerial.npz')
 
 
 def render_image(*, state, dataset, view):
@@ -106,6 +108,16 @@ def render_image(*, state, dataset, view):
 
     plotter = state['plotter']
     record = state['manifest']['frames'][view['frame']]
+    if view['aerial'] and state['aerial_colours'] is None and state['aerial_path'].is_file():
+        with np.load(file=state['aerial_path'],allow_pickle=False) as imagery:
+            colours=state['base_colours'].copy()
+            covered=imagery['covered'].ravel()
+            colours[covered]=imagery['rgb'].reshape(-1,3)[covered]
+            state['aerial_colours']=colours
+    if state['aerial_mode'] != view['aerial']:
+        selected=state['aerial_colours'] if view['aerial'] and state['aerial_colours'] is not None else state['base_colours']
+        state['terrain']['rgb']=selected
+        state['aerial_mode']=view['aerial']
     if state['frame'] != view['frame']:
         source = dataset / 'frames' / f'depth-{int(record["time_s"]):06d}.npz'
         if file_hash(path=source) != record['source_sha256']:

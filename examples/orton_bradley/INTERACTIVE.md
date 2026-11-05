@@ -182,3 +182,36 @@ DEM data retain CC BY 4.0 credits to LINZ, Environment Canterbury, Christchurch
 City Council where applicable, Aerial Surveys, Landpro and AAM NZ. These appear
 in the viewer and its metadata. See [DATA_LICENSE.md](DATA_LICENSE.md),
 [VISUALISATION.md](VISUALISATION.md) and [OUTPUT_NOTICE.md](OUTPUT_NOTICE.md).
+
+## Open NZ aerial terrain colour
+
+The prepared local viewer now includes Canterbury 0.3 m Rural Aerial Photos
+(2023), from the open LINZ NZ Imagery catalogue, licensed CC BY 4.0. Environment
+Canterbury is the licensor, Landpro the producer, and LINZ the host/processor.
+Six source COGs cover 100% of this model's active domain. The colour product is
+sampled onto the exact 5 m EPSG:2193 model grid; imagery changes colours only.
+The DEM, NZVD2016 elevations, masks and all flood results remain unchanged.
+
+Stop/restart the Python viewer and refresh the browser after updating. Use
+**Terrain colour → NZ aerial imagery** or switch back to **Hillshade**. Image
+credits remain visible in the viewport. The remote-desktop and client WebGL
+renderers both support these colours. Ongoing time/camera updates do not show
+the loading popup; only the initial view does.
+
+Regenerate the small local image product without a key or a simulation run:
+
+```bash
+.venv/bin/python -m examples.orton_bradley.prepare_aerial_imagery
+```
+
+Source collection:
+https://nz-imagery.s3.ap-southeast-2.amazonaws.com/canterbury/canterbury_2023_0.3m/rgb/2193/collection.json
+
+Source imagery is read using COG range requests and resampled as RGB display
+colours. `data/aerial.json` records collection/item hashes, published source
+asset checksums, dates, licence, credits, coverage and target-grid identity.
+Published whole-source checksums are recorded without claiming that partial
+remote reads validate entire COG files. The local 2 MB compressed display
+product, preview and metadata stay outside Git. It remains available offline
+after preparation. This is open NZ imagery, not Google imagery, and requires
+no Google or LINZ API key.

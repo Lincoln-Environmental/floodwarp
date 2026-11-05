@@ -13,6 +13,16 @@ def make_handler(*, directory, remote_renderer=None):
 
         def do_GET(self):
             parsed = urlsplit(url=self.path)
+            if parsed.path == '/api/imagery':
+                metadata = directory / 'data/aerial.json'
+                payload = json.dumps(dict(available=metadata.is_file(),
+                    metadata=json.loads(metadata.read_text()) if metadata.is_file() else None)).encode()
+                self.send_response(code=200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
             if parsed.path != '/api/scene':
                 return super().do_GET()
             try:

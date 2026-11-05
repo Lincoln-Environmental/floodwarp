@@ -4,9 +4,33 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 const element = (id) => document.getElementById(id);
 const state = { index: -1, request: 0, playing: false, frame: null, cache: new Map(), cacheLimit: 6, timer: null, ready: false };
 let manifest, renderer, scene, camera, controls, water, terrainIndices, waterIndices, depthAttribute;
-let canvasWidth = 1, canvasHeight = 1, modelBounds;
+let canvasWidth = 1, canvasHeight = 1, modelBounds, terrainColourAttribute, baseTerrainColours, aerialTerrainColours;
 const frameInterval = 300;
 const chartPadding = { left: 34, right: 9, top: 8, bottom: 23 };
+
+async function loadAerialMetadata() {
+  try {
+    const response=await fetch('./api/imagery');
+    if (!response.ok) return;
+    const result=await response.json();
+    if (result.available) state.aerial=result.metadata;
+  } catch (error) { /* An ordinary static host can still show hillshading. */ }
+}
+function updateImageryCredit() {
+  const selected=state.aerial && element('terrain-style').value==='aerial';
+  element('imagery-credit').hidden=!selected;
+  element('imagery-credit').textContent=selected ? state.aerial.attribution : '';
+}
+function changeTerrain() {
+  if (state.remote) {
+    if (state.aerial) state.remote.view.aerial=element('terrain-style').value==='aerial' ? 1 : 0;
+    scheduleRemoteView();
+  } else if (terrainColourAttribute) {
+    terrainColourAttribute.array.set(element('terrain-style').value==='aerial' && aerialTerrainColours ? aerialTerrainColours : baseTerrainColours);
+    terrainColourAttribute.needsUpdate=true; drawScene();
+  }
+  updateImageryCredit();
+}
 
 function createBrowserRenderer() {
   if (new URLSearchParams(location.search).get('render') === 'server') return false;
@@ -21,6 +45,7 @@ function createBrowserRenderer() {
 }
 function setupRemoteScene() {
   state.remote = { view: { azimuth: 120, elevation: 35, distance: 10500, east: 0, north: 0, opacity: Number(element('opacity').value) }, renders: 0, triangles: 0, wantedIndex: manifest.initial_frame, pointers: new Map() };
+  if (state.aerial) state.remote.view.aerial=1;
   const image = document.createElement('img');
   image.className = 'remote-scene'; image.alt = 'Server-rendered 3D terrain and instantaneous flood surface';
   image.draggable = false;
@@ -152,7 +177,15 @@ function setupScene(buffer) {
   terrainIndices = buildTerrainIndices(valid, ny, nx);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('color', new THREE.BufferAttribute(colours, 3, true));
+  baseTerrainColours=colours.slice();
+  if (state.aerialBuffer) {
+    const rgb=new Uint8Array(state.aerialBuffer,0,count*3), covered=new Uint8Array(state.aerialBuffer,count*3,count);
+    aerialTerrainColours=colours.slice();
+    for(let i=0;i<count;i++) if(covered[i]) {aerialTerrainColours[i*3]=rgb[i*3];aerialTerrainColours[i*3+1]=rgb[i*3+1];aerialTerrainColours[i*3+2]=rgb[i*3+2];}
+    colours.set(aerialTerrainColours);
+  }
+  terrainColourAttribute=new THREE.BufferAttribute(colours,3,true);
+  geometry.setAttribute('color',terrainColourAttribute);
   geometry.setIndex(new THREE.BufferAttribute(terrainIndices, 1));
   geometry.computeBoundingSphere();
   modelBounds = geometry.boundingSphere.clone();
@@ -215,7 +248,7 @@ function setupScene(buffer) {
   resizeScene();
 }
 function resetView(plan) {
-  if (state.remote) { state.remote.view = { azimuth: 120, elevation: plan ? 89.5 : 35, distance: 10500, east: 0, north: 0, opacity: Number(element('opacity').value) }; scheduleRemoteView(); return; }
+  if (state.remote) { state.remote.view = { azimuth: 120, elevation: plan ? 89.5 : 35, distance: 10500, east: 0, north: 0, opacity: Number(element('opacity').value), ...(state.aerial ? {aerial:element('terrain-style').value==='aerial'?1:0}: {}) }; scheduleRemoteView(); return; }
   const elevation = manifest.elevation_range_m;
   const target = new THREE.Vector3(0, elevation[0] + .2 * (elevation[1] - elevation[0]), 0);
   controls.target.copy(target);
@@ -377,6 +410,10 @@ function bindControls() {
   element('zoom-in').addEventListener('click', () => zoom(.8)); element('zoom-out').addEventListener('click', () => zoom(1.25));
   element('opacity').addEventListener('input', (event) => { if (state.remote) { state.remote.view.opacity = Number(event.target.value); scheduleRemoteView(); return; } water.material.uniforms.opacity.value = Number(event.target.value); drawScene(); });
   element('fullscreen').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (error) { console.warn(error); } });
+  element('terrain-style').disabled=!state.aerial;
+  element('terrain-style').value=state.aerial ? 'aerial' : 'hillshade';
+  element('terrain-style').addEventListener('change',changeTerrain);
+  updateImageryCredit();
   bindChart('hydrograph'); bindChart('hyetograph');
 }
 function setupLegend() {
@@ -399,7 +436,9 @@ async function start() {
   const response = await fetch('./data/manifest.json');
   if (!response.ok) throw new Error('Build the browser dataset before starting the viewer');
   manifest = await response.json();
+  await loadAerialMetadata();
   if (createBrowserRenderer()) {
+    if (state.aerial) state.aerialBuffer=await loadBinary(state.aerial.resource);
     const terrain = await loadBinary(manifest.terrain);
     setupScene(terrain);
   } else setupRemoteScene();

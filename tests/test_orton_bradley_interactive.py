@@ -142,3 +142,34 @@ def test_remote_view_preserves_requested_native_frame_and_camera():
     view=parse_view(query=dict(frame=['294'], azimuth=['480'], opacity=['.9']),
         frame_count=865, maximum_width=1600, maximum_height=1200)
     assert view['frame']==294 and view['azimuth']==120. and view['opacity']==.9
+
+
+def test_aerial_crop_preserves_model_grid_and_south_first_orientation(tmp_path):
+    from rasterio.enums import ColorInterp, Resampling
+    from rasterio.transform import Affine
+    import rasterio
+    from examples.orton_bradley.prepare_aerial_imagery import prepare
+
+    dataset=tmp_path/'dataset'
+    (dataset/'metadata').mkdir(parents=True)
+    transform=Affine(5.,0.,1574940.,0.,-5.,5167275.)
+    grid=dict(transform=list(transform),epsg=2193)
+    (dataset/'metadata/dataset.json').write_text(json.dumps(dict(grid=grid)))
+    np.savez_compressed(file=dataset/'metadata/terrain.npz',active=np.ones((2,3),dtype=bool))
+    rgb=np.array([[[10,20,30],[40,50,60],[70,80,90]],[[100,110,120],[130,140,150],[160,170,180]]],dtype=np.uint8)
+    alpha=np.full(shape=(2,3),fill_value=255,dtype=np.uint8)
+    source=tmp_path/'tile.tiff'
+    with rasterio.open(source,'w',driver='GTiff',width=3,height=2,count=4,dtype='uint8',crs='EPSG:2193',transform=transform) as target:
+        target.write(np.moveaxis(rgb,source=-1,destination=0),indexes=[1,2,3])
+        target.write(alpha,indexes=4)
+        target.colorinterp=(ColorInterp.red,ColorInterp.green,ColorInterp.blue,ColorInterp.alpha)
+    collection=tmp_path/'collection.json'
+    collection.write_text(json.dumps(dict(title='Synthetic imagery control',license='CC-BY-4.0',providers=[])))
+    (tmp_path/'tile.json').write_text(json.dumps(dict(assets=dict(visual=dict(href='./tile.tiff')),properties={})))
+    output=tmp_path/'browser'
+    report=prepare(dataset=dataset,output=output,collection_url=collection.as_uri(),tiles=['tile'],resampling=Resampling.average)
+    with np.load(file=output/'data/aerial.npz',allow_pickle=False) as saved:
+        np.testing.assert_array_equal(actual=saved['rgb'],desired=rgb[::-1])
+        assert saved['covered'].all()
+    assert report['active_domain_coverage_fraction']==1.
+    assert report['grid']==grid
