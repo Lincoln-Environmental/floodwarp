@@ -283,12 +283,28 @@ function bindControls() {
   element('fullscreen').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (error) { console.warn(error); } });
   bindChart('hydrograph'); bindChart('hyetograph');
 }
+function setupLegend() {
+  const minimum = manifest.configuration.wet_threshold_m;
+  const maximum = manifest.configuration.depth_maximum_m;
+  const values = [minimum, ...[.1, 1].filter((value) => value > minimum && value < maximum), maximum];
+  const container = document.querySelector('.legend-ticks');
+  container.replaceChildren();
+  values.forEach((value, index) => {
+    const tick = document.createElement('span');
+    tick.textContent = String(value);
+    tick.style.left = `${100 * Math.log(value / minimum) / Math.log(maximum / minimum)}%`;
+    tick.style.transform = index === 0 ? 'none' : index === values.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)';
+    container.appendChild(tick);
+  });
+  element('wet-area').closest('div').querySelector('span').textContent = `Wet area ≥ ${minimum} m`;
+}
+
 async function start() {
   const response = await fetch('./data/manifest.json');
   if (!response.ok) throw new Error('Build the browser dataset before starting the viewer');
   manifest = await response.json();
   const terrain = await loadBinary(manifest.terrain);
-  setupScene(terrain); bindControls();
+  setupScene(terrain); bindControls(); setupLegend();
   element('precision').textContent = `Measured maximum browser depth rounding: ${manifest.maximum_display_depth_error_m.toExponential(2)} m. Native FP64 wet/dry classification is preserved.`;
   element('data-credit').textContent = manifest.attribution;
   const bookmark = new URLSearchParams(location.hash.slice(1)).get('t');
