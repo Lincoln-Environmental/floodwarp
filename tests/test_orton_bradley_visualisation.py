@@ -1,5 +1,6 @@
 """Output/recovery and geometric controls; no full-domain hydraulic run."""
 import json
+import os
 from types import SimpleNamespace
 
 import numpy as np
@@ -140,3 +141,30 @@ def test_video_encoding_and_complete_decode(tmp_path):
     assert result['duration_s'] == 2.
     assert result['frames'] == 4
     assert result['bytes'] > 0
+
+
+@pytest.mark.skipif(os.environ.get('FLOODWARP_TEST_RENDER') != '1',
+                    reason='Explicit headless VTK rendering opt-in required')
+def test_renderer_refreshes_water_and_camera(monkeypatch):
+    monkeypatch.setenv('LIBGL_ALWAYS_SOFTWARE', '1')
+    monkeypatch.setenv('VTK_DEFAULT_OPENGL_WINDOW', 'vtkEGLRenderWindow')
+    monkeypatch.setenv('ALLOW_PLOTTING', 'true')
+    monkeypatch.delenv('DISPLAY', raising=False)
+    pytest.importorskip('pyvista')
+    from examples.orton_bradley.render_visualisation import create_scene, update_scene
+    dem = np.zeros(shape=(4, 5), dtype=np.float64)
+    active = np.ones(shape=dem.shape, dtype=bool)
+    plotter, points, triangles = create_scene(dem=dem, valid=active,
+        grid=dict(dx=5., dy=5.), width=320, height=240, background='#0c1720')
+    options = dict(plotter=plotter, points=points, triangles=triangles, active=active,
+        wet_threshold=.01, depth_maximum=7., camera_start=115., camera_end=145., opacity=.88)
+    try:
+        dry = update_scene(**options, depth=dem, fraction=0.).copy()
+        wet = update_scene(**options, depth=np.full_like(a=dem, fill_value=.5), fraction=0.).copy()
+        moved = update_scene(**options, depth=np.full_like(a=dem, fill_value=.5), fraction=1.).copy()
+        dry_moved = update_scene(**options, depth=dem, fraction=1.).copy()
+        assert not np.array_equal(dry, wet), 'New water must appear after the initial screenshot'
+        assert not np.array_equal(wet, moved), 'Camera movement must change the rendered scene'
+        assert not np.array_equal(moved, dry_moved), 'Receded water must disappear'
+    finally:
+        plotter.close()

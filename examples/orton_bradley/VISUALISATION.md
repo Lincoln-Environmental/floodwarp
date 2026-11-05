@@ -16,22 +16,55 @@ dt 1 s. The existing exact-sparse uniform FV1 scheduler remains in use.
 The public adapter's `finite_support` rainfall option preserves the native
 zero-rain recession after the original forcing ends at 172800 s.
 
-## Current execution status
+## Completed execution — 5 November 2026
 
-Preparation, immutable source checks, native 3D geometry and video encoding
-have been exercised using local published files. The retained files contain
-final depth, all-step maximum depth, minute diagnostics and a final checkpoint;
-they do **not** contain the required five-minute instantaneous series. The
-historical installation crop and synthetic outputs cannot substitute for it.
+The CUDA replay completed at exactly **259200 s** with
+**865 instantaneous depth frames**, **4320 minute-end diagnostics** and
+**1,570,053 accepted timesteps**. The 600-second full-domain smoke matched the
+unchanged public replay; the full event resumed that restart. All published
+input and reference hashes were checked again after execution.
 
-The GPU was occupied by another compute process during setup. No full-domain
-hydraulic smoke test or new event has been launched. The preflight video is
-explicitly labelled as a camera animation of the **retained final field only**.
-It is not the conference deliverable. Current evidence and test logs are in
-`outputs/orton_bradley_visualisation/` and remain outside Git. Setup checks
-passed 1054 CPU tests, with 642 skipped while CUDA was hidden. The software
-preflight renders 60 frames, encodes both MP4s and checks every decoded frame.
-These checks do not establish new full-event numerical parity.
+The final depth and all-step maximum-envelope RMSE, hydrograph NRMSE, final
+storage error and cumulative export error against the published FloodWarp FV1
+benchmark were all zero in this run. Maximum absolute mass residual was
+1.64582161e-08 m³, below the 0.0380923701 m³ gate.
+There were no missing or duplicated frame/diagnostic timestamps. Five-minute
+samples missed some local interframe maxima by up to
+0.053119150 m; none exceeded native all-step maxima.
+This temporal sampling deficit is retained in the validation report.
+
+Tracked hydraulic time was **1610.414 s (26.84 minutes)**;
+export time including IO/checkpoints was **1853.052 s (30.88 minutes)**.
+These are accumulated smoke/export process measurements, excluding the separate
+reference smoke and pauses between invocations. The successful software render,
+encoding and checks took **594.309 s (9.91 minutes)**.
+The reusable depth/terrain/diagnostic dataset occupies approximately **1.46 GB**;
+**73 separate restart checkpoints** occupy approximately **18.04 GB**, including
+the extra 600-second smoke restart. Sizes use decimal GB.
+
+Completed deliverables under `outputs/orton_bradley_visualisation/`:
+
+- `renders/conference/orton_bradley_fv1_3d.mp4`: 1920 × 1080, 72 s, 30 fps,
+  2160 frames, 7,149,307 bytes.
+- `renders/conference/orton_bradley_fv1_preview.mp4`: 960 × 540, 72 s, 30 fps,
+  2160 frames, 1,022,849 bytes.
+- `renders/conference/stills/`: initial development at 15:40, peak sampled
+  inundation at 24:05 and final recession at 72:00. An additional rising-flood
+  still at 20:00 is copied unchanged from movie frame 600; reproduce it with
+  `cp outputs/orton_bradley_visualisation/renders/conference/images/000600.png outputs/orton_bradley_visualisation/renders/conference/stills/rising_flood_20h.png`.
+- `diagnostics/validation.json`, `diagnostics/frame_manifest.json`,
+  `metadata/execution_report.json` and `renders/conference/render_report.json`:
+  metrics, coverage, runtime, hashes and exact artifact paths.
+
+Both videos were decoded in full and checked for dimensions, fps and frame
+count. The scene is explicitly refreshed before each screenshot. The graphics
+regression checks water appearing/disappearing after the first screenshot and
+camera movement; first/last terrain crops also confirm scene movement. The
+actual discharge-peak frame and all three selected stills were visually reviewed.
+The final CPU/headless-graphics suite passed **1055 tests, with 642 skipped**.
+Generated datasets, videos, images and earlier render review directories remain
+outside Git. Numerical source is the unchanged `e480500` implementation state;
+exact renderer hashes are in each render identity.
 
 ## Environment and local inputs
 
@@ -171,15 +204,16 @@ The validation command is independently repeatable after export:
 
 ```bash
 FLOODWARP_VIS_ACTION=validate .venv/bin/python -m examples.orton_bradley.export_visualisation
-CUDA_VISIBLE_DEVICES='' .venv/bin/python -m pytest -q
+FLOODWARP_TEST_RENDER=1 CUDA_VISIBLE_DEVICES='' .venv/bin/python -m pytest -q
 ```
 
 CUDA is hidden for the CPU regression command while another job occupies it.
 This does not establish new CUDA parity or replace the deferred full-domain
 CUDA smoke. The new controls test lossless output, duplicate protection,
 recovery with orphan frames and a corrupt checkpoint, interval ledgers,
-orientation, wet/dry triangles, exact DEM+h vertices, busy-device refusal and
-real MP4 encoding/decoding.
+orientation, wet/dry triangles, exact DEM+h vertices, busy-device refusal,
+real MP4 encoding/decoding and actual VTK water/camera refresh. The explicit
+`FLOODWARP_TEST_RENDER=1` flag enables the software EGL graphics regression.
 
 Full-event gates require exactly 259200 s and the expected complete timestamp
 sequences, finite nonnegative depths, inactive zeros, matching final native

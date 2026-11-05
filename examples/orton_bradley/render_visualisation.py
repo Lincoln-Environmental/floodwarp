@@ -20,6 +20,12 @@ from examples.orton_bradley.export_visualisation import atomic_json, frame_path
 from examples.orton_bradley.reproduce import file_hash
 
 
+def water_colormap():
+    """Keep shallow water distinguishable from hillshade without altering depth."""
+    return LinearSegmentedColormap.from_list(name='water_depth',
+        colors=['#58dfeb', '#2bade0', '#1677c6', '#093b8c'])
+
+
 def grid_geometry(*, dem, valid, grid):
     """Native cell-centre triangulation, south first, in local metre coordinates."""
     ny, nx = dem.shape
@@ -78,7 +84,7 @@ def update_scene(*, plotter, points, triangles, depth, active, wet_threshold,
     if len(faces):
         water = polydata(points=elevated, triangles=faces)
         water['depth_m'] = depth.ravel()
-        plotter.add_mesh(mesh=water, scalars='depth_m', cmap='Blues',
+        plotter.add_mesh(mesh=water, scalars='depth_m', cmap=water_colormap(),
             clim=(wet_threshold, depth_maximum), log_scale=True,
             opacity=opacity, lighting=False, show_scalar_bar=False,
             name='water', render=False)
@@ -94,6 +100,7 @@ def update_scene(*, plotter, points, triangles, depth, active, wet_threshold,
     plotter.camera_position = [position.tolist(), centre.tolist(), [0., 0., 1.]]
     plotter.camera.view_angle = 38.
     plotter.reset_camera_clipping_range()
+    plotter.render()
     return plotter.screenshot(return_img=True)
 
 
@@ -128,7 +135,7 @@ def create_layout(*, width, height, rows, wet_threshold, depth_maximum, title_no
         cursors.append(axis.axvline(x=0., color='#ffcf78', linewidth=1.5))
     colour_axis = figure.add_axes(rect=(.09, .14, .51, .016))
     figure.colorbar(mappable=ScalarMappable(
-        norm=LogNorm(vmin=wet_threshold, vmax=depth_maximum), cmap='Blues'),
+        norm=LogNorm(vmin=wet_threshold, vmax=depth_maximum), cmap=water_colormap()),
         cax=colour_axis, orientation='horizontal', label='Instantaneous depth (m; logarithmic colour scale)')
     colour_axis.tick_params(colors='#b9c8d2', labelsize=8)
     colour_axis.xaxis.label.set_color('#b9c8d2')
@@ -268,6 +275,14 @@ def render(*, dataset, source, output, preflight, width, height, seconds, fps, w
         scene[0].close()
     if limit < count:
         return dict(status='partial render', completed_frames=limit, expected_frames=count)
+    with Image.open(fp=output / 'images/000000.png') as first_image, Image.open(
+            fp=output / 'images' / f'{count - 1:06d}.png') as last_image:
+        crop = (int(width * .015), int(height * .14), int(width * .745), int(height * .84))
+        first_scene = np.asarray(first_image.crop(box=crop))
+        last_scene = np.asarray(last_image.crop(box=crop))
+    changed_scene_pixels = int(np.count_nonzero(np.any(first_scene != last_scene, axis=-1)))
+    if changed_scene_pixels == 0:
+        raise ArithmeticError('Scene did not update between first and last frames')
     videos = []
     for name, video_width, video_height, crf in (
         ('orton_bradley_pipeline_check.mp4' if preflight else 'orton_bradley_fv1_3d.mp4', width, height, 18),
@@ -290,7 +305,7 @@ def render(*, dataset, source, output, preflight, width, height, seconds, fps, w
                 save_image(image=image, path=still_path)
                 stills.append(dict(path=str(still_path), time_s=float(np.floor(
                     index / max(1, count - 1) * 259200. / 300.) * 300.)))
-    report = dict(status='pipeline check' if preflight else 'complete', videos=videos, stills=stills,
+    report = dict(status='pipeline check' if preflight else 'complete', videos=videos, stills=stills, changed_scene_pixels=changed_scene_pixels,
         render_seconds=time.perf_counter() - started, geometry='Native 5 m terrain and water meshes',
         limitations=render_identity['representation'])
     atomic_json(path=output / 'render_report.json', value=report)
