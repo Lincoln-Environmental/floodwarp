@@ -232,3 +232,12 @@ CC BY 4.0, with the LINZ, Environment Canterbury, Christchurch City Council,
 Aerial Surveys, Landpro and AAM NZ attribution preserved in metadata and video.
 See [DATA_LICENSE.md](DATA_LICENSE.md), [OUTPUT_NOTICE.md](OUTPUT_NOTICE.md)
 and [the source comparison](COMPARISON.md).
+
+## Interactive 3D results
+
+For free rotation, pan/zoom and timestep selection directly from the hydrograph
+or rainfall chart, use the [local interactive viewer](INTERACTIVE.md). It reuses
+the completed FP64 results, with measured Float32 browser display conversion,
+and does not rerun the model. Start it from the repository root with
+`python -m examples.orton_bradley.serve_interactive` after preparing the viewer
+bundle. Original animation outputs and numerical methods are unchanged.

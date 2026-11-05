@@ -59,3 +59,12 @@ attribution links to https://www.openstreetmap.org/copyright . Tile service
 use follows https://operations.osmfoundation.org/policies/tiles/ . Basemap
 images are display context; they do not supply hydraulic terrain or forcing.
 The documented map screenshot retains visible OpenStreetMap attribution.
+
+## Three.js (local Orton Bradley 3D viewer)
+
+Three.js 0.187.0 and its OrbitControls are vendored unchanged under
+`examples/orton_bradley/viewer/vendor/`. Copyright 2010–2026 Three.js Authors;
+MIT terms are retained verbatim in `LICENSE.txt` beside the source. The original
+npm archive URL and SHA256 values for the archive and retained files are in
+that directory's `provenance.json`. These are browser rendering dependencies;
+they introduce no hydraulic operators or solver dependency.

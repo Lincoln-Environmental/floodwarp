@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore the full-domain Orton Bradley FloodWarp FV1 design-rainfall demonstration in three dimensions.">
+  <title>Orton Bradley · FloodWarp 3D</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./viewer.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+  <script type="module" src="./viewer.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="./" aria-label="FloodWarp viewer home"><span class="brand-symbol">≋</span> FloodWarp <span class="brand-tag">EXPLORER</span></a>
+    <span class="project-label">ORTON BRADLEY PARK <span>·</span> BANKS PENINSULA, NZ</span>
+    <button id="fullscreen" class="quiet-button" title="Toggle full screen">Full screen ↗</button>
+  </header>
+  <main>
+    <section class="scene-panel" aria-label="Interactive three-dimensional flood terrain">
+      <div id="scene" tabindex="0" aria-label="3D model. Drag to rotate, scroll to zoom, right-drag to pan. Use the controls for time selection."></div>
+      <div class="scene-heading"><span class="eyebrow">FULL-DOMAIN FV1 · 5 M GRID</span><h1>Orton Bradley in 3D.</h1><p>Uncalibrated 100-year design rainfall demonstration</p></div>
+      <div class="view-tools"><button id="reset" title="Restore the valley overview">Reset view</button><button id="overhead" title="Look down from above">Plan view</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button></div>
+      <div id="loading" class="loading" role="status">Loading the model…</div>
+      <div id="fatal" class="fatal" role="alert" hidden></div>
+      <div class="scene-bottom">
+        <div class="legend"><div class="legend-title">WATER DEPTH <span>metres · log scale</span></div><div class="gradient"></div><div class="legend-ticks"><span>0.01</span><span>0.1</span><span>1</span><span>7</span></div></div>
+        <div class="north"><span id="north-arrow">↑</span><b>N</b></div>
+      </div>
+      <div class="navigation-hint">Drag to orbit <i>·</i> Scroll to zoom <i>·</i> Right-drag to pan <i>·</i> Touch: pinch &amp; drag</div>
+    </section>
+    <aside class="dashboard" aria-label="Hydraulic time and charts">
+      <div class="time-header"><span class="eyebrow">EXPLORE THE EVENT</span><span class="status-dot">VALIDATED FV1</span></div>
+      <div class="clock-row"><output id="clock">--:--</output><span>elapsed<br>hours : minutes</span></div>
+      <div class="transport"><button id="back" aria-label="Previous five-minute frame">‹</button><button id="play" class="play-button" aria-label="Play the event">▶ Play</button><button id="forward" aria-label="Next five-minute frame">›</button><label>Speed<select id="speed" aria-label="Playback speed"><option value="1">1 frame/s</option><option value="4" selected>4 frames/s</option><option value="12">12 frames/s</option></select></label></div>
+      <input id="time" type="range" min="0" max="864" value="294" step="1" aria-label="Simulation timestep">
+      <div class="time-range"><span>0 h</span><span>72 h</span></div>
+      <div class="jump-controls"><button id="start">Start</button><button id="discharge-peak">Peak flow</button><button id="inundation-peak">Peak extent</button><button id="end">End</button></div>
+      <label class="time-entry">Go to hour <input id="hours" type="number" min="0" max="72" step="any" value="24.5"><span id="sample-label">5-minute saved results</span></label>
+      <div class="chart-heading"><h2>Coastal discharge</h2><output id="discharge">—</output></div>
+      <canvas id="hydrograph" class="chart" tabindex="0" role="slider" aria-label="Select time from coastal discharge hydrograph" aria-valuemin="0" aria-valuemax="72" aria-valuenow="24.5"></canvas>
+      <div class="chart-heading"><h2>Domain-mean rainfall</h2><output id="rainfall">—</output></div>
+      <canvas id="hyetograph" class="chart" tabindex="0" role="slider" aria-label="Select time from rainfall hyetograph" aria-valuemin="0" aria-valuemax="72" aria-valuenow="24.5"></canvas>
+      <p class="chart-hint">Click or drag either chart to select time. Arrow keys step by 5 minutes.</p>
+      <div class="metrics"><div><span>Wet area ≥ 0.01 m</span><output id="wet-area">—</output></div><div><span>Maximum depth at this time</span><output id="maximum-depth">—</output></div></div>
+      <label class="opacity-control">Water opacity <input id="opacity" type="range" min="0.15" max="1" step="0.05" value="0.9"></label>
+      <details><summary>About this model</summary><p>Full 1123 × 843 model grid, 559,985 active cells. Native terrain and water geometry; water elevations are DEM + depth. No vertical exaggeration. Narrow wet strips can be omitted where a mesh triangle contains a dry vertex.</p><p>The charts show preceding-minute means. Displayed fields are saved every five minutes, with no temporal interpolation. Browser graphics use Float32; original FP64 hydraulic results are retained.</p><p>NZTM2000 / EPSG:2193 · NZVD2016. This is a design-rainfall demonstration, not a reconstruction of an observed flood.</p><p id="precision"></p><p id="data-credit"></p><a href="./build_report.json" target="_blank" rel="noopener">Display data verification ↗</a></details>
+    </aside>
+  </main>
+  <footer><span>Patrick Durney / Lincoln Agritech Ltd · AGPL-3.0-only</span><span>Terrain: LINZ, ECan / CCC, Aerial Surveys, Landpro, AAM NZ · CC BY 4.0</span><span>VERTICAL SCALE 1:1</span></footer>
+</body>
+</html>
