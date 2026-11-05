@@ -13,11 +13,11 @@ def create_overland_solver(*, solver_method="fv1", ny, nx, dx, dy,
                   manning_n=manning_n, active_mask=active_mask, device=device,
                   minimum_dt=explicit_minimum_dt, maximum_dt=explicit_maximum_dt)
     if solver_method == "fv1":
-        if hydraulic_geometry_mode != "coarse" or subgrid_bed_elevation is not None or subgrid_resolution_m is not None or structures:
-            raise ValueError("FV1 supports coarse geometry without SGS or structures")
+        if hydraulic_geometry_mode != "coarse" or subgrid_bed_elevation is not None or subgrid_resolution_m is not None:
+            raise ValueError("FV1 supports coarse geometry without SGS")
         if validation_profile is not None:
             raise ValueError("FV1 does not use local-inertial validation profiles")
-        return FullSWESolver(**common, **options)
+        return FullSWESolver(**common, structures=structures, **options)
     if solver_method in ("explicit", "li"):
         return LocalInertialSolver(**common, validation_profile=validation_profile,
             adaptive_dt_growth_factor=adaptive_dt_growth_factor,

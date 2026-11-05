@@ -22,7 +22,7 @@ class FullSWESolver:
                  device="cpu", gravity=9.81, dry_depth=1.e-4, cfl=.4,
                  maximum_dt=1., minimum_dt=0., stage_boundary_momentum='velocity_extrapolation',
                  flux_scheme='contact_hll', execution_mode='sparse', tile_size=8,
-                 dense_fraction=.65):
+                 dense_fraction=.65, structures=()):
         """Prescribed stages use an explicitly selected ghost momentum closure.
 
         Finite-velocity extrapolation is the default. Historical discharge
@@ -43,6 +43,10 @@ class FullSWESolver:
         Exact-zero sparse execution with 8x8 tiles is the default. Select
         execution_mode='dense' for the retained dense reference. Scheduling
         does not change the uniform grid, FP64 state, sources or CFL policy.
+
+        Optional structures are disjoint circular culverts with conservative
+        post-surface exchange and zero resolved inlet jet momentum. Geometry,
+        hydraulic parameters and flow history participate in checkpoint identity.
         """
         modes = ('discharge_extrapolation','velocity_extrapolation','characteristic')
         if stage_boundary_momentum not in modes:
@@ -97,6 +101,10 @@ class FullSWESolver:
         self.condition = wp.ones(1, dtype=wp.int32, device=self.device)
         self.set_rainfall_hyetograph(times_s=np.array([0., 1.e100]), rates_m_s=np.zeros(2))
         self.configure_execution(mode=execution_mode, tile_size=tile_size, dense_fraction=dense_fraction)
+        self._culverts = None
+        if structures:
+            from floodwarp.full_swe_culverts import FV1Culverts
+            self._culverts = FV1Culverts(solver=self, structures=structures)
 
     def _field(self, *, values, nonnegative=True):
         array = np.broadcast_to(np.asarray(values, dtype=np.float64), self._shape).copy()
@@ -260,8 +268,12 @@ class FullSWESolver:
             inputs=[self.q, f["flux_x"], f["flux_y"], f["pressure_x"], f["pressure_y"], f["active"], f["manning"], f["maximum"], f["inflow"], f["outflow"], self.ctrl, *common, self.dx, self.dy, self.gravity, self.dry_depth], device=self.device)
 
     def _enqueue_step(self):
+        if self._culverts is not None:
+            self._culverts.snapshot(solver=self)
         self._enqueue_sources()
         self._enqueue_hydraulics()
+        if self._culverts is not None:
+            self._culverts.enqueue(solver=self)
         wp.launch(kernels.finish_step, dim=1,
             inputs=[self.ctrl, self.condition, self._fields["dt_histogram"], self.minimum_dt], device=self.device)
 
@@ -292,6 +304,9 @@ class FullSWESolver:
         if self._sparse_execution is not None:
             from floodwarp import sparse_fv1_kernels
             wp.load_module(module=sparse_fv1_kernels, device=self.device)
+        if self._culverts is not None:
+            from floodwarp import full_swe_culverts
+            wp.load_module(module=full_swe_culverts, device=self.device)
         compilation = perf_counter() - began
         capture_seconds = 0.
         graph = use_cuda_graph is not False and self.device.is_cuda
@@ -398,9 +413,17 @@ class FullSWESolver:
                     qy=self._fields["volume_y"].numpy().reshape(self.ny + 1, self.nx).copy())
 
     def _configuration(self):
-        return dict(nx=self.nx, ny=self.ny, dx=self.dx, dy=self.dy, gravity=self.gravity,
+        configuration = dict(nx=self.nx, ny=self.ny, dx=self.dx, dy=self.dy, gravity=self.gravity,
                     dry_depth=self.dry_depth, cfl=self.cfl, maximum_dt=self.maximum_dt, minimum_dt=self.minimum_dt,
                     stage_boundary_momentum=self.stage_boundary_momentum,flux_scheme=self.flux_scheme)
+        if self._culverts is not None:
+            configuration['culverts'] = dict(version='fv1_disjoint_circular_v1', sha256=self._culverts.identity,
+                momentum='proportional_withdrawal_zero_jet_mixing', splitting='after_surface',
+                accepted_maximum='composed_step')
+        return configuration
+
+    def get_structure_diagnostics(self):
+        return [] if self._culverts is None else self._culverts.diagnostics()
 
     def numerical_configuration(self):
         """Resolved boundary semantics, including when the argument was omitted."""
@@ -425,7 +448,10 @@ class FullSWESolver:
         q = state["arrays"]["q"]
         if np.any(q[:, 0] < 0) or not np.array_equal(state["arrays"]["active"].astype(bool), self._active.ravel()):
             raise ValueError("Invalid checkpoint depths/mask")
-        for name in ("bed", "manning"):
+        immutable = ['bed', 'manning']
+        if self._culverts is not None:
+            immutable.extend(['culvert_cells', 'culvert_parameters'])
+        for name in immutable:
             if not np.array_equal(state["arrays"][name], self._fields[name].numpy()):
                 raise ValueError("Checkpoint physical input mismatch: " + name)
         self.set_rainfall_hyetograph(times_s=state["rain_times"], rates_m_s=state["rain_rates"])

@@ -31,6 +31,8 @@ preserved. See [release status](docs/RELEASE_STATUS.md) and
 | Traditional SGS | Explicit LI Python configuration | Experimental common-stage subgrid geometry |
 | Enhanced SGS | Explicit LI Python configuration | Experimental component-aware subgrid geometry |
 
+Development branch: the opt-in native FV1 circular culvert implementation is described in [FV1 structures](docs/FV1_STRUCTURES.md). It is not yet supported by the local UI or a tagged release.
+
 Static-mesh FV1, dynamic AMR, wavelets, mixed-precision FV1, surrogate and
 coupled-model research are excluded. Numerical agreement with an independent
 solver does not establish observed-event validation or grid convergence.
