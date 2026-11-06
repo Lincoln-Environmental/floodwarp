@@ -128,3 +128,45 @@ avoid the separate hydraulic job) gave 1,093 passed, 645 skipped and one failure
 `tests/test_enhanced_production_api.py`. That failure reproduces independently in
 the unchanged solver/test files; this profile does not change the constructor or
 any numerical code. Logs are retained under the new output directory's `checks/`.
+
+## Twenty-second edit
+
+`render_linkedin_short.py` provides a tighter edit for the observed audience
+retention. It renders fresh native scenes, preserving the original 45-second
+movie and its reports. Both hydraulic peaks occur within the first nine seconds.
+The opening caption fades out by two seconds; closing credits appear over the
+final two-second hold. The water fields, actual snapshot clock, scientific
+qualification, depth legend and attribution follow the same rules as above.
+
+```bash
+FLOODWARP_LINKEDIN_ACTION=preview .venv/bin/python -m examples.orton_bradley.render_linkedin_short
+FLOODWARP_LINKEDIN_ACTION=full .venv/bin/python -m examples.orton_bradley.render_linkedin_short
+```
+
+Outputs are isolated under `outputs/orton_bradley_visualisation/renders/linkedin_20s/`:
+
+- `orton_bradley_floodwarp_linkedin_20s_1080p.mp4`: exactly 20 s, 600 frames,
+  1920 × 1080, 30 fps, H.264/yuv420p, CRF 19, faststart, no audio.
+- `orton_bradley_floodwarp_linkedin_20s_preview.mp4`: 6 s, 960 × 540, 30 fps.
+- The same cover, per-profile identity, contact-sheet and report structure.
+
+| Video time | Simulation time |
+| --- | --- |
+| 0–1.5 s | 0–18 h |
+| 1.5–4 s | 18–23 h |
+| 4–10.5 s | 23–25 h |
+| 10.5–13.5 s | 25–30 h |
+| 13.5–18 s | 30–72 h |
+| 18–20 s | 72 h held |
+
+Peak sampled extent (24:05) appears at approximately 7.53 s; peak flow (24:30)
+appears at approximately 8.9 s. Quiet periods are accelerated independently of the
+camera, with no temporal interpolation of the hydraulic fields. The new profile
+source hash is included in the identity alongside the reused renderer hashes.
+
+The completed short movie is 12,064,849 bytes and took 135.1 s for its final
+render/encode/verification pass. All 600 frames decoded and their presentation
+timestamps matched exact 1/30 s spacing. Encoded representative views and closing
+credits were inspected; the original 45-second movie and preview retained their
+checksums. Focused tests: 26 passed, one skipped. Full CPU suite: 1,095 passed,
+645 skipped, with the same existing constructor-API failure documented above.

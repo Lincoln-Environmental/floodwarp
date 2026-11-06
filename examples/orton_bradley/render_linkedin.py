@@ -136,8 +136,10 @@ def overlay_frame(*, image, row, profile, fonts):
         alpha=int(190*y/(210*scale))
         draw.line(xy=[(0,height-int(210*scale)+y),(width,height-int(210*scale)+y)],fill=(5,12,17,alpha))
     margin=int(54*scale)
-    opening=max(0.,min(1.,(8.-row['production_time_s'])/2.))
-    ending=max(0.,min(1.,row['production_time_s']-42.))
+    opening=max(0.,min(1.,(profile.get('opening_fade_end_s',8.)-row['production_time_s'])
+        /profile.get('opening_fade_duration_s',2.)))
+    ending=max(0.,min(1.,(row['production_time_s']-profile.get('closing_start_s',42.))
+        /profile.get('closing_fade_duration_s',1.)))
     if opening>0.:
         draw.text(xy=(margin,int(42*scale)),text=profile['opening'],font=fonts['title'],fill=(242,248,250,int(255*opening)))
         draw.text(xy=(margin,int(112*scale)),text=profile['subtitle'],font=fonts['subtitle'],fill=(222,237,242,int(255*opening)))
