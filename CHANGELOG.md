@@ -2,6 +2,10 @@
 
 ## 0.2.0.dev0 — development only
 
+- Clarify LISFLOOD-FP's scientific influence, independent implementation and
+  external validation role; cite the foundational ACC and FV1 papers.
+  Update the enhanced-solver positional API test for the deliberate removal
+  of reference-only arithmetic mode.
 - Isolate LISFLOOD-FP 8.3 GPLv3 FREE-boundary numerical behaviour in a
   validation-only NumPy oracle, with explicit float32/FP64 tests.
   Remove production arithmetic compatibility overrides and API modes while
