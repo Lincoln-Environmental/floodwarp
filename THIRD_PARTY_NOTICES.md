@@ -29,15 +29,44 @@ vertical adjustment was applied. Original metadata and internal dataset names
 remain preserved as historical provenance. The small crop uses FREE boundaries;
 the full matched benchmark uses its established stage-0 coastal contacts.
 
-## Independent numerical references
+## Scientific influence and independent numerical references
 
-Validation arrays are outputs of independent LISFLOOD-FP ACC/FV1 runs, not
-FloodWarp-generated targets. `validation/fixtures/manifest.json` records their
-source paths, binary hashes, version, controls and file hashes. No LISFLOOD
-source or executable is included, linked into the package, or required to run
-its tests. The source project's inspected upstream distribution did not
-establish the main LISFLOOD software licence; do not infer executable/source
-redistribution rights from these comparisons.
+FloodWarp development was inspired in part by LISFLOOD-FP, which was also
+used as a numerical validation benchmark. FloodWarp's local-inertial solver
+draws on the formulation described by Bates, Horritt and Fewtrell (2010);
+its FV1 solver uses established first-order finite-volume shallow-water
+methods, including methods documented for LISFLOOD-FP by Shaw et al. (2021).
+The FloodWarp CPU/GPU implementation was developed independently in Python
+and NVIDIA Warp. Independent implementation does not mean independent
+invention of the numerical methods.
+
+Relevant scientific references:
+
+- Bates, P. D., Horritt, M. S. and Fewtrell, T. J. (2010).
+  A simple inertial formulation of the shallow water equations for
+  efficient two-dimensional flood inundation modelling.
+  Journal of Hydrology, 387, 33-45.
+  https://doi.org/10.1016/j.jhydrol.2010.03.027
+- Shaw, J., Kesserwani, G., Neal, J., Bates, P. and Sharifian, M. K. (2021).
+  LISFLOOD-FP 8.0: the new discontinuous Galerkin shallow-water solver
+  for multi-core CPUs and GPUs.
+  Geoscientific Model Development, 14, 3577-3602.
+  https://doi.org/10.5194/gmd-14-3577-2021
+
+Validation arrays are outputs of separate LISFLOOD-FP ACC/FV1 runs, not
+FloodWarp-generated targets. `validation/fixtures/manifest.json` records
+their source paths, binary hashes, version, controls and file hashes.
+The LISFLOOD-FP executable and source code are not shipped with, linked
+into or required by FloodWarp's production package.
+
+LISFLOOD-FP 8.3 distributes its source under GNU GPLv3:
+https://github.com/ihaseeburrehman/LISFLOOD-FP-8.3 .
+The validation-only `validation/lisflood_fp_free_boundary.py` is a
+NumPy re-expression of the LISFLOOD-FP 8.3 FREE1 boundary recurrence in
+`source/boundary.cpp`, including operation ordering for FP32/FP64 comparisons.
+It is not imported by production hydraulic modules and does not constitute
+a runtime dependency on LISFLOOD-FP. The historical hybrid arithmetic
+variant in that oracle is explicitly not an exact LISFLOOD-FP operator.
 
 ## Dependencies
 

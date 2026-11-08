@@ -117,10 +117,10 @@ def test_factory_and_direct_constructor_choose_same_explicit_method(device,metho
     np.testing.assert_array_equal(direct.get_qx(),factory.get_qx())
 
 
-def test_enhanced_dispatch_preserves_full_positional_production_constructor():
+def test_enhanced_dispatch_uses_current_positional_production_constructor():
     native=np.zeros((2,4));bed=np.zeros((1,2));rough=np.full((1,2),.03);mask=np.ones((1,2),np.int32)
     positional=LocalInertialSolver(1,2,2.,2.,bed,rough,mask,'cpu',None,True,1,1e-8,.02,None,
-        None,'native','enhanced',native,1.)
+        None,'enhanced',native,1.)
     keyword=LocalInertialSolver(ny=1,nx=2,dx=2.,dy=2.,bed_elevation=bed,manning_n=rough,active_mask=mask,
         hydraulic_geometry_mode='enhanced',subgrid_bed_elevation=native,subgrid_resolution_m=1.,
         minimum_dt=1e-8,maximum_dt=.02,adaptive_dt_growth_factor=None)

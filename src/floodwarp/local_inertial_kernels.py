@@ -39,14 +39,9 @@ BOUNDARY_MASKED_NORTH_FREE = 9
 BOUNDARY_MASKED_EAST_STAGE = 10
 BOUNDARY_MASKED_SOUTH_STAGE = 11
 
-# ``free_outflow_mode`` values above one remain deliberately local to the
-# opt-in LISFLOOD validation path.  They retain the ACC FREE equation but
-# reproduce the reference executable's float arithmetic at its unstable
-# no-slope outlet.  Generic production FREE remains mode zero.
+# The ACC FREE validation profile retains its published mathematical method.
+# LISFLOOD-FP floating-point behaviour is isolated in validation/.
 FREE_OUTFLOW_MODE_LISFLOOD_ACC = 1
-FREE_OUTFLOW_MODE_LISFLOOD_FLOAT_SURFACE = 2
-FREE_OUTFLOW_MODE_LISFLOOD_FLOAT_OPERATOR = 3
-FREE_OUTFLOW_MODE_LISFLOOD_FP64_OPERATOR = 4
 
 @wp.kernel
 def set_uniform_field_kernel(
@@ -99,127 +94,6 @@ def calc_face_h(eta_L: BED_FLOAT, eta_R: BED_FLOAT, z_L: BED_FLOAT, z_R: BED_FLO
     """Calculate water depth at cell face using maximum upwind elevation."""
     return wp.max(BED_FLOAT(0.0), wp.max(eta_L, eta_R) - wp.max(z_L, z_R))
 
-
-@wp.func
-def _lisflood_float_surface_dh(
-    edge_bed: BED_FLOAT,
-    edge_depth: WP_FLOAT,
-    inward_bed: BED_FLOAT,
-    inward_depth: WP_FLOAT,
-    spacing: WP_FLOAT,
-) -> WP_FLOAT:
-    """Return boundary.cpp's left-associative float ``dh``.
-
-    The local LISFLOOD build uses ``NUMERIC_TYPE=float`` and evaluates
-    ``dh = z0 + h0 - z1 - h1``.  The sequence of three rounded operations is
-    intentionally different from subtracting two pre-formed water surfaces.
-    """
-    z0 = wp.float32(edge_bed)
-    h0 = wp.float32(edge_depth)
-    z1 = wp.float32(inward_bed)
-    h1 = wp.float32(inward_depth)
-    dh = wp.float32(z0 + h0)
-    dh = wp.float32(dh - z1)
-    dh = wp.float32(dh - h1)
-    return WP_FLOAT(dh)
-
-
-@wp.func
-def _lisflood_float_surface_slope_magnitude(
-    edge_bed: BED_FLOAT,
-    edge_depth: WP_FLOAT,
-    inward_bed: BED_FLOAT,
-    inward_depth: WP_FLOAT,
-    spacing: WP_FLOAT,
-) -> WP_FLOAT:
-    """Return ``abs(Sf)`` with boundary.cpp's left-associative float dh."""
-    dh = _lisflood_float_surface_dh(
-        edge_bed, edge_depth, inward_bed, inward_depth, spacing,
-    )
-    return wp.abs(WP_FLOAT(wp.float32(-wp.float32(dh) / wp.float32(spacing))))
-
-
-@wp.func
-def _lisflood_float_free_unit_discharge(
-    q_old: WP_FLOAT,
-    edge_depth: WP_FLOAT,
-    edge_bed: BED_FLOAT,
-    inward_depth: WP_FLOAT,
-    inward_bed: BED_FLOAT,
-    manning_n: WP_FLOAT,
-    spacing: WP_FLOAT,
-    dt: WP_FLOAT,
-    gravity: WP_FLOAT,
-    direction: WP_FLOAT,
-) -> WP_FLOAT:
-    """Mirror the float ``FREE`` assignment in LISFLOOD boundary.cpp.
-
-    Every named intermediate corresponds to a ``NUMERIC_TYPE`` temporary or
-    the final ``*qoldptr`` assignment in the reference source.
-    """
-    z0 = wp.float32(edge_bed)
-    h0 = wp.float32(edge_depth)
-    z1 = wp.float32(inward_bed)
-    h1 = wp.float32(inward_depth)
-    q0 = wp.float32(q_old)
-    fn = wp.float32(manning_n)
-    g = wp.float32(gravity)
-    tstep = wp.float32(dt)
-    dx = wp.float32(spacing)
-
-    dh = wp.float32(z0 + h0)
-    dh = wp.float32(dh - z1)
-    dh = wp.float32(dh - h1)
-    sf = wp.float32(-dh / dx)
-
-    gravity_increment = wp.float32(g * tstep)
-    gravity_increment = wp.float32(gravity_increment * h0)
-    gravity_increment = wp.float32(gravity_increment * sf)
-    numerator = wp.float32(wp.abs(q0) + wp.abs(gravity_increment))
-    h_power = wp.pow(h0, wp.float32(10.0) / wp.float32(3.0))
-    friction = wp.float32(g * tstep)
-    friction = wp.float32(friction * h0)
-    friction = wp.float32(friction * fn)
-    friction = wp.float32(friction * fn)
-    friction = wp.float32(friction * wp.abs(q0))
-    denominator = wp.float32(1.0 + friction / h_power)
-    q_new = wp.float32(numerator / denominator)
-    return WP_FLOAT(wp.float32(direction) * q_new)
-
-
-@wp.func
-def _lisflood_fp64_free_unit_discharge(
-    q_old: WP_FLOAT,
-    edge_depth: WP_FLOAT,
-    edge_bed: BED_FLOAT,
-    inward_depth: WP_FLOAT,
-    inward_bed: BED_FLOAT,
-    manning_n: WP_FLOAT,
-    spacing: WP_FLOAT,
-    dt: WP_FLOAT,
-    gravity: WP_FLOAT,
-    direction: WP_FLOAT,
-) -> WP_FLOAT:
-    """Evaluate the complete FREE recurrence in FP64 from the stored state."""
-    z0 = wp.float64(edge_bed)
-    h0 = wp.float64(edge_depth)
-    z1 = wp.float64(inward_bed)
-    h1 = wp.float64(inward_depth)
-    q0 = wp.float64(q_old)
-    fn = wp.float64(manning_n)
-    g = wp.float64(gravity)
-    tstep = wp.float64(dt)
-    dx = wp.float64(spacing)
-    dh = z0 + h0
-    dh = dh - z1
-    dh = dh - h1
-    sf = -dh / dx
-    numerator = wp.abs(q0) + wp.abs(g * tstep * h0 * sf)
-    denominator = wp.float64(1.0) + (
-        g * tstep * h0 * fn * fn * wp.abs(q0)
-        / wp.pow(h0, wp.float64(10.0) / wp.float64(3.0))
-    )
-    return WP_FLOAT(wp.float64(direction) * numerator / denominator)
 
 @wp.kernel
 def calc_cfl_dt_x_kernel(
@@ -1055,112 +929,6 @@ def update_momentum_kernel(
 
 
 @wp.func
-def _diagnostic_free_override(
-    q_current: WP_FLOAT,
-    q_old: WP_FLOAT,
-    edge_depth: WP_FLOAT,
-    edge_bed: BED_FLOAT,
-    inward_depth: WP_FLOAT,
-    inward_bed: BED_FLOAT,
-    manning_n: WP_FLOAT,
-    prescribed_slope: STAGE_FLOAT,
-    spacing: WP_FLOAT,
-    dt: WP_FLOAT,
-    gravity: WP_FLOAT,
-    dry_depth: WP_FLOAT,
-    depth_epsilon: WP_FLOAT,
-    direction: WP_FLOAT,
-    arithmetic_mode: int,
-) -> WP_FLOAT:
-    """Override one local-slope FREE face for an opt-in arithmetic oracle."""
-    if edge_depth <= dry_depth:
-        return WP_FLOAT(0.0)
-    if (
-        arithmetic_mode == FREE_OUTFLOW_MODE_LISFLOOD_FLOAT_OPERATOR
-        and wp.float32(edge_depth) <= wp.float32(dry_depth)
-    ):
-        return WP_FLOAT(0.0)
-    if wp.isnan(prescribed_slope) or wp.abs(prescribed_slope) > STAGE_FLOAT(0.0):
-        return q_current
-    if arithmetic_mode == FREE_OUTFLOW_MODE_LISFLOOD_FLOAT_OPERATOR:
-        return _lisflood_float_free_unit_discharge(
-            q_old, edge_depth, edge_bed, inward_depth, inward_bed,
-            manning_n, spacing, dt, gravity, direction,
-        )
-    if arithmetic_mode == FREE_OUTFLOW_MODE_LISFLOOD_FP64_OPERATOR:
-        return _lisflood_fp64_free_unit_discharge(
-            q_old, edge_depth, edge_bed, inward_depth, inward_bed,
-            manning_n, spacing, dt, gravity, direction,
-        )
-    slope_magnitude = _lisflood_float_surface_slope_magnitude(
-        edge_bed, edge_depth, inward_bed, inward_depth, spacing,
-    )
-    denominator = WP_FLOAT(1.0) + gravity * manning_n * manning_n * dt * wp.abs(q_old) / wp.pow(
-        wp.max(edge_depth, depth_epsilon), WP_FLOAT(7.0 / 3.0)
-    )
-    return direction * (
-        wp.abs(q_old) + wp.abs(gravity * dt * edge_depth * slope_magnitude)
-    ) / denominator
-
-
-@wp.kernel
-def override_free_outflow_arithmetic_kernel(
-    qx: wp.array2d(dtype=WP_FLOAT),
-    qy: wp.array2d(dtype=WP_FLOAT),
-    qx_old: wp.array2d(dtype=WP_FLOAT),
-    qy_old: wp.array2d(dtype=WP_FLOAT),
-    water_depth: wp.array2d(dtype=WP_FLOAT),
-    bed_elevation: wp.array2d(dtype=BED_FLOAT),
-    manning_n: wp.array2d(dtype=WP_FLOAT),
-    boundary_type_qx: wp.array2d(dtype=wp.int32),
-    boundary_stage_qx: wp.array2d(dtype=STAGE_FLOAT),
-    boundary_type_qy: wp.array2d(dtype=wp.int32),
-    boundary_stage_qy: wp.array2d(dtype=STAGE_FLOAT),
-    dx: WP_FLOAT,
-    dy: WP_FLOAT,
-    dt: WP_FLOAT,
-    gravity: WP_FLOAT,
-    dry_depth: WP_FLOAT,
-    depth_epsilon: WP_FLOAT,
-    arithmetic_mode: int,
-):
-    """Apply expensive float FREE arithmetic only in diagnostic runs."""
-    j, i = wp.tid()
-    ny = water_depth.shape[0]
-    nx = water_depth.shape[1]
-    if j < ny and boundary_type_qx[j, i] == BOUNDARY_FREE_OUTFLOW:
-        edge_column = nx - 1
-        inward_column = nx - 2
-        direction = WP_FLOAT(1.0)
-        if i == 0:
-            edge_column = 0
-            inward_column = 1
-            direction = WP_FLOAT(-1.0)
-        qx[j, i] = _diagnostic_free_override(
-            qx[j, i], qx_old[j, i], water_depth[j, edge_column],
-            bed_elevation[j, edge_column], water_depth[j, inward_column],
-            bed_elevation[j, inward_column], manning_n[j, edge_column],
-            boundary_stage_qx[j, i], dx, dt, gravity, dry_depth,
-            depth_epsilon, direction, arithmetic_mode,
-        )
-    if i < nx and boundary_type_qy[j, i] == BOUNDARY_FREE_OUTFLOW:
-        edge_row = ny - 1
-        inward_row = ny - 2
-        direction = WP_FLOAT(1.0)
-        if j == 0:
-            edge_row = 0
-            inward_row = 1
-            direction = WP_FLOAT(-1.0)
-        qy[j, i] = _diagnostic_free_override(
-            qy[j, i], qy_old[j, i], water_depth[edge_row, i],
-            bed_elevation[edge_row, i], water_depth[inward_row, i],
-            bed_elevation[inward_row, i], manning_n[edge_row, i],
-            boundary_stage_qy[j, i], dy, dt, gravity, dry_depth,
-            depth_epsilon, direction, arithmetic_mode,
-        )
-
-
-@wp.func
 def _update_conditioned_qx_face(
     i: int,
     j: int,
@@ -1915,7 +1683,6 @@ def accumulate_free_outlet_trace_kernel(
     dt: WP_FLOAT,
     gravity: WP_FLOAT,
     depth_epsilon: WP_FLOAT,
-    free_outflow_mode: int,
     stats: wp.array(dtype=wp.float64),
 ):
     """Reduce outlet state and FREE momentum terms into a tiny trace array."""
@@ -1998,49 +1765,20 @@ def accumulate_free_outlet_trace_kernel(
 
     dh = WP_FLOAT((edge_bed + BED_FLOAT(edge_depth)) - (inward_bed + BED_FLOAT(inward_depth)))
     slope = -dh / spacing
-    has_prescribed_slope = 0
     if wp.isnan(prescribed_slope):
         slope = WP_FLOAT(0.0)
-        has_prescribed_slope = 1
     elif wp.abs(prescribed_slope) > WP_FLOAT(0.0):
         slope = prescribed_slope
-        has_prescribed_slope = 1
     elif USE_CONDITIONED_MIXED_KERNELS == 1:
         # Match the mixed hot kernel: retain the FP64 DEM difference before
         # combining it with FP32 depths, rather than forming absolute WSEs.
         dh = WP_FLOAT(edge_bed - inward_bed) + edge_depth - inward_depth
         slope = -dh / spacing
-    elif free_outflow_mode >= FREE_OUTFLOW_MODE_LISFLOOD_FLOAT_SURFACE:
-        dh = _lisflood_float_surface_dh(
-            edge_bed, edge_depth, inward_bed, inward_depth, spacing,
-        )
-        slope = WP_FLOAT(wp.float32(-wp.float32(dh) / wp.float32(spacing)))
     n_value = manning_n[j, i]
     gravity_increment = gravity * edge_depth * slope
     denominator = WP_FLOAT(1.0) + gravity * dt * edge_depth * n_value * n_value * wp.abs(q_old) / wp.pow(
         wp.max(edge_depth, depth_epsilon), WP_FLOAT(10.0 / 3.0)
     )
-    if (
-        has_prescribed_slope == 0
-        and free_outflow_mode == FREE_OUTFLOW_MODE_LISFLOOD_FLOAT_OPERATOR
-    ):
-        g = wp.float32(gravity)
-        tstep = wp.float32(dt)
-        hflow = wp.float32(edge_depth)
-        fn = wp.float32(n_value)
-        q0 = wp.float32(q_old)
-        sf = wp.float32(slope)
-        gravity_increment_float = wp.float32(g * tstep)
-        gravity_increment_float = wp.float32(gravity_increment_float * hflow)
-        gravity_increment = WP_FLOAT(wp.float32(gravity_increment_float * sf))
-        h_power = wp.pow(hflow, wp.float32(10.0) / wp.float32(3.0))
-        friction = wp.float32(g * tstep)
-        friction = wp.float32(friction * hflow)
-        friction = wp.float32(friction * fn)
-        friction = wp.float32(friction * fn)
-        friction = wp.float32(friction * wp.abs(q0))
-        denominator = WP_FLOAT(wp.float32(1.0 + friction / h_power))
-
     wp.atomic_add(stats, FREE_TRACE_COUNT, wp.float64(1.0))
     wp.atomic_add(stats, FREE_TRACE_QOUT, wp.float64(direction * q_new * width))
     wp.atomic_min(stats, FREE_TRACE_EDGE_MIN, wp.float64(edge_depth))
@@ -3510,66 +3248,6 @@ def device_loop_update_momentum_kernel(
             boundary_type_qy, boundary_stage_qy,
             dy, dt, gravity, dry_depth, depth_epsilon,
             manning_face_mode, use_two_dimensional_friction, free_outflow_mode,
-        )
-
-
-@wp.kernel
-def device_loop_override_free_outflow_arithmetic_kernel(
-    qx: wp.array2d(dtype=WP_FLOAT),
-    qy: wp.array2d(dtype=WP_FLOAT),
-    qx_old: wp.array2d(dtype=WP_FLOAT),
-    qy_old: wp.array2d(dtype=WP_FLOAT),
-    water_depth: wp.array2d(dtype=WP_FLOAT),
-    bed_elevation: wp.array2d(dtype=BED_FLOAT),
-    manning_n: wp.array2d(dtype=WP_FLOAT),
-    boundary_type_qx: wp.array2d(dtype=wp.int32),
-    boundary_stage_qx: wp.array2d(dtype=STAGE_FLOAT),
-    boundary_type_qy: wp.array2d(dtype=wp.int32),
-    boundary_stage_qy: wp.array2d(dtype=STAGE_FLOAT),
-    dx: WP_FLOAT,
-    dy: WP_FLOAT,
-    control: wp.array(dtype=wp.float64),
-    gravity: WP_FLOAT,
-    dry_depth: WP_FLOAT,
-    depth_epsilon: WP_FLOAT,
-    arithmetic_mode: int,
-):
-    """Device-loop counterpart of the opt-in FREE arithmetic override."""
-    j, i = wp.tid()
-    if control[DL_DONE] != 0.0:
-        return
-    ny = water_depth.shape[0]
-    nx = water_depth.shape[1]
-    dt = WP_FLOAT(control[DL_DT])
-    if j < ny and boundary_type_qx[j, i] == BOUNDARY_FREE_OUTFLOW:
-        edge_column = nx - 1
-        inward_column = nx - 2
-        direction = WP_FLOAT(1.0)
-        if i == 0:
-            edge_column = 0
-            inward_column = 1
-            direction = WP_FLOAT(-1.0)
-        qx[j, i] = _diagnostic_free_override(
-            qx[j, i], qx_old[j, i], water_depth[j, edge_column],
-            bed_elevation[j, edge_column], water_depth[j, inward_column],
-            bed_elevation[j, inward_column], manning_n[j, edge_column],
-            boundary_stage_qx[j, i], dx, dt, gravity, dry_depth,
-            depth_epsilon, direction, arithmetic_mode,
-        )
-    if i < nx and boundary_type_qy[j, i] == BOUNDARY_FREE_OUTFLOW:
-        edge_row = ny - 1
-        inward_row = ny - 2
-        direction = WP_FLOAT(1.0)
-        if j == 0:
-            edge_row = 0
-            inward_row = 1
-            direction = WP_FLOAT(-1.0)
-        qy[j, i] = _diagnostic_free_override(
-            qy[j, i], qy_old[j, i], water_depth[edge_row, i],
-            bed_elevation[edge_row, i], water_depth[inward_row, i],
-            bed_elevation[inward_row, i], manning_n[edge_row, i],
-            boundary_stage_qy[j, i], dy, dt, gravity, dry_depth,
-            depth_epsilon, direction, arithmetic_mode,
         )
 
 

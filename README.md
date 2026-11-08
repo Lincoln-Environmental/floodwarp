@@ -6,6 +6,13 @@ finite-volume implementation of the full shallow-water equations. Developed
 by **Patrick Durney**. Copyright **Lincoln Agritech Ltd**. Software is
 [AGPL-3.0-only](LICENSE); attributed elevation data retain CC BY 4.0.
 
+FloodWarp was inspired in part by LISFLOOD-FP and has been validated against
+LISFLOOD-FP ACC and FV1 results. Its Python/NVIDIA Warp solver implementation
+was developed separately from the LISFLOOD-FP source code using established
+published hydraulic methods. The independent implementation claim refers to
+software implementation, not to invention of the underlying equations.
+See [scientific influence and reference provenance](THIRD_PARTY_NOTICES.md).
+
 **Release status (2 November 2026):** GitHub's latest published release is
 [v0.1.3](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3),
 at `6a67851`, with the local UI and spatial inputs described below. The wheel

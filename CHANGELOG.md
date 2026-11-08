@@ -1,8 +1,20 @@
 # Changelog
 
+## Unreleased changes on main (no release tag)
+
+- Isolate LISFLOOD-FP 8.3 GPLv3 FREE-boundary arithmetic in a validation-only
+  NumPy numerical behaviour oracle. Remove three reference-specific arithmetic
+  modes and their Warp override kernels without changing native hydraulic
+  defaults or the LISFLOOD-style ACC validation profile.
+- Correct the enhanced-solver positional constructor regression test for the
+  deliberately shortened production constructor signature.
+- Explicitly credit LISFLOOD-FP as a development inspiration and independent
+  validation reference, citing Bates et al. (2010) and Shaw et al. (2021).
+  Published v0.1.x release tags and benchmark fixtures are unchanged.
+
 ## v0.1.3 — local rainfall UI and spatial inputs
 
-Released 2 November 2026 as Latest within the private repository, at `6a67851`.
+Released 2 November 2026, at `6a67851`.
 [Release notes](docs/RELEASE_NOTES_v0.1.3.md) and [assets](https://github.com/Lincoln-Environmental/floodwarp/releases/tag/v0.1.3).
 Publication uses the existing prepared artifacts; no new models, tests or builds were run.
 
