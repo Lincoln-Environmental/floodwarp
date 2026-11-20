@@ -181,22 +181,19 @@ def research_flux(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float6
     if hl <= dry or hr <= dry:
         return wp.vec4d(fallback[0], fallback[1], fallback[2], wp.float64(1.0))
     if mode == 5:
+        # The middle shear wave splits transverse momentum of the HLL state.
+        # Retain both longitudinal components of the conservative HLL state.
         if sl >= zero or sr <= zero:
             return wp.vec4d(fallback[0], fallback[1], fallback[2], zero)
-        # Conservative shallow-water HLLC. A shear wave has common depth
-        # and normal velocity on both sides. Its two star states differ in hv.
         dl = hl * (ul[0] - sl)
         dr = hr * (sr - ur[0])
-        hstar = (dl + dr) / (sr - sl)
-        if hstar > dry and wp.isfinite(hstar):
-            sm = (sr * dl + sl * dr) / (dl + dr)
-            if sl < sm and sm < sr:
-                qstar = wp.vec3d(hstar, hstar * sm, hstar * ur[1])
-                flux = fr + sr * (qstar - right)
-                if sm >= zero:
-                    qstar[2] = hstar * ul[1]
-                    flux = fl + sl * (qstar - left)
-                return wp.vec4d(flux[0], flux[1], flux[2], zero)
+        denominator = dl + dr
+        if denominator > zero:
+            contact = (sr * dl + sl * dr) / denominator
+            tangent = ur[1]
+            if contact >= zero:
+                tangent = ul[1]
+            return wp.vec4d(fallback[0], fallback[1], fallback[0] * tangent, zero)
         return wp.vec4d(fallback[0], fallback[1], fallback[2], wp.float64(2.0))
 
     sqrt_l = wp.sqrt(hl)
@@ -310,28 +307,33 @@ def cfl_reduce(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32),
 
 
 @wp.func
-def cell_wave_interval(k: int, axis: int, top: wp.float64,
-        q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64),
+def source_wave_bounds(k: int, q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64),
         rain: wp.array(dtype=wp.float64), multiplier: wp.array(dtype=wp.float64),
         infil: wp.array(dtype=wp.float64), f0: wp.array(dtype=wp.float64), fd: wp.array(dtype=wp.float64),
         conductivity: wp.array(dtype=wp.float64), soil: wp.array(dtype=wp.float64),
-        ctrl: wp.array(dtype=wp.float64), g: wp.float64, dry: wp.float64):
-    """Bounds on normal velocity and celerity for every dt <= immutable cap."""
-    zero = wp.float64(0.0)
+        ctrl: wp.array(dtype=wp.float64)):
     h = q[k][0]
-    added = ctrl[8]*(rain[k]+multiplier[k]*ctrl[12])
-    capacity = infil[k]+conductivity[k]+(f0[k]-conductivity[k])*wp.exp(-soil[k]/fd[k])
-    low = wp.max(zero,h-ctrl[8]*capacity)
-    high = h+added
+    high = h + ctrl[8]*(rain[k]+multiplier[k]*ctrl[12])
+    capacity = infil[k] + conductivity[k]
+    if f0[k] != conductivity[k]:
+        capacity += (f0[k]-conductivity[k])*wp.exp(-soil[k]/fd[k])
+    low = wp.max(wp.float64(0.0), h-ctrl[8]*capacity)
+    return wp.vec3d(high, low+bed[k], high+bed[k])
+
+
+@wp.func
+def cell_wave_interval(state: wp.vec3d, bounds: wp.vec3d, axis: int,
+                       top: wp.float64, g: wp.float64, dry: wp.float64):
+    zero = wp.float64(0.0)
     u0 = zero
     u1 = zero
-    if h > dry:
-        u0 = q[k][axis+1]/h
-        u1 = q[k][axis+1]/high
+    if state[0] > dry:
+        u0 = state[axis+1]/state[0]
+        u1 = state[axis+1]/bounds[0]
     umin = wp.min(u0,u1)
     umax = wp.max(u0,u1)
-    hl = wp.max(zero,low+bed[k]-top)
-    hh = wp.max(zero,high+bed[k]-top)
+    hl = wp.max(zero,bounds[1]-top)
+    hh = wp.max(zero,bounds[2]-top)
     if hl <= dry:
         umin = wp.min(umin,zero)
         umax = wp.max(umax,zero)
@@ -371,6 +373,7 @@ def star_cfl_reduce(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32
         return
     j = k/nx
     i = k%nx
+    local_bounds = source_wave_bounds(k,q,bed,rain,multiplier,infil,f0,fd,conductivity,soil,ctrl)
     rates = wp.vec2d(wp.float64(0.0))
     for axis in range(2):
         for side in range(2):
@@ -395,10 +398,11 @@ def star_cfl_reduce(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32
             top = bed[k]
             if interior:
                 top = wp.max(top,bed[neighbor])
-            inside = cell_wave_interval(k,axis,top,q,bed,rain,multiplier,infil,f0,fd,conductivity,soil,ctrl,g,dry)
+            inside = cell_wave_interval(q[k],local_bounds,axis,top,g,dry)
             outside = inside
             if interior:
-                outside = cell_wave_interval(neighbor,axis,top,q,bed,rain,multiplier,infil,f0,fd,conductivity,soil,ctrl,g,dry)
+                neighbor_bounds = source_wave_bounds(neighbor,q,bed,rain,multiplier,infil,f0,fd,conductivity,soil,ctrl)
+                outside = cell_wave_interval(q[neighbor],neighbor_bounds,axis,top,g,dry)
             elif kind <= 1:
                 outside = wp.vec4d(-inside[1],-inside[0],inside[2],inside[3])
             elif kind == 3:
@@ -427,9 +431,10 @@ def star_cfl_reduce(q: wp.array(dtype=wp.vec3d), active: wp.array(dtype=wp.int32
                         outside = wp.vec4d(ug,ug,cb,cb)
                         if sources:
                             outside = wp.vec4d(wp.min(ug,wp.float64(0.0)),wp.max(ug,wp.float64(0.0)),cb,cb)
-            speed = wave_interval_bound(inside,outside,g,dry)
             if side == 0:
                 speed = wave_interval_bound(outside,inside,g,dry)
+            else:
+                speed = wave_interval_bound(inside,outside,g,dry)
             rates[axis] = wp.max(rates[axis],speed)
     rate = rates[0]/dx+rates[1]/dy
     if rate > wp.float64(0.0):

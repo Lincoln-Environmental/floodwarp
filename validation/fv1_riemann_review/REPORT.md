@@ -1,178 +1,159 @@
-# FloodWarp FV1 Riemann flux investigation
+# FloodWarp FV1 flux requalification
 
-**Decision. Retain `contact_hll` as the production default.** Roe is a useful experimental option for sharp hydraulic jumps. Its depth RMSE improvement was modest on propagating dam breaks, and it needed a finer grid than 10 m to reach 5 m contact-HLL accuracy in the GPU Stoker benchmark. Full HLLC provided the same shear-wave resolution as contact-HLL at a higher GPU cost. The catchment evidence shows sensitivity to the flux, with no independent observations for ranking physical accuracy.
+**Retain `contact_hll` as the production default.** Roe exactly preserved grid-aligned stationary hydraulic jumps and improved the off-grid jump. On both dam breaks, spending a similar GPU budget on a finer contact-HLL grid produced lower depth error. Corrected HLLC gives the existing contact-upwind formula on wet faces with identical outer speeds. No catchment observations establish a physical-accuracy advantage for any of the alternatives.
 
-The investigation starts from `origin/dev` at `77dc855b544ecb98a25584fa214db7e41b50e6be`. The Warp implementations and independent FP64 NumPy expressions use the published mathematics. The new code was written in this repository under its existing licence. Existing Patrick Durney / Lincoln Agritech Ltd software attribution and separate terrain attribution apply. [Third-party notices](../../THIRD_PARTY_NOTICES.md) · [Orton Bradley data licence](../../examples/orton_bradley/DATA_LICENSE.md)
+This correction starts from `25b6081` on dev. **The original HLLC derivation and its accuracy, stability and performance rankings are superseded.** The original report, HLL audit, case specifications, JSON and figures remain available. Corrected measurements are under `corrected/`. All numerical code was derived within FloodWarp. [Original report at 25b6081](REPORT_25b6081.md) · [Corrected measurement environment](corrected/environment.json)
 
-## 1. Existing FV1 operators
+## What was wrong with HLLC?
 
-For an oriented face, use $Q=(h,hu,hv)$, where $u$ is normal velocity and $v$ transverse. The physical flux is $F=(hu,hu^2+gh^2/2,huv)$. At y faces the kernel interchanges the momentum components before and after evaluating the flux. Let $c=\sqrt{gh}$, and let $S_L,S_R$ denote estimated outer speeds. HLL uses the upwind physical flux if the fan lies on one side of the face. In the fan it uses
+Write the normal conservative state as $Q=(h,m,n)=(h,hu,hv)$ and its flux as $F=(m,mu+gh^2/2,mv)$. Across an approximate wave of speed $S$, conservation requires $F_b-F_a=S(Q_b-Q_a)$. For a wet fan spanning the face, integrating conservation across both outer speeds gives
 
-$$
- F_{HLL} = \frac{S_R F_L-S_L F_R+S_L S_R(Q_R-Q_L)}{S_R-S_L}.
-$$
+$$Q_H=\frac{S_R Q_R-S_L Q_L-(F_R-F_L)}{S_R-S_L},\qquad F_H=F_L+S_L(Q_H-Q_L)=F_R+S_R(Q_H-Q_R).$$
 
-| Flux | Wet outer speeds | Transverse momentum in the HLL fan |
-|---|---|---|
-| `legacy_hll` | $S_L=\min(u_L-c_L,u_R-c_R)$, $S_R=\max(u_L+c_L,u_R+c_R)$ | HLL on all three conserved components |
-| `contact_hll` | Same endpoint speeds | $F_h v_{up}$, upwinded by the middle-speed sign |
-| `star_hll` | If the two-rarefaction predictor is positive, $S_L=\min(u_L-c_L,u_*-c_*)$, $S_R=\max(u_R+c_R,u_*+c_*)$. Otherwise endpoint bounds | HLL on all three components |
-| `star_contact_hll` | Same as `star_hll` | Same middle-wave treatment as `contact_hll` |
+Let $H=Q_{H,h}$, $M=Q_{H,m}$ and $J=F_{H,h}$. The conservative contact restoration keeps $H,M$ common across the shear wave. Set $Q^*_K=(H,M,Hv_K)$ and compute $F^*_K=F_K+S_K(Q^*_K-Q_K)$. The first two components on either side equal the first two components of $F_H$. The transverse component is $Jv_K$ because the outer mass balance gives $J=m_K+S_K(H-h_K)$. The middle jump therefore satisfies $F^*_R-F^*_L=(J/H)(Q^*_R-Q^*_L)$. This establishes all three jump relations with middle speed $S_*=J/H$. The two outer bounds enclose both wet velocities, so $H>0$ and $S_*$ lies between the outer speeds. The one-sided fans return the upwind physical flux. HLL star fluxes and states satisfy these integral identities; an approximate star flux need not equal the physical flux evaluated at the HLL state. [Published shallow-water HLLC flux, §2.5, equations 25–32](https://www.mdpi.com/2077-1312/13/11/2036) · [Toro, *Shock-Capturing Methods for Free-Surface Shallow Flows*](https://www.wiley-vch.de/en/areas-interest/engineering/mechanical-engineering-10me/fluid-mechanics-10me3/shock-capturing-methods-for-free-surface-shallow-flows-978-0-471-98766-6)
 
-The two-rarefaction estimates are $c_*=(c_L+c_R)/2+(u_L-u_R)/4$ and $u_*=(u_L+u_R)/2+c_L-c_R$. The contact estimate is $(S_R d_L+S_L d_R)/(d_L+d_R)$ with $d_L=h_L(u_L-S_L)$ and $d_R=h_R(S_R-u_R)$. If the denominator is nonpositive, the contact variants retain the HLL transverse flux. All four historical variants use wet-side dry-fan speeds $(u_L-c_L,u_L+2c_L)$ at a right dry state and $(u_R-2c_R,u_R+c_R)$ at a left dry state. This speed switch uses `dry_depth`. Face flux and pressure are skipped for two exactly zero reconstructed depths, after constructing any boundary ghost. [Harten, Lax and van Leer (1983)](https://doi.org/10.1137/1025002) · [Warp kernels](../../src/floodwarp/full_swe_kernels.py)
+The previous implementation substituted $HS_*=J$ for $M$. Those quantities generally differ. For the requested 2 m / 0.4 m discontinuity at rest, $g=9.81$, the experimental bounds are −4.42945 and 5.65372 m/s. $H=1.10287$ m, $M=1.86799$ m²/s and $J=3.97381$ m²/s. The old left/right star normal fluxes are **2.01824 and 23.25157 m³/s²**. A middle wave with zero normal-momentum jump cannot support that flux difference. The corrected outer constructions both give **11.34586 m³/s²**. The old finite-volume update still shared one face flux between cells, so a global water-budget test alone could miss the defect.
 
-- **Bed and bed source.** At $z_f=\max(z_L,z_R)$ reconstruct $h'_i=\max(0,h_i+z_i-z_f)$, scaling discharges by $h'_i/h_i$ above the velocity cutoff. The momentum update differences the shared flux after subtracting the appropriate side's $gh_i'^2/2$. The omitted cell-local hydrostatic pressure cancels between opposite faces. [Audusse et al. (2004)](https://doi.org/10.1137/S1064827503431090)
-- **Time and sources.** FV1 performs a source update, face fluxes and a single unsplit forward Euler transport step, followed by semi-implicit vector Manning drag. Piecewise-linear rain is integrated over the accepted interval. Rain adds zero momentum and dilutes velocity. Constant and explicit cumulative-infiltration-dependent capacities are bounded by available water, with proportional momentum withdrawal. Optional culvert exchange follows the surface step and was outside this study. The analytical trials use zero drag and infiltration. [Solver](../../src/floodwarp/full_swe_solver.py) · [Independent NumPy step](../../src/floodwarp/full_swe_reference.py)
-- **CFL.** Endpoint schemes reduce a cap using $CFL/[(|u|+c)/\Delta x+(|v|+c)/\Delta y]$, with rain and stage-ghost bounds. Star schemes also use a face-based envelope over reconstructed source-depth intervals, endpoint and star speeds and dry rarefaction speeds. Roe and HLLC use that extra envelope. A characteristic stage with sources adds a further bound. Accepted steps are capped at forcing knots, requested output time and configured maximum dt. The accepted CFL parameter lies in $(0,0.45]$. The configured minimum dt rejects an inadequate stability bound instead of overriding it.
-- **Draining and wet/dry.** Each donor cell computes the lesser of one and the ratio of available depth to requested outward transport. Every adjacent receiver uses the same donor-limited shared flux. Positive film depth stays in the mass ledger. The existing state update zeros momentum at or below `dry_depth`, reports nonfinite states and depth below $-10^{-12}$ m as failures, and removes roundoff-scale negative depth. The experiments check the ledger independently of that tolerance.
-- **Boundaries.** Closed exterior and mask faces mirror normal momentum and enforce zero advective flux. FREE faces copy the interior state, suppress incoming transport and retain hydrostatic traction when blocked. Stage faces prescribe ghost depth above the local bed. Options extrapolate velocity (default), extrapolate discharge (historical), or combine stage with an outgoing characteristic invariant. The last has transparent supercritical outflow, a critical outlet when tailwater is sufficiently low, and rejects unsupported supercritical or dry-land inflow.
-- **Selection and restart.** The native `FullSWESolver`, `create_overland_solver` and `create_model` accept `flux_scheme`. The resolved scheme remains part of checkpoint identity. The existing flux IDs and control-array format for the four historical fluxes are retained. Dense and exact-sparse scheduling share the face operator. The audit reused the Stoker star relation and existing parity, analytical, restart and profile infrastructure. [Factory](../../src/floodwarp/solver_factory.py) · [Earlier Stoker verification](../analytical_convergence.py) · [CUDA benchmark infrastructure](../sparse_fv1_benchmark.py)
+The corrected Warp branch evaluates the conservative HLL longitudinal flux and upwinds tangential velocity on the middle wave. NumPy uses the sign of $J$ directly. This is the same wet contact treatment as `contact_hll` for common outer bounds. The experimental variant retains its wider endpoint-plus-positive-two-rarefaction envelope and explicit shallow HLL fallback. FloodWarp's `star_contact_hll` uses its existing star speed estimate. These choices explain remaining differences. Alternative choices for the approximate outer waves need not give identical numerical fluxes. HLLC checkpoints now carry revision 2. Loading a pre-correction experimental HLLC checkpoint raises an explicit error. Existing HLL and Roe checkpoints keep their prior identity. [Warp fluxes](../../src/floodwarp/full_swe_kernels.py) · [Independent NumPy fluxes](../../src/floodwarp/full_swe_reference.py)
 
-## 2. New experimental fluxes
+## Roe, conservation and independent verification
 
-**Roe.** The averages $\tilde u,\tilde v$ use $\sqrt{h_L},\sqrt{h_R}$ weights and $\tilde c=\sqrt{g(h_L+h_R)/2}$. Eigenvalues are $\tilde u-\tilde c,\tilde u,\tilde u+\tilde c$, with vectors $(1,\tilde u-\tilde c,\tilde v),(0,0,1),(1,\tilde u+\tilde c,\tilde v)$. For jumps $(\Delta h,\Delta m,\Delta n)$, the gravity-wave strengths are $[\Delta h\mp(\Delta m-\tilde u\Delta h)/\tilde c]/2$ and the shear strength is $\Delta n-\tilde v\Delta h$. The Warp flux uses left-going fluctuations. NumPy computes the centred flux minus characteristic dissipation. When the appropriate gravity characteristic crosses zero between its two Roe wave-edge states, the Harten–Hyman split replaces the negative fluctuation coefficient by $a(b-\lambda)/(b-a)$ for bracket speeds $a<0<b$. This maintains the summed wave and its linear flux difference. The intermediate depth must exceed `dry_depth`. An unbracketed entropy split, wave speeds outside the CFL envelope, or an inadmissible intermediate depth invokes HLL. [Roe (1981)](https://doi.org/10.1016/0021-9991(81)90128-5) · [Harten and Hyman (1983)](https://doi.org/10.1016/0021-9991(83)90066-9)
+Roe retains the square-root-depth velocity averages, $c^2=g(h_L+h_R)/2$, the two gravity eigenvectors and the transverse momentum eigenvector. The independent test solves the three-by-three characteristic system and checks $\sum_i\lambda_i W_i=F_R-F_L$. For a transonic gravity wave with edge speeds $a<0<b$, it solves $w_a+w_b=1$, $aw_a+bw_b=\lambda$ and adds $aw_a W$ to the left flux. It computes the intermediate depth, tests the wave brackets and predicts the outcome code independently. Both CPU and CUDA passed on 600 seeded pairs spanning four orders of depth with opposing and supercritical velocities. The sample exercised unsplit Roe, entropy-corrected Roe and inadmissible HLL. A further 1,000 pairs tested normal reversal and physical-flux consistency for each solver. The HLLC test reconstructed the two outer RH updates and the middle jump on 500 seeded interfaces. [Verification tests](../../tests/test_fv1_research_fluxes.py) · [Roe (1981)](https://doi.org/10.1016/0021-9991(81)90128-5) · [Harten and Hyman (1983)](https://doi.org/10.1016/0021-9991(83)90066-9)
 
-**Full HLLC.** The wet outer speeds enclose both endpoint characteristics and the corresponding positive two-rarefaction speeds. Put $h_*=(d_L+d_R)/(S_R-S_L)$ and $S_*=(S_Rd_L+S_Ld_R)/(d_L+d_R)$. Across the middle shear wave, depth and normal momentum are continuous. Each star state is $Q_{*K}=(h_*,h_*S_*,h_*v_K)$. The flux uses the Rankine–Hugoniot update $F_K+S_K(Q_{*K}-Q_K)$ on the star side selected by $S_*$, with outer upwinding as usual. Require a finite star depth above the cutoff and $S_L<S_*<S_R$ in a straddling fan. For identical admissible outer speeds, these jump conditions give the same mass and normal momentum flux as HLL and the same transverse flux as contact-upwind HLL. Differences between the implemented variants arise from wave bounds, fallback choices and FP64 arithmetic. [Toro (2001)](https://www.wiley-vch.de/en/areas-interest/engineering/mechanical-engineering-10me/fluid-mechanics-10me3/shock-capturing-methods-for-free-surface-shallow-flows-978-0-471-98766-6)
+Forty conjugate-depth pairs with Froude numbers 1.1–5 gave the stationary physical flux under Roe with zero fallback. The donor-limited, reflecting 2D basin test retained nonnegative depth and total volume and reproduced the rotated conservative solution. Tiny positive depths, vacuum-producing velocity contrasts, one-sided fans, wet/dry walls, sparse/dense checkpoint continuation and irregular lake shorelines are covered. Both alternatives retain the shared hydrostatic reconstruction, Euler update, draining limiter and shallow momentum policy audited in the original report. The largest normalized analytical water-balance residual was $7.53\times10^{-16}$. No analytical run reported a negative depth.
 
-**Shared fallback.** At shallow interfaces both fluxes use an HLL envelope enclosing endpoint characteristics and the applicable dry-front speeds. It retains the reconstructed mass, momentum and pressure, including a positive film. For a straddling fan the HLL intermediate depth is $(d_L+d_R)/(S_R-S_L)$, nonnegative because the bounds enclose the endpoint velocities. The same envelope is used for inadmissible wet faces. The enclosing speed estimate, combined CFL control and existing conservative draining limit provide the positivity protection. The optional outcome counters classify evaluated nonzero-depth faces as shallow HLL, inadmissible HLL, entropy-corrected Roe, or the ordinary selected flux. They include boundary faces and count face evaluations across steps.
+## Analytical results
 
-## 3. Analytical verification
+All 360 combinations completed on CUDA with the original exact solutions, break-aware cell averages, boundaries and measurement windows. The four common timestep runs at 20, 10, 5 and 2.5 m used 0.25, 0.125, 0.0625 and 0.03125 s. The second matrix used the production CFL. Depth, wet-region, velocity, momentum, variation and feature errors are retained per run. The four non-HLLC schemes reproduced the archived analytical depth RMSEs, ledgers and flux outcome counts. [Corrected analytical data](corrected/analytical.json)
 
-Five fluxes, four spacings (20, 10, 5 and 2.5 m) and two timestep policies completed **360 runs**. The common steps at those spacings were 0.25, 0.125, 0.0625 and 0.03125 s. Every common-policy run accepted exactly the requested dt. The adaptive runs use CFL 0.4 and the native 1 s ceiling. All trials use the same FP64 reconstruction, Euler update and boundary/source operators. Integration of exact cell averages splits quadrature at discontinuities and shorelines. The lake equilibrium uses the exact stage over the represented bed. Wet masks and reported fronts use a common 0.01 m threshold. Velocity RMSE uses cells wet in both fields. Total variation, overshoot, numerical feature widths, intermediate Stoker states, midpoint-to-final propagation, and both net balance and exact-volume differences are retained in the results. [Analytical results](analytical.json)
-
-| Case, 5 m common dt | `legacy_hll` | `contact_hll` | `star_contact_hll` | Roe | HLLC |
+| 5 m, common timestep | Legacy HLL | Contact-HLL | Star contact-HLL | Roe | Corrected HLLC |
 |---|---:|---:|---:|---:|---:|
-| Ritter depth RMSE (m) | 0.03220 | 0.03220 | 0.03234 | **0.03130** | 0.03401 |
-| Stoker depth RMSE (m) | 0.04663 | 0.04663 | 0.04659 | **0.04491** | 0.04716 |
-| Thacker depth RMSE (m) | 0.02343 | 0.02343 | 0.02343 | 0.02348 | **0.02340** |
-| Lake at rest depth RMSE (m) | 0 | 0 | 0 | 0 | 0 |
-| Forced smooth depth RMSE (mm) | 0.15739 | 0.15739 | 0.15739 | 0.15737 | 0.15739 |
-| Moving shear transverse momentum RMSE (m²/s) | 0.19896 | 0.15601 | 0.15601 | 0.15601 | 0.15601 |
-| Stationary shear transverse momentum RMSE (m²/s) | 0.22451 | 0 | 0 | 0 | 0 |
-| Aligned hydraulic jump depth RMSE (m) | 0.06068 | 0.06068 | 0.06000 | **0** | 0.06326 |
-| Off-grid hydraulic jump depth RMSE (m) | 0.04201 | 0.04201 | 0.04165 | **0.01178** | 0.04405 |
+| Ritter depth RMSE (m) | .03220 | .03220 | .03234 | .03130 | .03234 |
+| Stoker depth RMSE (m) | .04663 | .04663 | .04659 | .04491 | .04667 |
+| Aligned jump depth RMSE (m) | .06068 | .06068 | .06000 | 0 | .06068 |
+| Off-grid jump depth RMSE (m) | .04201 | .04201 | .04165 | .01178 | .04201 |
+| Lake depth RMSE (m) | 0 | 0 | 0 | 0 | 0 |
+| Thacker depth RMSE (m) | .02343 | .02343 | .02343 | .02348 | .02343 |
+| Manufactured depth RMSE (mm) | .15739 | .15739 | .15739 | .15737 | .15739 |
+| Moving shear transverse momentum RMSE (m²/s) | .19896 | .15601 | .15601 | .15601 | .15601 |
+| Stationary shear transverse momentum RMSE (m²/s) | .22451 | 0 | 0 | 0 | 0 |
 
-| Extracted feature at 5 m, common dt | `contact_hll` | Roe | HLLC |
+| 5 m feature or momentum metric | Contact-HLL | Roe | Corrected HLLC |
 |---|---:|---:|---:|
-| Ritter front position error (m, negative is behind) | −26.85 | **−23.23** | −29.82 |
-| Ritter 95%-depth rarefaction head error (m) | −18.20 | **−16.96** | −19.19 |
-| Stoker shock position error (m) | +0.79 | +1.13 | **+0.56** |
-| Stoker shock propagation error from midpoint (m) | −0.09 | −0.09 | −0.05 |
-| Stoker numerical shock 10–90% width (m) | 26.87 | **26.00** | 26.16 |
-| Thacker left / right shoreline error (m) | +1.03 / +36.70 | +1.00 / +36.87 | +1.07 / +35.93 |
-| Off-grid stationary jump position error (m) | −1.29 | **+0.04** | −1.39 |
+| Ritter front offset at 1 cm (m) | −26.85 | −23.23 | −27.27 |
+| Ritter normal momentum RMSE (m²/s) | .12426 | .11642 | .12520 |
+| Stoker shock offset (m) | +.788 | +1.133 | +.772 |
+| Stoker normal momentum RMSE (m²/s) | .17590 | .16952 | .17611 |
+| Off-grid jump position offset (m) | −1.289 | +.036 | −1.289 |
+| Off-grid jump normal momentum RMSE (m²/s) | .08941 | .07052 | .08940 |
+| Thacker left / right shoreline offset (m) | +1.03 / +36.70 | +1.00 / +36.87 | +1.03 / +36.74 |
 
-Ritter and Stoker use flat-bed dam releases into zero and 0.4 m tailwater with a 2 m reservoir. Thacker uses a frictionless parabolic trough and an exact translating depth parabola with harmonic centre motion. The left and right shoreline errors are strongly asymmetric in this Thacker phase, with a thin numerical tail along the receding side. At 5 m, Roe used shallow HLL on 8.43% of Ritter faces and 2.96% of Thacker faces. HLLC used it on 8.57% and 2.96%. Roe corrected 0.47% and 1.10% of faces for transonic rarefaction. The largest analytical relative mass residual across the suite was below (10^{-15}). [SWASHES, Delestre et al. (2013)](https://doi.org/10.1002/fld.3741) · [Thacker (1981)](https://doi.org/10.1017/S0022112081001882)
+The 5→2.5 m observed depth orders for contact-HLL / Roe / HLLC were 0.557 / 0.542 / 0.559 for Ritter, 0.617 / 0.618 / 0.618 for Stoker, and 0.828 / 0.829 / 0.828 for Thacker. All three gave 0.998 on the smooth manufactured solution. Roe's sharper jump and slightly lower dam-break RMSE coexist with greater Stoker shock-position error and a similar receding-shoreline tail on Thacker. The equilibrium and exact stationary shear have zero error, so an observed order is undefined.
 
-The smooth manufactured test uses constant (u=1.25) m/s and (h=0.8\exp(x/640)). Prescribe rain (R=u h_x) and (z=-h-(u^2/g)\log(h/0.8)). Then $(hu)_x=R$ and $(hu^2+gh^2/2)_x=-gh z_x$, with zero horizontal momentum input from rain. It exercises the ordinary rainfall and hydrostatic operators. Measure in the central ±120 m to isolate finite-domain boundary implementation differences. Contact-HLL gave 0.6262, 0.3141, 0.1574 and 0.0788 mm RMSE, about first-order across the four grids. The other schemes gave the same order and nearly identical errors.
+## Synthetic grid refinement
 
-The shear tests initialise constant depth and normal velocity, with constant stage at all edges to admit the uniform throughflow and preserve the y-invariant solution. The stationary exact cell averages show a 4.0 m interpolated 10–90% transition on the 5 m grid. Contact-HLL, Roe and HLLC preserve that width. Legacy HLL widens it to 57.37 m. At 1.5 m/s shear advection, all contact-aware variants give 39.45 m compared with 57.16 m for legacy HLL and a 7.92 m interpolated width in the exact cell averages. A reflecting end boundary in the initial moving-shear setup introduced gravity waves into the error norm. The retained results use compatible stage boundaries.
+The repeat used the same analytic terrain functions, sources and cell spacings. All 240 Warp runs completed, including timestep halvings. Ten independent NumPy legacy-HLL runs provided a second implementation. The table uses contact-HLL's last spatial gap at a common dt and the finest contact-HLL timestep-halving difference. The cross-formulation gap compares the 0.625 m contact-HLL and Roe solutions. These differences measure reference sensitivity and give no rigorous upper bound on continuum error. [Grid fields and reference checks](corrected/grid.json) · [Observed orders for all five schemes](corrected/grid_rates.json)
 
-The jump benchmark uses conjugate depths at a constant discharge with upstream Froude 2.25 in a horizontal, frictionless channel. The depth ratio is $(\sqrt{1+8Fr_1^2}-1)/2$, which enforces the mass and momentum jump conditions. Reservoirs at the two ends carry the corresponding depths and discharge. The staged ghosts keep the matching end states, and reservoir lengths isolate the measurement window for 16 s. This permits a supercritical inlet without adding a general prescribed-discharge boundary to FV1. The jump is at 0 or 13.75 m, with exact mixed cell averages for the latter. Roe gives the exact grid-aligned stationary shock since its gravity wave has zero speed. Its 5 m off-grid depth error was 72% lower than contact-HLL, with no HLL fallback in either 5 m jump. This tests stationary shocks in a horizontal reach. An accelerating flow over a bump with a dynamically selected jump would require a separate boundary and forcing qualification.
+| Domain | 1.25→0.625 m spatial gap (mm) | Finest dt-halving (mm) | Finest cross-formulation gap (mm) |
+|---|---:|---:|---:|
+| Plane | 1.757 | .029 | .033 |
+| Irregular | 1.240 | .016 | .105 |
+| Steep | 5.050 | .074 | 2.188 |
+| Expansion | 1.402 | .022 | .033 |
+| Rainfall | .470 | .002 | .142 |
 
-## 4. Synthetic grids and reference uncertainty
+The irregular-domain practical-grid comparison below separates 10 m Roe from 5 m contact-HLL against both fine references. At equal resolution, many scheme differences are smaller than the last reference refinement. A physical-accuracy ranking at that precision remains inconclusive.
 
-The five 320 × 160 m domains are a smooth sloping plane, an irregular catchment, a steep supercritical channel, a lateral expansion, and an initially dry rainfall-driven catchment. Terrain, forcing and initial data come from the same functions sampled on each grid, with 16 s of flow. All five schemes ran at the common dt and dt/2 on each practical grid. Two finest formulations, Warp contact-HLL and Warp Roe/HLL, ran on 1.25 and 0.625 m with both timesteps on each grid. Conservative fields from fine grids were area-averaged to the comparison grid. Independent vectorised NumPy legacy HLL ran on 2.5 and 1.25 m at the same 0.0078125 s timestep. This yields 240 Warp runs and 10 independent NumPy runs. The raw results compare both fine formulations separately. [Domains](../fv1_riemann_cases.py) · [Grid results](grid.json) · [Observed error slopes](grid_rates.json)
+![Five synthetic refinement comparisons with both fine references](corrected/synthetic_grid_refinement.png)
 
-| Domain | Contact-HLL reference gap 2.5→1.25 m (mm) | Gap 1.25→0.625 m (mm) | 0.625 m dt-halving effect (mm) | Finest Roe vs contact-HLL (mm) |
-|---|---:|---:|---:|---:|
-| Plane | 2.09 | 1.73 | 0.029 | 0.033 |
-| Irregular | 1.98 | 1.23 | 0.016 | 0.105 |
-| Steep channel | 6.97 | 5.01 | 0.074 | 2.188 |
-| Expansion | 2.44 | 1.39 | 0.022 | 0.033 |
-| Rainfall | 0.67 | 0.47 | 0.002 | 0.142 |
+## GPU costs and CFL parity
 
-Timestep halving is small compared with the spatial refinement gap. Each intermediate-to-finest gap decreases relative to the preceding gap. The finest contact-HLL–Roe separation drops compared with the 5 m result in all five cases. The rainfall difference first grows from 20 to 2.5 m. The steep channel retains 2.19 mm between formulations at 0.625 m, and refining the two finest contact-HLL grids at the same dt still gives about 5 mm. **These are refined numerical comparators with measured uncertainty.** Their spatial gaps are too large to establish convergence to the precision needed to rank the close FV1 results. Independent NumPy HLL confirms the scale of the refinement effect and provides a check on implementation dependence. It does not establish analytical truth.
+The revised star CFL reduction computes the local source-depth interval once per cell and reuses it for the four faces. It skips the exponential when its coefficient is exactly zero and evaluates the wave envelope in the required face orientation once. The neighboring cell, bed sill, stage ghost, possible source-depth range, dry rarefaction and unsplit two-direction bound all retain their original formulas. This uses local registers and adds no device allocation or kernel launch. A direct comparison with the frozen pre-change reduction exercised nonuniform terrain, source fields, dry states, extreme velocities, masks and all three stage modes. The maximum dt difference was zero in 128 randomized grids on CPU and 128 on CUDA. An adaptive expansion replay gave bit-identical final states and identical step counts. [Paired measurements and CFL checks](corrected/cost_controls.json)
 
-| Domain | 5 m contact-HLL error (mm) | 5 m Roe error (mm) | 5 m HLLC error (mm) | 5 m dt halving, contact-HLL (mm) |
-|---|---:|---:|---:|---:|
-| Plane | 5.91–5.93 | 5.79–5.81 | 5.94–5.96 | 0.055 |
-| Irregular | 5.57–5.58 | 5.66–5.66 | 5.60–5.61 | 0.034 |
-| Steep channel | 14.76–14.78 | **12.22–12.25** | 15.55–15.56 | 0.232 |
-| Expansion | 7.14–7.15 | 7.14–7.15 | 7.10–7.10 | 0.056 |
-| Rainfall | 1.64–1.65 | 1.51–1.52 | 1.72–1.73 | 0.012 |
+On a 5 m expansion, seven interleaved old/new comparisons measured a median **44.90→34.48 µs** per additional Roe CFL kernel and **5.62→5.17 ms** per adaptive hydraulic run including graph capture. The corresponding graph-loop times were 5.23→4.78 ms. This is an 8% wall-time reduction on this workload. The star bound and the Roe face solve still carry substantial costs. The non-instrumented five-scheme profile follows.
 
-Each range uses the two 0.625 m comparators. At 5 m in the steep channel, Roe reduced error relative to both by about 17%. The difference is comparable with the remaining uncertainty of the refined fields and therefore provisional. The other cases show smaller flux sensitivity. At the tested spacings, no 10 m Roe or HLLC solution matched the corresponding 5 m contact-HLL depth RMSE against either fine formulation. The largest relative balance residual in the synthetic suite was (3.87\times10^{-15}).
-
-![Synthetic depth error by grid spacing for five FV1 fluxes](synthetic_grid_refinement.png)
-
-## 5. GPU cost and accuracy
-
-RTX 4070 Ti SUPER, driver 595.99.02, Python 3.14.7, Warp 1.17.0, NumPy 2.3.5 and FP64 for all schemes. Repeated graph simulations use a 640 × 320 m copy of the analytical Stoker setup. Seven repetitions rotate scheme order on each spacing and policy. Each configuration is warmed and each wall measurement synchronises CUDA. Setup, compilation, result readback and plotting are excluded. The full hydraulic wall time includes graph capture. Steady-state hydraulic wall time reuses a captured graph. Independently instrumented launches on an 8192-cell expansion domain report kernel times without CUDA graphs. Memory is the isolated peak live CUDA allocation in Warp's pool. It excludes reserved and context memory. [GPU repetitions and kernel profile](gpu.json) · [Environment](environment.json)
-
-| 5 m adaptive Stoker | Steps | Mean dt (s) | Full / steady median (ms) | Throughput (M cell-steps/s) | Live peak (MiB) | Depth RMSE (m) |
-|---|---:|---:|---:|---:|---:|---:|
-| `legacy_hll` | 142 | 0.2254 | 10.34 / 9.98 | 116.6 | 2.04 | 0.04343 |
-| `contact_hll` | 142 | 0.2254 | 10.61 / 10.24 | 113.6 | 2.04 | 0.04343 |
-| `star_contact_hll` | 146 | 0.2192 | 18.36 / 17.95 | 66.6 | 2.04 | 0.04346 |
-| Roe | 147 | 0.2177 | 20.13 / 19.70 | 61.1 | 2.04 | 0.04146 |
-| HLLC | 146 | 0.2192 | 18.35 / 17.94 | 66.7 | 2.04 | 0.04412 |
-
-| GPU kernels on 5 m expansion (µs/step) | `legacy_hll` | `contact_hll` | `star_contact_hll` | Roe | HLLC |
+| 5 m expansion, µs per accepted step | Legacy HLL | Contact-HLL | Star contact-HLL | Roe | Corrected HLLC |
 |---|---:|---:|---:|---:|---:|
-| Both face launches | 26.06 | 27.85 | 30.00 | 40.03 | 32.09 |
-| Additional face-based CFL | — | — | 44.87 | 44.84 | 44.84 |
-| All kernels | 78.75 | 80.61 | 128.19 | 138.03 | 130.25 |
+| Both face kernels | 26.09 | 27.81 | 29.94 | 39.99 | 29.79 |
+| Additional star CFL | 0 | 0 | 34.51 | 34.54 | 34.48 |
+| All hydraulic kernels | 78.90 | 80.50 | 117.73 | 127.88 | 117.62 |
 
-At a comparable adaptive wall budget, the measured choice is **5 m contact-HLL (10.61 ms, 0.04343 m)** over **10 m Roe (10.35 ms, 0.05425 m)** for Stoker. Common-dt results agree: 5 m contact-HLL at 36.37 ms achieves 0.04663 m, compared with 10 m Roe at 33.70 ms and 0.05871 m. At a 36 ms adaptive budget, 2.5 m contact-HLL fits with an error of 0.02799 m and legacy HLL matches that error in this one-dimensional flow. At 73 ms the 2.5 m Roe point fits and reduces the error to 0.02667 m. The relative ranking depends on the target error, available grid spacings and the role of shear in the problem. The extra CFL scan accounts for most of the candidate cost on the expansion profile. No numerical failures occurred in these timings. Stoker at 5 m had zero candidate fallbacks at either policy. This fixed-cost result covers this GPU and workload.
+| Adaptive 5 m Stoker, 128 × 64 | Steps | Mean / min dt (s) | Warm wall (ms) | Million cell-steps/s | Graph capture (ms) | Depth RMSE (m) |
+|---|---:|---:|---:|---:|---:|---:|
+| Legacy HLL | 142 | .2254 / .1676 | 9.99 | 116.5 | .256 | .04343 |
+| Contact-HLL | 142 | .2254 / .1676 | 10.26 | 113.4 | .244 | .04343 |
+| Star contact-HLL | 146 | .2192 / .1058 | 16.49 | 72.5 | .261 | .04346 |
+| Roe | 147 | .2177 / .1704 | 18.24 | 66.0 | .261 | .04146 |
+| Corrected HLLC | 146 | .2192 / .1059 | 15.98 | 74.8 | .267 | .04357 |
 
-![Depth error versus grid spacing and median GPU wall time for analytical Stoker](stoker_accuracy_cost.png)
+FP64 on one RTX 4070 Ti SUPER, seven rotated repetitions, explicit synchronization and reused CUDA graphs. Peak incremental live CUDA-pool usage was 2.043 MiB for all five at this grid size. The common dense hydraulic module took 0.473 s to compile and load with an empty Warp kernel cache. The separate measurement includes neither a timestep nor graph capture. Kernel profiling used uncaptured launches. Catchment replay wall times are single runs and carry no comparative performance ranking. [Repetitions, quartiles, kernel timings, memory and throughput](corrected/gpu.json) · [Compile measurement](corrected/compile.json)
 
-## 6. Orton Bradley catchment comparisons
+| Common-dt comparison | 10 m Roe error (m) / wall (ms) | 5 m contact-HLL error (m) / wall (ms) | Lowest measured error under stated budget |
+|---|---:|---:|---|
+| Ritter | .04407 / 30.88 | .03220 / 33.67 | 35 ms, contact-HLL and legacy HLL |
+| Stoker | .05871 / 30.74 | .04663 / 36.12 | 37 ms, contact-HLL and legacy HLL |
+| Aligned stationary jump | 0 / 15.02 | .03716 / 17.32 | 18 ms, Roe |
+| Off-grid stationary jump | .00970 / 15.02 | .02575 / 17.31 | 18 ms, Roe |
+| Irregular synthetic catchment | .009389–.009399 / 14.40 | .005564–.005574 / 16.18 | 17 ms, contact-HLL has the smallest measured fine-reference discrepancy |
 
-The installation sample with historical Purau filenames is a 759-active-cell **Orton Bradley** crop. The full-domain window uses the same 5 m terrain and 559,985 active cells as the retained native Orton Bradley event, from hour 25 to hour 25 plus 600 s. Rainfall, roughness, soil capacities, boundaries and starting hydrodynamic fields are identical within each case. The long event window starts from the historical native state, retains its discharge-extrapolation stage condition and resets maximum depth to the starting field. The crop uses its existing velocity-extrapolation default. The separate, actual Purau case was unavailable as runnable matched inputs in the repository. The two measured runs are FV1 flux intercomparisons. Field observations for these windows were unavailable. [Crop provenance](../../examples/purau/README.md) · [Long-event provenance](../../examples/orton_bradley/provenance.json) · [Catchment results, input hashes and hydrographs](catchment.json)
+Budgets admit both listed alternatives and compare the discrete runs within each budget. Stoker includes four spacings. The additional cost tests compare all five schemes on 10 and 5 m grids. Shock timings use a 640 × 320 m domain and whole-domain RMSE. The analytical shock table above uses the central ±120 m measurement window. The two error norms serve different comparisons. With adaptive timesteps, 10 m Roe on Stoker achieved .05425 m at 9.26 ms versus .04343 m at 10.26 ms for 5 m contact-HLL. Hardware, domain shape and the user’s target error influence this trade-off. [Additional repetitions and reference-specific errors](corrected/cost_controls.json)
 
-| Full-domain 600 s window | Max depth (m) | Max-envelope extent >1 cm (m²) | Final depth RMSE vs contact-HLL (mm) | Peak outward flow (m³/s) | Export (m³) | 95th-percentile wet speed (m/s) | Jump candidates |
+![Measured Stoker depth error versus spacing and warmed GPU wall time](corrected/stoker_accuracy_cost.png)
+
+## Orton Bradley and hydraulically active fallback
+
+All five schemes completed the installation crop and matched continuations from the archived hour-25 checkpoint on the 559,985-active-cell domain. Physical inputs, stages, starting state, output intervals and wet threshold were identical. The separate Purau catchment lacked runnable matched inputs. On the historical 600 s window, the three existing HLL schemes and Roe exactly reproduced the archived hydrographs, ledgers, maximum depths and relative-field error metrics. Correcting HLLC changed its peak from 76.036 to 75.655 m³/s and its export from 41,977.87 to 41,862.96 m³. The table covers the longer 1,200 s continuation. [600 s repeat](corrected/catchment_600s.json) · [1,200 s hydrographs, diagnostics and input hashes](corrected/catchment.json)
+
+| Scheme | Max depth (m) | Max-envelope area >1 cm (m²) | Final depth RMSE vs contact-HLL (mm) | Peak 60 s outward flow (m³/s) | Export (m³) | Wet speed P95 (m/s) | Jump candidates at end |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `legacy_hll` | 3.65153 | 1,404,925 | 1.928 | 73.93 | 40,819.0 | 1.578 | 68 |
-| `contact_hll` | 3.65155 | 1,404,175 | 0 | 75.30 | 41,706.8 | 1.573 | 65 |
-| `star_contact_hll` | 3.65189 | 1,404,700 | 0.358 | 75.69 | 41,874.3 | 1.570 | 67 |
-| Roe | 3.65074 | 1,405,500 | 1.619 | 73.84 | 41,050.7 | 1.572 | 72 |
-| HLLC | 3.65179 | 1,404,725 | 0.781 | 76.04 | 41,977.9 | 1.572 | 63 |
+| Contact-HLL | 3.75435 | 1,404,300 | 0 | 75.298 | 77,487.1 | 1.558 | 62 |
+| Legacy HLL | 3.75434 | 1,405,025 | 1.998 | 73.929 | 76,083.2 | 1.569 | 62 |
+| Star contact-HLL | 3.75469 | 1,404,825 | .361 | 75.694 | 77,746.3 | 1.553 | 63 |
+| Roe | 3.75354 | 1,405,625 | 1.558 | 73.836 | 76,510.3 | 1.558 | 75 |
+| Corrected HLLC | 3.75469 | 1,404,800 | .351 | 75.655 | 77,730.2 | 1.554 | 62 |
 
-Peak discharge is the largest 60 s mean outward flux. Every reported window peak falls in the first interval, whose centre is +30 s. This window provides no full hydrograph peak-timing test. Against contact-HLL, Roe's final 1 cm extent symmetric difference was 5,375 m² and its x/y velocity RMSE was 0.0195/0.0188 m/s in jointly wet cells. HLLC gave 2,100 m² and 0.0167/0.0142 m/s. Jump candidates count adjacent wet cells with direction-consistent supercritical-to-subcritical flow and a depth increase. They are a diagnostic without a verified jump inventory. All five variants completed. The absolute window balance residual stayed below (10^{-9}) m³. Uninstrumented hydraulic loop time was 7.01 s for contact-HLL, 13.77 s for Roe and 13.34 s for HLLC, each a single run.
+The maximum 60 s interval mean fell in the first interval for every scheme. Event peak timing and agreement with observed floods remain untested. The final 1 cm extent symmetric difference against contact-HLL was 5,775 m² for Roe and 1,900 m² for HLLC. Corresponding x/y velocity RMSEs in jointly wet cells were .0196/.0187 and .0040/.0038 m/s. The largest absolute window balance residual was below $2\times10^{-9}$ m³. These are matched inter-model comparisons.
 
-Shallow HLL handled 97.80% of evaluated nonzero-depth faces for both candidates in the full-domain run. Roe inadmissibility added 0.00080% of faces and the entropy correction was used on 0.198%. These are hybrid simulations, dominated by the fallback in the extensive shallow-film area. The crop never reached 1 cm depth. Contact-HLL's maximum depth was 2.293 mm versus 2.308 mm for both candidates, with depth RMSE to contact-HLL about 0.0019 mm. Its export was 0.002037 m³ versus 0.002047 m³ for Roe and HLLC. The crop's shallow fallback proportion was 93.94% for both. The measurable shifts in the full-domain outlet flow have unknown accuracy. [Fallback counts and full metrics](catchment.json)
+The opt-in validation replay classifies post-source, hydrostatically reconstructed **interior** face pairs at every accepted step. The count excludes pairs with zero depth on both sides. Weights use actual donor-limited fluxes: absolute volume is $\sum |F_h|\Delta t L$ and momentum weight is $\sum\|(F_{hu},F_{hv})\|_2\Delta t L$, including pressure traction. These weightings count internal exchanges, so their totals exceed outlet volume. The original scalar outcome counts include boundary faces. Each instrumented replay checks bitwise final-state agreement with its uninstrumented run. Ordinary runs allocate no detailed counters and execute no detailed diagnostic kernels. [Diagnostic kernels and grouping](../fv1_riemann_transport.py)
 
-## 7. Separate second-order assessment
+| Roe reconstructed depth band, deeper side | Interior face-steps | Fallback share of faces | Fallback share of volume | Fallback share of momentum |
+|---|---:|---:|---:|---:|
+| 0–1 mm | 2,393,681,933 | 99.93% | 99.98% | 99.91% |
+| 1–10 mm | 6,561,844,109 | 99.77% | 99.85% | 99.44% |
+| 10–100 mm | 531,910,003 | 92.23% | 91.52% | 80.35% |
+| 100 mm–1 m | 146,223,819 | 33.04% | 26.55% | 14.21% |
+| ≥1 m | 15,612,704 | .022% | .036% | .025% |
 
-An isolated exact shallow-water shear subproblem keeps flat bed, constant depth and normal speed, and advances periodic transverse momentum. Contact-HLL reduces to positive-speed upwinding for this characteristic. The validation program compares its Euler FV1 projection to minmod MUSCL with SSP-RK2 at the same Courant number. Both conserve integrated transverse momentum to roundoff. Depth stays positive and constant by construction. [SSP methods, Gottlieb, Shu and Tadmor (2001)](https://doi.org/10.1137/S003614450036757X) · [Second-order measurements](order.json)
+| Subset | Roe HLL fallback, face / volume / momentum share | HLLC HLL fallback, face / volume / momentum share |
+|---|---:|---:|
+| All evaluated interior faces | 98.22 / 23.91 / 6.87% | 98.22 / 23.53 / 6.75% |
+| Adjacent to fixed channel proxy | 50.83 / 16.12 / 6.28% | 50.95 / 15.81 / 6.15% |
+| Both sides ≥1 cm | .052 / .060 / .035% | 0 / 0 / 0% |
+| Hydraulic-jump proxy | 0 / 0 / 0% | 0 / 0 / 0% |
 
-| Grid (m) | FV1 RMSE (m²/s) | MUSCL/RK2 RMSE (m²/s) | FV1 / MUSCL median CPU time (ms) | Pairwise FV1 / MUSCL order |
-|---:|---:|---:|---:|---:|
-| 20 | 0.06413 | 0.02400 | 0.105 / 0.705 | — |
-| 10 | 0.03318 | 0.00783 | 0.201 / 1.391 | 0.95 / 1.62 |
-| 5 | 0.01688 | 0.00250 | 0.405 / 2.812 | 0.98 / 1.65 |
-| 2.5 | 0.00851 | 0.00079 | 0.815 / 5.784 | 0.99 / 1.65 |
-| 1.25 | 0.00428 | 0.00025 | 1.886 / 13.749 | 0.99 / 1.66 |
+The fixed channel proxy selects the 11,057 initially wet cells with depth ≥0.1 m and discharge magnitude ≥0.05 m²/s. The per-step jump proxy selects jointly wet compressive faces with flow in the same direction, a transition in **normal** Froude number from above to below one, and increased downstream depth. These are reproducible spatial/hydraulic selections without an independently surveyed channel or jump inventory. The final-state jump-candidate count in the catchment table retains the historical stronger thresholds and cell-speed definition. All bands and selection thresholds for wet cells and channel locations are set in the catchment harness.
 
-At 5 m, raising the order reduced this shear error by 85%. Changing from contact-HLL to Roe or HLLC gave no measurable gain on the advected discontinuous shear test. The timed NumPy reconstruction and second stage cost roughly seven times the one-stage upwind computation at 5 m. The experiment exercises one smooth moving characteristic. General second-order flood hydraulics, irregular-bed well-balancing, positive moving shorelines, stage-consistent source integration, and GPU cost at equal error remain untested. A separate development branch could qualify those operators against the retained analytical suite. [Second-order hydrostatic reconstruction, Audusse and Bristeau](https://doi.org/10.1016/j.jcp.2004.12.016)
+Of interior Roe evaluations, 0.00086% fell back for inadmissibility (0.0453% of volume). Entropy-corrected Roe accounted for 0.189% of evaluations, 11.21% of volume and 9.18% of momentum weight. Combining ordinary and entropy-corrected Roe gives **76.09% of absolute transported volume** and **93.13% of momentum weight**. On faces adjacent to the channel proxy, Roe handled 83.88% of volume. On jump-proxy faces it handled all measured volume. The extended window therefore establishes where Roe operated and leaves the physical correctness of the resulting hydrograph open.
 
-## 8. Decision and coverage
+## Engineering decision and coverage
 
-| Question | Evidence-based answer |
-|---|---|
-| A. Roe analytical accuracy | Measurably better for the stationary jump and modestly better for Ritter/Stoker depth RMSE. Essentially tied on smooth forcing and shear. Thacker accuracy is slightly worse. |
-| B. HLLC advantage | No comparable advantage for shear or depth RMSE. Its Stoker shock position was closer at 5 m, with wider outer-wave bounds and higher runtime. |
-| C. Wet/dry and transcritical | Roe/HLL improved the Ritter front and led the stationary hydraulic-jump tests. Thacker leads were small and depended on shoreline and metric. No universal wet/dry winner was established. |
-| D. Realistic domains | The matched Orton Bradley results changed modestly, including up to 1.46 m³/s peak difference for Roe versus contact-HLL. Accuracy relative to observations remains untested. |
-| E. Fixed GPU cost | Contact-HLL on 5 m beat Roe on 10 m at comparable Stoker GPU cost. At a sufficiently large budget and the same fine grid Roe reached a lower measured Stoker error. |
-| F. Higher order | The exact smooth-shear experiment supports investigating higher order. The effect on full flood domains and fixed GPU cost remains inconclusive. |
-| G. Production default | Retain `contact_hll`. Keep Roe and HLLC opt-in for further research. |
+- **HLLC.** The original normal-momentum closure violated the middle jump condition. The corrected contact restoration is algebraically equivalent to the existing wet contact-upwind treatment under identical outer bounds. The extra speed bound offered no consistent accuracy advantage here.
+- **Roe.** Its stationary-shock advantage survived the independent characteristic, entropy, conjugate-depth and whole-solver tests. The conditional HLL fallback matters at moving wet/dry interfaces. Ritter and Thacker give different rankings, which precludes a universal shoreline recommendation.
+- **Cost.** The reduced CFL workload lowered Roe wall time while preserving the measured stability envelope. Contact-HLL still achieved lower dam-break error at the representative fixed budgets. Roe was competitive for stationary shocks. Equal-cost physical accuracy over observed catchments remains unresolved.
+- **Next development priority.** Qualify a separate conservative, positive, well-balanced second-order finite-volume method before adding further first-order flux variants. The preserved MUSCL/SSP-RK2 experiment reduced 5 m smooth-shear RMSE from .01688 to .00250 m²/s at about seven times the CPU cost. It exercises one characteristic with constant depth and normal velocity. Moving-shoreline accuracy, irregular-bed balance and fixed-GPU-budget gains for a full second-order flood solver remain untested. [Preserved second-order measurements](order.json)
 
-Completed coverage includes analytical, synthetic, CUDA cost, both Orton Bradley windows, face-level CPU/GPU NumPy parity, masked shoreline well-balancing, reflected boundaries, extreme velocity contrasts, tiny positive depths, and sparse-to-dense checkpoint replay. No completed investigation run failed after the moving-shear boundary correction. The inconclusive results are fine-grid physical-accuracy rankings and equal-GPU-cost generalisation to realistic floods. Untested coverage includes the separate Purau catchment, field-observation validation, a distinct 72-hour run for every candidate, and a general second-order irregular-terrain GPU solver. `star_hll` was audited and regression-tested. The comparative experiment follows the five-scheme matrix.
+**Coverage.** All 360 analytical runs, 240 synthetic Warp runs, 10 synthetic NumPy runs, 40 Stoker cost groups, 40 additional cost groups and the matched catchment windows completed. No completed comparison failed a numerical gate. The full CUDA-enabled regression command returned **1,773 passed, 26 skipped, 743 warnings**. The separate Purau case, field validation, full-event peak timing and a general second-order solver remain untested. The finite-resolution synthetic comparators only support differences larger than their observed uncertainty.
 
-## Reproduction
+## Reproduce
 
-From the repository root in the pinned Python 3.14 environment with the plot extra, run the modules below. Their execution guards contain the experiment settings. Plot generation uses the retained JSON and takes no hydraulic steps. The catchment script always runs the tracked installation crop. The full-domain replay also needs the archived checkpoint identified by path and SHA-256 in `catchment.json`. Its archive and terrain are retained under their separate data terms.
+Run from the repository root using the pinned Python 3.14 environment with CUDA and the plotting dependencies. Keep the GPU free of concurrent hydraulic workloads for timing. The catchment module reruns both windows when the input archive is available. Its JSON records the checkpoint SHA-256. The supplemental cost module reads the corrected grid results and compares the archived and optimized reductions on the same hardware. The first-order scripts write under `corrected/`. The second-order evidence remains in the original directory.
 
 ```sh
 python -m validation.fv1_riemann
+python -m validation.fv1_riemann_compile
 python -m validation.fv1_riemann_gpu
+python -m validation.fv1_riemann_cost_controls
 python -m validation.fv1_riemann_catchment
-python -m validation.fv1_riemann_order
 python -m validation.fv1_riemann_figures
 OVERLANDER_TEST_FULL_SWE_CUDA=1 python -m pytest -q
 ```
-
-The full test command returned **1764 passed, 26 skipped, 743 warnings**. Existing regression tolerances were retained. Separate CPU/CUDA face tests and lake/restart tests exercised the two new schemes. No failing existing regression was observed. The investigation branch is separate from `dev` and preserves the frozen extraction fixtures and historical reports.

@@ -28,14 +28,14 @@ def gpu_figure(*, plot, rows, styles, directory):
     figure, panels = plot.subplots(nrows=2, ncols=2, figsize=(10.5, 7), layout='constrained')
     for (left, right), policy in zip(panels, ('common', 'adaptive'), strict=True):
         selected = [dict(scheme=row['scheme'], dx=row['dx_m'], error=row['accuracy']['depth_rmse_m'],
-                         wall=row['median_wall_with_capture_seconds'] * 1.e3) for row in rows if row['policy'] == policy]
+                         wall=row['median_wall_seconds'] * 1.e3) for row in rows if row['policy'] == policy]
         draw_series(axis=left, rows=selected, x_key='dx', styles=styles)
         draw_series(axis=right, rows=selected, x_key='wall', styles=styles)
         left.set_xticks([2.5, 5., 10., 20.], ['2.5', '5', '10', '20'])
         ticks = (10, 20, 40, 80, 160, 250) if policy == 'common' else (4, 8, 16, 32, 64)
         right.set_xticks(ticks, [str(value) for value in ticks])
         left.set_xlabel('Cell spacing (m)')
-        right.set_xlabel('Median hydraulic wall time, including graph capture (ms)')
+        right.set_xlabel('Median hydraulic wall time, warmed graph (ms)')
         left.set_ylabel('Depth RMSE vs analytical Stoker (m)')
         left.set_title('Common timestep' if policy == 'common' else 'Scheme-specific CFL')
     panels[0, 1].legend(fontsize=8)
@@ -87,7 +87,7 @@ def run(*, directory, styles):
 
 
 if __name__ == "__main__":
-    directory = Path('validation/fv1_riemann_review')
+    directory = Path('validation/fv1_riemann_review/corrected')
     styles = dict(legacy_hll=('#787878', 'x', ':'), contact_hll=('#2363a1', 'o', '-'),
                   star_contact_hll=('#ad7821', '^', '--'), roe=('#a03053', 's', '-.'), hllc=('#187e6b', 'd', '--'))
     run(directory=directory, styles=styles)

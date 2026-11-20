@@ -441,9 +441,12 @@ class FullSWESolver:
         return dict(solver_method='fv1',**self._configuration())
 
     def capture_state(self):
-        return dict(configuration=self._configuration(), time=self.time, steps=self.steps,
+        state = dict(configuration=self._configuration(), time=self.time, steps=self.steps,
                     initial_volume=self.initial_volume, arrays={key: value.numpy().copy() for key, value in self._fields.items()},
                     rain_times=self._times.copy(), rain_rates=self._rates.copy(), control=self.ctrl.numpy().copy())
+        if self.flux_scheme == 'hllc':
+            state['hllc_revision'] = 2
+        return state
 
     def restore_state(self, *, state):
         recorded=dict(state['configuration'])
@@ -451,6 +454,8 @@ class FullSWESolver:
         # Its absence identifies legacy discharge extrapolation, never the new law.
         recorded.setdefault('stage_boundary_momentum','discharge_extrapolation')
         recorded.setdefault('flux_scheme','legacy_hll')
+        if recorded['flux_scheme'] == 'hllc' and state.get('hllc_revision') != 2:
+            raise ValueError('Checkpoint configuration uses the superseded experimental HLLC flux')
         if recorded != self._configuration() or set(state["arrays"]) != set(self._fields):
             raise ValueError("Checkpoint configuration/field set mismatch")
         for name, array in state["arrays"].items():

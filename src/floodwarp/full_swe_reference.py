@@ -114,16 +114,11 @@ def research_flux(*, left, right, gravity, dry_depth, flux_scheme):
                     span[..., None], out=np.zeros_like(left), where=mixed[..., None])
     hll = np.where((sl >= 0.)[..., None], fl, np.where((sr <= 0.)[..., None], fr, hll))
     if flux_scheme == 'hllc':
-        left_mass, right_mass = hl * (u - sl), hr * (sr - w)
-        star_h = np.divide(left_mass + right_mass, span, out=np.zeros_like(hl), where=mixed)
-        star_m = np.divide(sr * left_mass + sl * right_mass, span, out=np.zeros_like(hl), where=mixed)
-        sm = np.divide(star_m, star_h, out=np.zeros_like(hl), where=star_h > 0.)
-        use_left = sm >= 0.
-        star = np.stack((star_h, star_m, star_h * np.where(use_left, v, z)), axis=-1)
-        flux = np.where(use_left[..., None], fl + sl[..., None] * (star - left),
-                        fr + sr[..., None] * (star - right))
-        valid = wet & mixed & (star_h > dry_depth) & np.isfinite(star_h) & (sl < sm) & (sm < sr)
-        return np.where(valid[..., None], flux, hll)
+        # The intermediate HLL depth is positive on a wet, straddling fan.
+        # Thus contact speed F_h/h_H has the sign of the HLL mass flux.
+        tangent = np.where(hll[..., 0] >= 0., v, z)
+        hll[..., 2] = np.where(wet & mixed, hll[..., 0] * tangent, hll[..., 2])
+        return hll
     if flux_scheme != 'roe':
         raise ValueError('Unknown experimental flux')
     wl, wr = np.sqrt(hl), np.sqrt(hr)

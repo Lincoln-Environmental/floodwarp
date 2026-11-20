@@ -11,6 +11,7 @@ from examples.run_purau import load_inputs
 from floodwarp.full_swe_solver import FullSWESolver
 from floodwarp.model import create_model
 from validation.fv1_riemann import errors, report_json
+from validation.fv1_riemann_transport import InteriorTransport
 from validation.sparse_fv1_benchmark import digest, select_checkpoints
 
 
@@ -37,6 +38,9 @@ def checkpoint_solver(*, scheme, device, path):
     config['flux_scheme'] = scheme
     solver = FullSWESolver(device=device, **geometry, **config)
     initial['configuration'] = solver._configuration()
+    if scheme == 'hllc':
+        # This is an explicit cross-flux initial condition from the validated archive.
+        initial['hllc_revision'] = 2
     initial['control'] = np.zeros(solver.ctrl.size)
     initial['arrays']['maximum'] = initial['arrays']['q'][:, 0].copy()
     solver.restore_state(state=initial)
@@ -92,7 +96,7 @@ def window(*, solver, device, duration, interval, threshold):
 
 
 def compare(*, output, schemes, device, checkpoint_directory, checkpoint_hour, crop_directory, crop_duration,
-            crop_interval, crop_cap, event_duration, event_interval, threshold):
+            crop_interval, crop_cap, event_duration, event_interval, threshold, diagnostic_settings):
     has_event = checkpoint_directory.is_dir()
     checkpoint = select_checkpoints(directory=checkpoint_directory, hours=(checkpoint_hour,))[0] if has_event else None
     cases = [('installation_crop', crop_duration, crop_interval)]
@@ -130,12 +134,15 @@ def compare(*, output, schemes, device, checkpoint_directory, checkpoint_hour, c
                         tracked = crop_solver(scheme=scheme, device=device, directory=crop_directory, maximum_dt=crop_cap)
                     else:
                         tracked = checkpoint_solver(scheme=scheme, device=device, path=checkpoint)
+                    probe = InteriorTransport(solver=tracked, **diagnostic_settings)
                     counts = dict(faces=0, shallow_hll=0, inadmissible_hll=0, entropy_corrected=0)
                     for _ in row['timings']:
                         stats = tracked.run_device_loop(duration=interval, use_cuda_graph=True, track_flux=True)
                         for key in counts:
                             counts[key] += stats['flux_outcomes'][key]
                     np.testing.assert_array_equal(actual=tracked.get_conservative_state(), desired=final)
+                    row['interior_transport'] = probe.results()
+                    del probe
                     row['flux_outcomes'] = counts
                     del tracked
             except (ArithmeticError, AssertionError) as failure:
@@ -154,16 +161,19 @@ def compare(*, output, schemes, device, checkpoint_directory, checkpoint_hour, c
 
 
 if __name__ == "__main__":
-    output = Path('validation/fv1_riemann_review/catchment.json')
+    directory = Path('validation/fv1_riemann_review/corrected')
     device = 'cuda:0'
     schemes = ('contact_hll', 'legacy_hll', 'star_contact_hll', 'roe', 'hllc')
     checkpoint_directory = Path('outputs/qualification_optimized/purau_event_72h/fv1_0')
     checkpoint_hour = 25
     crop_directory = Path('examples/purau')
     crop_duration, crop_interval, crop_cap = 120., 10., .5
-    event_duration, event_interval = 600., 60.
+    windows = ((600., 'catchment_600s.json'), (1200., 'catchment.json'))
+    event_interval = 60.
     threshold = .01
-    compare(output=output, schemes=schemes, device=device, checkpoint_directory=checkpoint_directory,
-        checkpoint_hour=checkpoint_hour, crop_directory=crop_directory, crop_duration=crop_duration,
-        crop_interval=crop_interval, crop_cap=crop_cap, event_duration=event_duration, event_interval=event_interval,
-        threshold=threshold)
+    diagnostic_settings = dict(edges=(.001, .01, .1, 1.), wet=.01, channel_depth=.1, channel_discharge=.05)
+    for event_duration, filename in windows:
+        compare(output=directory / filename, schemes=schemes, device=device, checkpoint_directory=checkpoint_directory,
+            checkpoint_hour=checkpoint_hour, crop_directory=crop_directory, crop_duration=crop_duration,
+            crop_interval=crop_interval, crop_cap=crop_cap, event_duration=event_duration, event_interval=event_interval,
+            threshold=threshold, diagnostic_settings=diagnostic_settings)

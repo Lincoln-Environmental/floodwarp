@@ -309,7 +309,7 @@ def run(*, output, device, schemes, controls, analytical_names, analytical_spaci
 
 
 if __name__ == "__main__":
-    output = Path('validation/fv1_riemann_review')
+    output = Path('validation/fv1_riemann_review/corrected')
     device = 'cuda:0'
     schemes = ('legacy_hll', 'contact_hll', 'star_contact_hll', 'roe', 'hllc')
     controls = dict(gravity=9.81, dry=.0001, wet_depth=.01, cfl=.4, dt_scale=.015625, adaptive_cap=1.)

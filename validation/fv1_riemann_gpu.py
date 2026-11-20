@@ -41,8 +41,9 @@ def repetitions(*, domain, schemes, policy, controls, device, repeats, exact):
             initial = solver.capture_state()
             first = timed_graph(solver=solver, device=device, duration=domain.duration)
             if repeat == 0:
-                rows[scheme]['accuracy'] = errors(result=solver.get_conservative_state(), expected=exact,
-                    wet_depth=controls['wet_depth'], dx=domain.dx)
+                if exact is not None:
+                    rows[scheme]['accuracy'] = errors(result=solver.get_conservative_state(), expected=exact,
+                        wet_depth=controls['wet_depth'], dx=domain.dx)
                 rows[scheme]['balance'] = solver.cumulative_accounting()
             graph = solver._graph
             # Restore only fields mutated during stepping. The forcing arrays
@@ -121,7 +122,7 @@ def run(*, output, schemes, spacings, controls, repeats, device, length, width, 
 
 
 if __name__ == "__main__":
-    output = Path('validation/fv1_riemann_review/gpu.json')
+    output = Path('validation/fv1_riemann_review/corrected/gpu.json')
     device = 'cuda:0'
     schemes = ('legacy_hll', 'contact_hll', 'star_contact_hll', 'roe', 'hllc')
     controls = dict(gravity=9.81, dry=.0001, wet_depth=.01, cfl=.4, dt_scale=.015625, adaptive_cap=1.)
