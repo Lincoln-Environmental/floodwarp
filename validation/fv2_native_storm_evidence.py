@@ -12,6 +12,35 @@ from validation.fv2_native_storm import support
 from validation.fv1_riemann import report_json
 
 
+def export_hydrographs(*, work, output):
+    columns = []
+    names = []
+    endpoints = None
+    for path in sorted(work.glob("dem*_factor*_*.npz")):
+        with np.load(path) as archive:
+            record = json.loads(str(archive["record"]))
+        values = np.array(record["hydrograph_m3_s"])
+        times = record["sample_s"] * np.arange(1, len(values) + 1)
+        if times[-1] != record["time_s"] or record["time_s"] != 48 * 3600:
+            raise ValueError(f"Incomplete design storm at {path}")
+        np.testing.assert_allclose(
+            sum(values) * record["sample_s"], record["ledger"]["boundary_outflow"], rtol=2e-12
+        )
+        if endpoints is None:
+            endpoints = times
+            columns.append(times)
+            names.append("interval_end_s")
+        else:
+            np.testing.assert_array_equal(times, endpoints)
+        columns.append(values)
+        names.append(path.stem + "_m3_s")
+    if endpoints is None:
+        raise ValueError(f"No complete HIRDS coastal tile records in {work}")
+    np.savetxt(
+        output, np.column_stack(columns), delimiter=",", fmt="%.17g", header=",".join(names), comments=""
+    )
+
+
 def connectivity(*, source, work, spacings, wet, factor):
     row, col, height, width = source["north_first_5m_window"]
     with np.load(source["source"]) as archive:
@@ -31,9 +60,7 @@ def connectivity(*, source, work, spacings, wet, factor):
                 dict(
                     dx_m=dx,
                     method=m,
-                    event_wet_iou=np.count_nonzero(wet_cells & truth) / union
-                    if union
-                    else 1.0,
+                    event_wet_iou=np.count_nonzero(wet_cells & truth) / union if union else 1.0,
                     event_wet_area_change_m2=int(wet_cells.sum() - truth.sum()),
                     event_components=int(label(wet_cells)[1]),
                     reference_components=int(label(truth)[1]),
@@ -43,6 +70,7 @@ def connectivity(*, source, work, spacings, wet, factor):
 
 
 def compare_storms(*, directory, work, wet, spacings, reference_factors):
+    export_hydrographs(work=work, output=directory / "native_tile_hydrographs.csv")
     source = json.loads((directory / "native_hirds48.json").read_text())
     records = source["rows"]
 
@@ -50,9 +78,7 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
         matches = [
             r
             for r in records
-            if r["terrain_dx_m"] == dx
-            and r["hydraulic_dx_m"] == hydraulic
-            and r["method"] == method
+            if r["terrain_dx_m"] == dx and r["hydraulic_dx_m"] == hydraulic and r["method"] == method
         ]
         return matches[-1] if half else matches[0]
 
@@ -71,15 +97,12 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
             "hydrograph_rmse_m3_s",
         ):
             candidates = [
-                first[k][metric] - second[k][metric]
-                for k in ("vs_fine_mc", "vs_fine_fv1", "vs_half_dt")
+                first[k][metric] - second[k][metric] for k in ("vs_fine_mc", "vs_fine_fv1", "vs_half_dt")
             ]
             improvements[metric] = dict(
                 improvement=candidates[0],
                 reference_range=[min(candidates), max(candidates)],
-                percent_of_coarse_fv1_error=100 * candidates[0] / a[metric]
-                if a[metric]
-                else None,
+                percent_of_coarse_fv1_error=100 * candidates[0] / a[metric] if a[metric] else None,
             )
         comparisons.append(dict(dx_m=dx, improvements=improvements))
         for r, m in ((first, a), (second, b)):
@@ -203,9 +226,7 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
         ylabel="Maximum-depth RMSE (mm)",
         xticks=spacings,
     )
-    axes[1].set(
-        xlabel="Storm time (hours)", ylabel="Coastal tile outlet (L/s)", xlim=(0, 48)
-    )
+    axes[1].set(xlabel="Storm time (hours)", ylabel="Coastal tile outlet (L/s)", xlim=(0, 48))
     for ax in axes:
         ax.grid(alpha=0.2)
         ax.legend(frameon=False, fontsize=8)
