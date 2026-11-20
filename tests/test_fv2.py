@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import warp as wp
 
-from floodwarp.fv2_reference import reference_step
+from floodwarp.fv2_reference import reference_step, traces
 from floodwarp.fv2_solver import FV2Solver
 from floodwarp.solver_factory import create_overland_solver
 
@@ -329,3 +329,56 @@ def test_thin_fast_films_on_steep_bed_with_rapid_sources(mode):
         if reference is not None:
             np.testing.assert_allclose(state, reference, atol=3.0e-13, rtol=5.0e-13)
         reference = state
+
+
+@pytest.mark.parametrize("device", ("cpu", "cuda:0"))
+@pytest.mark.parametrize("axis", (0, 1))
+def test_fv2_downhill_face_stays_open(device, axis):
+    if device.startswith("cuda") and not wp.is_cuda_available():
+        pytest.skip("CUDA unavailable")
+    # A thin downstream-directed sheet crosses the observed Orton bed stencil.
+    # Independently centred MC bed traces used to create an uphill step here.
+    profile = np.array([354.0, 353.25, 349.019, 339.557, 335.040, 326.95, 319.0])
+    bed = np.repeat(profile[None, :], 5, axis=0)
+    if axis == 0:
+        bed = bed.T.copy()
+    h = np.full(bed.shape, 0.01)
+    solver = FV2Solver(
+        ny=h.shape[0],
+        nx=h.shape[1],
+        dx=5.0,
+        dy=5.0,
+        bed_elevation=bed,
+        manning_n=0.0,
+        active_mask=np.ones(h.shape, bool),
+        device=device,
+        maximum_dt=0.001,
+    )
+    solver.set_water_depth(depth=h)
+    solver.set_momentum(
+        hu=2 * h if axis == 1 else np.zeros_like(h), hv=2 * h if axis == 0 else np.zeros_like(h)
+    )
+    solver.run_device_loop(duration=0.001)
+    flux = solver.get_cumulative_face_volumes()
+    actual = flux["qx"][2, 4] if axis == 1 else flux["qy"][4, 2]
+    assert actual > 0
+    assert abs(solver.cumulative_accounting()["residual"]) < 1e-12
+    wrong = solver.capture_state()
+    wrong["configuration"]["reconstruction"] = "muscl_eta_bed_velocity_v1"
+    with pytest.raises(ValueError, match="superseded FV2 bed"):
+        solver.restore_state(state=wrong)
+
+
+def test_fv2_reconstructed_bed_preserves_face_order():
+    rng = np.random.default_rng(seed=95017)
+    bed = rng.normal(size=(54, 91)).cumsum(axis=0).cumsum(axis=1)
+    h = rng.uniform(0.001, 4.0, size=bed.shape)
+    q = np.stack((h, h * 3.0, -h), axis=-1)
+    for axis in (0, 1):
+        _, _, _, slope = traces(q=q, z=bed, dry=1e-4, axis=axis, limiter="mc")
+        centre = np.diff(bed, axis=axis)
+        left = np.take(slope, range(bed.shape[axis] - 1), axis=axis)
+        right = np.take(slope, range(1, bed.shape[axis]), axis=axis)
+        rise = centre - 0.5 * (left + right)
+        assert np.all(centre * rise >= 0)
+        assert np.all(np.abs(rise) <= np.abs(centre))

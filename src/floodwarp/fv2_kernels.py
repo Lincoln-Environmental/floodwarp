@@ -24,6 +24,25 @@ def limited(a: wp.float64, b: wp.float64, mc: int):
 
 
 @wp.func
+def surface_bed_slopes(
+    dz_back: wp.float64,
+    dz_ahead: wp.float64,
+    dh_back: wp.float64,
+    dh_ahead: wp.float64,
+    mc: int,
+):
+    bed = limited(dz_back, dz_ahead, mc)
+    surface = limited(dh_back + dz_back, dh_ahead + dz_ahead, mc)
+    # Neither neighbour's bed trace may cross the midpoint between their
+    # centres. Otherwise a monotone descent can acquire an uphill face step.
+    bound = wp.min(wp.abs(dz_back), wp.abs(dz_ahead))
+    if wp.abs(bed) > bound:
+        surface = surface * (bound / wp.abs(bed))
+        bed = wp.sign(bed) * bound
+    return wp.vec2d(surface, bed)
+
+
+@wp.func
 def neighbor(k: int, axis: int, side: int, nx: int, ny: int):
     if axis == 0:
         if k % nx + side >= 0 and k % nx + side < nx:
@@ -155,8 +174,9 @@ def slope(
     h = q[k][0]
     da = bed[k] - bed[a]
     db = bed[b] - bed[k]
-    sz = limited(da, db, mc)
-    se = limited((h - q[a][0]) + da, (q[b][0] - h) + db, mc)
+    geometry = surface_bed_slopes(da, db, h - q[a][0], q[b][0] - h, mc)
+    se = geometry[0]
+    sz = geometry[1]
     velocities = wp.vec2d(q[k][1], q[k][2]) / h
     va = wp.vec2d(q[a][1], q[a][2]) / q[a][0]
     vb = wp.vec2d(q[b][1], q[b][2]) / q[b][0]
