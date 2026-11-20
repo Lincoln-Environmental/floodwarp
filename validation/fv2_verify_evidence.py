@@ -20,7 +20,16 @@ def digest(*, path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def check(*, directory, grids, methods, analytical_tolerance, balance_tolerance, test_log, output):
+def check(
+    *,
+    directory,
+    grids,
+    methods,
+    analytical_tolerance,
+    balance_tolerance,
+    test_log,
+    output,
+):
     def record(*, name):
         return json.loads((directory / name).read_text())
 
@@ -45,8 +54,15 @@ def check(*, directory, grids, methods, analytical_tolerance, balance_tolerance,
     for dx in grids:
         for method in methods:
             r = record(name=f"hirds48/{dx}m_{method}.json")
-            assert (r["dx"], r["method"], r["time_s"], len(r["hydrograph"])) == (dx, method, 172800.0, 2880)
-            np.testing.assert_array_equal([h["t"] for h in r["hydrograph"]], np.arange(60, 172801, 60))
+            assert (r["dx"], r["method"], r["time_s"], len(r["hydrograph"])) == (
+                dx,
+                method,
+                172800.0,
+                2880,
+            )
+            np.testing.assert_array_equal(
+                [h["t"] for h in r["hydrograph"]], np.arange(60, 172801, 60)
+            )
             assert r["minimum_depth_m"] >= 0.0
             area = r["forcing"]["integrated_volume_m3"]
             np.testing.assert_allclose(r["ledger"]["rain"], area, rtol=1.0e-10)
@@ -57,7 +73,23 @@ def check(*, directory, grids, methods, analytical_tolerance, balance_tolerance,
         assert max(r["max_absolute_differences"].values()) == 0.0
     for filename in ("common_support.json", "comparison.json", "wet_cost.json"):
         assert len(record(name="hirds48/" + filename)) == len(grids) * len(methods)
+    references = record(name="synthetic_reference.json")
+    assert len(references) == 14
+    assert all(r["reference_grids_m"] == [0.625, 0.3125] for r in references)
+    assert len(record(name="hirds48/stage_replay.json")) == len(grids)
+    assert len(record(name="hirds48/muscl_fallback.json")) == len(grids) * 3
+    assert len(record(name="hirds48/lisflood_comparison.json")["rows"]) == len(rain)
+    geom = record(name="storm_geometry.json")
+    assert {(r["method"], r["terrain_dx_m"]) for r in geom} == {
+        (m, d) for m in ("fv1", "mc") for d in (5, 10)
+    }
+    native_result = record(name="native_storm_improvement.json")
+    assert (
+        len(native_result["comparisons"]) == 5
+        and len(native_result["connectivity"]) == 10
+    )
     auxiliary = record(name="native_hirds48.json")
+    assert len(auxiliary["rows"]) == 15
     assert all(r["time_s"] == 172800.0 for r in auxiliary["rows"])
     results = dict(
         analytical_runs=len(all_cases),
@@ -66,12 +98,16 @@ def check(*, directory, grids, methods, analytical_tolerance, balance_tolerance,
         spatial_orders=p_space.tolist(),
         temporal_orders=p_time.tolist(),
         storms=len(rain),
+        complete_native_tile_storms=len(auxiliary["rows"]),
+        fixed_coarse_terrain_tile_storms=len(geom),
         min_max_storm_rain_m3=[min(rain), max(rain)],
         max_absolute_storm_balance_m3=max(residuals),
     )
     if test_log.is_file():
         text = test_log.read_text()
-        counts = re.search(r"(\d+) passed, (\d+) skipped, (\d+) warnings in ([0-9.]+)s", text)
+        counts = re.search(
+            r"(\d+) passed, (\d+) skipped, (\d+) warnings in ([0-9.]+)s", text
+        )
         if not counts:
             raise AssertionError("No successful complete-suite summary found")
         results["tests"] = dict(
@@ -82,7 +118,9 @@ def check(*, directory, grids, methods, analytical_tolerance, balance_tolerance,
             skips=[line for line in text.splitlines() if line.startswith("SKIPPED")],
             log_sha256=digest(path=test_log),
         )
-    sources = list(Path("src/floodwarp").glob("fv2*.py")) + list(Path("validation").glob("fv2*.py"))
+    sources = list(Path("src/floodwarp").glob("fv2*.py")) + list(
+        Path("validation").glob("fv2*.py")
+    )
     sources.extend(
         Path(p)
         for p in (
@@ -95,7 +133,11 @@ def check(*, directory, grids, methods, analytical_tolerance, balance_tolerance,
     )
     artifacts = [p for p in directory.rglob("*") if p.is_file() and p != output]
     info = subprocess.run(
-        ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
+        [
+            "nvidia-smi",
+            "--query-gpu=name,driver_version,memory.total",
+            "--format=csv,noheader",
+        ],
         check=True,
         capture_output=True,
         text=True,
@@ -112,7 +154,9 @@ def check(*, directory, grids, methods, analytical_tolerance, balance_tolerance,
             gpu=info,
             checks=results,
             source_sha256={str(p): digest(path=p) for p in sorted(sources)},
-            artifact_sha256={str(p.relative_to(directory)): digest(path=p) for p in sorted(artifacts)},
+            artifact_sha256={
+                str(p.relative_to(directory)): digest(path=p) for p in sorted(artifacts)
+            },
         ),
     )
 

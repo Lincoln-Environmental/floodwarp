@@ -87,7 +87,21 @@ The historical HIRDS v4 100-year design storm has **578 time nodes, 272.095646 m
 
 The released 5 m ordinary input files and the independent hour-25 checkpoint generated bitwise-identical fields at all three storm spacings. The public data path runs the 5 m control from dry when the historical archive is unavailable. The regression for masked stage inflow verifies equality under translation between the exterior perimeter and an internal inactive-cell boundary. The lowest coastal bed exceeds the prescribed stage by 0.1594 m at 5 m and 0.19192 m at 10 and 20 m. The directional slope is zero next to an inactive cell, so the exterior coastal ghost is dry across the entire full-event matrix. [Public input parity](hirds48/public_input_parity.json)
 
+On the coastal tile the 5 m FV1 and MC outlet peaks were 61.34 and 51.17 L/s. With the native 1 m terrain they were 29.24 and 28.93 L/s, both in the 15-minute interval ending at hour 26. Keeping FV1 and the 5 m DEM fixed while refining its hydraulic spacing to 1 m changed final depth by 1.36 mm RMSE. Switching the represented terrain at the same 1 m hydraulic spacing changed it by 72.92 mm. For 10 m terrain the two changes were 4.17 and 98.97 mm. For FV2, those hydraulic-grid and terrain changes were 4.04 and 72.88 mm at 5 m, and 11.84 and 98.78 mm at 10 m. These full-event comparisons use the same original 1 m active footprint and retain the 3,755.956 m³ spatial rainfall volume. They quantify the sensitivity of model predictions to the grid and terrain.
+
 At 20 m, FV2 exported 82,498 m³ less than FV1 over the 48 h storm. Its extra final surface storage accounted for 80,785 m³ of that difference and extra infiltration for 1,714 m³. On the original 5 m active footprint, the 20 m FV1 and FV2 maximum-depth RMSE against 5 m FV1 was 0.115 and 0.141 m. Peak inundation overlap above 1 cm was 0.655 and 0.445 respectively. The wet FV2 peak replay after the masked-stage correction reproduced 66,116 steps and all checked arrays bitwise at 20 m.
+
+The storm tables report the twelve full hydrographs, maximum depth and inundation on common active support, directional transport diagnostics, independent-model discharge comparisons and separate wet-window timings. The support used for each metric is given with the table. [Whole-domain results](hirds48/RESULTS.md) · [48-hour native-tile comparison and reference sensitivity](NATIVE_STORM.md) · [Fixed-terrain controls](storm_geometry.md)
+
+![Exact HIRDS hyetograph and full-domain simulated coastal discharge](hirds48/storm.png)
+
+![Maximum-depth envelopes on common 5 m support](hirds48/depth_maps.png)
+
+![Full-event disagreement from 5 m FV1 versus independent wet-window GPU runtime](hirds48/storm_cost.png)
+
+![Transport-weighted reconstruction fallback near the rainfall peak](hirds48/fallback.png)
+
+![Native coastal-tile hydrographs and maximum-depth errors](native_storm.png)
 
 The earlier 120 s wet continuations exercise full-domain state transfer and restart sensitivity. Their start times, terrain shapes and checkpoint hashes remain available. They are excluded from the design-storm hydrographs and practical rankings. [Orton continuation](orton_full_window.json) · [NZ demo continuation](nz_demo_full_window.json)
 
@@ -102,7 +116,7 @@ The separate Purau guided-DEM package specifies a 303.62 mm external 48 h hyetog
 | C. Numerical diffusion | At 5 m the Stoker thickness fell by 61% and the discontinuous shear width by 58%. Over two Thacker periods the amplitude loss fell from 7.70 to 0.63 m. |
 | D. Native predictions | Source-resolution tile depths can improve. Wet extent, export and timing do not show a uniform benefit. Whole-catchment observed flood accuracy remains undetermined. |
 | E. Coarse versus native | At 5 and 10 m neither short real-terrain tile gave a resolved reduction in final-depth RMSE against the fine reference. Whole-domain storm results use a 5 m model comparator. |
-| F. Relative to geometry loss | Holding coarse terrain fixed while refining its solver does not restore the lost mask, channels or bed. The sign of a small improvement depends on the output metric and reference uncertainty. |
+| F. Relative to geometry loss | In the full 48-hour coastal tile, replacing the 5 m terrain at fixed hydraulic spacing changed final depths by about 73 mm RMSE for either solver. Refining the hydraulic grid on that fixed terrain changed them by 1.36 mm with FV1 and 4.04 mm with FV2. |
 | G. Actual cost | Same-grid Stoker at 5 m cost 3.54× FV1 in the primary dense benchmark. The hour-25 full 5 m Orton wet replay cost about 7.2×. Sparse mask indexing recovers some time in both wet and dry windows. |
 | H. Equal cost | Stoker favours coarser FV2 at about the 5 m FV1 budget. An equal-cost advantage across practical rainfall-driven catchments has not been established. |
 | I. Production selection | Keep FV1 contact-HLL as default. Retain FV2 as an explicitly selected experimental solver, particularly for wave-dominated applications. |
@@ -133,6 +147,7 @@ python -m validation.fv2_full_native_probe
 python -m validation.fv2_figures
 python -m validation.fv2_orton_matrix
 python -m validation.fv2_native_storm
+python -m validation.fv2_storm_geometry
 python -m validation.fv2_native_storm_evidence
 python -m validation.fv2_stage_replay
 python -m validation.fv2_storm_evidence

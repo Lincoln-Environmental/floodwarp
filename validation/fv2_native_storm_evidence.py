@@ -31,7 +31,9 @@ def connectivity(*, source, work, spacings, wet, factor):
                 dict(
                     dx_m=dx,
                     method=m,
-                    event_wet_iou=np.count_nonzero(wet_cells & truth) / union if union else 1.0,
+                    event_wet_iou=np.count_nonzero(wet_cells & truth) / union
+                    if union
+                    else 1.0,
                     event_wet_area_change_m2=int(wet_cells.sum() - truth.sum()),
                     event_components=int(label(wet_cells)[1]),
                     reference_components=int(label(truth)[1]),
@@ -48,7 +50,9 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
         matches = [
             r
             for r in records
-            if r["terrain_dx_m"] == dx and r["hydraulic_dx_m"] == hydraulic and r["method"] == method
+            if r["terrain_dx_m"] == dx
+            and r["hydraulic_dx_m"] == hydraulic
+            and r["method"] == method
         ]
         return matches[-1] if half else matches[0]
 
@@ -60,14 +64,22 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
         a = first["vs_fine_mc"]
         b = second["vs_fine_mc"]
         improvements = {}
-        for metric in ("depth_rmse_m", "wet_depth_rmse_m", "peak_envelope_rmse_m", "hydrograph_rmse_m3_s"):
+        for metric in (
+            "depth_rmse_m",
+            "wet_depth_rmse_m",
+            "peak_envelope_rmse_m",
+            "hydrograph_rmse_m3_s",
+        ):
             candidates = [
-                first[k][metric] - second[k][metric] for k in ("vs_fine_mc", "vs_fine_fv1", "vs_half_dt")
+                first[k][metric] - second[k][metric]
+                for k in ("vs_fine_mc", "vs_fine_fv1", "vs_half_dt")
             ]
             improvements[metric] = dict(
                 improvement=candidates[0],
                 reference_range=[min(candidates), max(candidates)],
-                percent_of_coarse_fv1_error=100 * candidates[0] / a[metric] if a[metric] else None,
+                percent_of_coarse_fv1_error=100 * candidates[0] / a[metric]
+                if a[metric]
+                else None,
             )
         comparisons.append(dict(dx_m=dx, improvements=improvements))
         for r, m in ((first, a), (second, b)):
@@ -88,6 +100,9 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
     mc = pick(dx=1, hydraulic=fine, method="mc")
     last = pick(dx=1, hydraulic=1 / reference_factors[-2], method="mc")["vs_fine_mc"]
     other = pick(dx=1, hydraulic=fine, method="fv1")["vs_fine_mc"]
+    half = pick(dx=1, hydraulic=fine, method="mc", half=True)
+    if half["cap_s"] != 0.5 * mc["cap_s"]:
+        raise ValueError("Reference timestep caps do not form a halving pair")
     time = mc["vs_half_dt"]
     report_json(
         path=directory / "native_storm_improvement.json",
@@ -97,8 +112,20 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
             reference_last_mc_refinement=last,
             reference_cross_formulation=other,
             reference_dt_halving=time,
+            timestep_check=dict(
+                base_cap_s=mc["cap_s"],
+                half_cap_s=half["cap_s"],
+                base_steps=mc["steps"],
+                half_cap_steps=half["steps"],
+                base_mean_accepted_dt_s=mc["time_s"] / mc["steps"],
+                half_cap_mean_accepted_dt_s=half["time_s"] / half["steps"],
+            ),
             connectivity=connectivity(
-                source=source, work=work, spacings=spacings, wet=wet, factor=reference_factors[-1]
+                source=source,
+                work=work,
+                spacings=spacings,
+                wet=wet,
+                factor=reference_factors[-1],
             ),
         ),
     )
@@ -118,7 +145,30 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
         rows=rows,
         note=f"The surveyed tile receives {source['tile_rain_volume_m3']:.3f} m³ of the original spatially scaled Orton rain. Cut edges are closed except mapped stage-zero coastal faces. The tile has {source['active_area_m2']} m² of original active footprint. Outlet samples average 15 minutes. All spatial errors use common active 1 m support relative to the finest {fine:g} m MC hydraulic grid on the fixed 1 m DEM.",
     )
-    (directory / "NATIVE_STORM.md").write_text(table)
+    checks = rows_table(
+        title="Sensitivity of the full-event coastal-tile numerical reference",
+        columns=[
+            "Check",
+            "Final depth RMSE (mm)",
+            "Maximum-depth RMSE (mm)",
+            "Outlet RMSE (L/s)",
+        ],
+        rows=[
+            [
+                name,
+                1000 * data["depth_rmse_m"],
+                1000 * data["peak_envelope_rmse_m"],
+                1000 * data["hydrograph_rmse_m3_s"],
+            ]
+            for name, data in [
+                ("Last MC refinement", last),
+                ("Finest FV1 vs MC", other),
+                ("Finest MC cap halving", time),
+            ]
+        ],
+        note=f"All fields use common active 1 m support. The original and halved timestep caps were {mc['cap_s']:g} and {half['cap_s']:g} s, with {mc['steps']:,} and {half['steps']:,} accepted steps. The device wave-speed restriction can set an even smaller step in wet regions.",
+    )
+    (directory / "NATIVE_STORM.md").write_text(table + "\n" + checks)
     fig, axes = plt.subplots(1, 2, figsize=(10, 4), layout="constrained")
     colors = {"fv1": "#2166ac", "mc": "#11865a"}
     for m in colors:
@@ -136,11 +186,26 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
                 x = np.arange(1, len(hydro) + 1) * r["sample_s"] / 3600
                 style = {1: "-", 5: "--", 10: ":"}[r["hydraulic_dx_m"]]
                 axes[1].plot(
-                    x, hydro, color=colors[m], linestyle=style, label=f"{m} {r['hydraulic_dx_m']:g} m"
+                    x,
+                    hydro,
+                    color=colors[m],
+                    linestyle=style,
+                    label=f"{m} {r['hydraulic_dx_m']:g} m",
                 )
-    axes[0].axhline(1000 * last["peak_envelope_rmse_m"], color="gray", ls=":", label="Last MC refinement")
-    axes[0].set(xlabel="DEM and hydraulic spacing (m)", ylabel="Maximum-depth RMSE (mm)", xticks=spacings)
-    axes[1].set(xlabel="Storm time (hours)", ylabel="Coastal tile outlet (L/s)", xlim=(0, 48))
+    axes[0].axhline(
+        1000 * last["peak_envelope_rmse_m"],
+        color="gray",
+        ls=":",
+        label="Last MC refinement",
+    )
+    axes[0].set(
+        xlabel="DEM and hydraulic spacing (m)",
+        ylabel="Maximum-depth RMSE (mm)",
+        xticks=spacings,
+    )
+    axes[1].set(
+        xlabel="Storm time (hours)", ylabel="Coastal tile outlet (L/s)", xlim=(0, 48)
+    )
     for ax in axes:
         ax.grid(alpha=0.2)
         ax.legend(frameon=False, fontsize=8)
@@ -154,5 +219,9 @@ if __name__ == "__main__":
     spacings = (1, 2, 5, 10, 20)
     reference_factors = (2, 4)
     compare_storms(
-        directory=directory, work=work, wet=0.01, spacings=spacings, reference_factors=reference_factors
+        directory=directory,
+        work=work,
+        wet=0.01,
+        spacings=spacings,
+        reference_factors=reference_factors,
     )
