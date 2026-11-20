@@ -46,7 +46,7 @@ def hll_wave_speeds(*, left, right, gravity, dry_depth, flux_scheme='legacy_hll'
     cl, cr = np.sqrt(gravity * hl), np.sqrt(gravity * hr)
     sl = np.minimum(ul[..., 0] - cl, ur[..., 0] - cr)
     sr = np.maximum(ul[..., 0] + cl, ur[..., 0] + cr)
-    if flux_scheme not in ('legacy_hll','contact_hll','star_hll','star_contact_hll'):
+    if flux_scheme not in ('legacy_hll','contact_hll','star_hll','star_contact_hll','low_froude_hll'):
         raise ValueError('Unknown FV1 flux_scheme')
     if flux_scheme in ('star_hll','star_contact_hll'):
         predictor = (cl+cr)/2+(ul[..., 0]-ur[..., 0])/4
@@ -72,12 +72,19 @@ def hll_flux(*, left, right, gravity, dry_depth, flux_scheme='legacy_hll'):
     fl[..., 2], fr[..., 2] = left[..., 1] * ul[..., 1], right[..., 1] * ur[..., 1]
     middle = np.divide(sr[..., None] * fl - sl[..., None] * fr + (sl * sr)[..., None] * (right - left),
                        (sr - sl)[..., None], out=np.zeros_like(left), where=(sr > sl)[..., None])
-    if flux_scheme in ('contact_hll','star_contact_hll'):
+    if flux_scheme in ('contact_hll','star_contact_hll','low_froude_hll'):
         dl = hl*(ul[..., 0]-sl); dr = hr*(sr-ur[..., 0])
         denominator = dl+dr
         contact = np.divide(sr*dl+sl*dr,denominator,out=np.zeros_like(hl),where=denominator > 0.)
         tangent = np.where(contact >= 0.,ul[..., 1],ur[..., 1])
         middle[..., 2] = np.where(denominator > 0.,middle[..., 0]*tangent,middle[..., 2])
+    if flux_scheme == "low_froude_hll":
+        wet = (hl > dry_depth) & (hr > dry_depth) & (sl < 0) & (sr > 0)
+        cl = np.sqrt(gravity*np.maximum(hl,dry_depth))
+        cr = np.sqrt(gravity*np.maximum(hr,dry_depth))
+        theta = np.minimum(1.,np.maximum(abs(ul[...,0])/cl,abs(ur[...,0])/cr))
+        damping = np.divide(-sl*sr,sr-sl,out=np.zeros_like(sl),where=wet)
+        middle[...,1] += (1-theta)*damping*(hl+hr)/2*(ur[...,0]-ul[...,0])
     return np.where((sl >= 0)[..., None], fl, np.where((sr <= 0)[..., None], fr, middle))
 
 

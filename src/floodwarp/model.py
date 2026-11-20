@@ -48,7 +48,7 @@ def create_model(*, terrain: Terrain, solver_method="fv1", manning_n=.03,
                  stage_datum=None, device="cpu", rainfall_end_behavior='require_coverage', **solver_options):
     if rainfall_end_behavior not in ('require_coverage', 'finite_support'):
         raise ValueError('Rainfall end behavior must be require_coverage or finite_support')
-    if rainfall_end_behavior == 'finite_support' and solver_method not in ('fv1', 'fv2'):
+    if rainfall_end_behavior == 'finite_support' and solver_method not in ('fv1', 'fv2', 'fv1_muscl_euler', 'fv1_hancock'):
         raise ValueError('Explicit finite-support continuation is supported here for FV1 and FV2')
     if initial_depth is not None and initial_stage is not None:
         raise ValueError("Specify initial depth or initial stage, never both")
@@ -106,7 +106,7 @@ def create_model(*, terrain: Terrain, solver_method="fv1", manning_n=.03,
     ty = None if stage_series_qy is None else series_values(series=stage_series_qy, name='qy stage')
     if tx is not None and not np.isin(x, (3, 5, 10)).any() or ty is not None and not np.isin(y, (3, 4, 11)).any():
         raise ValueError("Stage series requires prescribed-stage faces on its axis")
-    if solver_method == 'fv2':
+    if solver_method in ('fv2', 'fv1_muscl_euler', 'fv1_hancock'):
         solver.set_stage_series(axis='x', series=tx)
         solver.set_stage_series(axis='y', series=ty)
     identity = dict(numerical=solver.numerical_configuration(), dx=terrain.dx, dy=terrain.dy,
@@ -142,7 +142,7 @@ def advance(*, model, end_time, use_cuda_graph=None):
             model.rainfall_end_behavior != 'finite_support'):
         raise ValueError("Rainfall series must cover simulation, including explicit zero-rain recession")
     if isinstance(solver, FullSWESolver):
-        if model.identity['numerical'].get('solver_method') == 'fv2':
+        if model.identity['numerical'].get('solver_method') in ('fv2', 'fv1_muscl_euler', 'fv1_hancock'):
             return solver.run_device_loop(duration=end_time-start, use_cuda_graph=use_cuda_graph)
         if model.stage_series_x is not None or model.stage_series_y is not None:
             if use_cuda_graph:

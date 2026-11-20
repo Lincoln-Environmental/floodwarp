@@ -64,8 +64,11 @@ def traces(*, q, z, dry, axis, limiter, gravity=9.80665):
     return minus, plus, slope[..., 0], slope[..., 1]
 
 
-def directional(*, q, z, g, dry, axis, limiter):
-    minus, plus, eta, dz = traces(q=q, z=z, dry=dry, axis=axis, limiter=limiter, gravity=g)
+def directional(*, q, z, g, dry, axis, limiter, face_traces=None, flux_scheme="contact_hll"):
+    if face_traces is None:
+        minus, plus, eta, dz = traces(q=q, z=z, dry=dry, axis=axis, limiter=limiter, gravity=g)
+    else:
+        minus, plus, eta, dz = face_traces
     order = [0, 1, 2] if axis == 1 else [0, 2, 1]
     lower = np.take(minus, [0], axis=axis)[..., order].copy()
     upper = np.take(plus, [-1], axis=axis)[..., order].copy()
@@ -85,7 +88,7 @@ def directional(*, q, z, g, dry, axis, limiter):
             ..., None
         ]
         side[..., 0] = depth
-    f = hll_flux(left=l, right=r, gravity=g, dry_depth=dry, flux_scheme="contact_hll")
+    f = hll_flux(left=l, right=r, gravity=g, dry_depth=dry, flux_scheme=flux_scheme)
     for end in (0, -1):
         sl = [slice(None)] * 2
         sl[axis] = end
@@ -106,10 +109,11 @@ def friction(*, q, n, g, dry, dt):
     return result
 
 
-def euler(*, q, z, dt, spacing, g, dry, limiter):
+def euler(*, q, z, dt, spacing, g, dry, limiter, faces=None, source_depth=None):
     h = q[..., 0]
     result = q.copy()
-    faces = [directional(q=q, z=z, g=g, dry=dry, axis=axis, limiter=limiter) for axis in (0, 1)]
+    if faces is None:
+        faces = [directional(q=q, z=z, g=g, dry=dry, axis=axis, limiter=limiter) for axis in (0, 1)]
     outgoing = np.zeros_like(h)
     for axis, ((flux, _, _, _), delta) in enumerate(zip(faces, spacing, strict=True)):
         outgoing += (
@@ -133,7 +137,7 @@ def euler(*, q, z, dt, spacing, g, dry, limiter):
             * (
                 np.take(pl, range(1, h.shape[axis] + 1), axis=axis)
                 - np.take(pr, range(h.shape[axis]), axis=axis)
-                - g * h * eta
+                - g * (h if source_depth is None else source_depth) * eta
             )
         )
     result[..., 1:] = np.where(result[..., :1] > dry, result[..., 1:], 0.0)
@@ -158,6 +162,8 @@ def reference_step(
     gravity,
     dry,
     limiter,
+    integration="rk2",
+    flux_scheme="contact_hll",
 ):
     half = dt / 2
     rain = 0.75 * rain_start + 0.25 * rain_end
@@ -166,8 +172,17 @@ def reference_step(
     )
     start = friction(q=initial, n=manning, g=gravity, dry=dry, dt=half)
     spatial = dict(z=z, dt=dt, spacing=(dy, dx), g=gravity, dry=dry, limiter=limiter)
-    mid = euler(q=start, **spatial)
-    final = friction(q=0.5 * (start + euler(q=mid, **spatial)), n=manning, g=gravity, dry=dry, dt=half)
+    if integration == "rk2":
+        mid = euler(q=start, **spatial)
+        advanced = 0.5 * (start + euler(q=mid, **spatial))
+    elif integration == "euler":
+        advanced = euler(q=start, **spatial)
+    elif integration == "hancock":
+        from floodwarp.fv1_plus_reference import hancock
+        advanced = hancock(q=start, flux_scheme=flux_scheme, **spatial)
+    else:
+        raise ValueError("Unknown time integration")
+    final = friction(q=advanced, n=manning, g=gravity, dry=dry, dt=half)
     result, history = exchange(
         q=final,
         soil=history,

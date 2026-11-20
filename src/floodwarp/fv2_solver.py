@@ -9,12 +9,18 @@ from floodwarp.full_swe_solver import FullSWESolver
 
 
 class FV2Solver(FullSWESolver):
+    method_name = "fv2"
+    integration = "ssprk2_strang_drag"
+
     def __init__(
         self, *, limiter="mc", execution_mode="dense", structures=(), flux_scheme="contact_hll", **options
     ):
         if structures:
             raise ValueError("FV2 does not support stage-consistent culvert exchange")
-        if limiter not in ("mc", "minmod", "adaptive") or flux_scheme != "contact_hll":
+        if limiter not in ("mc", "minmod", "adaptive") or (
+            flux_scheme != "contact_hll"
+            and not (self.method_name == "fv1_hancock" and flux_scheme == "low_froude_hll")
+        ):
             raise ValueError("FV2 requires contact_hll and limiter mc, minmod or adaptive")
         self.limiter = limiter
         self._limiter_code = {"minmod": 0, "mc": 1, "adaptive": 2}[limiter]
@@ -26,13 +32,20 @@ class FV2Solver(FullSWESolver):
         # All neighbour reads finish in face kernels. The final Euler update
         # only reads its own cell and can overwrite the first-stage state.
         self._end = self._stage
+        if self.method_name == "fv1_hancock":
+            self._predicted = self._stage
+            self._fuse_prediction = True
+            self._predictor_fallback = wp.zeros(count, dtype=wp.int32, device=self.device)
         self._shock_flags = wp.zeros(
             count if limiter == "adaptive" else 0, dtype=wp.int32, device=self.device
         )
         self._inverse = wp.empty(count, dtype=wp.float64, device=self.device)
         self._slopes = [wp.zeros(count, dtype=wp.vec4d, device=self.device) for _ in range(2)]
         self._amounts = wp.zeros(count, dtype=wp.vec2d, device=self.device)
-        self._flux = [[wp.zeros_like(self._fields["flux_" + axis]) for axis in ("x", "y")] for _ in range(2)]
+        self._flux = [
+            [wp.zeros_like(self._fields["flux_" + axis]) for axis in ("x", "y")]
+            for _ in range(2 if self.method_name == "fv2" else 1)
+        ]
         self._fields["fv2_cfl_predictor"] = wp.zeros(1, dtype=wp.float64, device=self.device)
         self._stage_series = {}
         self._stage_identity = {}
@@ -104,6 +117,8 @@ class FV2Solver(FullSWESolver):
     def track_reconstruction(self, *, depth_edges):
         from floodwarp.fv2_diagnostics import ReconstructionDiagnostics
 
+        if self.method_name != "fv2" and depth_edges is not None:
+            raise ValueError("RK stage reconstruction diagnostics require fv2")
         if depth_edges is None:
             self._diagnostics = None
             self._end = self._stage
@@ -119,10 +134,10 @@ class FV2Solver(FullSWESolver):
     def _configuration(self):
         configuration = dict(
             super()._configuration(),
-            method="fv2",
+            method=self.method_name,
             limiter=self.limiter,
             reconstruction="muscl_ordered_bed_velocity_v2",
-            integration="ssprk2_strang_drag",
+            integration=self.integration,
             stage_forcing=self._stage_identity,
         )
         if self.limiter == "adaptive":
@@ -137,7 +152,7 @@ class FV2Solver(FullSWESolver):
         super().restore_state(state=state)
 
     def numerical_configuration(self):
-        return dict(solver_method="fv2", **self._configuration())
+        return dict(solver_method=self.method_name, **self._configuration())
 
     def _launch(self, kernel, count, inputs):
         wp.launch(kernel=kernel, dim=count, inputs=inputs, device=self.device)
@@ -182,7 +197,12 @@ class FV2Solver(FullSWESolver):
             self.dry_depth,
         ]
         self._launch_grid(k.split_sources, n, [*source_args, 0], layout=0)
-        for stage, (q, dest) in enumerate(((self._start, self._stage), (self._stage, self._end))):
+        stages = (
+            ((self._start, self._stage), (self._stage, self._end))
+            if self.method_name == "fv2"
+            else ((self._start, self._end),)
+        )
+        for stage, (q, dest) in enumerate(stages):
             if stage and type(self)._stage_forcing is not FV2Solver._stage_forcing:
                 # A manufactured residual may change depth after the Euler kernel.
                 self._launch_grid(k.inverse_depth, n, [q, self._inverse, self.dry_depth], layout=0)
@@ -193,29 +213,65 @@ class FV2Solver(FullSWESolver):
                     [q, f["active"], self._shock_flags, self.nx, self.ny, self.dry_depth, self.gravity],
                     layout=0,
                 )
-            self._launch_grid(
-                k.slopes,
-                n,
-                [
+            if self.method_name != "fv1_hancock" or not self._fuse_prediction:
+                self._launch_grid(
+                    k.slopes,
+                    n,
+                    [
+                        q,
+                        self._inverse,
+                        self._shock_flags,
+                        f["bed"],
+                        f["active"],
+                        *self._slopes,
+                        self.nx,
+                        self.ny,
+                        self.dry_depth,
+                        self._limiter_code,
+                    ],
+                    layout=0,
+                )
+            face_inverse = self._inverse
+            face_q = q
+            forcing_stage = stage
+            if self.method_name == "fv1_hancock":
+                from floodwarp.fv1_plus_kernels import predict, slopes_predict
+
+                face_q = self._predicted
+                forcing_stage = 2
+                # The donor budget is overwritten only after every midpoint face is read.
+                face_inverse = f["theta"]
+                arguments = [
                     q,
+                    face_q,
                     self._inverse,
-                    self._shock_flags,
-                    f["bed"],
-                    f["active"],
+                    face_inverse,
                     *self._slopes,
-                    self.nx,
-                    self.ny,
+                    f["active"],
+                    self._predictor_fallback,
+                    ctrl,
+                    self.dx,
+                    self.dy,
+                    self.gravity,
                     self.dry_depth,
-                    self._limiter_code,
-                ],
-                layout=0,
-            )
+                    self.cfl,
+                ]
+                if self._fuse_prediction:
+                    arguments.extend([self._shock_flags, f["bed"], self.nx, self.ny, self._limiter_code])
+                    self._launch_grid(slopes_predict, n, arguments, layout=0)
+                else:
+                    self._launch_grid(predict, n, arguments, layout=0)
+                if type(self)._stage_forcing is not FV2Solver._stage_forcing:
+                    self._stage_forcing(dest=face_q, stage=-1)
+                    self._launch_grid(k.inverse_depth, n, [face_q, face_inverse, self.dry_depth], layout=0)
             if self._dynamic:
                 self._launch(k.reset_tiles, 1, self._face_tiles)
             for axis, name, spacing in ((0, "x", self.dx), (1, "y", self.dy)):
-                if stage and self._stage_identity[name] is not None:
+                if forcing_stage and self._stage_identity[name] is not None:
                     self._launch(
-                        k.forcing_time, 1, [*self._stage_series[name], self._samples[axis], ctrl, stage]
+                        k.forcing_time,
+                        1,
+                        [*self._stage_series[name], self._samples[axis], ctrl, forcing_stage],
                     )
                 flux = self._flux[stage][axis]
                 tiles = self._face_tiles[axis]
@@ -226,7 +282,7 @@ class FV2Solver(FullSWESolver):
                         k.schedule_faces,
                         tiles.size - 1,
                         [
-                            q,
+                            face_q,
                             f["active"],
                             f["types_" + name],
                             flux,
@@ -242,8 +298,8 @@ class FV2Solver(FullSWESolver):
                     k.faces,
                     threads,
                     [
-                        q,
-                        self._inverse,
+                        face_q,
+                        face_inverse,
                         f["bed"],
                         f["active"],
                         self._slopes[axis],
@@ -261,6 +317,7 @@ class FV2Solver(FullSWESolver):
                         self.dry_depth,
                         self.cfl,
                         self._stage_momentum_mode,
+                        self._flux_mode,
                         self._omit_dry,
                         tiles,
                         indices,
@@ -284,6 +341,7 @@ class FV2Solver(FullSWESolver):
                 n,
                 [
                     q,
+                    face_q,
                     dest,
                     self._inverse,
                     self._shock_flags,
@@ -302,11 +360,11 @@ class FV2Solver(FullSWESolver):
                 ],
                 layout=0,
             )
-            self._stage_forcing(dest=dest, stage=stage)
+            self._stage_forcing(dest=dest, stage=forcing_stage)
         self._launch(k.validate_trial, 1, [ctrl, self.minimum_dt])
         if self._diagnostics is not None:
             self._diagnostics.enqueue(solver=self)
-        self._launch_grid(k.split_sources, n, [*source_args, 1], layout=0)
+        self._launch_grid(k.split_sources, n, [*source_args, 1 if self.method_name == "fv2" else 2], layout=0)
         for axis, name, width in ((0, "x", self.dy), (1, "y", self.dx)):
             flux = f["flux_" + name]
             self._launch_grid(
@@ -314,7 +372,7 @@ class FV2Solver(FullSWESolver):
                 flux.size,
                 [
                     self._flux[0][axis],
-                    self._flux[1][axis],
+                    self._flux[-1][axis],
                     flux,
                     f["volume_" + name],
                     f["active"],
@@ -332,6 +390,10 @@ class FV2Solver(FullSWESolver):
 
     def _load_extra_step_modules(self):
         wp.load_module(module=k, device=self.device)
+        if self.method_name == "fv1_hancock":
+            from floodwarp import fv1_plus_kernels
+
+            wp.load_module(module=fv1_plus_kernels, device=self.device)
         if self._diagnostics is not None:
             from floodwarp import fv2_diagnostics
 
@@ -345,3 +407,17 @@ class FV2Solver(FullSWESolver):
         while self.steps == previous:
             dt = super().step(remaining_time=remaining_time, fixed_dt=fixed_dt)
         return dt
+
+
+class MUSCLEulerSolver(FV2Solver):
+    method_name = "fv1_muscl_euler"
+    integration = "muscl_euler_strang_drag"
+
+
+class HancockSolver(FV2Solver):
+    method_name = "fv1_hancock"
+    integration = "unsplit_hancock_strang_drag"
+
+    def predictor_fallback_cells(self):
+        """Cells with an inadmissible half-time reconstruction in the last trial."""
+        return self._predictor_fallback.numpy().reshape(self.ny, self.nx).astype(bool)

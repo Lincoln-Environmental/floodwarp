@@ -98,6 +98,15 @@ def hll_speeds(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, 
 
 
 @wp.func
+def low_froude_pressure(hl: wp.float64, hr: wp.float64, ul: wp.float64, ur: wp.float64,
+                        cl: wp.float64, cr: wp.float64, sl: wp.float64, sr: wp.float64):
+    # Straddling wet fan. Reduce only the normal velocity-jump contribution.
+    theta = wp.min(wp.float64(1.0), wp.max(wp.abs(ul) / cl, wp.abs(ur) / cr))
+    penalty = -sl * sr / (sr - sl) * wp.float64(0.5) * (hl + hr)
+    return (wp.float64(1.0) - theta) * penalty * (ur - ul)
+
+
+@wp.func
 def hll(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, flux_mode: int = 0):
     ul = wp.vec2d(wp.float64(0.0))
     ur = wp.vec2d(wp.float64(0.0))
@@ -117,7 +126,7 @@ def hll(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, flux_mo
         result = fr
     elif sr > sl:
         result = (sr * fl - sl * fr + sl * sr * (right - left)) / (sr - sl)
-        if flux_mode == 1 or flux_mode == 3:
+        if flux_mode == 1 or flux_mode == 3 or flux_mode == -1:
             # Algebraically equivalent to the contact speed estimate; its
             # denominator is positive for a nondegenerate wet HLL star state.
             dl = left[0]*(ul[0]-sl)
@@ -130,6 +139,12 @@ def hll(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, flux_mo
                     tangent = ul[1]
                 result[2] = result[0]*tangent
             # Degenerate star states retain the finite conservative HLL value.
+        if flux_mode == -1 and left[0] > dry and right[0] > dry:
+            # Scale only the normal velocity-jump part of HLL dissipation.
+            # Leave gravity-wave speeds, mass flux and contact upwinding intact.
+            cl = wp.sqrt(g*left[0])
+            cr = wp.sqrt(g*right[0])
+            result[1] += low_froude_pressure(left[0],right[0],ul[0],ur[0],cl,cr,sl,sr)
     return result
 
 

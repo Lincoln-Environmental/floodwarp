@@ -2,7 +2,7 @@
 
 import warp as wp
 
-from floodwarp.full_swe_kernels import hll_speeds, stage_boundary_state
+from floodwarp.full_swe_kernels import hll_speeds, stage_boundary_state, low_froude_pressure
 
 
 # FV2-only HLL flux reusing the wave bounds already needed for the CFL.
@@ -28,7 +28,7 @@ def hll_fv2_precomputed(
         result = fr
     elif sr > sl:
         result = (sr * fl - sl * fr + sl * sr * (right - left)) / (sr - sl)
-        if flux_mode == 1 or flux_mode == 3:
+        if flux_mode == 1 or flux_mode == 3 or flux_mode == -1:
             # Algebraically equivalent to the contact speed estimate; its
             # denominator is positive for a nondegenerate wet HLL star state.
             dl = left[0] * (ul[0] - sl)
@@ -41,6 +41,8 @@ def hll_fv2_precomputed(
                     tangent = ul[1]
                 result[2] = result[0] * tangent
             # Degenerate star states retain the finite conservative HLL value.
+        if flux_mode == -1 and left[0] > dry and right[0] > dry:
+            result[1] += low_froude_pressure(left[0],right[0],ul[0],ur[0],wp.sqrt(g*left[0]),wp.sqrt(g*right[0]),sl,sr)
     return result
 
 
@@ -205,12 +207,15 @@ def split_sources(
         return
     dt = ctrl[2] * wp.float64(0.5)
     state = q[k]
-    rate = rain[k] + mult[k] * (ctrl[9] + (wp.float64(0.5) + wp.float64(stage)) * dt * ctrl[11])
+    rate = rain[k] + mult[k] * (ctrl[9] + (wp.float64(0.5) + wp.float64(wp.min(stage, 1))) * dt * ctrl[11])
     history = soil[k]
-    if stage == 1:
+    if stage != 0:
         if ctrl[2] > ctrl[17] or ctrl[7] != wp.float64(0.0):
             return
-        state = drag(wp.float64(0.5) * (start[k] + end[k]), n[k], dt, g, dry)
+        state = end[k]
+        if stage == 1:
+            state = wp.float64(0.5) * (start[k] + end[k])
+        state = drag(state, n[k], dt, g, dry)
         history += amounts[k][1]
     change = water_exchange(state, history, rate, dt, infil[k], f0[k], fd[k], cond[k])
     state = wp.vec3d(change[0], state[1] * change[1], state[2] * change[1])
@@ -432,7 +437,7 @@ def cut_trace(
 
 
 @wp.func
-def primitive_contact(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64):
+def primitive_contact(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, flux_mode: int = 1):
     zero = wp.float64(0.0)
     l = wp.vec3d(left[0], left[0] * left[1], left[0] * left[2])
     r = wp.vec3d(right[0], right[0] * right[1], right[0] * right[2])
@@ -467,6 +472,8 @@ def primitive_contact(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.fl
             dr = r[0] * (sr - ur)
             if dl + dr > zero:
                 result[2] = result[0] * wp.where(sr * dl + sl * dr >= zero, vl, vr)
+            if flux_mode == -1 and l[0] > dry and r[0] > dry:
+                result[1] += low_froude_pressure(l[0],r[0],ul,ur,cl,cr,sl,sr)
     return wp.vec4d(result[0], result[1], result[2], wp.max(wp.abs(sl), wp.abs(sr)))
 
 
@@ -538,6 +545,7 @@ def faces(
     dry: wp.float64,
     cfl: wp.float64,
     mode: int,
+    flux_mode: int,
     sparse: int,
     tiles: wp.array(dtype=wp.int32),
     work: wp.array(dtype=wp.int32),
@@ -573,7 +581,7 @@ def faces(
         rise = (bed[b] - bed[a]) - wp.float64(0.5) * (s[a][1] + s[b][1])
         l = cut_trace(q[a], inverse[a], s[a], wp.float64(1.0), rise, axis, dry)
         r = cut_trace(q[b], inverse[b], s[b], wp.float64(-1.0), -rise, axis, dry)
-        result = primitive_contact(l, r, g, dry)
+        result = primitive_contact(l, r, g, dry, flux_mode)
         f = wp.vec3d(result[0], result[1], result[2])
         speed = result[3]
     else:
@@ -605,7 +613,7 @@ def faces(
         else:
             l = ghost
         speeds = hll_speeds(l, r, g, dry, 1)
-        f = hll_fv2_precomputed(l, r, g, dry, 1, speeds)
+        f = hll_fv2_precomputed(l, r, g, dry, flux_mode, speeds)
         speed = wp.max(wp.abs(speeds[0]), wp.abs(speeds[1]))
     if speed > zero:
         wp.atomic_min(ctrl, 17, wp.float64(0.5) * spacing * cfl / speed)
@@ -666,6 +674,7 @@ def limit_faces(
 @wp.kernel
 def euler(
     q: wp.array(dtype=wp.vec3d),
+    source_state: wp.array(dtype=wp.vec3d),
     dest: wp.array(dtype=wp.vec3d),
     inverse: wp.array(dtype=wp.float64),
     flags: wp.array(dtype=wp.int32),
@@ -694,7 +703,7 @@ def euler(
             inverse[k] = wet_inverse(q[k][0], dry)
         return
     w = k + k / nx
-    h = q[k][0]
+    h = source_state[k][0]
     dt = ctrl[2]
     v = q[k]
     west = fx[w]
@@ -780,7 +789,8 @@ def forcing_time(
     if stage == 0:
         ctrl[2] = wp.min(ctrl[2], times[i + 1] - t)
     sample[0] = wp.float64(1.0)
-    sample[1] = levels[i] + ((t - times[i]) + wp.float64(stage) * ctrl[2]) / (times[i + 1] - times[i]) * (
+    fraction = wp.where(stage == 2, wp.float64(0.5), wp.float64(stage))
+    sample[1] = levels[i] + ((t - times[i]) + fraction * ctrl[2]) / (times[i + 1] - times[i]) * (
         levels[i + 1] - levels[i]
     )
 

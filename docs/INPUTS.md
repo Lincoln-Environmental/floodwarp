@@ -70,6 +70,22 @@ on affected faces. Pass `depth_edges=None` to stop collecting and release the
 extra RK scratch. Configure identical physical inputs, limiter and time series
 before loading an FV2 checkpoint. Directional bed traces respect the ordering of adjacent DEM centres. Earlier experimental FV2 checkpoints using `muscl_eta_bed_velocity_v1` are rejected because they may contain artificial ponding and momentum. Restart those cases from their physical initial conditions. See the [FV2 verification report](../validation/fv2_review/REPORT.md).
 
+### Experimental single-flux full shallow-water methods
+
+Select `solver_method="fv1_muscl_euler"` for the spatial reconstruction control or
+`solver_method="fv1_hancock"` for the unsplit half-step predictor. Both accept
+`limiter="minmod"`, `"mc"` or `"adaptive"`. Rain, infiltration and Manning drag use
+the FV2 split source operators. The final shared face flux is the accepted
+transport for the entire step. Hancock samples prescribed stages at the
+midpoint. CUDA graphs and FV2 scheduling modes are available. The methods
+reject hydraulic structures and SGS, and record their own integration identity
+in checkpoints. Hancock exposes the last trial's local predictor failures
+through `predictor_fallback_cells()`.
+
+Select `flux_scheme="low_froude_hll"` with FV1 or Hancock to test
+Froude-scaled normal momentum dissipation. FV1 contact-HLL remains the
+default. See the [analytical accuracy and cost study](../validation/fv1_diffusion_review/REPORT.md).
+
 ## Forcing and infiltration
 
 `rainfall` accepts a constant or spatial rate field. `rainfall_series=(times,

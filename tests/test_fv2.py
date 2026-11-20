@@ -9,7 +9,8 @@ from floodwarp.solver_factory import create_overland_solver
 
 @pytest.mark.parametrize("device", ("cpu", "cuda:0"))
 @pytest.mark.parametrize("limiter", ("minmod", "mc", "adaptive"))
-def test_fv2_oracle_and_restart(device, limiter, tmp_path):
+@pytest.mark.parametrize("method, integration", (("fv2", "rk2"), ("fv1_hancock", "hancock"), ("fv1_hancock", "hancock_low_froude"), ("fv1_muscl_euler", "euler")))
+def test_fv2_oracle_and_restart(device, limiter, tmp_path, method, integration):
     if device.startswith("cuda") and not wp.is_cuda_available():
         pytest.skip("CUDA unavailable")
     rng = np.random.default_rng(seed=4312)
@@ -21,7 +22,8 @@ def test_fv2_oracle_and_restart(device, limiter, tmp_path):
     rain = rng.uniform(0.0, 0.02, shape)
     n = rng.uniform(0.01, 0.04, shape)
     args = dict(
-        solver_method="fv2",
+        solver_method=method,
+        flux_scheme="low_froude_hll" if integration=="hancock_low_froude" else "contact_hll",
         ny=shape[0],
         nx=shape[1],
         dx=1.0,
@@ -43,6 +45,8 @@ def test_fv2_oracle_and_restart(device, limiter, tmp_path):
     oracle, soil = reference_step(
         q=q,
         z=z,
+        integration="hancock" if method=="fv1_hancock" else integration,
+        flux_scheme=args["flux_scheme"],
         soil=np.zeros(shape),
         rain_start=rain,
         rain_end=rain,
@@ -64,14 +68,15 @@ def test_fv2_oracle_and_restart(device, limiter, tmp_path):
     s.save_checkpoint(path=p)
     other = create_overland_solver(execution_mode="sparse", **args)
     other.load_checkpoint(path=p)
-    diag = other.track_reconstruction(depth_edges=(0.001, 0.01, 0.1, 1.0))
+    diag = other.track_reconstruction(depth_edges=(0.001, 0.01, 0.1, 1.0)) if method == "fv2" else None
     for solver in (s, other):
         solver.run_device_loop(duration=0.2)
         assert solver.get_water_depth().min() >= 0.0
         assert abs(solver.cumulative_accounting()["residual"]) < 2.0e-12
     np.testing.assert_array_equal(s.get_conservative_state(), other.get_conservative_state())
     np.testing.assert_array_equal(s.get_max_water_depth(), other.get_max_water_depth())
-    assert np.asarray(diag.summary()["bands"])[:, :, 1].sum() > 0.0
+    if diag is not None:
+        assert np.asarray(diag.summary()["bands"])[:, :, 1].sum() > 0.0
     for a in ("qx", "qy"):
         np.testing.assert_array_equal(
             s.get_cumulative_face_volumes()[a], other.get_cumulative_face_volumes()[a]
@@ -182,7 +187,8 @@ def test_failed_fv2_trial_keeps_last_accepted_physical_state():
     assert s.time == s.steps == 0
 
 
-def test_fv2_direct_model_graph_stage_restart(tmp_path):
+@pytest.mark.parametrize("method", ("fv2","fv1_muscl_euler","fv1_hancock"))
+def test_fv2_direct_model_graph_stage_restart(tmp_path,method):
     from floodwarp.inputs import boundary_faces, terrain_from_array
     from floodwarp.model import advance, create_model, load_checkpoint, save_checkpoint
 
@@ -193,7 +199,7 @@ def test_fv2_direct_model_graph_stage_restart(tmp_path):
     bx[:, 0] = 3
     options = dict(
         terrain=terrain,
-        solver_method="fv2",
+        solver_method=method,
         initial_depth=0.5,
         stage_datum="local",
         boundary_qx=bx,

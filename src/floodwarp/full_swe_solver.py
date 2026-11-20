@@ -54,11 +54,11 @@ class FullSWESolver:
             raise ValueError('stage_boundary_momentum must be one of '+', '.join(modes))
         self.stage_boundary_momentum=stage_boundary_momentum
         self._stage_momentum_mode=modes.index(stage_boundary_momentum)
-        flux_schemes = ('legacy_hll','contact_hll','star_hll','star_contact_hll','roe','hllc')
+        flux_schemes = ('legacy_hll','contact_hll','star_hll','star_contact_hll','roe','hllc','low_froude_hll')
         if flux_scheme not in flux_schemes:
             raise ValueError('flux_scheme must be one of '+', '.join(flux_schemes))
         self.flux_scheme = flux_scheme
-        self._flux_mode = flux_schemes.index(flux_scheme)
+        self._flux_mode = -1 if flux_scheme == "low_froude_hll" else flux_schemes.index(flux_scheme)
         if not np.isfinite([nx, ny, dx, dy, gravity, dry_depth, cfl, maximum_dt, minimum_dt]).all():
             raise ValueError("Finite numerical parameters required")
         if nx < 1 or ny < 1 or min(dx, dy, gravity, maximum_dt) <= 0:
