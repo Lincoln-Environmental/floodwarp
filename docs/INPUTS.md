@@ -66,7 +66,8 @@ with exact dry-face omission and dense storage. FV2 rejects culverts, SGS and al
 For an instrumented run, call `probe = model.solver.track_reconstruction(depth_edges=(.001, .01, .1, 1.))`
 before advancing. Read `probe.summary()` for counts and transported volume by depth and
 fallback reason. The two oriented arrays in `probe.maps` hold transported volume
-on affected faces. Configure identical physical inputs, limiter and time series
+on affected faces. Pass `depth_edges=None` to stop collecting and release the
+extra RK scratch. Configure identical physical inputs, limiter and time series
 before loading an FV2 checkpoint. See the [FV2 verification report](../validation/fv2_review/REPORT.md).
 
 ## Forcing and infiltration

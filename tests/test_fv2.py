@@ -76,6 +76,11 @@ def test_fv2_oracle_and_restart(device, limiter, tmp_path):
         np.testing.assert_array_equal(
             s.get_cumulative_face_volumes()[a], other.get_cumulative_face_volumes()[a]
         )
+    other.track_reconstruction(depth_edges=None)
+    assert other._end is other._stage
+    for solver in (s, other):
+        solver.run_device_loop(duration=0.03)
+    np.testing.assert_array_equal(s.get_conservative_state(), other.get_conservative_state())
     with pytest.raises(ValueError, match="configuration"):
         create_overland_solver(
             **dict(args, limiter="mc" if limiter == "minmod" else "minmod")

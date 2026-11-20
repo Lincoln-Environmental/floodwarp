@@ -65,7 +65,7 @@ def benchmark(*, domain, method, mode, device, repeats, exact, mask=None, rain=N
         arrays = [s._start, s._stage, s._end, s._amounts, *s._slopes, *s._flux[0], *s._flux[1], *s._samples]
         for v in s._stage_series.values():
             arrays.extend(v)
-        extra = sum(v.capacity for v in arrays)
+        extra = sum({v.ptr: v.capacity for v in arrays}.values())
     total = (
         sum(v.capacity for v in s._fields.values())
         + sum(v.capacity for v in (s.ctrl, s.condition, s._rain_rates, s._rain_times))

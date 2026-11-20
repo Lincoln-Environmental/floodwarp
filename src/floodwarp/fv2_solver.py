@@ -20,9 +20,11 @@ class FV2Solver(FullSWESolver):
         super().__init__(execution_mode=execution_mode, flux_scheme=flux_scheme, **options)
         self.ctrl = wp.zeros(18, dtype=wp.float64, device=self.device)
         count = self.nx * self.ny
-        self._start, self._stage, self._end = [
-            wp.zeros(count, dtype=wp.vec3d, device=self.device) for _ in range(3)
-        ]
+        self._start = wp.zeros(count, dtype=wp.vec3d, device=self.device)
+        self._stage = wp.zeros(count, dtype=wp.vec3d, device=self.device)
+        # All neighbour reads finish in face kernels. The final Euler update
+        # only reads its own cell and can overwrite the first-stage state.
+        self._end = self._stage
         self._slopes = [wp.zeros(count, dtype=wp.vec4d, device=self.device) for _ in range(2)]
         self._amounts = wp.zeros(count, dtype=wp.vec2d, device=self.device)
         self._flux = [[wp.zeros_like(self._fields["flux_" + axis]) for axis in ("x", "y")] for _ in range(2)]
@@ -84,7 +86,15 @@ class FV2Solver(FullSWESolver):
     def track_reconstruction(self, *, depth_edges):
         from floodwarp.fv2_diagnostics import ReconstructionDiagnostics
 
-        self._diagnostics = ReconstructionDiagnostics(solver=self, depth_edges=depth_edges)
+        if depth_edges is None:
+            self._diagnostics = None
+            self._end = self._stage
+        else:
+            probe = ReconstructionDiagnostics(solver=self, depth_edges=depth_edges)
+            if self._end is self._stage:
+                # Accepted-step diagnostics need both pre-Euler stage states.
+                self._end = wp.empty_like(self._stage)
+            self._diagnostics = probe
         self._graph = None
         return self._diagnostics
 
