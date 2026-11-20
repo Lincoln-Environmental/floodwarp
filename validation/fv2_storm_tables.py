@@ -1,15 +1,116 @@
 """Publish the outlet, inundation, reference and runtime comparisons from complete storm records."""
 
+import hashlib
 import json
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 
+from validation.fv1_riemann import report_json
 from validation.fv2_figures import rows_table
 from validation.fv2_storm_evidence import fallback
 
 
-def publish(*, directory, grids, methods):
+def external_hydrograph(*, directory, archived_csv, grids, methods):
+    series = np.genfromtxt(archived_csv, delimiter=",", names=True)
+    final_s = 48 * 3600
+    event = series[series["interval_end_s"] <= final_s]
+    ends = event["interval_end_s"]
+    interval = ends - event["interval_start_s"]
+    ref = event["lisflood_fv1_mean_net_outlet_m3_s"]
+    ref_volume = float(np.dot(ref, interval))
+    ref_peak = float(ref.max())
+    peak_end = float(ends[np.argmax(ref)])
+    rows = []
+    for dx in grids:
+        for method in methods:
+            record = json.loads((directory / f"{dx}m_{method}.json").read_text())
+            if record["ledger"]["boundary_inflow"] != 0:
+                raise ValueError("Gross and net coastal flows differ in this event")
+            np.testing.assert_array_equal(ends, [x["t"] for x in record["hydrograph"]])
+            hydro = np.array([x["outflow_m3_s"] for x in record["hydrograph"]])
+            rows.append(
+                dict(
+                    dx=dx,
+                    method=method,
+                    difference_rmse_m3_s=float(np.sqrt(np.mean((hydro - ref) ** 2))),
+                    peak_difference_m3_s=float(hydro.max() - ref_peak),
+                    peak_time_difference_min=float(ends[np.argmax(hydro)] - peak_end)
+                    / 60,
+                    net_export_difference_m3=float(np.dot(hydro - ref, interval)),
+                )
+            )
+    report_json(
+        path=directory / "lisflood_comparison.json",
+        content=dict(
+            source=str(archived_csv),
+            source_sha256=hashlib.sha256(archived_csv.read_bytes()).hexdigest(),
+            series="lisflood_fv1_mean_net_outlet_m3_s",
+            minutes=len(ends),
+            peak_m3_s=ref_peak,
+            peak_interval_end_s=peak_end,
+            export_m3=ref_volume,
+            rows=rows,
+        ),
+    )
+    return rows_table(
+        title="Outlet disagreement with the archived 5 m LISFLOOD-FP FV1 simulation",
+        columns=[
+            "Grid (m)",
+            "Scheme",
+            "Hydrograph RMSE (m³/s)",
+            "Peak change (m³/s)",
+            "Peak time change (min)",
+            "Export change (m³)",
+        ],
+        rows=[list(r.values()) for r in rows],
+        note=f"The independent model used the same design event. Its first 48 hours exported {ref_volume:,.1f} m³ and peaked at {ref_peak:.3f} m³/s. These differences quantify agreement between models. There is no measured storm hydrograph.",
+    )
+
+
+def plot_cost(*, directory, common, timings, methods):
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4), layout="constrained")
+    colors = ("#2166ac", "#d89000", "#9a4c97", "#11865a")
+    cost = {(r["dx"], r["method"]): 1000 * r["median_wall_s"] for r in timings}
+    for ax, key, scale, ylabel in zip(
+        axes,
+        ("peak_envelope_rmse_m", "hydrograph_rmse_m3_s"),
+        (1000, 1),
+        ("Maximum-depth difference (mm RMSE)", "Outlet difference (m³/s RMSE)"),
+        strict=True,
+    ):
+        for method, color in zip(methods, colors, strict=True):
+            points = sorted(
+                (r["dx"], cost[r["dx"], method], scale * r["vs_5m_contact"][key])
+                for r in common
+                if r["method"] == method
+            )
+            ax.plot(
+                [x for _, x, _ in points],
+                [y for _, _, y in points],
+                "o-",
+                color=color,
+                label=method,
+            )
+            for dx, x, y in points:
+                ax.annotate(
+                    f"{dx:g}",
+                    (x, y),
+                    xytext=(2, 4),
+                    textcoords="offset points",
+                    fontsize=7,
+                )
+        ax.set(
+            xscale="log", xlabel="Warm 12-second wet replay on GPU (ms)", ylabel=ylabel
+        )
+        ax.grid(alpha=0.2)
+    axes[0].legend(fontsize=8, frameon=False)
+    fig.savefig(directory / "storm_cost.png", dpi=165)
+    plt.close(fig)
+
+
+def publish(*, directory, grids, methods, archived_csv):
     rows = []
     shares = []
     for dx in grids:
@@ -132,11 +233,18 @@ def publish(*, directory, grids, methods):
     for r in diag:
         a = np.array(r["bands"])
         fractions = np.divide(
-            a[:, 1:].sum(axis=(0, 1)), a.sum(axis=(0, 1)), out=np.zeros(2), where=a.sum(axis=(0, 1)) > 0
+            a[:, 1:].sum(axis=(0, 1)),
+            a.sum(axis=(0, 1)),
+            out=np.zeros(2),
+            where=a.sum(axis=(0, 1)) > 0,
         )
         if r["start_h"] == 24:
             sparse.append(
-                [r["dx"], *list(100 * fractions), *list(100 * a.sum(axis=0)[1:, 1] / a[:, :, 1].sum())]
+                [
+                    r["dx"],
+                    *list(100 * fractions),
+                    *list(100 * a.sum(axis=0)[1:, 1] / a[:, :, 1].sum()),
+                ]
             )
     sections.append(
         rows_table(
@@ -154,7 +262,8 @@ def publish(*, directory, grids, methods):
         )
     )
     cost = []
-    for r in json.loads((directory / "wet_cost.json").read_text()):
+    timings = json.loads((directory / "wet_cost.json").read_text())
+    for r in timings:
         cost.append(
             [
                 r["dx"],
@@ -186,11 +295,22 @@ def publish(*, directory, grids, methods):
             note="All methods start from the same conservative state for their resolution, on the same RTX 4070 Ti SUPER in dense mode. Five synchronised graph runs follow warm-up. Every reset reproduced its first final state bitwise. The raw file includes per-kernel CUDA timings.",
         )
     )
-    (directory / "RESULTS.md").write_text("# Orton Bradley design-storm results\n\n" + "\n".join(sections))
+    plot_cost(directory=directory, common=common, timings=timings, methods=methods)
+    sections.append(
+        external_hydrograph(
+            directory=directory, archived_csv=archived_csv, grids=grids, methods=methods
+        )
+    )
+    (directory / "RESULTS.md").write_text(
+        "# Orton Bradley design-storm results\n\n" + "\n".join(sections)
+    )
 
 
 if __name__ == "__main__":
     directory = Path("validation/fv2_review/hirds48")
     grids = (5, 10, 20)
     methods = ("contact_hll", "roe", "hllc", "fv2_mc")
-    publish(directory=directory, grids=grids, methods=methods)
+    archived_csv = Path("validation/sparse_modified_event_review/hydrographs_72h.csv")
+    publish(
+        directory=directory, grids=grids, methods=methods, archived_csv=archived_csv
+    )

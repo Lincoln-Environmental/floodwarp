@@ -46,9 +46,11 @@ The discontinuous, intermittently dry lake remained stationary to roundoff, incl
 
 ## Terrain representation and reference uncertainty
 
-Both orders receive identical cell-average terrain for each spacing. FV2 infers limited face-bed slopes from those data, which is part of its discretisation. Seven synthetic cases reuse the same mathematical terrain on six hydraulic grids from 20 to 0.625 m. A separate experiment holds each 5 m bed cell and physical input constant under subdivision to 2.5 and 1.25 m. This isolates transport error on the same represented geometry. Both FV1 and FV2 provide independent numerical discretisations, using the common contact-HLL building block. The finest MC case also runs with a halved timestep on the resampled continuous surface. Reference-grid and cross-formulation differences are practical uncertainty indicators, without a rigorous error bound. [Synthetic data](synthetic.json)
+Both methods receive identical terrain at each spacing. The synthetic study samples a fixed mathematical surface at cell centres. The real DEM coarsening averages active source elevations within each block. FV2 infers limited face-bed slopes from those data, which is part of its discretisation. Seven synthetic cases reuse the same mathematical terrain on six hydraulic grids from 20 to 0.625 m. A separate experiment holds each 5 m bed cell and physical input constant under subdivision to 2.5 and 1.25 m. This isolates transport error on the same represented geometry. Both FV1 and FV2 provide independent numerical discretisations, using the common contact-HLL building block. The finest MC case also runs with a halved timestep on the resampled continuous surface. Reference-grid and cross-formulation differences are practical uncertainty indicators, without a rigorous error bound. [Synthetic data](synthetic.json)
 
 On fixed 5 m terrain, MC reduced expansion-case depth RMSE against the 1.25 m MC reference from 5.30 to 1.51 mm. The reduction persisted against the alternative 1.25 m FV1 reference. The irregular case changed from 4.75 to 5.37 mm and the rainfall case from 2.79 to 2.97 mm. Both changes were smaller than the corresponding last reference refinement differences. In the steep case, depth and export pointed in different directions. The 5 m MC envelope RMSE fell from 8.71 to 4.47 mm while its export difference rose from 37.2 to 43.0 m³. All seven cases include velocity, wet-area overlap, wet component count, sampled arrival and outlet metrics. [Fixed-terrain comparisons](TABLES.md)
+
+Further refinement to 0.3125 m with the independent Roe/HLL formulation confirmed the fixed-terrain expansion result. FV1 and FV2 had depth RMSE of 5.35 and 1.66 mm against fine MC, and 4.82 and 1.10 mm against fine Roe/HLL. The finest formulations differed by 1.48 mm. On fixed irregular terrain, the corresponding pairs were 5.26 and 5.66 mm, and 4.42 and 5.80 mm. Those differences were smaller than the 1.57 mm inter-method reference spread. On the resampled oblique channel, switching the reference reversed the ranking. For the resampled narrow barrier, the last reference grid change was 11.97 mm and the two 5 m methods differed in RMSE by less than 0.45 mm. This case cannot resolve an accuracy ranking. The largest finest-grid MC timestep effect across all 14 reference experiments was 0.0344 mm. [Fine-reference table](SYNTHETIC_REFERENCES.md) · [All fine-reference error metrics](synthetic_reference.json)
 
 The 200 × 200 m Orton and Purau tile controls independently vary represented DEM and hydraulic grid. The 240 s Orton installation forcing and the 600 s Purau rain-peak segment are numerical controls. Both have 1 m surveys. Subcells at 0.5, 0.25 and 0.125 m hold that 1 m terrain constant. Full-field comparison uses a common 1 m support. A second control solves the aggregated 5 and 10 m DEMs at 1 m hydraulic spacing, preserving the geometry removed by aggregation as an identifiable error source. The native-grid FV1-to-MC final-depth RMSE fell from 1.022 to 0.793 mm at Orton and 5.965 to 3.666 mm at Purau. At 5 m it rose from 0.566 to 0.585 mm and from 6.698 to 6.753 mm respectively. The corresponding final MC reference refinement gaps were 0.120 and 0.774 mm, and the finest cross-method spreads were 0.337 and 1.990 mm. Timestep halving changed finest depth by 0.0045 and 0.0340 mm respectively on finest support. These comparisons cannot rank the small 5 m changes. Fine-grid depth improvement alone also failed to predict wet-area overlap. [Orton control](orton_terrain.json) · [Purau control](purau_terrain.json)
 
@@ -105,12 +107,17 @@ The separate Purau guided-DEM package specifies a 303.62 mm external 48 h hyetog
 | H. Equal cost | Stoker favours coarser FV2 at about the 5 m FV1 budget. An equal-cost advantage across practical rainfall-driven catchments has not been established. |
 | I. Production selection | Keep FV1 contact-HLL as default. Retain FV2 as an explicitly selected experimental solver, particularly for wave-dominated applications. |
 
+## Regression results
+
+The complete FP64 suite with CUDA SWE, the adapted external reference executable and the offscreen renderer enabled passed **1,791 tests**, with 24 skips and 743 warnings in 352.60 s. Eighteen skips cover unsupported graph/trace combinations, four require the mixed-precision configuration, and two require the separately installed external CPU model or its smoke runner. All four mixed-precision cases passed in a separate run. The FV2 validation, including the native GPU solver, uses FP64.
+
 ## Reproduce
 
 Use the pinned Python 3.14 environment with the project test and plotting extras. Run modules from the repository root. The local catchment archive paths are set in each module's main guard. For a fresh full-event run, extract the public data archive at the configured release directory. The 1 m site studies also need the locally identified native terrain. [Release input instructions](../../examples/orton_bradley/README.md) The machine-readable evidence lists the input identities. See the numerics tables for the full set of error metrics and refinement outcomes.
 
 ```sh
-OVERLANDER_TEST_FULL_SWE_CUDA=1 python -m pytest -q
+OVERLANDER_TEST_FULL_SWE_CUDA=1 FLOODWARP_TEST_RENDER=1 FLOODWARP_REFERENCE_BINARY="$PWD/outputs/qualified_reference/build/lisflood" python -m pytest -q -rs
+FLOODWARP_PRECISION=mixed python -m pytest -q tests/test_mixed_precision_conditioning.py tests/test_masked_free.py::test_masked_free_conditioned_mixed_precision_drains
 python -m validation.fv2_accuracy
 python -m validation.fv2_equilibria
 python -m validation.fv2_additional
@@ -126,6 +133,7 @@ python -m validation.fv2_full_native_probe
 python -m validation.fv2_figures
 python -m validation.fv2_orton_matrix
 python -m validation.fv2_native_storm
+python -m validation.fv2_native_storm_evidence
 python -m validation.fv2_stage_replay
 python -m validation.fv2_storm_evidence
 python -m validation.fv2_storm_tables
