@@ -38,3 +38,24 @@ def test_macdonald_cell_averages_against_quadrature():
     np.testing.assert_allclose(bed, continuous_bed @ (weights / 2.0), rtol=1.e-13, atol=1.e-13)
     np.testing.assert_allclose(state[:, 0], continuous_h @ (weights / 2.0), rtol=1.e-13, atol=1.e-13)
     np.testing.assert_allclose(state[:, 1], q, rtol=0.0, atol=0.0)
+
+
+def test_macdonald_short_solver_replay_cpu(tmp_path):
+    import json
+
+    from validation.fv2_macdonald_manning import run
+
+    output = tmp_path / "macdonald.json"
+    run(
+        output=output, device="cpu", methods=("fv1", "mc"), spacings=(20.0,),
+        gauges=(-80.0, 0.0, 80.0), length=640.0, width=40.0,
+        duration=2.0, interval=1.0, depth_at_zero=0.5,
+        decay=0.001, discharge=0.5, manning=0.025, gravity=9.81,
+    )
+    rows = json.loads(output.read_text())["rows"]
+    assert [row["method"] for row in rows] == ["fv1", "mc"]
+    for row in rows:
+        assert row["steps"] > 0
+        assert row["depth_min_m"] >= 0.0
+        assert np.isfinite(row["discharge_rmse_m2_s"])
+        assert abs(row["ledger"]["residual"]) < 1.e-7
