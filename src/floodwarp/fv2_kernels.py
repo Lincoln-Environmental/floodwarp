@@ -314,11 +314,18 @@ def donor_budget(
 
 
 @wp.kernel
-def limit_faces(f: wp.array(dtype=wp.vec3d), theta: wp.array(dtype=wp.float64), nx: int, ny: int, axis: int):
+def limit_faces(
+    f: wp.array(dtype=wp.vec3d),
+    theta: wp.array(dtype=wp.float64),
+    active: wp.array(dtype=wp.int32),
+    nx: int,
+    ny: int,
+    axis: int,
+):
     k = wp.tid()
     pair = indices(k, axis, nx, ny)
     donor = wp.where(f[k][0] >= wp.float64(0.0), pair[0], pair[1])
-    if donor >= 0:
+    if donor >= 0 and active[donor] != 0:
         f[k] *= theta[donor]
 
 

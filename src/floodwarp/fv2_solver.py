@@ -177,7 +177,9 @@ class FV2Solver(FullSWESolver):
                 k.donor_budget, n, [q, f["theta"], *self._flux[stage], ctrl, self.nx, self.dx, self.dy]
             )
             for axis, flux in enumerate(self._flux[stage]):
-                self._launch(k.limit_faces, flux.size, [flux, f["theta"], self.nx, self.ny, axis])
+                self._launch(
+                    k.limit_faces, flux.size, [flux, f["theta"], f["active"], self.nx, self.ny, axis]
+                )
             self._launch(
                 k.euler,
                 n,

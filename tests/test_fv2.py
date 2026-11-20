@@ -238,3 +238,46 @@ def test_fv2_retry_has_one_accepted_step_on_host_and_device():
     with pytest.raises(ArithmeticError, match="step budget"):
         rejected.run_device_loop(duration=1.0, max_steps=1, use_cuda_graph=False)
     assert rejected.steps == 1 and rejected.time == dt
+
+
+@pytest.mark.parametrize("axis", (0, 1))
+@pytest.mark.parametrize("mode", ("dense", "sparse"))
+def test_stage_reservoir_on_mask_has_perimeter_inflow(axis, mode):
+    def run(*, border):
+        shape = (6 + 2 * border, 8 + 2 * border)
+        mask = np.zeros(shape, dtype=bool)
+        inner = np.s_[border : border + 6, border : border + 8]
+        mask[inner] = True
+        solver = FV2Solver(
+            ny=shape[0],
+            nx=shape[1],
+            dx=2.0,
+            dy=3.0,
+            active_mask=mask,
+            bed_elevation=0.0,
+            manning_n=0.03,
+            maximum_dt=0.02,
+            device="cpu",
+            execution_mode=mode,
+        )
+        faces = list(shape)
+        faces[1 - axis] += 1
+        codes = np.zeros(faces, dtype=np.int32)
+        if axis == 0:
+            codes[border : border + 6, border] = 3
+            solver.set_boundary_type_qx(boundary_type=codes)
+            solver.set_boundary_stage_qx(stage=np.full(faces, 0.5))
+        else:
+            codes[border, border : border + 8] = 3
+            solver.set_boundary_type_qy(boundary_type=codes)
+            solver.set_boundary_stage_qy(stage=np.full(faces, 0.5))
+        solver.run_device_loop(duration=0.5)
+        ledger = solver.cumulative_accounting()
+        assert ledger["boundary_inflow"] > 0.0
+        assert abs(ledger["residual"]) < 1.0e-12
+        return solver.get_conservative_state()[inner], ledger["boundary_inflow"]
+
+    reference, perimeter = run(border=0)
+    masked, internal = run(border=1)
+    np.testing.assert_array_equal(masked, reference)
+    np.testing.assert_allclose(internal, perimeter, rtol=1.0e-14)
