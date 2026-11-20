@@ -160,6 +160,8 @@ def check(
     assert len(auxiliary["rows"]) == 15
     assert all(r["time_s"] == 172800.0 for r in auxiliary["rows"])
     results = dict(
+        fv2_terrain_qualification="superseded: MC bed traces can reverse a monotone face",
+        corrected_implementation_commit="94fb7df",
         analytical_runs=len(all_cases),
         lake_max_depth_drift_m=max_drift,
         max_normalised_analytical_balance=max_balance,
