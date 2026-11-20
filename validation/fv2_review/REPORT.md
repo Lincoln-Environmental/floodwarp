@@ -113,6 +113,9 @@ The earlier 120 s wet continuations exercise full-domain state transfer and rest
 
 The separate Purau guided-DEM package specifies a 303.62 mm external 48 h hyetograph and an empty boundary list. Applying an invented full-catchment outlet or relabelling that forcing as the Orton HIRDS event would invalidate a matched comparison. The Purau terrain controls therefore state their cut-edge boundary assumptions and forcing window.
 
+<!-- measured-storm-summary:start -->
+<!-- measured-storm-summary:end -->
+
 ## Engineering decision
 
 | Question | Finding |
