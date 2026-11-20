@@ -25,8 +25,8 @@ def configured(*, domain, method, cap, device, mode="dense", mask=None):
         device=device,
         execution_mode=mode,
     )
-    if method in ("fv1", "roe"):
-        flux = "contact_hll" if method == "fv1" else "roe"
+    if method in ("fv1", "roe", "hllc"):
+        flux = "contact_hll" if method == "fv1" else method
         solver = FullSWESolver(flux_scheme=flux, **options)
     else:
         solver = FV2Solver(limiter=method, **options)
