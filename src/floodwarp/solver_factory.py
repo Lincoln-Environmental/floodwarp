@@ -12,11 +12,14 @@ def create_overland_solver(*, solver_method="fv1", ny, nx, dx, dy,
     common = dict(ny=ny, nx=nx, dx=dx, dy=dy, bed_elevation=bed_elevation,
                   manning_n=manning_n, active_mask=active_mask, device=device,
                   minimum_dt=explicit_minimum_dt, maximum_dt=explicit_maximum_dt)
-    if solver_method == "fv1":
+    if solver_method in ("fv1", "fv2"):
         if hydraulic_geometry_mode != "coarse" or subgrid_bed_elevation is not None or subgrid_resolution_m is not None:
-            raise ValueError("FV1 supports coarse geometry without SGS")
+            raise ValueError(f"{solver_method.upper()} supports coarse geometry without SGS")
         if validation_profile is not None:
-            raise ValueError("FV1 does not use local-inertial validation profiles")
+            raise ValueError(f"{solver_method.upper()} does not use local-inertial validation profiles")
+        if solver_method == "fv2":
+            from floodwarp.fv2_solver import FV2Solver
+            return FV2Solver(**common, structures=structures, **options)
         return FullSWESolver(**common, structures=structures, **options)
     if solver_method in ("explicit", "li"):
         return LocalInertialSolver(**common, validation_profile=validation_profile,
@@ -24,4 +27,4 @@ def create_overland_solver(*, solver_method="fv1", ny, nx, dx, dy,
             hydraulic_geometry_mode=hydraulic_geometry_mode,
             subgrid_bed_elevation=subgrid_bed_elevation,
             subgrid_resolution_m=subgrid_resolution_m, structures=structures, **options)
-    raise ValueError("solver_method must be 'li', 'explicit' or 'fv1'")
+    raise ValueError("solver_method must be 'li', 'explicit' or 'fv1' or 'fv2'")

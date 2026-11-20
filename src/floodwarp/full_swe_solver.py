@@ -278,6 +278,12 @@ class FullSWESolver:
         wp.launch(kernels.finish_step, dim=1,
             inputs=[self.ctrl, self.condition, self._fields["dt_histogram"], self.minimum_dt], device=self.device)
 
+    def _load_extra_step_modules(self):
+        """Preload extension kernels before graph capture and timing."""
+
+    def _extra_loop_statistics(self, *, control):
+        return {}
+
     def run_device_loop(self, *, duration, use_cuda_graph=None, max_steps=10000000, track_flux=False):
         """Run to an exact requested time; CUDA uses a device conditional loop.
 
@@ -314,6 +320,7 @@ class FullSWESolver:
         if self._culverts is not None:
             from floodwarp import full_swe_culverts
             wp.load_module(module=full_swe_culverts, device=self.device)
+        self._load_extra_step_modules()
         compilation = perf_counter() - began
         capture_seconds = 0.
         graph = use_cuda_graph is not False and self.device.is_cuda
@@ -336,10 +343,12 @@ class FullSWESolver:
             wp.capture_launch(graph=self._graph)
             ctrl = self.ctrl.numpy()
         else:
-            for _ in range(max_steps):
+            syncs = 0
+            while True:
                 self._enqueue_step()
                 ctrl = self.ctrl.numpy()
-                if ctrl[0] >= target or ctrl[7]:
+                syncs += 1
+                if ctrl[0] >= target or ctrl[3] >= ctrl[13] or ctrl[7]:
                     break
         elapsed = perf_counter() - began
         done = int(ctrl[3]) - self.steps
@@ -353,7 +362,8 @@ class FullSWESolver:
         stats = dict(steps=done, time_s=self.time, loop_seconds=elapsed, compilation_seconds=compilation,
                     graph_capture_seconds=capture_seconds, dt_min_s=float(ctrl[4]), dt_max_s=float(ctrl[5]),
                     dt_mean_s=duration / done, dt_rms_s=float(np.sqrt(ctrl[6] / done)),
-                    host_state_syncs=1 if graph else done, cuda_graph=bool(graph))
+                    host_state_syncs=1 if graph else syncs, cuda_graph=bool(graph),
+                    **self._extra_loop_statistics(control=ctrl))
         if track_flux:
             stats['flux_outcomes'] = dict(zip(('faces', 'shallow_hll', 'inadmissible_hll', 'entropy_corrected'),
                                              map(int, ctrl[16:20]), strict=True))
