@@ -125,10 +125,11 @@ def manufactured_average(*, n, t):
     )
 
 
-def manufactured_run(*, n, dt, length, duration, device, bed_amplitude=0.0):
+def manufactured_run(*, n, dt, length, duration, device, bed_amplitude=0.0, limiter="mc"):
     coord = (np.arange(n) + 0.5) / n
     cos_mean = np.cos(2 * np.pi * coord) * np.sinc(1 / n)
     s = Manufactured(
+        limiter=limiter,
         bed_amplitude=bed_amplitude,
         ny=n,
         nx=n,
@@ -147,12 +148,12 @@ def manufactured_run(*, n, dt, length, duration, device, bed_amplitude=0.0):
     return s.get_conservative_state(), stats
 
 
-def convergence(*, grids, temporal_grid, timesteps, length, duration, device, bed_amplitude=0.0):
+def convergence(*, grids, temporal_grid, timesteps, length, duration, device, bed_amplitude=0.0, limiter="mc"):
     rows = []
     for n in grids:
         dt = duration / (4 * n)
         q, stats = manufactured_run(
-            n=n, dt=dt, length=length, duration=duration, device=device, bed_amplitude=bed_amplitude
+            n=n, dt=dt, length=length, duration=duration, device=device, bed_amplitude=bed_amplitude, limiter=limiter
         )
         error = q - manufactured_average(n=n, t=duration)
         rows.append(
@@ -166,7 +167,7 @@ def convergence(*, grids, temporal_grid, timesteps, length, duration, device, be
         length=length,
         duration=duration,
         device=device,
-        bed_amplitude=bed_amplitude,
+        bed_amplitude=bed_amplitude, limiter=limiter,
     )
     for dt in timesteps:
         q, stats = manufactured_run(
@@ -175,7 +176,7 @@ def convergence(*, grids, temporal_grid, timesteps, length, duration, device, be
             length=length,
             duration=duration,
             device=device,
-            bed_amplitude=bed_amplitude,
+            bed_amplitude=bed_amplitude, limiter=limiter,
         )
         rows.append(
             dict(

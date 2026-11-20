@@ -15,7 +15,7 @@ def limited(*, left, right, limiter):
     return np.where(left * right > 0, np.sign(left) * mag, 0.0)
 
 
-def traces(*, q, z, dry, axis, limiter):
+def traces(*, q, z, dry, axis, limiter, gravity=9.80665):
     h = q[..., 0]
     vel = np.divide(q[..., 1:], h[..., None], out=np.zeros_like(q[..., 1:]), where=h[..., None] > dry)
     variables = np.concatenate((h[..., None], z[..., None], vel), axis=-1)
@@ -23,7 +23,17 @@ def traces(*, q, z, dry, axis, limiter):
     ahead = np.roll(variables, -1, axis=axis) - variables
     back[..., 0] += back[..., 1]
     ahead[..., 0] += ahead[..., 1]
-    slope = limited(left=back, right=ahead, limiter=limiter)
+    if limiter == "adaptive":
+        ha, hb = np.roll(h, 1, axis=axis), np.roll(h, -1, axis=axis)
+        normal = vel[..., 1-axis]
+        ua, ub = np.roll(normal, 1, axis=axis), np.roll(normal, -1, axis=axis)
+        ca, cb = np.sqrt(gravity * ha), np.sqrt(gravity * hb)
+        crossing = ((ua > .8*ca) & (ub < 1.25*cb) & (hb > ha)) | ((ua > -1.25*ca) & (ub < -.8*cb) & (ha > hb))
+        shock = (ua > ub) & (np.abs(ha-hb) > 0.04*np.minimum(ha,hb)) & crossing
+        slope = np.where(shock[..., None], limited(left=back, right=ahead, limiter="minmod"),
+                         limited(left=back, right=ahead, limiter="mc"))
+    else:
+        slope = limited(left=back, right=ahead, limiter=limiter)
     # Limit each bed extrapolation to half the centre-to-centre bed change.
     original_bed = slope[..., 1].copy()
     bound = np.minimum(np.abs(back[..., 1]), np.abs(ahead[..., 1]))
@@ -45,7 +55,7 @@ def traces(*, q, z, dry, axis, limiter):
 
 
 def directional(*, q, z, g, dry, axis, limiter):
-    minus, plus, eta, dz = traces(q=q, z=z, dry=dry, axis=axis, limiter=limiter)
+    minus, plus, eta, dz = traces(q=q, z=z, dry=dry, axis=axis, limiter=limiter, gravity=g)
     order = [0, 1, 2] if axis == 1 else [0, 2, 1]
     lower = np.take(minus, [0], axis=axis)[..., order].copy()
     upper = np.take(plus, [-1], axis=axis)[..., order].copy()

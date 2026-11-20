@@ -25,9 +25,11 @@ def profile(*, solver, state, duration):
     return result
 
 
-def record(*, state, factor, method, device, duration, repeats, kernel_interval):
+def record(*, state, factor, method, device, duration, repeats, kernel_interval, mode="dense"):
     data, info = geometry(state=state, factor=factor)
     s = replay_solver(data=data, state=state, factor=factor, method=method, device=device)
+    if mode != "dense":
+        s.configure_execution(mode=mode)
     start = s.capture_state()
     warm = timed(solver=s, duration=duration, samples=1)
     expected = s.get_conservative_state()
@@ -41,6 +43,7 @@ def record(*, state, factor, method, device, duration, repeats, kernel_interval)
     row = dict(
         dx=s.dx,
         method=method,
+        mode=mode,
         shape=s._shape,
         geometry=info,
         start_s=state["time"],

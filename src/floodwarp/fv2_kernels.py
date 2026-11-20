@@ -4,6 +4,43 @@ import warp as wp
 
 from floodwarp.full_swe_kernels import hll, hll_speeds, stage_boundary_state
 
+# FV2-only HLL flux reusing the wave bounds already needed for the CFL.
+# Preserve the exact arithmetic of full_swe_kernels.hll; test parity on wet and dry faces.
+@wp.func
+def hll_fv2_precomputed(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, flux_mode: int, speeds: wp.vec2d):
+    ul = wp.vec2d(wp.float64(0.0))
+    ur = wp.vec2d(wp.float64(0.0))
+    if left[0] > dry:
+        ul = wp.vec2d(left[1],left[2])/left[0]
+    if right[0] > dry:
+        ur = wp.vec2d(right[1],right[2])/right[0]
+    sl = speeds[0]
+    sr = speeds[1]
+    fl = wp.vec3d(left[1], left[1] * ul[0] + wp.float64(0.5) * g * left[0] * left[0], left[1] * ul[1])
+    fr = wp.vec3d(right[1], right[1] * ur[0] + wp.float64(0.5) * g * right[0] * right[0], right[1] * ur[1])
+    result = wp.vec3d(wp.float64(0.0))
+    if sl >= wp.float64(0.0):
+        result = fl
+    elif sr <= wp.float64(0.0):
+        result = fr
+    elif sr > sl:
+        result = (sr * fl - sl * fr + sl * sr * (right - left)) / (sr - sl)
+        if flux_mode == 1 or flux_mode == 3:
+            # Algebraically equivalent to the contact speed estimate; its
+            # denominator is positive for a nondegenerate wet HLL star state.
+            dl = left[0]*(ul[0]-sl)
+            dr = right[0]*(sr-ur[0])
+            denominator = dl+dr
+            if denominator > wp.float64(0.0):
+                contact = (sr*dl+sl*dr)/denominator
+                tangent = ur[1]
+                if contact >= wp.float64(0.0):
+                    tangent = ul[1]
+                result[2] = result[0]*tangent
+            # Degenerate star states retain the finite conservative HLL value.
+    return result
+
+
 
 @wp.func
 def scheduled_index(thread: int, work: wp.array(dtype=wp.int32)):
@@ -65,7 +102,7 @@ def indices(face: int, axis: int, nx: int, ny: int):
 def drag(q: wp.vec3d, n: wp.float64, dt: wp.float64, g: wp.float64, dry: wp.float64):
     if q[0] <= dry:
         return wp.vec3d(q[0], wp.float64(0.0), wp.float64(0.0))
-    if n == wp.float64(0.0):
+    if n == wp.float64(0.0) or (q[1] == wp.float64(0.0) and q[2] == wp.float64(0.0)):
         return q
     beta = (
         dt * g * n * n * wp.length(wp.vec2d(q[1], q[2])) / wp.pow(q[0], (wp.float64(7.0) / wp.float64(3.0)))
@@ -86,6 +123,9 @@ def water_exchange(
 ):
     # Explicit midpoint for cumulative infiltration, with a finite supply.
     added = rain * dt
+    if f0 == cond and infil == wp.float64(0.0) and cond == wp.float64(0.0):
+        factor = wp.where(q[0] > wp.float64(0.0), wp.float64(1.0), wp.float64(0.0))
+        return wp.vec4d(q[0] + added, factor, added, wp.float64(0.0))
     initial = (f0 - cond) * wp.exp(-soil / fd)
     base = infil + cond
     mid = wp.float64(0.5) * wp.min(q[0] + added, dt * (base + initial))
@@ -153,6 +193,19 @@ def split_sources(
 
 
 @wp.func
+def compression_rule(left: wp.vec3d, right: wp.vec3d, axis: int, gravity: wp.float64):
+    # A compressing acoustic family straddles zero at a stationary jump.
+    ul = left[axis + 1] / left[0]
+    ur = right[axis + 1] / right[0]
+    if ul > ur and wp.abs(left[0] - right[0]) > wp.float64(0.04) * wp.min(left[0], right[0]):
+        cl = wp.sqrt(gravity * left[0])
+        cr = wp.sqrt(gravity * right[0])
+        if (ul > wp.float64(0.8)*cl and ur < wp.float64(1.25)*cr and right[0] > left[0]) or (ul > -wp.float64(1.25)*cl and ur < -wp.float64(0.8)*cr and left[0] > right[0]):
+            return 0
+    return 1
+
+
+@wp.func
 def slope(
     k: int,
     axis: int,
@@ -163,6 +216,7 @@ def slope(
     ny: int,
     dry: wp.float64,
     mc: int,
+    gravity: wp.float64,
 ):
     a = neighbor(k, axis, -1, nx, ny)
     b = neighbor(k, axis, 1, nx, ny)
@@ -172,9 +226,14 @@ def slope(
     if active[a] == 0 or active[b] == 0 or wp.min(q[k][0], wp.min(q[a][0], q[b][0])) <= dry:
         return wp.vec4d(zero)
     h = q[k][0]
+    if q[a] == q[k] and q[b] == q[k] and bed[a] == bed[k] and bed[b] == bed[k]:
+        return wp.vec4d(zero)
     da = bed[k] - bed[a]
     db = bed[b] - bed[k]
-    geometry = surface_bed_slopes(da, db, h - q[a][0], q[b][0] - h, mc)
+    rule = mc
+    if mc == 2:
+        rule = compression_rule(q[a], q[b], axis, gravity)
+    geometry = surface_bed_slopes(da, db, h - q[a][0], q[b][0] - h, rule)
     se = geometry[0]
     sz = geometry[1]
     velocities = wp.vec2d(q[k][1], q[k][2]) / h
@@ -183,8 +242,8 @@ def slope(
     s = wp.vec4d(
         se,
         sz,
-        limited(velocities[0] - va[0], vb[0] - velocities[0], mc),
-        limited(velocities[1] - va[1], vb[1] - velocities[1], mc),
+        limited(velocities[0] - va[0], vb[0] - velocities[0], rule),
+        limited(velocities[1] - va[1], vb[1] - velocities[1], rule),
     )
     if wp.abs(se - sz) >= wp.float64(2.0) * h:
         # A zero order trace is safer than an almost empty moving face.
@@ -203,11 +262,12 @@ def slopes(
     ny: int,
     dry: wp.float64,
     mc: int,
+    gravity: wp.float64,
     work: wp.array(dtype=wp.int32),
 ):
     k = scheduled_index(wp.tid(), work)
-    sx[k] = slope(k, 0, q, bed, active, nx, ny, dry, mc)
-    sy[k] = slope(k, 1, q, bed, active, nx, ny, dry, mc)
+    sx[k] = slope(k, 0, q, bed, active, nx, ny, dry, mc, gravity)
+    sy[k] = slope(k, 1, q, bed, active, nx, ny, dry, mc, gravity)
 
 
 @wp.func
@@ -216,7 +276,7 @@ def trace(q: wp.vec3d, s: wp.vec4d, side: wp.float64, dry: wp.float64, axis: int
     delta = half * (s[0] - s[1])
     h = q[0] + delta
     v = wp.vec2d(wp.float64(0.0))
-    if q[0] > dry:
+    if q[0] > dry and (q[1] != wp.float64(0.0) or q[2] != wp.float64(0.0) or s[2] != wp.float64(0.0) or s[3] != wp.float64(0.0)):
         v = (wp.vec2d(q[1], q[2]) + half * (q[0] - delta) * wp.vec2d(s[2], s[3])) / q[0]
     if axis == 1:
         v = wp.vec2d(v[1], v[0])
@@ -228,8 +288,111 @@ def cut(q: wp.vec3d, rise: wp.float64, dry: wp.float64):
     h = wp.max(wp.float64(0.0), q[0] - wp.max(wp.float64(0.0), rise))
     factor = wp.float64(0.0)
     if q[0] > dry:
+        if rise <= wp.float64(0.0):
+            return q
         factor = h / q[0]
     return wp.vec3d(h, q[1] * factor, q[2] * factor)
+
+
+@wp.func
+def cut_trace(q: wp.vec3d, s: wp.vec4d, side: wp.float64, rise: wp.float64, axis: int, dry: wp.float64):
+    # Return the hydrostatic depth and the two velocities that multiply it.
+    # A trace already below the dry threshold carries no post-cut momentum.
+    half = wp.float64(0.5) * side
+    delta = half * (s[0] - s[1])
+    original = q[0] + delta
+    depth = wp.max(wp.float64(0.0), original - wp.max(rise, wp.float64(0.0)))
+    velocity = wp.vec2d(wp.float64(0.0))
+    if original > dry and q[0] > dry:
+        velocity = (wp.vec2d(q[1], q[2]) + half * (q[0] - delta) * wp.vec2d(s[2], s[3])) / q[0]
+    if axis == 1:
+        velocity = wp.vec2d(velocity[1], velocity[0])
+    return wp.vec3d(depth, velocity[0], velocity[1])
+
+
+@wp.func
+def primitive_contact(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64):
+    zero = wp.float64(0.0)
+    l = wp.vec3d(left[0], left[0]*left[1], left[0]*left[2])
+    r = wp.vec3d(right[0], right[0]*right[1], right[0]*right[2])
+    ul = left[1]
+    ur = right[1]
+    vl = left[2]
+    vr = right[2]
+    if l[0] <= dry:
+        ul = zero
+        vl = zero
+    if r[0] <= dry:
+        ur = zero
+        vr = zero
+    cl = wp.sqrt(g*l[0])
+    cr = wp.sqrt(g*r[0])
+    sl = wp.min(ul-cl,ur-cr)
+    sr = wp.max(ul+cl,ur+cr)
+    if r[0] <= dry:
+        sl = ul-cl
+        sr = ul+wp.float64(2.0)*cl
+    if l[0] <= dry:
+        sl = ur-wp.float64(2.0)*cr
+        sr = ur+cr
+    fl = wp.vec3d(l[1], l[1]*ul + wp.float64(0.5)*g*l[0]*l[0], l[1]*vl)
+    fr = wp.vec3d(r[1], r[1]*ur + wp.float64(0.5)*g*r[0]*r[0], r[1]*vr)
+    result = fl
+    if sl < zero:
+        result = fr
+        if sr > zero:
+            result = (sr*fl-sl*fr+sl*sr*(r-l))/(sr-sl)
+            dl = l[0]*(ul-sl)
+            dr = r[0]*(sr-ur)
+            if dl+dr > zero:
+                result[2] = result[0]*wp.where(sr*dl+sl*dr >= zero, vl, vr)
+    return wp.vec4d(result[0], result[1], result[2], wp.max(wp.abs(sl),wp.abs(sr)))
+
+
+
+# Compact contiguous runs of face indices. The list is rebuilt from each
+# post-source RK stage. Every excluded face has exactly zero incident depth.
+TILE_FACES = 32
+
+
+@wp.kernel
+def reset_tiles(x: wp.array(dtype=wp.int32), y: wp.array(dtype=wp.int32)):
+    x[0] = 0
+    y[0] = 0
+
+
+@wp.kernel
+def schedule_faces(
+    q: wp.array(dtype=wp.vec3d),
+    active: wp.array(dtype=wp.int32),
+    types: wp.array(dtype=wp.int32),
+    flux: wp.array(dtype=wp.vec3d),
+    pressure: wp.array(dtype=wp.vec2d),
+    tiles: wp.array(dtype=wp.int32),
+    nx: int, ny: int, axis: int,
+):
+    tile = wp.tid()
+    first = tile * TILE_FACES
+    end = wp.min(first + TILE_FACES, flux.shape[0])
+    live = bool(False)
+    for k in range(first, end):
+        ab = indices(k, axis, nx, ny)
+        if types[k] == 3:
+            live = True
+            break
+        for side in range(2):
+            cell = ab[side]
+            if cell >= 0 and active[cell] != 0 and q[cell][0] != wp.float64(0.0):
+                live = True
+        if live:
+            break
+    if live:
+        slot = wp.atomic_add(tiles, 0, 1)
+        tiles[1 + slot] = tile
+    else:
+        for k in range(first, end):
+            flux[k] = wp.vec3d(wp.float64(0.0))
+            pressure[k] = wp.vec2d(wp.float64(0.0))
 
 
 @wp.kernel
@@ -253,9 +416,20 @@ def faces(
     cfl: wp.float64,
     mode: int,
     sparse: int,
+    tiles: wp.array(dtype=wp.int32),
     work: wp.array(dtype=wp.int32),
 ):
-    k = scheduled_index(wp.tid(), work)
+    thread = wp.tid()
+    k = thread
+    if tiles.shape[0] > 0:
+        slot = thread / TILE_FACES
+        if slot >= tiles[0]:
+            return
+        k = tiles[slot + 1] * TILE_FACES + thread % TILE_FACES
+        if k >= flux.shape[0]:
+            return
+    else:
+        k = scheduled_index(thread, work)
     pair = indices(k, axis, nx, ny)
     a = pair[0]
     b = pair[1]
@@ -270,15 +444,20 @@ def faces(
         return
     l = wp.vec3d(zero)
     r = wp.vec3d(zero)
-    if al:
-        l = trace(q[a], s[a], wp.float64(1.0), dry, axis)
-    if ar:
-        r = trace(q[b], s[b], wp.float64(-1.0), dry, axis)
+    speed = zero
+    f = wp.vec3d(zero)
     if al and ar:
         rise = (bed[b] - bed[a]) - wp.float64(0.5) * (s[a][1] + s[b][1])
-        l = cut(l, rise, dry)
-        r = cut(r, -rise, dry)
+        l = cut_trace(q[a], s[a], wp.float64(1.0), rise, axis, dry)
+        r = cut_trace(q[b], s[b], wp.float64(-1.0), -rise, axis, dry)
+        result = primitive_contact(l, r, g, dry)
+        f = wp.vec3d(result[0], result[1], result[2])
+        speed = result[3]
     else:
+        if al:
+            l = trace(q[a], s[a], wp.float64(1.0), dry, axis)
+        if ar:
+            r = trace(q[b], s[b], wp.float64(-1.0), dry, axis)
         inside = r
         cell = b
         outward = wp.float64(-1.0)
@@ -302,9 +481,9 @@ def faces(
             r = ghost
         else:
             l = ghost
-    f = hll(l, r, g, dry, 1)
-    speeds = hll_speeds(l, r, g, dry, 1)
-    speed = wp.max(wp.abs(speeds[0]), wp.abs(speeds[1]))
+        speeds = hll_speeds(l, r, g, dry, 1)
+        f = hll_fv2_precomputed(l, r, g, dry, 1, speeds)
+        speed = wp.max(wp.abs(speeds[0]), wp.abs(speeds[1]))
     if speed > zero:
         wp.atomic_min(ctrl, 17, wp.float64(0.5) * spacing * cfl / speed)
     if al != ar and types[k] <= 1:

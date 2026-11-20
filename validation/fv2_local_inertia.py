@@ -152,7 +152,7 @@ def domain(*, case, dx, duration, gravity, near_zero_n, length, width):
 
 def build(*, d, method, dx, cap, device, gravity):
     li = method == "li"
-    key = method if li else ("fv2" if method in ("mc", "minmod") else "fv1")
+    key = method if li else ("fv2" if method in ("mc", "minmod", "adaptive") else "fv1")
     kw = (
         dict(
             track_cumulative_face_volumes=True,

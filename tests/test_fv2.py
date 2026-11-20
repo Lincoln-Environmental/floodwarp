@@ -8,7 +8,7 @@ from floodwarp.solver_factory import create_overland_solver
 
 
 @pytest.mark.parametrize("device", ("cpu", "cuda:0"))
-@pytest.mark.parametrize("limiter", ("minmod", "mc"))
+@pytest.mark.parametrize("limiter", ("minmod", "mc", "adaptive"))
 def test_fv2_oracle_and_restart(device, limiter, tmp_path):
     if device.startswith("cuda") and not wp.is_cuda_available():
         pytest.skip("CUDA unavailable")

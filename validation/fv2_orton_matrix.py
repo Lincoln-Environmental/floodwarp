@@ -98,9 +98,11 @@ def replay_solver(*, data, state, factor, method, device, fv2_class=FV2Solver):
         nx=mask.shape[1],
         dx=5.0 * factor,
         dy=5.0 * factor,
-        flux_scheme="contact_hll" if method == "fv2_mc" else method,
+        flux_scheme="contact_hll" if method in ("fv2_mc", "fv2_adaptive") else method,
     )
-    factory = fv2_class if method == "fv2_mc" else FullSWESolver
+    factory = fv2_class if method in ("fv2_mc", "fv2_adaptive") else FullSWESolver
+    if method == "fv2_adaptive":
+        config["limiter"] = "adaptive"
     s = factory(
         **config,
         bed_elevation=data["bed"],

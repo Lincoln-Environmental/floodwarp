@@ -14,9 +14,10 @@ class FV2Solver(FullSWESolver):
     ):
         if structures:
             raise ValueError("FV2 does not support stage-consistent culvert exchange")
-        if limiter not in ("mc", "minmod") or flux_scheme != "contact_hll":
-            raise ValueError("FV2 requires contact_hll and limiter mc or minmod")
+        if limiter not in ("mc", "minmod", "adaptive") or flux_scheme != "contact_hll":
+            raise ValueError("FV2 requires contact_hll and limiter mc, minmod or adaptive")
         self.limiter = limiter
+        self._limiter_code = {"minmod": 0, "mc": 1, "adaptive": 2}[limiter]
         super().__init__(execution_mode=execution_mode, flux_scheme=flux_scheme, **options)
         self.ctrl = wp.zeros(18, dtype=wp.float64, device=self.device)
         count = self.nx * self.ny
@@ -37,11 +38,19 @@ class FV2Solver(FullSWESolver):
         self._diagnostics = None
 
     def configure_execution(self, *, mode, tile_size=8, dense_fraction=0.65):
-        if mode not in ("dense", "sparse"):
-            raise ValueError("FV2 execution mode must be dense or sparse")
-        self._omit_dry = int(mode == "sparse")
+        if mode not in ("dense", "sparse", "dynamic"):
+            raise ValueError("FV2 execution mode must be dense, sparse or dynamic")
+        self._omit_dry = int(mode != "dense")
+        self._dynamic = mode == "dynamic"
         dense = wp.empty(0, dtype=wp.int32, device=self.device)
         self._work_indices = [dense, dense, dense]
+        self._face_tiles = [dense, dense]
+        if self._dynamic:
+            self._face_tiles = [
+                wp.zeros(1 + (self._fields["flux_" + axis].size + k.TILE_FACES - 1) // k.TILE_FACES,
+                         dtype=wp.int32, device=self.device)
+                for axis in ("x", "y")
+            ]
         if self._omit_dry and not self._active.all():
             mask = self._active
             live_x = np.pad(mask, ((0, 0), (1, 0))) | np.pad(mask, ((0, 0), (0, 1)))
@@ -54,9 +63,9 @@ class FV2Solver(FullSWESolver):
 
     def execution_diagnostics(self):
         return dict(
-            execution="active_mask_and_dry_face_omission" if self._omit_dry else "dense_uniform",
+            execution="dynamic_face_tiles" if self._dynamic else ("active_mask_and_dry_face_omission" if self._omit_dry else "dense_uniform"),
             storage="dense",
-            scheduling_bytes=sum(a.capacity for a in self._work_indices),
+            scheduling_bytes=sum(a.capacity for a in (*self._work_indices, *self._face_tiles)),
             scheduled_indices=[a.size for a in self._work_indices],
         )
 
@@ -169,19 +178,30 @@ class FV2Solver(FullSWESolver):
                     self.nx,
                     self.ny,
                     self.dry_depth,
-                    int(self.limiter == "mc"),
+                    self._limiter_code,
+                    self.gravity,
                 ],
                 layout=0,
             )
+            if self._dynamic:
+                self._launch(k.reset_tiles, 1, self._face_tiles)
             for axis, name, spacing in ((0, "x", self.dx), (1, "y", self.dy)):
                 if stage and self._stage_identity[name] is not None:
                     self._launch(
                         k.forcing_time, 1, [*self._stage_series[name], self._samples[axis], ctrl, stage]
                     )
                 flux = self._flux[stage][axis]
-                self._launch_grid(
+                tiles = self._face_tiles[axis]
+                indices = self._work_indices[axis + 1]
+                threads = indices.size or flux.size
+                if self._dynamic:
+                    self._launch(k.schedule_faces, tiles.size - 1,
+                                 [q, f["active"], f["types_" + name], flux, f["pressure_" + name],
+                                  tiles, self.nx, self.ny, axis])
+                    threads = (tiles.size - 1) * k.TILE_FACES
+                self._launch(
                     k.faces,
-                    flux.size,
+                    threads,
                     [
                         q,
                         f["bed"],
@@ -202,8 +222,9 @@ class FV2Solver(FullSWESolver):
                         self.cfl,
                         self._stage_momentum_mode,
                         self._omit_dry,
+                        tiles,
+                        indices,
                     ],
-                    layout=axis + 1,
                 )
             self._launch_grid(
                 k.donor_budget,

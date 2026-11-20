@@ -10,14 +10,14 @@ from validation.fv2_accuracy import configured, manufactured_average, manufactur
 from floodwarp.fv2_reference import limited, traces
 
 
-def fixed_time_space(*, grids, dt, length, duration, device, bed_amplitude=0.0):
+def fixed_time_space(*, grids, dt, length, duration, device, bed_amplitude=0.0, limiter="mc"):
     rows = []
     for n in grids:
         reference = manufactured_average(n=n, t=duration)
         solutions = []
         for cap in (dt, dt / 2):
             q, stats = manufactured_run(
-                n=n, dt=cap, length=length, duration=duration, device=device, bed_amplitude=bed_amplitude
+                n=n, dt=cap, length=length, duration=duration, device=device, bed_amplitude=bed_amplitude, limiter=limiter
             )
             solutions.append(q)
         r = np.sqrt(np.mean((solutions[-1] - reference) ** 2, axis=(0, 1)))

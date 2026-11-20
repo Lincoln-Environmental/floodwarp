@@ -11,7 +11,7 @@ from validation.fv2_terrain import compare, refined, run_domain, terrain
 
 
 def reference_check(
-    *, cases, spacings, base_dx, fine_grids, length, width, device, samples, wet, output
+    *, cases, spacings, base_dx, fine_grids, length, width, device, samples, wet, output, candidates=("fv1", "mc")
 ):
     rows = []
     for case in cases:
@@ -62,7 +62,7 @@ def reference_check(
             time_error = differences(run=ref, truth=small, spacing=finest)
             tests = []
             for dx in (base_dx,) if fixed else spacings:
-                for m in ("fv1", "mc"):
+                for m in candidates:
                     result = calculate(dx=dx, method=m, ratio=32.0)
                     tests.append(
                         dict(

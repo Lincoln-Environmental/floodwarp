@@ -3,7 +3,7 @@
 import numpy as np
 import warp as wp
 
-from floodwarp.fv2_kernels import indices, neighbor, surface_bed_slopes
+from floodwarp.fv2_kernels import compression_rule, indices, neighbor, surface_bed_slopes
 
 
 @wp.func
@@ -17,6 +17,7 @@ def reason(
     ny: int,
     dry: wp.float64,
     mc: int,
+    gravity: wp.float64,
 ):
     if k < 0 or active[wp.max(0, k)] == 0:
         return 0
@@ -30,7 +31,10 @@ def reason(
         return 3
     la = bed[k] - bed[a]
     rb = bed[b] - bed[k]
-    geometry = surface_bed_slopes(la, rb, q[k][0] - q[a][0], q[b][0] - q[k][0], mc)
+    rule = mc
+    if mc == 2:
+        rule = compression_rule(q[a], q[b], axis, gravity)
+    geometry = surface_bed_slopes(la, rb, q[k][0] - q[a][0], q[b][0] - q[k][0], rule)
     dh = geometry[0] - geometry[1]
     if wp.abs(dh) >= wp.float64(2.0) * q[k][0]:
         return 2
@@ -53,6 +57,7 @@ def measure(
     width: wp.float64,
     dry: wp.float64,
     mc: int,
+    gravity: wp.float64,
 ):
     if ctrl[2] > ctrl[17] or ctrl[7] != wp.float64(0.0):
         return
@@ -64,7 +69,7 @@ def measure(
         cell = pair[side]
         if cell >= 0 and active[wp.max(0, cell)] != 0:
             depth = wp.max(depth, q[cell][0])
-            why = wp.max(why, reason(cell, axis, q, bed, active, nx, ny, dry, mc))
+            why = wp.max(why, reason(cell, axis, q, bed, active, nx, ny, dry, mc, gravity))
     if depth > wp.float64(0.0) or f[k][0] != wp.float64(0.0):
         band = int(0)
         for i in range(edges.shape[0]):
@@ -110,7 +115,8 @@ class ReconstructionDiagnostics:
                         axis,
                         width,
                         s.dry_depth,
-                        int(s.limiter == "mc"),
+                        s._limiter_code,
+                        s.gravity,
                     ],
                 )
 

@@ -43,7 +43,7 @@ def steady(*, case, dx, length, width, g):
     return Domain(dx=dx, bed=bed, initial=q, duration=16.0, manning=n, stage_x=tuple((bed + h)[0, [0, -1]]))
 
 
-def controls(*, spacings, device):
+def controls(*, spacings, device, methods=("fv1", "minmod", "mc")):
     rows = []
     for dx in spacings:
         for case in ("uniform", "gradual", "oblique", "smooth_shear"):
@@ -73,7 +73,7 @@ def controls(*, spacings, device):
                 x, y = coordinates(length=640.0, width=40.0, dx=dx)
                 window = np.abs(x) < 120.0
                 expected = d.initial
-            for method in ("fv1", "minmod", "mc"):
+            for method in methods:
                 s = configured(domain=d, method=method, cap=dx / 32.0, device=device)
                 stats = s.run_device_loop(duration=d.duration)
                 result = s.get_conservative_state()
