@@ -111,6 +111,15 @@ def drag(q: wp.vec3d, n: wp.float64, dt: wp.float64, g: wp.float64, dry: wp.floa
 
 
 @wp.func
+def decay(x: wp.float64):
+    # Taylor remainder <= (1/256)^6 / 6! < 5e-18 on the polynomial branch.
+    if x >= wp.float64(0.0) and x < wp.float64(1.0 / 256.0):
+        return wp.float64(1.0) - x * (wp.float64(1.0) - x * (wp.float64(0.5) -
+            x * (wp.float64(1.0 / 6.0) - x * (wp.float64(1.0 / 24.0) - x * wp.float64(1.0 / 120.0)))))
+    return wp.exp(-x)
+
+
+@wp.func
 def water_exchange(
     q: wp.vec3d,
     soil: wp.float64,
@@ -129,7 +138,7 @@ def water_exchange(
     initial = (f0 - cond) * wp.exp(-soil / fd)
     base = infil + cond
     mid = wp.float64(0.5) * wp.min(q[0] + added, dt * (base + initial))
-    removed = wp.min(q[0] + added, dt * (base + initial * wp.exp(-mid / fd)))
+    removed = wp.min(q[0] + added, dt * (base + initial * decay(mid / fd)))
     h = (q[0] + added) - removed
     factor = wp.float64(0.0)
     if h > wp.float64(0.0) and q[0] > wp.float64(0.0):
@@ -137,9 +146,24 @@ def water_exchange(
         delta = added - removed
         inverse = wp.float64(2.0) / (q[0] + h)
         if wp.abs(delta) > wp.float64(1.0e-5) * q[0]:
-            inverse = wp.log(h / q[0]) / delta
-        factor = wp.exp(-removed * inverse)
+            r = delta / (q[0] + h)
+            if wp.abs(r) < wp.float64(0.01):
+                # log(h/h0)/delta = 2*atanh(r)/(r*(h+h0)).
+                # Relative tail beyond r^6 is below 1.2e-17.
+                rr = r * r
+                inverse *= wp.float64(1.0) + rr * (wp.float64(1.0/3.0) + rr *
+                           (wp.float64(1.0/5.0) + rr * wp.float64(1.0/7.0)))
+            else:
+                inverse = wp.log(h / q[0]) / delta
+        factor = decay(removed * inverse)
     return wp.vec4d(h, factor, added, removed)
+
+
+@wp.func
+def wet_inverse(h: wp.float64, dry: wp.float64):
+    if h > dry:
+        return wp.float64(1.0) / h
+    return wp.float64(0.0)
 
 
 @wp.kernel
@@ -147,6 +171,7 @@ def split_sources(
     q: wp.array(dtype=wp.vec3d),
     start: wp.array(dtype=wp.vec3d),
     end: wp.array(dtype=wp.vec3d),
+    inverse: wp.array(dtype=wp.float64),
     active: wp.array(dtype=wp.int32),
     n: wp.array(dtype=wp.float64),
     soil: wp.array(dtype=wp.float64),
@@ -181,6 +206,7 @@ def split_sources(
     state = wp.vec3d(change[0], state[1] * change[1], state[2] * change[1])
     if stage == 0:
         start[k] = drag(state, n[k], dt, g, dry)
+        inverse[k] = wet_inverse(state[0], dry)
         amounts[k] = wp.vec2d(change[2], change[3])
     else:
         if state[0] <= dry:
@@ -205,11 +231,22 @@ def compression_rule(left: wp.vec3d, right: wp.vec3d, axis: int, gravity: wp.flo
     return 1
 
 
+@wp.kernel
+def inverse_depth(q: wp.array(dtype=wp.vec3d), inverse: wp.array(dtype=wp.float64), dry: wp.float64,
+                  work: wp.array(dtype=wp.int32)):
+    k = scheduled_index(wp.tid(), work)
+    value = wp.float64(0.0)
+    if q[k][0] > dry:
+        value = wp.float64(1.0) / q[k][0]
+    inverse[k] = value
+
+
 @wp.func
 def slope(
     k: int,
     axis: int,
     q: wp.array(dtype=wp.vec3d),
+    inverse: wp.array(dtype=wp.float64),
     bed: wp.array(dtype=wp.float64),
     active: wp.array(dtype=wp.int32),
     nx: int,
@@ -236,9 +273,9 @@ def slope(
     geometry = surface_bed_slopes(da, db, h - q[a][0], q[b][0] - h, rule)
     se = geometry[0]
     sz = geometry[1]
-    velocities = wp.vec2d(q[k][1], q[k][2]) / h
-    va = wp.vec2d(q[a][1], q[a][2]) / q[a][0]
-    vb = wp.vec2d(q[b][1], q[b][2]) / q[b][0]
+    velocities = wp.vec2d(q[k][1], q[k][2]) * inverse[k]
+    va = wp.vec2d(q[a][1], q[a][2]) * inverse[a]
+    vb = wp.vec2d(q[b][1], q[b][2]) * inverse[b]
     s = wp.vec4d(
         se,
         sz,
@@ -254,6 +291,7 @@ def slope(
 @wp.kernel
 def slopes(
     q: wp.array(dtype=wp.vec3d),
+    inverse: wp.array(dtype=wp.float64),
     bed: wp.array(dtype=wp.float64),
     active: wp.array(dtype=wp.int32),
     sx: wp.array(dtype=wp.vec4d),
@@ -266,8 +304,8 @@ def slopes(
     work: wp.array(dtype=wp.int32),
 ):
     k = scheduled_index(wp.tid(), work)
-    sx[k] = slope(k, 0, q, bed, active, nx, ny, dry, mc, gravity)
-    sy[k] = slope(k, 1, q, bed, active, nx, ny, dry, mc, gravity)
+    sx[k] = slope(k, 0, q, inverse, bed, active, nx, ny, dry, mc, gravity)
+    sy[k] = slope(k, 1, q, inverse, bed, active, nx, ny, dry, mc, gravity)
 
 
 @wp.func
@@ -295,7 +333,7 @@ def cut(q: wp.vec3d, rise: wp.float64, dry: wp.float64):
 
 
 @wp.func
-def cut_trace(q: wp.vec3d, s: wp.vec4d, side: wp.float64, rise: wp.float64, axis: int, dry: wp.float64):
+def cut_trace(q: wp.vec3d, inverse: wp.float64, s: wp.vec4d, side: wp.float64, rise: wp.float64, axis: int, dry: wp.float64):
     # Return the hydrostatic depth and the two velocities that multiply it.
     # A trace already below the dry threshold carries no post-cut momentum.
     half = wp.float64(0.5) * side
@@ -304,7 +342,7 @@ def cut_trace(q: wp.vec3d, s: wp.vec4d, side: wp.float64, rise: wp.float64, axis
     depth = wp.max(wp.float64(0.0), original - wp.max(rise, wp.float64(0.0)))
     velocity = wp.vec2d(wp.float64(0.0))
     if original > dry and q[0] > dry:
-        velocity = (wp.vec2d(q[1], q[2]) + half * (q[0] - delta) * wp.vec2d(s[2], s[3])) / q[0]
+        velocity = (wp.vec2d(q[1], q[2]) + half * (q[0] - delta) * wp.vec2d(s[2], s[3])) * inverse
     if axis == 1:
         velocity = wp.vec2d(velocity[1], velocity[0])
     return wp.vec3d(depth, velocity[0], velocity[1])
@@ -398,6 +436,7 @@ def schedule_faces(
 @wp.kernel
 def faces(
     q: wp.array(dtype=wp.vec3d),
+    inverse: wp.array(dtype=wp.float64),
     bed: wp.array(dtype=wp.float64),
     active: wp.array(dtype=wp.int32),
     s: wp.array(dtype=wp.vec4d),
@@ -448,8 +487,8 @@ def faces(
     f = wp.vec3d(zero)
     if al and ar:
         rise = (bed[b] - bed[a]) - wp.float64(0.5) * (s[a][1] + s[b][1])
-        l = cut_trace(q[a], s[a], wp.float64(1.0), rise, axis, dry)
-        r = cut_trace(q[b], s[b], wp.float64(-1.0), -rise, axis, dry)
+        l = cut_trace(q[a], inverse[a], s[a], wp.float64(1.0), rise, axis, dry)
+        r = cut_trace(q[b], inverse[b], s[b], wp.float64(-1.0), -rise, axis, dry)
         result = primitive_contact(l, r, g, dry)
         f = wp.vec3d(result[0], result[1], result[2])
         speed = result[3]
@@ -544,6 +583,8 @@ def limit_faces(
 def euler(
     q: wp.array(dtype=wp.vec3d),
     dest: wp.array(dtype=wp.vec3d),
+    inverse: wp.array(dtype=wp.float64),
+    stage: int,
     active: wp.array(dtype=wp.int32),
     sx: wp.array(dtype=wp.vec4d),
     sy: wp.array(dtype=wp.vec4d),
@@ -562,6 +603,8 @@ def euler(
     k = scheduled_index(wp.tid(), work)
     if active[k] == 0 or ctrl[2] > ctrl[17] or ctrl[7] != wp.float64(0.0):
         dest[k] = q[k]
+        if stage == 0:
+            inverse[k] = wet_inverse(q[k][0], dry)
         return
     w = k + k / nx
     h = q[k][0]
@@ -584,6 +627,8 @@ def euler(
         v[1] = wp.float64(0.0)
         v[2] = wp.float64(0.0)
     dest[k] = v
+    if stage == 0:
+        inverse[k] = wet_inverse(v[0], dry)
 
 
 @wp.kernel

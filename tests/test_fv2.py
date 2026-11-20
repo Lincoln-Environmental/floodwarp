@@ -246,7 +246,7 @@ def test_fv2_retry_has_one_accepted_step_on_host_and_device():
 
 
 @pytest.mark.parametrize("axis", (0, 1))
-@pytest.mark.parametrize("mode", ("dense", "sparse"))
+@pytest.mark.parametrize("mode", ("dense", "sparse", "dynamic"))
 def test_stage_reservoir_on_mask_has_perimeter_inflow(axis, mode):
     def run(*, border):
         shape = (6 + 2 * border, 8 + 2 * border)
@@ -288,7 +288,7 @@ def test_stage_reservoir_on_mask_has_perimeter_inflow(axis, mode):
     np.testing.assert_allclose(internal, perimeter, rtol=1.0e-14)
 
 
-@pytest.mark.parametrize("mode", ("dense", "sparse"))
+@pytest.mark.parametrize("mode", ("dense", "sparse", "dynamic"))
 def test_thin_fast_films_on_steep_bed_with_rapid_sources(mode):
     rng = np.random.default_rng(seed=20261120)
     shape = (13, 23)

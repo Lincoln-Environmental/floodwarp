@@ -26,6 +26,7 @@ class FV2Solver(FullSWESolver):
         # All neighbour reads finish in face kernels. The final Euler update
         # only reads its own cell and can overwrite the first-stage state.
         self._end = self._stage
+        self._inverse = wp.empty(count, dtype=wp.float64, device=self.device)
         self._slopes = [wp.zeros(count, dtype=wp.vec4d, device=self.device) for _ in range(2)]
         self._amounts = wp.zeros(count, dtype=wp.vec2d, device=self.device)
         self._flux = [[wp.zeros_like(self._fields["flux_" + axis]) for axis in ("x", "y")] for _ in range(2)]
@@ -149,6 +150,7 @@ class FV2Solver(FullSWESolver):
             self.q,
             self._start,
             self._end,
+            self._inverse,
             f["active"],
             f["manning"],
             f["soil"],
@@ -167,11 +169,15 @@ class FV2Solver(FullSWESolver):
         ]
         self._launch_grid(k.split_sources, n, [*source_args, 0], layout=0)
         for stage, (q, dest) in enumerate(((self._start, self._stage), (self._stage, self._end))):
+            if stage and type(self)._stage_forcing is not FV2Solver._stage_forcing:
+                # A manufactured residual may change depth after the Euler kernel.
+                self._launch_grid(k.inverse_depth, n, [q, self._inverse, self.dry_depth], layout=0)
             self._launch_grid(
                 k.slopes,
                 n,
                 [
                     q,
+                    self._inverse,
                     f["bed"],
                     f["active"],
                     *self._slopes,
@@ -204,6 +210,7 @@ class FV2Solver(FullSWESolver):
                     threads,
                     [
                         q,
+                        self._inverse,
                         f["bed"],
                         f["active"],
                         self._slopes[axis],
@@ -245,6 +252,8 @@ class FV2Solver(FullSWESolver):
                 [
                     q,
                     dest,
+                    self._inverse,
+                    stage,
                     f["active"],
                     *self._slopes,
                     *self._flux[stage],
