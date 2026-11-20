@@ -124,7 +124,7 @@ def compare(*, tile, spacings, methods, cap, sample, work, device, wet, output):
 
 if __name__ == "__main__":
     directory = Path("validation/fv2_review")
-    work = Path("outputs/fv2_hirds_native_tile")
+    work = Path("outputs/fv2_hirds_native_ordered_bed")
     source = Path(
         "../floodfm_data/examples/purau_point_1575902_5166615_catchment_model/model_inputs.npz"
     )

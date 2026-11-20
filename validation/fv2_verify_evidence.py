@@ -122,6 +122,17 @@ def check(
     p_time = np.log2(np.array(time[-2]["rmse"]) / time[-1]["rmse"])
     if min(*p_space, *p_time) < 1.8:
         raise AssertionError("Smooth convergence gate failed")
+    curved = record(name="additional.json")
+    curved_orders = {}
+    for label in ("curved_bed_spatial", "curved_bed_temporal"):
+        rows = curved[label]
+        measured = np.log2(np.array(rows[-2]["rmse"]) / rows[-1]["rmse"])
+        assert min(measured) > 1.8
+        curved_orders[label] = measured.tolist()
+    face_audit = record(name="bed_face_audit.json")
+    assert all(row["reversed"] == 0 for row in face_audit["whole_snapshot_face_order"]["corrected"].values())
+    assert face_audit["instantaneous_flux_on_identical_archived_state"]["corrected"]["mass_flux_m2_s"] > 0
+    revisions = {}
     rain = []
     residuals = []
     for dx in grids:
@@ -134,6 +145,11 @@ def check(
                 2880,
             )
             np.testing.assert_array_equal([h["t"] for h in r["hydrograph"]], np.arange(60, 172801, 60))
+            if method == "fv2_mc":
+                with np.load(Path(r["origin"])) as archive:
+                    cfg = json.loads(str(archive["metadata"]))["configuration"]
+                assert cfg["reconstruction"] == "muscl_ordered_bed_velocity_v2"
+                revisions[dx] = cfg["reconstruction"]
             assert r["minimum_depth_m"] >= 0.0
             area = r["forcing"]["integrated_volume_m3"]
             np.testing.assert_allclose(r["ledger"]["rain"], area, rtol=1.0e-10)
@@ -160,6 +176,9 @@ def check(
     assert len(auxiliary["rows"]) == 15
     assert all(r["time_s"] == 172800.0 for r in auxiliary["rows"])
     results = dict(
+        terrain_reconstruction=revisions,
+        curved_bed_orders=curved_orders,
+        corrected_uphill_sign_reversals=0,
         analytical_runs=len(all_cases),
         lake_max_depth_drift_m=max_drift,
         max_normalised_analytical_balance=max_balance,
@@ -233,7 +252,7 @@ def check(
 
 if __name__ == "__main__":
     directory = Path("validation/fv2_review")
-    test_log = Path("outputs/fv2_qualification_tests.log")
+    test_log = Path("outputs/fv2_ordered_bed_suite.log")
     check(
         directory=directory,
         grids=(5, 10, 20),

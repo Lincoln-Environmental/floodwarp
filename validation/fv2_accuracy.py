@@ -64,6 +64,7 @@ def manufactured_source(
     dx: wp.float64,
     length: wp.float64,
     g: wp.float64,
+    bed_amplitude: wp.float64,
     stage: int,
 ):
     i = wp.tid()
@@ -90,15 +91,23 @@ def manufactured_source(
         + deriv * c * (b * px + c * py)
         + g * h * a * py,
     )
+    # Prescribed force compensates the physical -g h grad(z) in the SWE.
+    two = wp.float64(2.0)
+    source[1] -= g * h * bed_amplitude * two * freq * wp.sin(two * x) * wp.cos(two * y)
+    source[2] -= g * h * bed_amplitude * two * freq * wp.cos(two * x) * wp.sin(two * y)
     out[i] += ctrl[2] * source
 
 
 class Manufactured(FV2Solver):
+    def __init__(self, *, bed_amplitude, **options):
+        self.bed_amplitude = bed_amplitude
+        super().__init__(**options)
+
     def _stage_forcing(self, *, dest, stage):
         self._launch(
             manufactured_source,
             self.nx * self.ny,
-            [dest, self.ctrl, self.nx, self.dx, self.dx * self.nx, self.gravity, stage],
+            [dest, self.ctrl, self.nx, self.dx, self.dx * self.nx, self.gravity, self.bed_amplitude, stage],
         )
 
 
@@ -116,13 +125,16 @@ def manufactured_average(*, n, t):
     )
 
 
-def manufactured_run(*, n, dt, length, duration, device):
+def manufactured_run(*, n, dt, length, duration, device, bed_amplitude=0.0):
+    coord = (np.arange(n) + 0.5) / n
+    cos_mean = np.cos(2 * np.pi * coord) * np.sinc(1 / n)
     s = Manufactured(
+        bed_amplitude=bed_amplitude,
         ny=n,
         nx=n,
         dx=length / n,
         dy=length / n,
-        bed_elevation=0.0,
+        bed_elevation=bed_amplitude * np.outer(cos_mean, cos_mean),
         manning_n=0.0,
         active_mask=np.ones((n, n), bool),
         maximum_dt=dt,
@@ -135,11 +147,13 @@ def manufactured_run(*, n, dt, length, duration, device):
     return s.get_conservative_state(), stats
 
 
-def convergence(*, grids, temporal_grid, timesteps, length, duration, device):
+def convergence(*, grids, temporal_grid, timesteps, length, duration, device, bed_amplitude=0.0):
     rows = []
     for n in grids:
         dt = duration / (4 * n)
-        q, stats = manufactured_run(n=n, dt=dt, length=length, duration=duration, device=device)
+        q, stats = manufactured_run(
+            n=n, dt=dt, length=length, duration=duration, device=device, bed_amplitude=bed_amplitude
+        )
         error = q - manufactured_average(n=n, t=duration)
         rows.append(
             dict(
@@ -147,10 +161,22 @@ def convergence(*, grids, temporal_grid, timesteps, length, duration, device):
             )
         )
     ref, _ = manufactured_run(
-        n=temporal_grid, dt=timesteps[-1] / 16, length=length, duration=duration, device=device
+        n=temporal_grid,
+        dt=timesteps[-1] / 16,
+        length=length,
+        duration=duration,
+        device=device,
+        bed_amplitude=bed_amplitude,
     )
     for dt in timesteps:
-        q, stats = manufactured_run(n=temporal_grid, dt=dt, length=length, duration=duration, device=device)
+        q, stats = manufactured_run(
+            n=temporal_grid,
+            dt=dt,
+            length=length,
+            duration=duration,
+            device=device,
+            bed_amplitude=bed_amplitude,
+        )
         rows.append(
             dict(
                 study="time",

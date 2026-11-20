@@ -236,7 +236,7 @@ def compare_storms(*, directory, work, wet, spacings, reference_factors):
 
 if __name__ == "__main__":
     directory = Path("validation/fv2_review")
-    work = Path("outputs/fv2_hirds_native_tile")
+    work = Path("outputs/fv2_hirds_native_ordered_bed")
     spacings = (1, 2, 5, 10, 20)
     reference_factors = (2, 4)
     compare_storms(

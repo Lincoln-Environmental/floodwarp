@@ -68,7 +68,7 @@ before advancing. Read `probe.summary()` for counts and transported volume by de
 fallback reason. The two oriented arrays in `probe.maps` hold transported volume
 on affected faces. Pass `depth_edges=None` to stop collecting and release the
 extra RK scratch. Configure identical physical inputs, limiter and time series
-before loading an FV2 checkpoint. See the [FV2 verification report](../validation/fv2_review/REPORT.md).
+before loading an FV2 checkpoint. Directional bed traces respect the ordering of adjacent DEM centres. Earlier experimental FV2 checkpoints using `muscl_eta_bed_velocity_v1` are rejected because they may contain artificial ponding and momentum. Restart those cases from their physical initial conditions. See the [FV2 verification report](../validation/fv2_review/REPORT.md).
 
 ## Forcing and infiltration
 

@@ -107,7 +107,7 @@ if __name__ == "__main__":
         json.loads(Path("validation/fv1_riemann_review/corrected/catchment.json").read_text())["checkpoint"]
     )
     release = Path("outputs/release/orton_bradley_v0.1.0")
-    work = Path("outputs/fv2_hirds48_v1")
+    work = Path("outputs/fv2_hirds48_ordered_bed")
     output = Path("validation/fv2_review/hirds48/stage_replay.json")
     grids = (20, 10, 5)
     hours = (24, 26)

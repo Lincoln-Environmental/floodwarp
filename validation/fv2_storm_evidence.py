@@ -312,7 +312,7 @@ def reconstruction_sample(*, directory, work, checkpoint, grids, hours, duration
 
 if __name__ == "__main__":
     directory = Path("validation/fv2_review/hirds48")
-    work = Path("outputs/fv2_hirds48_v1")
+    work = Path("outputs/fv2_hirds48_ordered_bed")
     checkpoint = Path(
         json.loads(Path("validation/fv1_riemann_review/corrected/catchment.json").read_text())["checkpoint"]
     )
