@@ -11,7 +11,7 @@ from validation.fv2_cost import reset, timed
 from validation.fv2_storm_cost import profile
 
 
-def record(*, method, case, mode, device, dx, length, width, seconds, cap, repeats):
+def record(*, method, case, mode, device, dx, length, width, seconds, cap, repeats, fuse_prediction=None):
     d = domain(
         case="stoker", dx=dx, duration=seconds, gravity=9.80665, near_zero_n=1e-7, length=length, width=width
     )
@@ -20,6 +20,8 @@ def record(*, method, case, mode, device, dx, length, width, seconds, cap, repea
         d["initial"][..., 0] = np.where(abs(x) < length / 32, 0.45, 0.0)
     s = build(d=d, method=method, dx=dx, cap=cap, device=device, gravity=9.80665)
     s.configure_execution(mode=mode)
+    if fuse_prediction is not None:
+        s._fuse_prediction = fuse_prediction
     initial = s.capture_state()
     warm = timed(solver=s, duration=seconds, samples=1)
     expected = s.get_conservative_state()
@@ -32,12 +34,14 @@ def record(*, method, case, mode, device, dx, length, width, seconds, cap, repea
     arrays = [*s._fields.values(), s.ctrl, s.condition, s._rain_rates, s._rain_times]
     if hasattr(s, "_slopes"):
         arrays.extend(
-            [s._start, s._stage, s._end, s._amounts, *s._slopes, *s._flux[0], *s._flux[1], *s._samples]
+            [s._start, s._stage, s._end, s._amounts, *s._slopes, *(a for stage in s._flux for a in stage), *s._samples]
         )
         for series in s._stage_series.values():
             arrays.extend(series)
         if hasattr(s, "_shock_flags"):
             arrays.append(s._shock_flags)
+        if hasattr(s, "_predicted"):
+            arrays.extend([s._predicted,s._predictor_fallback])
         if hasattr(s, "_inverse"):
             arrays.append(s._inverse)
     owned = sum({a.ptr: a.capacity for a in arrays}.values()) + s.execution_diagnostics()["scheduling_bytes"]

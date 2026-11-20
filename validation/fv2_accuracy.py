@@ -6,7 +6,7 @@ import numpy as np
 import warp as wp
 
 from floodwarp.full_swe_solver import FullSWESolver
-from floodwarp.fv2_solver import FV2Solver
+from floodwarp.fv2_solver import FV2Solver, MUSCLEulerSolver, HancockSolver
 from validation.fv1_riemann import analytical_metrics, cap_at_grid, report_json, trial
 from validation.fv1_riemann_cases import analytical_domain
 
@@ -25,9 +25,14 @@ def configured(*, domain, method, cap, device, mode="dense", mask=None):
         device=device,
         execution_mode=mode,
     )
-    if method in ("fv1", "roe", "hllc"):
+    if method in ("fv1", "roe", "hllc", "low_froude_hll"):
         flux = "contact_hll" if method == "fv1" else method
         solver = FullSWESolver(flux_scheme=flux, **options)
+    elif method.startswith(("hancock_", "euler_")):
+        integrator, limiter = method.split("_", 1)
+        factory = HancockSolver if integrator == "hancock" else MUSCLEulerSolver
+        flux = "low_froude_hll" if limiter == "low_froude" else "contact_hll"
+        solver = factory(limiter="mc" if limiter == "low_froude" else limiter, flux_scheme=flux, **options)
     else:
         solver = FV2Solver(limiter=method, **options)
     solver.set_water_depth(depth=domain.initial[..., 0])
@@ -68,7 +73,8 @@ def manufactured_source(
     stage: int,
 ):
     i = wp.tid()
-    t = ctrl[0] + wp.float64(stage) * ctrl[2]
+    instant = wp.where(stage == 2, wp.float64(.5), wp.float64(wp.max(stage, 0)))
+    t = ctrl[0] + instant * ctrl[2]
     freq = wp.float64(3.141592653589793) / length
     x = (wp.float64(i % nx) + wp.float64(0.5)) * dx * freq
     y = (wp.float64(i / nx) + wp.float64(0.5)) * dx * freq
@@ -95,7 +101,8 @@ def manufactured_source(
     two = wp.float64(2.0)
     source[1] -= g * h * bed_amplitude * two * freq * wp.sin(two * x) * wp.cos(two * y)
     source[2] -= g * h * bed_amplitude * two * freq * wp.cos(two * x) * wp.sin(two * y)
-    out[i] += ctrl[2] * source
+    weight = wp.where(stage == -1,wp.float64(.5),wp.float64(1.))
+    out[i] += weight * ctrl[2] * source
 
 
 class Manufactured(FV2Solver):
@@ -109,6 +116,16 @@ class Manufactured(FV2Solver):
             self.nx * self.ny,
             [dest, self.ctrl, self.nx, self.dx, self.dx * self.nx, self.gravity, self.bed_amplitude, stage],
         )
+
+
+class ManufacturedHancock(Manufactured):
+    method_name = HancockSolver.method_name
+    integration = HancockSolver.integration
+
+
+class ManufacturedEuler(Manufactured):
+    method_name = MUSCLEulerSolver.method_name
+    integration = MUSCLEulerSolver.integration
 
 
 def manufactured_average(*, n, t):
@@ -125,10 +142,11 @@ def manufactured_average(*, n, t):
     )
 
 
-def manufactured_run(*, n, dt, length, duration, device, bed_amplitude=0.0, limiter="mc"):
+def manufactured_run(*, n, dt, length, duration, device, bed_amplitude=0.0, limiter="mc", integrator="fv2"):
     coord = (np.arange(n) + 0.5) / n
     cos_mean = np.cos(2 * np.pi * coord) * np.sinc(1 / n)
-    s = Manufactured(
+    factory = {"fv2": Manufactured, "hancock": ManufacturedHancock, "euler": ManufacturedEuler}[integrator]
+    s = factory(
         limiter=limiter,
         bed_amplitude=bed_amplitude,
         ny=n,
@@ -148,12 +166,12 @@ def manufactured_run(*, n, dt, length, duration, device, bed_amplitude=0.0, limi
     return s.get_conservative_state(), stats
 
 
-def convergence(*, grids, temporal_grid, timesteps, length, duration, device, bed_amplitude=0.0, limiter="mc"):
+def convergence(*, grids, temporal_grid, timesteps, length, duration, device, bed_amplitude=0.0, limiter="mc", integrator="fv2"):
     rows = []
     for n in grids:
         dt = duration / (4 * n)
         q, stats = manufactured_run(
-            n=n, dt=dt, length=length, duration=duration, device=device, bed_amplitude=bed_amplitude, limiter=limiter
+            n=n, dt=dt, length=length, duration=duration, device=device, bed_amplitude=bed_amplitude, limiter=limiter, integrator=integrator
         )
         error = q - manufactured_average(n=n, t=duration)
         rows.append(
@@ -167,7 +185,7 @@ def convergence(*, grids, temporal_grid, timesteps, length, duration, device, be
         length=length,
         duration=duration,
         device=device,
-        bed_amplitude=bed_amplitude, limiter=limiter,
+        bed_amplitude=bed_amplitude, limiter=limiter, integrator=integrator,
     )
     for dt in timesteps:
         q, stats = manufactured_run(
@@ -176,7 +194,7 @@ def convergence(*, grids, temporal_grid, timesteps, length, duration, device, be
             length=length,
             duration=duration,
             device=device,
-            bed_amplitude=bed_amplitude, limiter=limiter,
+            bed_amplitude=bed_amplitude, limiter=limiter, integrator=integrator,
         )
         rows.append(
             dict(

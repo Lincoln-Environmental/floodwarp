@@ -162,10 +162,16 @@ def build(*, d, method, dx, cap, device, gravity):
         if li
         else dict(execution_mode="dense", gravity=gravity)
     )
+    if method.startswith(("euler_","hancock_")):
+        integrator, limiter = method.split("_",1)
+        key = "fv1_hancock" if integrator == "hancock" else "fv1_muscl_euler"
+        kw["limiter"] = "mc" if limiter == "low_froude" else limiter
+        if limiter == "low_froude":
+            kw["flux_scheme"] = "low_froude_hll"
     if key == "fv2":
         kw["limiter"] = method
     if key == "fv1":
-        kw["flux_scheme"] = method
+        kw["flux_scheme"] = "contact_hll" if method == "fv1" else method
     s = create_overland_solver(
         solver_method=key,
         ny=d["z"].shape[0],
