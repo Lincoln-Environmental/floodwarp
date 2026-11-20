@@ -281,3 +281,46 @@ def test_stage_reservoir_on_mask_has_perimeter_inflow(axis, mode):
     masked, internal = run(border=1)
     np.testing.assert_array_equal(masked, reference)
     np.testing.assert_allclose(internal, perimeter, rtol=1.0e-14)
+
+
+@pytest.mark.parametrize("mode", ("dense", "sparse"))
+def test_thin_fast_films_on_steep_bed_with_rapid_sources(mode):
+    rng = np.random.default_rng(seed=20261120)
+    shape = (13, 23)
+    iy, ix = np.indices(shape)
+    mask = np.ones(shape, bool)
+    mask[3:7, 9:12] = False
+    bed = -0.18 * ix + 0.12 * np.sin(iy * 0.7) + 0.015 * rng.standard_normal(size=shape)
+    depth = np.where(mask, np.where(ix < 5, 0.45, rng.uniform(0.0, 0.0006, shape)), 0.0)
+    depth[8:11, 12:17] = 0.0
+    wet = depth > 0.0001
+    momentum = np.where(wet, depth * np.where(ix < 5, 2.0, -4.0), 0.0)
+    devices = ("cpu", "cuda:0") if wp.is_cuda_available() else ("cpu",)
+    reference = None
+    for device in devices:
+        solver = FV2Solver(
+            ny=shape[0],
+            nx=shape[1],
+            dx=0.8,
+            dy=1.3,
+            active_mask=mask,
+            bed_elevation=bed,
+            manning_n=0.015 + 0.002 * iy,
+            maximum_dt=0.008,
+            execution_mode=mode,
+            device=device,
+        )
+        solver.set_water_depth(depth=depth)
+        solver.set_momentum(hu=momentum, hv=0.4 * momentum)
+        solver.set_rainfall_hyetograph(times_s=np.arange(5) * 0.08, rates_m_s=[0.0, 0.003, 0.0, 0.002, 0.0])
+        solver.set_rainfall_spatial_multiplier(multiplier=0.5 + 0.5 * (ix % 3))
+        solver.set_exponential_infiltration(f0=0.004, fd=0.008, conductivity=0.0007)
+        for t in np.arange(1, 5) * 0.08:
+            solver.run_device_loop(duration=t - solver.time)
+            state = solver.get_conservative_state()
+            assert state[..., 0].min() >= 0.0 and np.isfinite(state).all()
+            assert np.all(state[..., 1:][state[..., 0] <= solver.dry_depth] == 0.0)
+            assert abs(solver.cumulative_accounting()["residual"]) < 1.0e-11
+        if reference is not None:
+            np.testing.assert_allclose(state, reference, atol=3.0e-13, rtol=5.0e-13)
+        reference = state

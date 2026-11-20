@@ -25,7 +25,7 @@ class FV2Solver(FullSWESolver):
         ]
         self._slopes = [wp.zeros(count, dtype=wp.vec4d, device=self.device) for _ in range(2)]
         self._amounts = wp.zeros(count, dtype=wp.vec2d, device=self.device)
-        self._flux = [[wp.empty_like(self._fields["flux_" + axis]) for axis in ("x", "y")] for _ in range(2)]
+        self._flux = [[wp.zeros_like(self._fields["flux_" + axis]) for axis in ("x", "y")] for _ in range(2)]
         self._fields["fv2_cfl_predictor"] = wp.zeros(1, dtype=wp.float64, device=self.device)
         self._stage_series = {}
         self._stage_identity = {}
@@ -38,13 +38,24 @@ class FV2Solver(FullSWESolver):
         if mode not in ("dense", "sparse"):
             raise ValueError("FV2 execution mode must be dense or sparse")
         self._omit_dry = int(mode == "sparse")
+        dense = wp.empty(0, dtype=wp.int32, device=self.device)
+        self._work_indices = [dense, dense, dense]
+        if self._omit_dry and not self._active.all():
+            mask = self._active
+            live_x = np.pad(mask, ((0, 0), (1, 0))) | np.pad(mask, ((0, 0), (0, 1)))
+            live_y = np.pad(mask, ((1, 0), (0, 0))) | np.pad(mask, ((0, 1), (0, 0)))
+            self._work_indices = [
+                wp.array(np.flatnonzero(live).astype(np.int32), dtype=wp.int32, device=self.device)
+                for live in (mask, live_x, live_y)
+            ]
         self._graph = None
 
     def execution_diagnostics(self):
         return dict(
-            execution="exact_dry_face_omission" if self._omit_dry else "dense_uniform",
+            execution="active_mask_and_dry_face_omission" if self._omit_dry else "dense_uniform",
             storage="dense",
-            scheduling_bytes=0,
+            scheduling_bytes=sum(a.capacity for a in self._work_indices),
+            scheduled_indices=[a.size for a in self._work_indices],
         )
 
     def set_stage_series(self, *, axis, series):
@@ -93,6 +104,10 @@ class FV2Solver(FullSWESolver):
     def _launch(self, kernel, count, inputs):
         wp.launch(kernel=kernel, dim=count, inputs=inputs, device=self.device)
 
+    def _launch_grid(self, kernel, count, inputs, *, layout):
+        indices = self._work_indices[layout]
+        self._launch(kernel, indices.size or count, [*inputs, indices])
+
     def _stage_forcing(self, *, dest, stage):
         """Validation subclasses can add a prescribed manufactured residual here."""
 
@@ -126,9 +141,9 @@ class FV2Solver(FullSWESolver):
             self.gravity,
             self.dry_depth,
         ]
-        self._launch(k.split_sources, n, [*source_args, 0])
+        self._launch_grid(k.split_sources, n, [*source_args, 0], layout=0)
         for stage, (q, dest) in enumerate(((self._start, self._stage), (self._stage, self._end))):
-            self._launch(
+            self._launch_grid(
                 k.slopes,
                 n,
                 [
@@ -141,6 +156,7 @@ class FV2Solver(FullSWESolver):
                     self.dry_depth,
                     int(self.limiter == "mc"),
                 ],
+                layout=0,
             )
             for axis, name, spacing in ((0, "x", self.dx), (1, "y", self.dy)):
                 if stage and self._stage_identity[name] is not None:
@@ -148,7 +164,7 @@ class FV2Solver(FullSWESolver):
                         k.forcing_time, 1, [*self._stage_series[name], self._samples[axis], ctrl, stage]
                     )
                 flux = self._flux[stage][axis]
-                self._launch(
+                self._launch_grid(
                     k.faces,
                     flux.size,
                     [
@@ -172,15 +188,22 @@ class FV2Solver(FullSWESolver):
                         self._stage_momentum_mode,
                         self._omit_dry,
                     ],
+                    layout=axis + 1,
                 )
-            self._launch(
-                k.donor_budget, n, [q, f["theta"], *self._flux[stage], ctrl, self.nx, self.dx, self.dy]
+            self._launch_grid(
+                k.donor_budget,
+                n,
+                [q, f["theta"], *self._flux[stage], ctrl, self.nx, self.dx, self.dy],
+                layout=0,
             )
             for axis, flux in enumerate(self._flux[stage]):
-                self._launch(
-                    k.limit_faces, flux.size, [flux, f["theta"], f["active"], self.nx, self.ny, axis]
+                self._launch_grid(
+                    k.limit_faces,
+                    flux.size,
+                    [flux, f["theta"], f["active"], self.nx, self.ny, axis],
+                    layout=axis + 1,
                 )
-            self._launch(
+            self._launch_grid(
                 k.euler,
                 n,
                 [
@@ -198,15 +221,16 @@ class FV2Solver(FullSWESolver):
                     self.gravity,
                     self.dry_depth,
                 ],
+                layout=0,
             )
             self._stage_forcing(dest=dest, stage=stage)
         self._launch(k.validate_trial, 1, [ctrl, self.minimum_dt])
         if self._diagnostics is not None:
             self._diagnostics.enqueue(solver=self)
-        self._launch(k.split_sources, n, [*source_args, 1])
+        self._launch_grid(k.split_sources, n, [*source_args, 1], layout=0)
         for axis, name, width in ((0, "x", self.dy), (1, "y", self.dx)):
             flux = f["flux_" + name]
-            self._launch(
+            self._launch_grid(
                 k.accept_faces,
                 flux.size,
                 [
@@ -223,6 +247,7 @@ class FV2Solver(FullSWESolver):
                     axis,
                     width,
                 ],
+                layout=axis + 1,
             )
         self._launch(k.finish, 1, [ctrl, f["fv2_cfl_predictor"], self.condition, f["dt_histogram"]])
 

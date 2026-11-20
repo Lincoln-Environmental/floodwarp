@@ -6,6 +6,13 @@ from floodwarp.full_swe_kernels import hll, hll_speeds, stage_boundary_state
 
 
 @wp.func
+def scheduled_index(thread: int, work: wp.array(dtype=wp.int32)):
+    if work.shape[0] > 0:
+        return work[thread]
+    return thread
+
+
+@wp.func
 def limited(a: wp.float64, b: wp.float64, mc: int):
     zero = wp.float64(0.0)
     if a * b <= zero:
@@ -97,8 +104,9 @@ def split_sources(
     g: wp.float64,
     dry: wp.float64,
     stage: int,
+    work: wp.array(dtype=wp.int32),
 ):
-    k = wp.tid()
+    k = scheduled_index(wp.tid(), work)
     if active[k] == 0:
         return
     dt = ctrl[2] * wp.float64(0.5)
@@ -175,8 +183,9 @@ def slopes(
     ny: int,
     dry: wp.float64,
     mc: int,
+    work: wp.array(dtype=wp.int32),
 ):
-    k = wp.tid()
+    k = scheduled_index(wp.tid(), work)
     sx[k] = slope(k, 0, q, bed, active, nx, ny, dry, mc)
     sy[k] = slope(k, 1, q, bed, active, nx, ny, dry, mc)
 
@@ -224,8 +233,9 @@ def faces(
     cfl: wp.float64,
     mode: int,
     sparse: int,
+    work: wp.array(dtype=wp.int32),
 ):
-    k = wp.tid()
+    k = scheduled_index(wp.tid(), work)
     pair = indices(k, axis, nx, ny)
     a = pair[0]
     b = pair[1]
@@ -298,8 +308,9 @@ def donor_budget(
     nx: int,
     dx: wp.float64,
     dy: wp.float64,
+    work: wp.array(dtype=wp.int32),
 ):
-    k = wp.tid()
+    k = scheduled_index(wp.tid(), work)
     zero = wp.float64(0.0)
     dt = ctrl[2]
     w = k + k / nx
@@ -321,8 +332,9 @@ def limit_faces(
     nx: int,
     ny: int,
     axis: int,
+    work: wp.array(dtype=wp.int32),
 ):
-    k = wp.tid()
+    k = scheduled_index(wp.tid(), work)
     pair = indices(k, axis, nx, ny)
     donor = wp.where(f[k][0] >= wp.float64(0.0), pair[0], pair[1])
     if donor >= 0 and active[donor] != 0:
@@ -346,8 +358,9 @@ def euler(
     dy: wp.float64,
     g: wp.float64,
     dry: wp.float64,
+    work: wp.array(dtype=wp.int32),
 ):
-    k = wp.tid()
+    k = scheduled_index(wp.tid(), work)
     if active[k] == 0 or ctrl[2] > ctrl[17] or ctrl[7] != wp.float64(0.0):
         dest[k] = q[k]
         return
@@ -388,9 +401,10 @@ def accept_faces(
     ny: int,
     axis: int,
     width: wp.float64,
+    work: wp.array(dtype=wp.int32),
 ):
     if ctrl[2] <= ctrl[17] and ctrl[7] == wp.float64(0.0):
-        k = wp.tid()
+        k = scheduled_index(wp.tid(), work)
         mean = wp.float64(0.5) * (first[k] + second[k])
         flux[k] = mean
         volume[k] += ctrl[2] * width * mean[0]
