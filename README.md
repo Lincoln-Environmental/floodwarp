@@ -70,6 +70,8 @@ validation. CUDA wheel use needs a compatible NVIDIA driver, not a separate
 system CUDA toolkit. No prepared-model installation or external solver
 executable is required. See [development guidance](docs/DEVELOPMENT.md).
 
+The opt-in research solver `solver_method='fv2'` uses MUSCL reconstruction and SSP-RK2 with contact-HLL. Its analytical tests, GPU costs and Orton Bradley storm comparisons are documented in the [FV2 investigation](validation/fv2_review/REPORT.md).
+
 ## Launch the local interface
 
 ```bash

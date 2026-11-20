@@ -107,3 +107,13 @@ New Zealand (host/processor). Source URLs, dates and checksums are recorded in
 the generated `data/aerial.json`. The imagery is resampled for colour display
 on the unchanged 5 m model terrain; it supplies no hydraulic elevations or
 forcing. No Google imagery is bundled or requested.
+
+
+## Experimental FV2
+
+The MUSCL/SSP-RK2 Warp and NumPy implementations were written for FloodWarp.
+The numerical report identifies the hydrostatic reconstruction, time integration
+and analytical solution literature. The investigation reuses FloodWarp's
+contact-HLL flux and existing verification inputs. The Orton Bradley elevation
+outputs retain the attribution and data licence in
+[the Orton Bradley data notice](examples/orton_bradley/DATA_LICENSE.md).

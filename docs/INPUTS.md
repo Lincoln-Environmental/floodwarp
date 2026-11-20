@@ -23,7 +23,7 @@ Rasterio is imported only when these IO functions are called.
 
 ## Solvers and initial state
 
-`create_model(terrain=..., solver_method='li'|'fv1', ...)` uses the supported
+`create_model(terrain=..., solver_method='li'|'fv1'|'fv2', ...)` uses the supported
 factory, with FV1 as the omitted-method default since v0.1.2. Explicit LI
 selection and native LI construction remain available. `initial_depth` or `initial_stage` accepts a scalar or spatial field;
 they are mutually exclusive. Stages require `stage_datum` matching terrain.
@@ -36,7 +36,7 @@ walls, finite-velocity stages and contact-upwind HLL. Historical
 Factory timestep defaults remain 0.001–60 s; the native FV1 class retains its
 own 0–1 s defaults. Minimum timestep guards never authorise exceeding CFL.
 
-On the Riemann investigation branch, `flux_scheme='roe'` and
+In FV1, `flux_scheme='roe'` and
 `flux_scheme='hllc'` select experimental FV1 fluxes. They use the native
 hydrostatic reconstruction and the face-based CFL envelope. Both use HLL
 when either reconstructed state is at or below `dry_depth` or the proposed
@@ -54,6 +54,20 @@ with `solver.configure_execution(mode='dense'|'sparse', tile_size=8)`.
 Full-domain source/soil updates and CFL remain unchanged, including dry cells
 where rain infiltrates. Positive shallow water is retained exactly. Checkpoints
 are portable in both directions and reconstruct scheduling caches after restore.
+
+### Experimental full shallow-water FV2
+
+Select `create_model(terrain=terrain, solver_method='fv2', limiter='mc', device='cuda:0')`.
+The alternative limiter is `'minmod'`. The solver uses FP64, contact-HLL, MUSCL
+reconstruction, two SSP-RK2 flux evaluations, split rainfall, soil loss and
+Manning drag. Prescribed stages are sampled at the two RK times on the device.
+Choose `execution_mode='dense'` (FV2 default) or `'sparse'` for a static list of active cells and adjacent faces,
+with exact dry-face omission and dense storage. FV2 rejects culverts, SGS and alternative fluxes.
+For an instrumented run, call `probe = model.solver.track_reconstruction(depth_edges=(.001, .01, .1, 1.))`
+before advancing. Read `probe.summary()` for counts and transported volume by depth and
+fallback reason. The two oriented arrays in `probe.maps` hold transported volume
+on affected faces. Configure identical physical inputs, limiter and time series
+before loading an FV2 checkpoint. See the [FV2 verification report](../validation/fv2_review/REPORT.md).
 
 ## Forcing and infiltration
 
