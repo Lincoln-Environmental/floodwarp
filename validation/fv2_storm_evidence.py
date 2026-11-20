@@ -48,7 +48,26 @@ def fallback(*, row):
     return samples
 
 
-def summarize(*, directory, grids, methods, wet, sample_hours):
+def threshold_overlap(*, predicted, reference, active, thresholds, cell_area):
+    rows = []
+    for limit in thresholds:
+        a = (predicted > limit) & active
+        b = (reference > limit) & active
+        rows.append(
+            dict(
+                depth_m=limit,
+                predicted_m2=int(a.sum() * cell_area),
+                reference_m2=int(b.sum() * cell_area),
+                both_m2=int((a & b).sum() * cell_area),
+                predicted_only_m2=int((a & ~b).sum() * cell_area),
+                reference_only_m2=int((b & ~a).sum() * cell_area),
+                iou=overlap(a=a, b=b, mask=active),
+            )
+        )
+    return rows
+
+
+def summarize(*, directory, grids, methods, wet, sample_hours, thresholds):
     base = min(grids)
     records = {}
     for dx in grids:
@@ -109,6 +128,9 @@ def summarize(*, directory, grids, methods, wet, sample_hours):
                 sample_hours=sample_hours,
                 original_active_area_m2=int(active.sum() * base**2),
                 vs_5m_contact=metrics,
+                envelope_thresholds=threshold_overlap(
+                    predicted=peak, reference=max_ref, active=active, thresholds=thresholds, cell_area=base**2
+                ),
                 fallback_samples=fallback(row=row),
             )
         )
@@ -281,10 +303,18 @@ if __name__ == "__main__":
     methods = ("contact_hll", "roe", "hllc", "fv2_mc")
     colors = ("#2166ac", "#a45b00", "#8b52a5", "#11865a")
     wet = 0.01
+    thresholds = (0.001, 0.01, 0.03, 0.10, 0.30, 1.0)
     sample_hours = tuple(range(2, 49, 2))
     if not checkpoint.is_file():
         checkpoint = Path(json.loads((directory / "5m_contact_hll.json").read_text())["origin"])
-    summarize(directory=directory, grids=grids, methods=methods, wet=wet, sample_hours=sample_hours)
+    summarize(
+        directory=directory,
+        grids=grids,
+        methods=methods,
+        wet=wet,
+        sample_hours=sample_hours,
+        thresholds=thresholds,
+    )
     plot_hydrographs(directory=directory, grids=grids, methods=methods, checkpoint=checkpoint, colors=colors)
     depth_maps(directory=directory, grids=grids, methods=methods, difference_limit=0.25, depth_limit=1.5)
     reconstruction_sample(

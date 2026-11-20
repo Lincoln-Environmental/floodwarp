@@ -36,8 +36,7 @@ def external_hydrograph(*, directory, archived_csv, grids, methods):
                     method=method,
                     difference_rmse_m3_s=float(np.sqrt(np.mean((hydro - ref) ** 2))),
                     peak_difference_m3_s=float(hydro.max() - ref_peak),
-                    peak_time_difference_min=float(ends[np.argmax(hydro)] - peak_end)
-                    / 60,
+                    peak_time_difference_min=float(ends[np.argmax(hydro)] - peak_end) / 60,
                     net_export_difference_m3=float(np.dot(hydro - ref, interval)),
                 )
             )
@@ -101,9 +100,7 @@ def plot_cost(*, directory, common, timings, methods):
                     textcoords="offset points",
                     fontsize=7,
                 )
-        ax.set(
-            xscale="log", xlabel="Warm 12-second wet replay on GPU (ms)", ylabel=ylabel
-        )
+        ax.set(xscale="log", xlabel="Warm 12-second wet replay on GPU (ms)", ylabel=ylabel)
         ax.grid(alpha=0.2)
     axes[0].legend(fontsize=8, frameon=False)
     fig.savefig(directory / "storm_cost.png", dpi=165)
@@ -228,6 +225,16 @@ def publish(*, directory, grids, methods, archived_csv):
             note="Each fraction sums shallow and inadmissible HLL paths. Jointly wet means both reconstructed depths ≥ 0.01 m. The fixed channel proxy at each sample start requires h ≥ 0.1 m and |q| ≥ 0.05 m²/s. The jump proxy uses a convergent supercritical-to-subcritical transition. The JSON retains all five depth bands, the individual reasons, and four event samples.",
         )
     )
+    threshold_rows = [[r["dx"], r["method"], *[b["iou"] for b in r["envelope_thresholds"]]] for r in common]
+    limits = [b["depth_m"] for b in common[0]["envelope_thresholds"]]
+    sections.append(
+        rows_table(
+            title="Overlap of maximum inundation over a range of depths",
+            columns=["Grid (m)", "Method", *[f"IoU above {v:g} m" for v in limits]],
+            rows=threshold_rows,
+            note="Each threshold applies to the maximum-depth envelope on the original 5 m active footprint. The JSON also records the common area and the area flooded only by either model.",
+        )
+    )
     diag = json.loads((directory / "muscl_fallback.json").read_text())
     sparse = []
     for r in diag:
@@ -297,13 +304,9 @@ def publish(*, directory, grids, methods, archived_csv):
     )
     plot_cost(directory=directory, common=common, timings=timings, methods=methods)
     sections.append(
-        external_hydrograph(
-            directory=directory, archived_csv=archived_csv, grids=grids, methods=methods
-        )
+        external_hydrograph(directory=directory, archived_csv=archived_csv, grids=grids, methods=methods)
     )
-    (directory / "RESULTS.md").write_text(
-        "# Orton Bradley design-storm results\n\n" + "\n".join(sections)
-    )
+    (directory / "RESULTS.md").write_text("# Orton Bradley design-storm results\n\n" + "\n".join(sections))
 
 
 if __name__ == "__main__":
@@ -311,6 +314,4 @@ if __name__ == "__main__":
     grids = (5, 10, 20)
     methods = ("contact_hll", "roe", "hllc", "fv2_mc")
     archived_csv = Path("validation/sparse_modified_event_review/hydrographs_72h.csv")
-    publish(
-        directory=directory, grids=grids, methods=methods, archived_csv=archived_csv
-    )
+    publish(directory=directory, grids=grids, methods=methods, archived_csv=archived_csv)
