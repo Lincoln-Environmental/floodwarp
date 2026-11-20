@@ -4,6 +4,43 @@ import warp as wp
 
 from floodwarp.full_swe_kernels import hll, hll_speeds, stage_boundary_state
 
+# FV2-only HLL flux reusing the wave bounds already needed for the CFL.
+# Preserve the exact arithmetic of full_swe_kernels.hll; test parity on wet and dry faces.
+@wp.func
+def hll_fv2_precomputed(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, flux_mode: int, speeds: wp.vec2d):
+    ul = wp.vec2d(wp.float64(0.0))
+    ur = wp.vec2d(wp.float64(0.0))
+    if left[0] > dry:
+        ul = wp.vec2d(left[1],left[2])/left[0]
+    if right[0] > dry:
+        ur = wp.vec2d(right[1],right[2])/right[0]
+    sl = speeds[0]
+    sr = speeds[1]
+    fl = wp.vec3d(left[1], left[1] * ul[0] + wp.float64(0.5) * g * left[0] * left[0], left[1] * ul[1])
+    fr = wp.vec3d(right[1], right[1] * ur[0] + wp.float64(0.5) * g * right[0] * right[0], right[1] * ur[1])
+    result = wp.vec3d(wp.float64(0.0))
+    if sl >= wp.float64(0.0):
+        result = fl
+    elif sr <= wp.float64(0.0):
+        result = fr
+    elif sr > sl:
+        result = (sr * fl - sl * fr + sl * sr * (right - left)) / (sr - sl)
+        if flux_mode == 1 or flux_mode == 3:
+            # Algebraically equivalent to the contact speed estimate; its
+            # denominator is positive for a nondegenerate wet HLL star state.
+            dl = left[0]*(ul[0]-sl)
+            dr = right[0]*(sr-ur[0])
+            denominator = dl+dr
+            if denominator > wp.float64(0.0):
+                contact = (sr*dl+sl*dr)/denominator
+                tangent = ur[1]
+                if contact >= wp.float64(0.0):
+                    tangent = ul[1]
+                result[2] = result[0]*tangent
+            # Degenerate star states retain the finite conservative HLL value.
+    return result
+
+
 
 @wp.func
 def scheduled_index(thread: int, work: wp.array(dtype=wp.int32)):
@@ -302,8 +339,8 @@ def faces(
             r = ghost
         else:
             l = ghost
-    f = hll(l, r, g, dry, 1)
     speeds = hll_speeds(l, r, g, dry, 1)
+    f = hll_fv2_precomputed(l, r, g, dry, 1, speeds)
     speed = wp.max(wp.abs(speeds[0]), wp.abs(speeds[1]))
     if speed > zero:
         wp.atomic_min(ctrl, 17, wp.float64(0.5) * spacing * cfl / speed)
