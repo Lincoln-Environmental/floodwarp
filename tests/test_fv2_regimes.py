@@ -83,3 +83,12 @@ def test_transcritical_discharge_refines():
     fine=trial(dx=2.5,**common)
     assert fine["q_rmse"] < coarse["q_rmse"] < .01
     assert abs(fine["balance"]["residual"]) < 1e-7
+
+
+def test_finest_stationary_jump_settles():
+    if not wp.is_cuda_available():
+        pytest.skip("CUDA unavailable")
+    from validation.fv2_regime_jump_history import measure
+    r = measure(dx=1.25,method="adaptive",duration=80.,interval=.5,device="cuda:0",
+                grade=.4,position=22.5,length=1920.,width=20.,gravity=9.81)
+    assert r["final_half_max_section_std"] < .0003

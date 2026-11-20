@@ -62,7 +62,7 @@ def benchmark(*, domain, method, mode, device, repeats, exact, mask=None, rain=N
     wall = float(np.median([r["full_hydraulic_s"] for r in samples]))
     extra = 0
     if method != "fv1":
-        arrays = [s._start, s._stage, s._end, s._amounts, *s._slopes, *s._flux[0], *s._flux[1], *s._samples]
+        arrays = [s._start, s._stage, s._end, s._inverse, s._amounts, *s._slopes, *s._flux[0], *s._flux[1], *s._samples]
         for v in s._stage_series.values():
             arrays.extend(v)
         extra = sum({v.ptr: v.capacity for v in arrays}.values())

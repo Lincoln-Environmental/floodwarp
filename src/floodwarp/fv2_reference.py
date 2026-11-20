@@ -30,6 +30,11 @@ def traces(*, q, z, dry, axis, limiter, gravity=9.80665):
         ca, cb = np.sqrt(gravity * ha), np.sqrt(gravity * hb)
         crossing = ((ua > .8*ca) & (ub < 1.25*cb) & (hb > ha)) | ((ua > -1.25*ca) & (ub < -.8*cb) & (ha > hb))
         shock = (ua > ub) & (np.abs(ha-hb) > 0.04*np.minimum(ha,hb)) & crossing
+        shock &= (ha > dry) & (hb > dry) & (h > dry)
+        boundary = [slice(None)] * 2
+        boundary[axis] = [0, -1]
+        shock[tuple(boundary)] = False
+        shock = shock | np.roll(shock, 1, axis=axis) | np.roll(shock, -1, axis=axis)
         slope = np.where(shock[..., None], limited(left=back, right=ahead, limiter="minmod"),
                          limited(left=back, right=ahead, limiter="mc"))
     else:

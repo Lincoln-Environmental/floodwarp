@@ -220,13 +220,35 @@ def split_sources(
 
 @wp.func
 def compression_rule(left: wp.vec3d, right: wp.vec3d, axis: int, gravity: wp.float64):
-    # A compressing acoustic family straddles zero at a stationary jump.
-    ul = left[axis + 1] / left[0]
-    ur = right[axis + 1] / right[0]
-    if ul > ur and wp.abs(left[0] - right[0]) > wp.float64(0.04) * wp.min(left[0], right[0]):
-        cl = wp.sqrt(gravity * left[0])
-        cr = wp.sqrt(gravity * right[0])
-        if (ul > wp.float64(0.8)*cl and ur < wp.float64(1.25)*cr and right[0] > left[0]) or (ul > -wp.float64(1.25)*cl and ur < -wp.float64(0.8)*cr and left[0] > right[0]):
+    # Signed acoustic bracket with hysteresis to cover the smeared jump.
+    hl = left[0]
+    hr = right[0]
+    ml = left[axis + 1]
+    mr = right[axis + 1]
+    if ml*hr > mr*hl and wp.abs(hl-hr) > wp.float64(0.04)*wp.min(hl,hr):
+        fl = gravity*hl*hl*hl
+        fr = gravity*hr*hr*hr
+        if hr > hl and ml > wp.float64(0.0) and ml*ml > wp.float64(0.64)*fl:
+            if mr <= wp.float64(0.0) or mr*mr < wp.float64(1.5625)*fr:
+                return 0
+        if hl > hr and mr < wp.float64(0.0) and mr*mr > wp.float64(0.64)*fr:
+            if ml >= wp.float64(0.0) or ml*ml < wp.float64(1.5625)*fl:
+                return 0
+    return 1
+
+
+@wp.func
+def stencil_rule(k: int, a: int, b: int, axis: int, q: wp.array(dtype=wp.vec3d),
+                 active: wp.array(dtype=wp.int32), nx: int, ny: int, dry: wp.float64, gravity: wp.float64):
+    if compression_rule(q[a], q[b], axis, gravity) == 0:
+        return 0
+    left = neighbor(a, axis, -1, nx, ny)
+    if left >= 0 and active[left] != 0 and q[left][0] > dry:
+        if compression_rule(q[left], q[k], axis, gravity) == 0:
+            return 0
+    right = neighbor(b, axis, 1, nx, ny)
+    if right >= 0 and active[right] != 0 and q[right][0] > dry:
+        if compression_rule(q[k], q[right], axis, gravity) == 0:
             return 0
     return 1
 
@@ -269,7 +291,7 @@ def slope(
     db = bed[b] - bed[k]
     rule = mc
     if mc == 2:
-        rule = compression_rule(q[a], q[b], axis, gravity)
+        rule = stencil_rule(k, a, b, axis, q, active, nx, ny, dry, gravity)
     geometry = surface_bed_slopes(da, db, h - q[a][0], q[b][0] - h, rule)
     se = geometry[0]
     sz = geometry[1]

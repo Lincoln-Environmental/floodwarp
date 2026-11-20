@@ -109,7 +109,7 @@ class FV2Solver(FullSWESolver):
         return self._diagnostics
 
     def _configuration(self):
-        return dict(
+        configuration = dict(
             super()._configuration(),
             method="fv2",
             limiter=self.limiter,
@@ -117,6 +117,9 @@ class FV2Solver(FullSWESolver):
             integration="ssprk2_strang_drag",
             stage_forcing=self._stage_identity,
         )
+        if self.limiter == "adaptive":
+            configuration["shock_sensor"] = "compressive_froude_band_one_cell_halo_v1"
+        return configuration
 
     def restore_state(self, *, state):
         if state["configuration"].get("reconstruction") == "muscl_eta_bed_velocity_v1":

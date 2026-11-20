@@ -90,7 +90,7 @@ def geometry(*, state, factor):
     return data, info
 
 
-def replay_solver(*, data, state, factor, method, device, fv2_class=FV2Solver):
+def replay_solver(*, data, state, factor, method, device, fv2_class=FV2Solver, execution_mode="dense"):
     config = state["configuration"].copy()
     mask = data["active"]
     config.update(
@@ -109,7 +109,7 @@ def replay_solver(*, data, state, factor, method, device, fv2_class=FV2Solver):
         manning_n=data["manning"],
         active_mask=mask,
         device=device,
-        execution_mode="dense",
+        execution_mode=execution_mode,
     )
     s.set_boundary_type_qy(boundary_type=data["by"])
     s.set_boundary_stage_qy(stage=data["sy"])

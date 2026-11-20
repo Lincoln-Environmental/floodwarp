@@ -3,7 +3,7 @@
 import numpy as np
 import warp as wp
 
-from floodwarp.fv2_kernels import compression_rule, indices, neighbor, surface_bed_slopes
+from floodwarp.fv2_kernels import stencil_rule, indices, neighbor, surface_bed_slopes
 
 
 @wp.func
@@ -33,7 +33,7 @@ def reason(
     rb = bed[b] - bed[k]
     rule = mc
     if mc == 2:
-        rule = compression_rule(q[a], q[b], axis, gravity)
+        rule = stencil_rule(k, a, b, axis, q, active, nx, ny, dry, gravity)
     geometry = surface_bed_slopes(la, rb, q[k][0] - q[a][0], q[b][0] - q[k][0], rule)
     dh = geometry[0] - geometry[1]
     if wp.abs(dh) >= wp.float64(2.0) * q[k][0]:
