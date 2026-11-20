@@ -12,7 +12,7 @@ def interval(*, steps, end, low, high, mean, rms, hydraulic):
 
 
 def test_weighted_timestep_statistics_and_separate_runtime_scopes():
-    metrics=new_run_metrics(version='test',source={'commit':'fixture'},duration_s=5.,device='cpu',numerical_profile='ordinary')
+    metrics=new_run_metrics(version='test',source={'commit':'fixture'},duration_s=5.,device='cpu',numerical_profile='ordinary',solver_method='fv1')
     accumulate_advance(metrics=metrics,stats=interval(steps=2,end=1.,low=.25,high=.75,mean=.5,
         rms=math.sqrt((.25**2+.75**2)/2.),hydraulic=.3),wall_seconds=.8)
     accumulate_advance(metrics=metrics,stats=interval(steps=4,end=5.,low=1.,high=1.,mean=1.,rms=1.,hydraulic=.7),wall_seconds=1.2)
@@ -28,7 +28,7 @@ def test_weighted_timestep_statistics_and_separate_runtime_scopes():
 
 
 def test_no_completed_steps_has_no_invented_dt_or_throughput():
-    metrics=new_run_metrics(version='test',source={},duration_s=1.,device='cpu',numerical_profile='ordinary')
+    metrics=new_run_metrics(version='test',source={},duration_s=1.,device='cpu',numerical_profile='ordinary',solver_method='fv1')
     finish_run_metrics(metrics=metrics,wall_seconds=.1,complete=False)
     assert metrics['accepted_steps']==0 and metrics['dt_min_s'] is None
     assert metrics['dt_mean_s'] is None and metrics['hydraulic_microseconds_per_step'] is None

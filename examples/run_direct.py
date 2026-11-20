@@ -3,6 +3,7 @@ from pathlib import Path
 
 from floodwarp.inputs import read_terrain, read_aligned_field, boundary_faces
 from floodwarp.model import create_model
+from floodwarp.solver_defaults import DEFAULT_SOLVER_METHOD
 from examples.common import run_example
 from floodwarp.sampling import sample_targets
 
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     roughness_path = None  # Or Path('my_manning.tif'), exactly aligned with terrain.
     vertical_datum = 'NZVD2016'  # Replace with your DEM's verified datum.
     output_path = Path('outputs/direct')
-    solver_method = 'fv1'
+    solver_method = DEFAULT_SOLVER_METHOD
     manning_n = .035
     rainfall_m_s = 20./3.6e6
     infiltration_m_s = 0.
@@ -22,7 +23,7 @@ if __name__ == "__main__":
     maximum_dt_s = .5
     device = 'cpu'
     make_plots = True
-    use_cuda_graph = False
+    use_cuda_graph = None
 
     terrain = read_terrain(path=terrain_path, vertical_datum=vertical_datum)
     roughness = manning_n if roughness_path is None else read_aligned_field(path=roughness_path, terrain=terrain)

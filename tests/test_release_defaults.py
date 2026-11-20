@@ -1,10 +1,13 @@
 """Public formulation defaults, sampling endpoints and checkpoint identity."""
+import json
+
 import numpy as np
 import pytest
 
 from floodwarp import FullSWESolver, LocalInertialSolver, create_overland_solver
+from floodwarp.fv2_solver import HancockSolver
 from floodwarp.inputs import terrain_from_array
-from floodwarp.model import advance, create_model, load_checkpoint, save_checkpoint
+from floodwarp.model import advance, create_model, create_model_from_config, load_checkpoint, save_checkpoint
 from floodwarp.sampling import sample_targets
 
 
@@ -33,12 +36,15 @@ def test_default_factories_and_cross_formulation_restart(tmp_path):
         row_order='south_to_north', vertical_datum='local')
     options = dict(ny=3, nx=4, dx=2., dy=2., bed_elevation=terrain.elevation,
         manning_n=np.full((3, 4), .03), active_mask=np.ones((3, 4), dtype=np.int32))
-    assert isinstance(create_overland_solver(**options), FullSWESolver)
+    assert isinstance(create_overland_solver(**options), HancockSolver)
     assert isinstance(create_overland_solver(solver_method='li', **options), LocalInertialSolver)
     default = create_model(terrain=terrain, rainfall=.001)
-    assert isinstance(default.solver, FullSWESolver)
-    assert default.solver.execution_diagnostics()['execution'] == 'sparse_uniform'
-    dense = create_model(terrain=terrain, execution_mode='dense')
+    assert isinstance(default.solver, HancockSolver)
+    assert default.solver.limiter == 'adaptive' and default.solver.flux_scheme == 'contact_hll'
+    baseline = create_model(terrain=terrain, solver_method='fv1')
+    assert type(baseline.solver) is FullSWESolver
+    assert baseline.solver.execution_diagnostics()['execution'] == 'sparse_uniform'
+    dense = create_model(terrain=terrain, solver_method='fv1', execution_mode='dense')
     assert dense.solver.execution_diagnostics()['execution'] == 'dense_uniform'
     li = create_model(terrain=terrain, solver_method='li', rainfall=.001)
     advance(model=li, end_time=.1)
@@ -48,6 +54,33 @@ def test_default_factories_and_cross_formulation_restart(tmp_path):
         load_checkpoint(model=default, path=tmp_path/'li.npz')
     np.testing.assert_array_equal(actual=default.solver.get_water_depth(), desired=before)
     advance(model=default, end_time=.1)
-    save_checkpoint(model=default, path=tmp_path/'fv1.npz')
+    save_checkpoint(model=default, path=tmp_path/'hancock.npz')
+    with np.load(tmp_path/'hancock.npz', allow_pickle=False) as saved:
+        identity = json.loads(str(saved['metadata']))['numerical_method']
+    assert identity == dict(solver_method='fv1_hancock', limiter='adaptive',
+                            integration='unsplit_hancock_strang_drag', flux_scheme='contact_hll')
     with pytest.raises(ValueError, match='provenance'):
-        load_checkpoint(model=li, path=tmp_path/'fv1.npz')
+        load_checkpoint(model=li, path=tmp_path/'hancock.npz')
+
+
+@pytest.mark.parametrize(("options", "method", "limiter"), [
+    ({}, "fv1", None), ({"solver_method": "fv2"}, "fv2", "mc"),
+    ({"solver_method": "fv1_hancock"}, "fv1_hancock", "mc"),
+    ({"solver_method": "hancock"}, "fv1_hancock", "adaptive"),
+    ({"solver_method": "fv1_hancock", "limiter": "adaptive"}, "fv1_hancock", "adaptive"),
+])
+def test_saved_direct_options_retain_historical_method(options, method, limiter):
+    terrain = terrain_from_array(elevation=np.zeros((3, 4)), dx=2., dy=2.,
+                                 row_order="south_to_north", vertical_datum="local")
+    model = create_model_from_config(terrain=terrain, options=options)
+    config = model.solver.numerical_configuration()
+    assert (config["solver_method"], config.get("limiter")) == (method, limiter)
+
+
+def test_default_rejects_unsupported_structures_and_sgs():
+    terrain = terrain_from_array(elevation=np.zeros((3, 4)), dx=2., dy=2.,
+                                 row_order="south_to_north", vertical_datum="local")
+    with pytest.raises(ValueError, match="solver_method='fv1'"):
+        create_model(terrain=terrain, structures=[object()])
+    with pytest.raises(ValueError, match="solver_method='li'"):
+        create_model(terrain=terrain, hydraulic_geometry_mode="traditional")

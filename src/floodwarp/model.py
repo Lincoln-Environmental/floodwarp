@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from floodwarp.solver_defaults import DEFAULT_SOLVER_METHOD, canonical_solver_method, saved_solver_options
 from floodwarp import FullSWESolver, create_overland_solver
 from floodwarp.inputs import Terrain, boundary_faces, field_array, validate_boundaries
 from floodwarp.rainfall import Hyetograph
@@ -41,11 +42,17 @@ def stage_field(*, value, shape):
     return np.broadcast_to(array, shape).copy()
 
 
-def create_model(*, terrain: Terrain, solver_method="fv1", manning_n=.03,
+def create_model_from_config(*, terrain: Terrain, options):
+    """Replay saved Python model options with their historical method and limiter."""
+    return create_model(terrain=terrain, **saved_solver_options(options=options))
+
+
+def create_model(*, terrain: Terrain, solver_method=DEFAULT_SOLVER_METHOD, manning_n=.03,
                  initial_depth=None, initial_stage=None, rainfall=0., rainfall_series=None,
                  infiltration=0., boundary_qx=None, boundary_qy=None,
                  stage_qx=0., stage_qy=0., stage_series_qx=None, stage_series_qy=None,
                  stage_datum=None, device="cpu", rainfall_end_behavior='require_coverage', **solver_options):
+    solver_method = canonical_solver_method(method=solver_method)
     if rainfall_end_behavior not in ('require_coverage', 'finite_support'):
         raise ValueError('Rainfall end behavior must be require_coverage or finite_support')
     if rainfall_end_behavior == 'finite_support' and solver_method not in ('fv1', 'fv2', 'fv1_muscl_euler', 'fv1_hancock'):
@@ -215,7 +222,10 @@ def validate_checkpoint_archive(*, path, identity):
             return False
         manifest=json.loads(str(saved['_direct_manifest']))
         if manifest['identity']!=identity or set(saved.files)!=(set(manifest['sha256']) | {'_direct_manifest'}):
-            raise ValueError('Checkpoint provenance or direct inputs do not match')
+            previous = manifest['identity'].get('numerical', {})
+            method = previous.get('solver_method', 'li' if 'validation_profile' in previous else 'fv1')
+            raise ValueError(f"Checkpoint provenance or direct inputs do not match. "
+                             f"Restore with solver_method={method!r} and the recorded numerical and physical inputs.")
         for name,digest in manifest['sha256'].items():
             if hashlib.sha256(saved[name].tobytes()).hexdigest()!=digest:
                 raise ValueError('Checkpoint checksum failure: '+name)

@@ -19,6 +19,7 @@ from floodwarp.inputs import (boundary_faces, read_active_mask, read_aligned_fie
 from floodwarp.model import advance, create_model, diagnostics, model_time, save_checkpoint
 from floodwarp.sampling import sample_targets
 from floodwarp.run_metrics import new_run_metrics, accumulate_advance, finish_run_metrics
+from floodwarp.solver_defaults import DEFAULT_SOLVER_METHOD, DEFAULT_HANCOCK_LIMITER, canonical_solver_method
 from floodwarp.ui_fields import aligned_coefficient, active_range, rate_factor, read_boundary_csv, numerical_options
 
 
@@ -53,6 +54,12 @@ class RunConfig:
     numerical_profile: str = 'ordinary'
     preset_manifest: str = ''
     checkpoint_interval_s: float = 0.
+    solver_method: str = DEFAULT_SOLVER_METHOD
+
+    @classmethod
+    def from_saved(cls, *, options):
+        """The original UI always ran FV1 and omitted the solver field."""
+        return cls(**{"solver_method": "fv1", **options})
 
 
 @dataclass
@@ -301,7 +308,16 @@ def prepare_run(*, config):
     parent = Path(config.output_parent).expanduser().resolve()
     if not parent.is_dir():
         raise ValueError('Output parent must be an existing directory; create it or select another directory')
-    summary = dict(inputs=identities, solver='fv1', precision='float64', execution='sparse',
+    method = canonical_solver_method(method=config.solver_method)
+    if method not in ('fv1', 'fv1_hancock', 'fv2', 'fv1_muscl_euler'):
+        raise ValueError("Choose a full-SWE method in the UI. Use create_model(solver_method='li') for local inertia.")
+    if config.numerical_profile == 'orton_bradley_matched' and method != 'fv1':
+        raise ValueError("The matched Orton Bradley profile requires FV1. Choose FV1 or the ordinary profile.")
+    limiter = DEFAULT_HANCOCK_LIMITER if method == 'fv1_hancock' else None
+    if method in ('fv2', 'fv1_muscl_euler'):
+        limiter = 'mc'
+    summary = dict(inputs=identities, solver=method, limiter=limiter, precision='float64',
+        execution='sparse' if method == 'fv1' else 'dense',
         numerical_defaults=numerical_defaults(profile=config.numerical_profile), numerical_profile=config.numerical_profile,
         device=resolve_device(requested=config.device), boundary=config.boundary,
         open_faces=int(np.count_nonzero(qx >= 2) + np.count_nonzero(qy >= 2)),
@@ -330,7 +346,7 @@ def prepare_run(*, config):
 
 def create_run_model(*, prepared):
     config = prepared.config
-    model = create_model(terrain=prepared.terrain, solver_method='fv1',
+    model = create_model(terrain=prepared.terrain, solver_method=prepared.summary['solver'],
         manning_n=prepared.roughness, infiltration=prepared.infiltration,
         rainfall_series=(prepared.times_s, prepared.rates_m_s), boundary_qx=prepared.qx,
         boundary_qy=prepared.qy, stage_qx=prepared.stage_x, stage_qy=prepared.stage_y,
@@ -386,7 +402,8 @@ def execute_run(*, config, output, expected_inputs=None):
             source=source_identity(), checkpoint='checkpoint.npz', use_cuda_graph=None,
             graph_policy='Existing solver default; no UI override', actual_final_time_s=None)
         metrics = new_run_metrics(version=__version__, source=resolved['source'], duration_s=config.duration_s,
-            device=prepared.summary['device'], numerical_profile=config.numerical_profile)
+            device=prepared.summary['device'], solver_method=model.solver.numerical_configuration()['solver_method'],
+            numerical_profile=config.numerical_profile)
         metrics['preparation_seconds'] = time.monotonic()-started
         resolved['metrics_file'] = 'metrics.json'
         write_json(path=output/'run_config.json', value=resolved)

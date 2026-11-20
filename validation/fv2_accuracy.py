@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import warp as wp
 
+from floodwarp.solver_factory import create_overland_solver
 from floodwarp.full_swe_solver import FullSWESolver
 from floodwarp.fv2_solver import FV2Solver, MUSCLEulerSolver, HancockSolver
 from validation.fv1_riemann import analytical_metrics, cap_at_grid, report_json, trial
@@ -25,7 +26,11 @@ def configured(*, domain, method, cap, device, mode="dense", mask=None):
         device=device,
         execution_mode=mode,
     )
-    if method in ("fv1", "roe", "hllc", "low_froude_hll"):
+    if method == "default":
+        # Match the analytical timestep policy while exercising omitted numerical settings.
+        solver = create_overland_solver(explicit_maximum_dt=options.pop("maximum_dt"),
+                                       explicit_minimum_dt=0., **options)
+    elif method in ("fv1", "roe", "hllc", "low_froude_hll"):
         flux = "contact_hll" if method == "fv1" else method
         solver = FullSWESolver(flux_scheme=flux, **options)
     elif method.startswith(("hancock_", "euler_")):

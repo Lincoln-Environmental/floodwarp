@@ -15,13 +15,14 @@ import numpy as np
 import warp as wp
 
 from floodwarp import full_swe_kernels as kernels
+from floodwarp.solver_defaults import DEFAULT_FULL_SWE_FLUX
 
 
 class FullSWESolver:
     def __init__(self, *, ny, nx, dx, dy, bed_elevation, manning_n, active_mask,
                  device="cpu", gravity=9.81, dry_depth=1.e-4, cfl=.4,
                  maximum_dt=1., minimum_dt=0., stage_boundary_momentum='velocity_extrapolation',
-                 flux_scheme='contact_hll', execution_mode='sparse', tile_size=8,
+                 flux_scheme=DEFAULT_FULL_SWE_FLUX, execution_mode='sparse', tile_size=8,
                  dense_fraction=.65, structures=()):
         """Prescribed stages use an explicitly selected ghost momentum closure.
 
@@ -459,6 +460,8 @@ class FullSWESolver:
         return state
 
     def restore_state(self, *, state):
+        if 'numerical_method' in state and state['numerical_method'] != self._checkpoint_method():
+            raise ValueError('Checkpoint configuration mismatch. Select the recorded method, limiter and flux.')
         recorded=dict(state['configuration'])
         # Before this option existed there was exactly one FV1 ghost law.
         # Its absence identifies legacy discharge extrapolation, never the new law.
@@ -488,10 +491,16 @@ class FullSWESolver:
         if self._sparse_execution is not None:
             self._sparse_execution.invalidate()
 
+    def _checkpoint_method(self):
+        config = self.numerical_configuration()
+        return dict(solver_method=config["solver_method"], limiter=config.get("limiter"),
+                    integration=config.get("integration", "forward_euler"), flux_scheme=self.flux_scheme)
+
     def save_checkpoint(self, *, path: Path):
         state = self.capture_state()
         metadata = {name: value for name, value in state.items() if name not in ("arrays", "rain_times", "rain_rates", "control")}
         arrays = dict(state["arrays"], rain_times=state["rain_times"], rain_rates=state["rain_rates"], control=state["control"])
+        metadata["numerical_method"] = self._checkpoint_method()
         metadata["sha256"] = {name: hashlib.sha256(value.tobytes()).hexdigest() for name, value in arrays.items()}
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(path.suffix + ".partial")

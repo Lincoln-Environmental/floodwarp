@@ -44,7 +44,7 @@ function review(result) {
   const roughness=s.roughness_mode==='map'?'spatial Manning n '+s.roughness_range.map(formatMapValue).join('–'):'Manning n '+s.manning_n;
   const infiltration=s.infiltration_mode==='exponential'?'spatial exponential infiltration (f0/fd/k)':s.infiltration_mode==='map'?'spatial constant infiltration '+s.infiltration_range_mm_h.map(formatMapValue).join('–')+' mm/h':'constant infiltration '+s.infiltration_mm_h+' mm/h';
   const boundary=s.boundary==='free'?'FREE exterior':s.boundary==='closed'?'Closed':'Explicit faces';
-  byId('summary').textContent = `FV1 · FP64 · ${s.execution} · resolved device ${s.device} · ${boundary} (${s.free_faces} FREE, ${s.stage_faces} stage faces) · ${roughness} · ${infiltration} · ${s.active_cells.toLocaleString()} active cells · ${s.cell_size_m.join(' × ')} m · ${s.duration_s} s · ${s.numerical_profile} · CFL ${s.numerical_defaults.cfl} · dt ${s.numerical_defaults.minimum_dt_s}–${s.numerical_defaults.maximum_dt_s} s · ${s.numerical_defaults.stage_boundary_momentum}`;
+  byId('summary').textContent = `${s.solver}${s.limiter ? ' · '+s.limiter : ''} · FP64 · ${s.execution} · resolved device ${s.device} · ${boundary} (${s.free_faces} FREE, ${s.stage_faces} stage faces) · ${roughness} · ${infiltration} · ${s.active_cells.toLocaleString()} active cells · ${s.cell_size_m.join(' × ')} m · ${s.duration_s} s · ${s.numerical_profile} · CFL ${s.numerical_defaults.cfl} · dt ${s.numerical_defaults.minimum_dt_s}–${s.numerical_defaults.maximum_dt_s} s · ${s.numerical_defaults.stage_boundary_momentum}`;
   if (s.stage_range_m) byId('summary').textContent += ' · absolute stage '+s.stage_range_m.map(formatMapValue).join('–')+' m '+s.vertical_datum;
   if (s.exponential_ranges) byId('summary').textContent += ' · f0 '+s.exponential_ranges.f0.map(formatMapValue).join('–')+' m/s · fd '+s.exponential_ranges.fd.map(formatMapValue).join('–')+' m · k '+s.exponential_ranges.conductivity.map(formatMapValue).join('–')+' m/s';
   byId('terrain-preview').src = 'data:image/png;base64,'+result.terrain_png;
@@ -141,7 +141,6 @@ async function init() {
     byId('choose-directory').onclick=function chooseDirectory() {byId(pickerTarget).value=browseDirectory; byId('picker').close();};
     byId('close-picker').onclick=function closePicker() { byId('picker').close(); };
     visibility(); await refresh();
-    if (!b.has_configuration && b.orton_directory) await loadOrton();
     byId('controls').disabled=false; setInterval(refresh,1500);
   } catch(error) {byId('message').textContent=error.message;}
 }

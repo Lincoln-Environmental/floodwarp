@@ -46,6 +46,7 @@ def test_local_requests_and_duplicate_start(tmp_path, monkeypatch):
     try:
         boot = request_json(url=url+'/bootstrap')
         assert boot['defaults']['manning_n'] == .03
+        assert boot['defaults']['solver_method'] == 'fv1_hancock'
         with pytest.raises(HTTPError):
             request_json(url=url+'/browse', data=dict(path=str(tmp_path)))
         with pytest.raises(HTTPError):

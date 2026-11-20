@@ -44,13 +44,14 @@ def write_field(*, path, config, values, shift=0., crs='EPSG:2193', nodata=None)
 
 
 @pytest.mark.parametrize('duration', [2., 22., 23., 20.])
-def test_runner_direct_api_and_exact_final_time(inputs, tmp_path, duration):
-    config = replace(inputs, duration_s=duration)
+@pytest.mark.parametrize('method', ['fv1', 'fv1_hancock'])
+def test_runner_direct_api_and_exact_final_time(inputs, tmp_path, duration, method):
+    config = replace(inputs, duration_s=duration, solver_method=method)
     prepared = prepare_run(config=config)
     output = tmp_path/'result'
     result = execute_run(config=config, output=output)
     # Construct independently through the ordinary API, with identical resolved inputs.
-    direct = create_model(terrain=prepared.terrain, solver_method='fv1', manning_n=config.manning_n,
+    direct = create_model(terrain=prepared.terrain, solver_method=config.solver_method, manning_n=config.manning_n,
         infiltration=config.infiltration_mm_h/3.6e6, rainfall_series=(prepared.times_s, prepared.rates_m_s),
         boundary_qx=prepared.qx, boundary_qy=prepared.qy, device='cpu')
     direct.solver.set_rainfall_spatial_multiplier(multiplier=prepared.multiplier)
@@ -76,6 +77,7 @@ def test_runner_direct_api_and_exact_final_time(inputs, tmp_path, duration):
     status = json.loads((output/'status.json').read_text())
     assert status['state'] == 'completed'
     metrics = json.loads((output/'metrics.json').read_text())
+    assert metrics['solver'] == direct.solver.numerical_configuration()['solver_method']
     assert metrics['accepted_steps'] == direct.solver.steps
     assert metrics['actual_time_s'] == duration
     assert metrics['dt_mean_s'] == pytest.approx(duration/direct.solver.steps)
@@ -244,6 +246,10 @@ def test_ui_cuda_default_graph_path(inputs, tmp_path):
     cpu_output, gpu_output = tmp_path/'cpu', tmp_path/'gpu'
     execute_run(config=inputs, output=cpu_output)
     execute_run(config=replace(inputs, device='cuda:0'), output=gpu_output)
+    with wp.ScopedDevice(device='cuda:0'):
+        supported = wp.is_conditional_graph_supported()
+    assert json.loads((gpu_output/'metrics.json').read_text())['cuda_graph'] == supported
+    assert json.loads((cpu_output/'metrics.json').read_text())['cuda_graph'] is False
     for filename in ('maximum_depth.tif', 'final_depth.tif'):
         with rasterio.open(cpu_output/filename) as cpu, rasterio.open(gpu_output/filename) as gpu:
             np.testing.assert_allclose(actual=gpu.read(1), desired=cpu.read(1), rtol=1.e-12, atol=1.e-14)
@@ -251,3 +257,15 @@ def test_ui_cuda_default_graph_path(inputs, tmp_path):
     gpu_ledger = json.loads((gpu_output/'diagnostics.json').read_text())[-1]
     assert gpu_ledger['time_s'] == cpu_ledger['time_s'] == 2.
     assert abs(gpu_ledger['residual_m3']) < 1.e-11
+
+
+def test_saved_ui_replay_and_matched_preset(inputs):
+    from dataclasses import asdict
+
+    old_request = asdict(inputs)
+    del old_request["solver_method"]
+    restored = RunConfig.from_saved(options=old_request)
+    fv1 = create_run_model(prepared=prepare_run(config=restored))
+    assert fv1.solver.numerical_configuration()["solver_method"] == "fv1"
+    with pytest.raises(ValueError, match="profile requires FV1"):
+        prepare_run(config=replace(inputs, numerical_profile="orton_bradley_matched"))

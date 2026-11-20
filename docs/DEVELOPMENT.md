@@ -1,7 +1,6 @@
 # Development
 
-The verified modified sparse FV1 path is now the default on both main and dev.
-Dense execution remains selectable; static AMR stays separate on dev.
+New full-SWE models on dev select adaptive MUSCL–Hancock. Explicit FV1 uses the verified sparse path, also the default in v0.1.3. See the [default qualification](../validation/hancock_default_review/REPORT.md).
 
 Work on dev. main receives ordinary validated merges/fast-forwards. This
 repository has independent history; do not change the original Overlander
@@ -13,7 +12,7 @@ Numba 0.67.0 and Warp 1.17.0. Do not upgrade them as housekeeping.
 
 Maintained entry points, from the repository root:
 
-- `python -m examples.run_synthetic`: small LI/FV1 installation smoke test.
+- `python -m examples.run_synthetic`: small adaptive Hancock, FV1 and LI installation smoke test.
 - `python -m examples.run_purau`: 40×40 real-terrain CPU rainfall demonstration.
 - `python -m examples.run_direct`: user-editable GeoTIFF paths and controls.
 - `python -m validation.compare`: bounded independent reference comparisons.
@@ -158,8 +157,7 @@ Inspect its guard for the test-log destination before reproducing the audit.
 
 ## v0.1.2 local interface and packaging
 
-High-level factories now default to FV1; LI/SGS examples must select LI
-explicitly. Use `python -m floodwarp.ui` after installing `.[ui]` for the local
+In v0.1.2 the high-level factories selected FV1. For replay on dev, select FV1 explicitly. LI/SGS examples select LI. Use `python -m floodwarp.ui` after installing `.[ui]` for the local
 rainfall interface. See [UI guide](UI.md). `floodwarp.sampling.sample_targets`
 shares exact-final-time output targets with the small public examples; the
 standalone full-domain replay retains its own identical helper.

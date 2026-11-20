@@ -50,7 +50,7 @@ def test_spatial_roughness_and_capacity_match_direct_api(spatial_inputs, tmp_pat
         infiltration_mode='map', infiltration_map=str(infiltration))
     prepared = prepare_run(config=config)
     actual = create_run_model(prepared=prepared)
-    direct = create_model(terrain=prepared.terrain, solver_method='fv1', manning_n=prepared.roughness,
+    direct = create_model(terrain=prepared.terrain, solver_method=config.solver_method, manning_n=prepared.roughness,
         infiltration=prepared.infiltration, rainfall_series=(prepared.times_s, prepared.rates_m_s),
         rainfall_end_behavior='finite_support', boundary_qx=prepared.qx, boundary_qy=prepared.qy)
     for model in (actual, direct):

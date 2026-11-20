@@ -2,6 +2,8 @@
 
 ## 0.2.0.dev0 — development only
 
+- New Python and UI full-SWE models use adaptive MUSCL–Hancock, FP64 and contact-HLL. CUDA graphs activate on supported devices. Select `solver_method="fv1"` for first-order hydraulics and culverts. Historical saved UI requests, the matched Orton preset and explicit FV1/FV2 checkpoints retain their solver identity. See the [development qualification and migration notes](validation/hancock_default_review/REPORT.md).
+
 - Clarify LISFLOOD-FP's scientific influence, independent implementation and
   external validation role; cite the foundational ACC and FV1 papers.
   Update the enhanced-solver positional API test for the deliberate removal

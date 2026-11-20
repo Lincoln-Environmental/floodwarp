@@ -13,11 +13,11 @@ Select the project's `.venv/bin/python` interpreter in PyCharm. Open
 http://127.0.0.1:8765. The same interface starts with `python -m floodwarp.ui`.
 No numerical dependency pins changed.
 
-## Default Orton Bradley setup
+## Orton Bradley replay preset
 
 When the extracted original `orton_bradley_v0.1.0` archive is present in
 `outputs/release/orton_bradley_v0.1.0`, `orton_bradley_v0.1.0`, or the launch
-directory itself, the interface loads and previews that full-domain setup.
+directory itself, **Load Orton Bradley setup** loads and previews the matched FV1 configuration. A new ordinary form selects adaptive Hancock. Saved UI requests without a solver field replay as FV1.
 IDE launches from `src/floodwarp` are anchored at the checkout root, so the
 archive and normal `outputs/` directory are found there too. An empty or wrong
 archive folder produces a selection error rather than a missing Python-source

@@ -23,9 +23,7 @@ Rasterio is imported only when these IO functions are called.
 
 ## Solvers and initial state
 
-`create_model(terrain=..., solver_method='li'|'fv1'|'fv2', ...)` uses the supported
-factory, with FV1 as the omitted-method default since v0.1.2. Explicit LI
-selection and native LI construction remain available. `initial_depth` or `initial_stage` accepts a scalar or spatial field;
+New `create_model(terrain=...)` and `create_overland_solver(...)` calls on dev select `fv1_hancock`, `limiter="adaptive"` and `flux_scheme="contact_hll"`. The short alias `hancock` records the canonical method. FV1, MUSCL–Euler, FV2 and LI remain explicitly selectable. For a stored Python options dictionary, use `create_model_from_config(terrain=terrain, options=options)` from `floodwarp.model`. An omitted stored solver means historical FV1. An explicit historical `fv1_hancock` without a limiter means MC. Store both method and limiter when saving a new configuration. For older LI configurations explicitly specify `li`. `initial_depth` or `initial_stage` accepts a scalar or spatial field;
 they are mutually exclusive. Stages require `stage_datum` matching terrain.
 Native `LocalInertialSolver` and `FullSWESolver` remain public for advanced
 array control. LI's ordinary omitted profile resolves to `physical_candidate`.
@@ -70,7 +68,7 @@ on affected faces. Pass `depth_edges=None` to stop collecting and release the
 extra RK scratch. Configure identical physical inputs, limiter and time series
 before loading an FV2 checkpoint. Directional bed traces respect the ordering of adjacent DEM centres. Earlier experimental FV2 checkpoints using `muscl_eta_bed_velocity_v1` are rejected because they may contain artificial ponding and momentum. Restart those cases from their physical initial conditions. See the [FV2 verification report](../validation/fv2_review/REPORT.md).
 
-### Experimental single-flux full shallow-water methods
+### Single-flux MUSCL methods
 
 Select `solver_method="fv1_muscl_euler"` for the spatial reconstruction control or
 `solver_method="fv1_hancock"` for the unsplit half-step predictor. Both accept
@@ -83,8 +81,7 @@ in checkpoints. Hancock exposes the last trial's local predictor failures
 through `predictor_fallback_cells()`.
 
 Select `flux_scheme="low_froude_hll"` with FV1 or Hancock to test
-Froude-scaled normal momentum dissipation. FV1 contact-HLL remains the
-default. See the [analytical accuracy and cost study](../validation/fv1_diffusion_review/REPORT.md).
+Froude-scaled normal momentum dissipation. The ordinary development configuration uses adaptive Hancock with contact-HLL. See the [analytical accuracy and cost study](../validation/fv1_diffusion_review/REPORT.md).
 
 ## Forcing and infiltration
 

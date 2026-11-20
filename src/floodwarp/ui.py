@@ -208,9 +208,9 @@ class LocalHandler(BaseHTTPRequestHandler):
             elif self.path == '/preset/orton':
                 result = self.server.app.load_orton(directory=request['directory'], output_parent=request['output_parent'])
             elif self.path == '/validate':
-                result = self.server.app.validate(config=RunConfig(**request))
+                result = self.server.app.validate(config=RunConfig.from_saved(options=request))
             elif self.path == '/run':
-                result = self.server.app.start(config=RunConfig(**request))
+                result = self.server.app.start(config=RunConfig.from_saved(options=request))
             else:
                 self.respond(status=404, data=dict(error='Not found'))
                 return

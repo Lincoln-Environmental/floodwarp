@@ -1,13 +1,14 @@
 # FloodWarp evidence index
 
+New models on dev select adaptive MUSCL–Hancock. See the [development default qualification](hancock_default_review/REPORT.md) for analytical, GPU, regression and cross-version restart results.
+
 The v0.1.2 candidate starts from release baseline
 `bce98b103beca066cd0c9afdeec0fc330576182a` on main. The owner's subsequent
 README/COPYRIGHT commits through `731cf6d1c3a69eb1267875c90f67965e9f72c193`
 are also preserved; they do not change hydraulics. It retains FP64 uniform-grid
 FV1 with verified modified exact-sparse scheduling and explicit dense execution.
 The candidate commit and actual distribution hashes are recorded in
-[release verification](release_v0.1.2/REPORT.md). Default high-level construction
-now selects FV1. Explicit LI and experimental SGS remain available.
+[release verification](release_v0.1.2/REPORT.md). High-level construction in the v0.1.2 candidate selects FV1. Explicit LI and experimental SGS remain available.
 No static-mesh or adaptive runtime is part of this release.
 
 | Evidence | Scope |

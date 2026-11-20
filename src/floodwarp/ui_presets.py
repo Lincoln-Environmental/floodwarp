@@ -132,7 +132,7 @@ def prepare_orton_bradley(*, directory, output_parent):
     catalog = preset_catalog()
     output = output_parent/'orton-bradley-ui-inputs'
     manifest = convert_orton_inputs(directory=directory, output=output, expected_digests=catalog['source_sha256'])
-    config = RunConfig(dem=str(output/'dem.tif'), rainfall_csv=str(output/'rainfall.csv'),
+    config = RunConfig(solver_method='fv1', dem=str(output/'dem.tif'), rainfall_csv=str(output/'rainfall.csv'),
         output_parent=str(output_parent), vertical_datum='NZVD2016', duration_s=259200., interval_s=60.,
         roughness_mode='map', roughness_map=str(output/'roughness.tif'),
         distribution='map', multiplier=str(output/'multiplier.tif'),

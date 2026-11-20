@@ -24,7 +24,7 @@ def build_model(*, shape, factor, controller, device, rainfall, infiltration, ma
         infiltration_fd_m=soil_settings['decay_depth_m'],infiltration_k_m_per_s=infiltration)
     if method=='green_ampt':options=dict(infiltration_ks_m_per_s=infiltration,
         infiltration_psi_f_m=soil_settings['suction_m'],infiltration_delta_theta=soil_settings['delta_theta'])
-    return create_model(terrain=terrain,device=device,hydraulic_geometry_mode='enhanced',
+    return create_model(terrain=terrain,solver_method='li',device=device,hydraulic_geometry_mode='enhanced',
         subgrid_bed_elevation=np.zeros((shape[0]*factor,shape[1]*factor)),subgrid_resolution_m=1.,
         component_timestep=controller,initial_depth=initial_depth,rainfall=rainfall,infiltration=infiltration,
         infiltration_method=method,explicit_maximum_dt=maximum_dt,explicit_minimum_dt=minimum_dt,

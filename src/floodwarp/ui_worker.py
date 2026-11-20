@@ -8,7 +8,7 @@ from floodwarp.ui_runner import RunConfig, execute_run
 
 def run_request(*, request_path):
     request = json.loads(request_path.read_text())
-    execute_run(config=RunConfig(**request['config']), output=request_path.parent,
+    execute_run(config=RunConfig.from_saved(options=request['config']), output=request_path.parent,
                 expected_inputs=request['inputs'])
 
 

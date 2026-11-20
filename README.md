@@ -11,8 +11,7 @@ The spatial UI is now also on main / v0.1.3. See the
 [spatial UI guide](docs/UI_SPATIAL.md). Original v0.1.2 distributions are unchanged.
 
 FloodWarp simulates rainfall-driven surface flooding on CPU and NVIDIA CUDA.
-The primary solver is FP64, uniform-grid FV1, an independent first-order
-finite-volume implementation of the full shallow-water equations. Developed
+New models on dev use FP64 adaptive MUSCL–Hancock for the full shallow-water equations. The v0.1.3 release uses first-order FV1. Developed
 by **Patrick Durney**. Copyright **Lincoln Agritech Ltd**. Software is
 [AGPL-3.0-only](LICENSE); attributed elevation data retain CC BY 4.0.
 
@@ -33,7 +32,9 @@ preserved. See [release status](docs/RELEASE_STATUS.md) and
 
 | Method | Interface | Status and scope |
 |---|---|---|
-| FV1 | Local UI, Python factories, native class | Ordinary high-level default; exact sparse scheduling with dense storage; explicit dense override |
+| Adaptive MUSCL–Hancock | Local UI and Python factories (also `solver_method="hancock"`) | Development default, FP64 contact-HLL with midpoint prediction |
+| FV1 | Local UI, Python factories, native class | Fast first-order option, exact sparse scheduling, supports culverts through Python |
+| FV2 and MUSCL–Euler | Local UI and Python factories | SSP-RK2 and spatial-reconstruction controls |
 | LI | Explicit `solver_method="li"`, native class | Reduced-complexity local-inertial alternative; ordinary LI physical profile retained |
 | Traditional SGS | Explicit LI Python configuration | Experimental common-stage subgrid geometry |
 | Enhanced SGS | Explicit LI Python configuration | Experimental component-aware subgrid geometry |
@@ -86,17 +87,16 @@ not start another run.
 
 ![Orton Bradley terrain and explicit coastal stage contacts on OpenStreetMap](docs/ui-orton-map.png)
 
-The UI supports rainfall-driven FV1 with uniform or spatial Manning roughness,
+The development UI supports rainfall-driven full-SWE methods with uniform or spatial Manning roughness,
 uniform/spatial constant-capacity or spatial exponential infiltration,
 CPU/automatic/specific CUDA devices and Closed/FREE/explicit constant-stage
 boundaries. OpenStreetMap streams the viewed basemap behind local terrain,
 domain and maximum/final-depth overlays. No coastal stages are inferred.
-Sparse execution and CUDA-graph defaults remain unchanged.
+Hancock starts in dense mode and uses CUDA graphs on supported devices.
 [Current UI guide](docs/UI_SPATIAL.md) explains spatial inputs, boundary face
 CSVs, map behaviour and replay; [the earlier guide](docs/UI.md) records v0.1.2.
 
-When the extracted original Orton Bradley archive is present, the UI loads its
-complete 5 m setup by default: spatial roughness, original exponential soils,
+Select **Load Orton Bradley setup** to reproduce the original FV1 preset. It uses the archived 5 m inputs, including spatial roughness, original exponential soils,
 rainfall scaling and 212 explicit coastal contacts. It previews the setup and
 waits for Run; the 72-hour event never starts automatically. Otherwise choose
 the archive directory with Browse. The small synthetic control remains available.
@@ -153,11 +153,9 @@ preserve the DEM grid, CRS, mask and metre units. Boundary-flow time series are
 are distinct from simultaneous final depth. Checkpoints are saved after each
 completed diagnostic interval; full depth snapshots are not accumulated.
 
-From a source checkout, `python -m examples.run_synthetic` runs explicit FV1
-and LI controls. `python -m examples.run_purau` is the historical **200 m Orton
+From a source checkout, `python -m examples.run_synthetic` runs the development default alongside explicit FV1 and LI controls. `python -m examples.run_purau` is the historical **200 m Orton
 Bradley installation crop**; the name does not identify the actual Purau
-catchment. [run_direct.py](examples/run_direct.py) is the editable own-DEM FV1
-example. These examples write to `outputs/` and reach their exact final time.
+catchment. [run_direct.py](examples/run_direct.py) is the editable own-DEM example using the development default. These examples write to `outputs/` and reach their exact final time.
 
 ## Equivalent Python API
 
@@ -184,7 +182,8 @@ if __name__ == "__main__":
 
 `prepare_run` and `create_run_model` expose the resolved inputs and ordinary
 `floodwarp.model` object. `create_model(terrain=terrain)` and
-`create_overland_solver(...)` now default to FV1 deliberately in v0.1.2.
+`create_overland_solver(...)` select adaptive Hancock on dev. Use `solver_method="fv1"` to reproduce the v0.1.2–v0.1.3 default.
+See [restart compatibility and qualification](validation/hancock_default_review/REPORT.md).
 Pass `solver_method="li"` for LI, or use native `LocalInertialSolver`.
 FV1 defaults to exact sparse execution; `execution_mode="dense"` retains the
 reference. Existing checkpoints retain their formulation identity; incompatible

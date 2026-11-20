@@ -2,8 +2,8 @@
 import math
 
 
-def new_run_metrics(*, version, source, duration_s, device, numerical_profile):
-    return dict(schema=1, version=version, source=source, solver='fv1', device=device,
+def new_run_metrics(*, version, source, duration_s, device, numerical_profile, solver_method):
+    return dict(schema=1, version=version, source=source, solver=solver_method, device=device,
         copyright='Lincoln Agritech Ltd', developed_by='Patrick Durney',
         numerical_profile=numerical_profile, requested_duration_s=float(duration_s),
         actual_time_s=0., accepted_steps=0, completed_intervals=0,

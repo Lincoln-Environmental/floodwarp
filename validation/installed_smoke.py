@@ -7,7 +7,8 @@ import sys
 
 import numpy as np
 import floodwarp
-from floodwarp import FullSWESolver, LocalInertialSolver
+from floodwarp import LocalInertialSolver
+from floodwarp.fv2_solver import HancockSolver
 from floodwarp.inputs import terrain_from_array
 from floodwarp.model import advance, create_model, diagnostics
 
@@ -20,7 +21,7 @@ def verify_installation(*, expected_version, duration, rainfall):
         row_order='south_to_north', vertical_datum='local')
     default = create_model(terrain=terrain, rainfall=rainfall, device='cpu')
     li = create_model(terrain=terrain, solver_method='li', rainfall=rainfall, device='cpu')
-    assert isinstance(default.solver, FullSWESolver)
+    assert isinstance(default.solver, HancockSolver) and default.solver.limiter == "adaptive"
     assert isinstance(li.solver, LocalInertialSolver)
     for model in (default, li):
         advance(model=model, end_time=duration)
@@ -29,7 +30,7 @@ def verify_installation(*, expected_version, duration, rainfall):
         assert abs(diagnostics(model=model)['residual_m3']) < 1.e-12
     assert 'matplotlib' not in sys.modules and 'pyogrio' not in sys.modules
     print(json.dumps(dict(version=expected_version, module=str(module), python=sys.version,
-        fv1=True, li=True, ui_installed=importlib.util.find_spec('pyogrio') is not None)))
+        fv1_hancock=True, li=True, ui_installed=importlib.util.find_spec('pyogrio') is not None)))
 
 
 if __name__ == "__main__":

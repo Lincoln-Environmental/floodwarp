@@ -41,7 +41,7 @@ def build_case(*,shape,factor,scenario,controller,device,cap,minimum_dt,
         row_order='south_to_north',vertical_datum='local')
     f0,k=soil['initial_m_s'],soil['conductivity_m_s']
     if scenario=='infiltrating':f0=k=soil['fully_infiltrating_m_s']
-    model=create_model(terrain=terrain,device=device,hydraulic_geometry_mode='enhanced',
+    model=create_model(terrain=terrain,solver_method='li',device=device,hydraulic_geometry_mode='enhanced',
         subgrid_bed_elevation=native,subgrid_resolution_m=1.,native_active_mask=mask,
         subgrid_manning_n=.035+np.indices(native.shape)[1]*.0001,
         component_timestep=controller,maximum_stage_m=float(native.max()+2.),

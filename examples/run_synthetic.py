@@ -4,6 +4,7 @@ import numpy as np
 
 from floodwarp.inputs import terrain_from_array, boundary_faces
 from floodwarp.model import create_model
+from floodwarp.solver_defaults import DEFAULT_SOLVER_METHOD
 from examples.common import run_example
 from floodwarp.sampling import sample_targets
 
@@ -19,7 +20,7 @@ if __name__ == "__main__":
     dx = 5.
     dy = 5.
     slope = .01
-    methods = ('fv1', 'li')
+    methods = (DEFAULT_SOLVER_METHOD, 'fv1', 'li')
     manning_n = .035
     rainfall_m_s = 20./3.6e6
     duration_s = 10.
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     maximum_dt_s = .5
     device = 'cpu'
     make_plots = False
-    use_cuda_graph = False
+    use_cuda_graph = None
     output_root = Path('outputs/synthetic')
 
     terrain = synthetic_terrain(shape=shape, dx=dx, dy=dy, slope=slope)

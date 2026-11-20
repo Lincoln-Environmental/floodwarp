@@ -5,6 +5,7 @@ import warp as wp
 
 from floodwarp import full_swe_kernels as fv1
 from floodwarp import fv2_kernels as k
+from floodwarp.solver_defaults import DEFAULT_FULL_SWE_FLUX, DEFAULT_HANCOCK_LIMITER
 from floodwarp.full_swe_solver import FullSWESolver
 
 
@@ -13,15 +14,17 @@ class FV2Solver(FullSWESolver):
     integration = "ssprk2_strang_drag"
 
     def __init__(
-        self, *, limiter="mc", execution_mode="dense", structures=(), flux_scheme="contact_hll", **options
+        self, *, limiter="mc", execution_mode="dense", structures=(), flux_scheme=DEFAULT_FULL_SWE_FLUX, **options
     ):
         if structures:
-            raise ValueError("FV2 does not support stage-consistent culvert exchange")
-        if limiter not in ("mc", "minmod", "adaptive") or (
-            flux_scheme != "contact_hll"
-            and not (self.method_name == "fv1_hancock" and flux_scheme == "low_froude_hll")
+            raise ValueError(f"{self.method_name} does not support stage-consistent culvert exchange. Select solver_method='fv1' for full-SWE culverts.")
+        if limiter not in ("mc", "minmod", "adaptive"):
+            raise ValueError(f"{self.method_name} requires limiter mc, minmod or adaptive")
+        if flux_scheme != "contact_hll" and not (
+            self.method_name == "fv1_hancock" and flux_scheme == "low_froude_hll"
         ):
-            raise ValueError("FV2 requires contact_hll and limiter mc, minmod or adaptive")
+            raise ValueError(f"{self.method_name} does not support {flux_scheme!r}. "
+                             "Use contact_hll or explicitly select FV1 for its alternative fluxes.")
         self.limiter = limiter
         self._limiter_code = {"minmod": 0, "mc": 1, "adaptive": 2}[limiter]
         super().__init__(execution_mode=execution_mode, flux_scheme=flux_scheme, **options)
@@ -57,6 +60,9 @@ class FV2Solver(FullSWESolver):
     def configure_execution(self, *, mode, tile_size=8, dense_fraction=0.65):
         if mode not in ("dense", "sparse", "dynamic"):
             raise ValueError("FV2 execution mode must be dense, sparse or dynamic")
+        if tile_size != 8 or dense_fraction != .65:
+            raise ValueError(f"{self.method_name} does not use FV1 tile_size or dense_fraction tuning. "
+                             "Omit these overrides or select solver_method='fv1'.")
         self._omit_dry = int(mode != "dense")
         self._dynamic = mode == "dynamic"
         dense = wp.empty(0, dtype=wp.int32, device=self.device)
@@ -417,6 +423,9 @@ class MUSCLEulerSolver(FV2Solver):
 class HancockSolver(FV2Solver):
     method_name = "fv1_hancock"
     integration = "unsplit_hancock_strang_drag"
+
+    def __init__(self, *, limiter=DEFAULT_HANCOCK_LIMITER, **options):
+        super().__init__(limiter=limiter, **options)
 
     def predictor_fallback_cells(self):
         """Cells with an inadmissible half-time reconstruction in the last trial."""

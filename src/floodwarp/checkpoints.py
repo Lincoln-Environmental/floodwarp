@@ -22,7 +22,8 @@ def durable_checkpoint(*, surface, path, signature, report):
         directory=path.parent/'geometry'
         if not (directory/(geometry_key+'.npz')).exists():
             save_geometry_cache(geometry=geometry,directory=directory,key=geometry_key)
-    metadata=dict(signature=signature,host=host,initial_volume=surface.initial_volume,
+    metadata=dict(numerical_method=dict(solver_method="li", integration="staggered_local_inertial", limiter=None),
+        signature=signature,host=host,initial_volume=surface.initial_volume,
         none_fields=[name for name,field in state['device'].items() if field is None],
         cumulative_report=report,geometry_key=geometry_key)
     temporary=None
