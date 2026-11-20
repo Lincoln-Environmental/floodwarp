@@ -46,11 +46,11 @@ The discontinuous, intermittently dry lake remained stationary to roundoff, incl
 
 ## Terrain representation and reference uncertainty
 
-Seven synthetic cases reuse the same mathematical terrain on six hydraulic grids from 20 to 0.625 m. A separate experiment holds each 5 m bed cell and physical input constant under subdivision to 2.5 and 1.25 m. This isolates transport error on the same represented geometry. Both FV1 and FV2 provide independent numerical discretisations, using the common contact-HLL building block. The finest MC case also runs with a halved timestep on the resampled continuous surface. Reference-grid and cross-formulation differences are practical uncertainty indicators, without a rigorous error bound. [Synthetic data](synthetic.json)
+Both orders receive identical cell-average terrain for each spacing. FV2 infers limited face-bed slopes from those data, which is part of its discretisation. Seven synthetic cases reuse the same mathematical terrain on six hydraulic grids from 20 to 0.625 m. A separate experiment holds each 5 m bed cell and physical input constant under subdivision to 2.5 and 1.25 m. This isolates transport error on the same represented geometry. Both FV1 and FV2 provide independent numerical discretisations, using the common contact-HLL building block. The finest MC case also runs with a halved timestep on the resampled continuous surface. Reference-grid and cross-formulation differences are practical uncertainty indicators, without a rigorous error bound. [Synthetic data](synthetic.json)
 
 On fixed 5 m terrain, MC reduced expansion-case depth RMSE against the 1.25 m MC reference from 5.30 to 1.51 mm. The reduction persisted against the alternative 1.25 m FV1 reference. The irregular case changed from 4.75 to 5.37 mm and the rainfall case from 2.79 to 2.97 mm. Both changes were smaller than the corresponding last reference refinement differences. In the steep case, depth and export pointed in different directions. The 5 m MC envelope RMSE fell from 8.71 to 4.47 mm while its export difference rose from 37.2 to 43.0 m³. All seven cases include velocity, wet-area overlap, wet component count, sampled arrival and outlet metrics. [Fixed-terrain comparisons](TABLES.md)
 
-The 200 × 200 m Orton and Purau tile controls independently vary represented DEM and hydraulic grid. The shortest Orton installation forcing and the 600 s Purau rain-peak segment are numerical controls. Both have 1 m surveys. Subcells at 0.5, 0.25 and 0.125 m hold that 1 m terrain constant. Full-field comparison uses a common 1 m support. A second control solves the aggregated 5 and 10 m DEMs at 1 m hydraulic spacing, preserving the geometry removed by aggregation as an identifiable error source. The native-grid FV1-to-MC final-depth RMSE fell from 1.022 to 0.793 mm at Orton and 5.965 to 3.666 mm at Purau. At 5 m it rose from 0.566 to 0.585 mm and from 6.698 to 6.753 mm respectively. The corresponding final MC reference refinement gaps were 0.120 and 0.774 mm, and the finest cross-method spreads were 0.337 and 1.990 mm. Timestep halving changed finest depth by 0.0045 and 0.0340 mm respectively on finest support. These comparisons cannot rank the small 5 m changes. Fine-grid depth improvement alone also failed to predict wet-area overlap. [Orton control](orton_terrain.json) · [Purau control](purau_terrain.json)
+The 200 × 200 m Orton and Purau tile controls independently vary represented DEM and hydraulic grid. The 240 s Orton installation forcing and the 600 s Purau rain-peak segment are numerical controls. Both have 1 m surveys. Subcells at 0.5, 0.25 and 0.125 m hold that 1 m terrain constant. Full-field comparison uses a common 1 m support. A second control solves the aggregated 5 and 10 m DEMs at 1 m hydraulic spacing, preserving the geometry removed by aggregation as an identifiable error source. The native-grid FV1-to-MC final-depth RMSE fell from 1.022 to 0.793 mm at Orton and 5.965 to 3.666 mm at Purau. At 5 m it rose from 0.566 to 0.585 mm and from 6.698 to 6.753 mm respectively. The corresponding final MC reference refinement gaps were 0.120 and 0.774 mm, and the finest cross-method spreads were 0.337 and 1.990 mm. Timestep halving changed finest depth by 0.0045 and 0.0340 mm respectively on finest support. These comparisons cannot rank the small 5 m changes. Fine-grid depth improvement alone also failed to predict wet-area overlap. [Orton control](orton_terrain.json) · [Purau control](purau_terrain.json)
 
 ![Common-support native terrain comparison](native_terrain.png)
 
@@ -60,18 +60,24 @@ Five synchronised warmed repeats on an NVIDIA RTX 4070 Ti SUPER with FP64 state 
 
 | Stoker, adaptive timestep, dense | Depth RMSE (m) | Median hydraulic time (ms) | Steps | Device arrays (MB) |
 |---|---:|---:|---:|---:|
-| FV1 5 m | 0.04343 | 10.33 | 142 | 2.14 |
-| FV2 MC 5 m | 0.01401 | 36.59 | 192 | 4.18 |
-| FV2 MC 20 m | 0.02752 | 9.24 | 48 | 0.27 |
-| FV1 2.5 m | 0.02799 | 35.31 | 284 | 8.54 |
+| FV1 5 m | 0.04343 | 10.32 | 142 | 2.14 |
+| FV2 MC 5 m | 0.01401 | 36.59 | 192 | 3.99 |
+| FV2 MC 20 m | 0.02752 | 9.23 | 48 | 0.25 |
+| FV1 2.5 m | 0.02799 | 35.30 | 284 | 8.54 |
 
-At approximately the 5 m FV1 budget, the coarser FV2 Stoker depth RMSE was 37% lower. At 5 m the same-grid hydraulic cost was 3.54× FV1. The Orton 5 m installation tile took 8.31 ms with FV1 and 91.73 ms with MC, with 120 and 307 accepted steps respectively. The small wet-area tile has a different CFL history and kernel utilisation. Dense and sparse modes produced bitwise-identical final fields across all 18 case/grid/method pairs. A separate alternating dense/compact replay on the real footprint gave 20.85 versus 12.45 ms over 8 s at dry hour 1 and 702.27 versus 627.85 ms at wet hour 25 on the 5 m grid. The 6.73 MB index lists reduced wet-window time by 10.6% and dry-window time by 40.3%. State, accepted timesteps, face transport, maxima and ledgers matched bitwise at all three grid resolutions. [Scheduling study](scheduling.json) The higher-order stored state requires extra RK scratch, two directional slopes, per-stage fluxes and water-exchange amounts. [Execution table](TABLES.md)
+At approximately the 5 m FV1 budget, the coarser FV2 Stoker depth RMSE was 37% lower. At 5 m the same-grid hydraulic cost was 3.54× FV1. The Orton 5 m installation tile took 8.31 ms with FV1 and 91.77 ms with MC, with 120 and 307 accepted steps respectively. The small wet-area tile has a different CFL history and kernel utilisation. Dense and sparse modes produced bitwise-identical final fields across all 18 case/grid/method pairs. A separate alternating dense/compact replay on the real footprint gave 20.84 versus 12.45 ms over 8 s at dry hour 1 and 701.38 versus 627.41 ms at wet hour 25 on the 5 m grid. The 6.73 MB index lists reduced wet-window time by 10.6% and dry-window time by 40.3%. State, accepted timesteps, face transport, maxima and ledgers matched bitwise at all three grid resolutions. [Scheduling study](scheduling.json) The higher-order stored state requires extra RK scratch, two directional slopes, per-stage fluxes and water-exchange amounts. After both face kernels finish, the second Euler update can overwrite its own input. An extra 24 bytes per cell is reserved only during reconstruction diagnostics, saving 568 MB on the full 1 m Orton grid in ordinary operation. [Execution table](TABLES.md)
 
 ![Measured error versus spacing and GPU cost](accuracy_cost.png)
 
+At wet hour 25 on the full 5 m grid, CUDA events measured a median 1.690 ms of uncaptured kernel work per accepted FV1 step and 6.987 ms per FV2 step. FV1 face fluxes took 0.797 ms and its cell CFL reduction 0.118 ms. FV2 slope reconstruction took 1.024 ms, the two stages' four oriented face kernels 3.235 ms including face CFL, the two source half-steps 1.263 ms and both Euler updates 0.517 ms. Over a 12 s window FV1 also needed 88 accepted steps versus 161 for FV2. Separate stage evaluations and the more conservative unsplit step both contribute to wall cost. [Matched wet GPU profile](hirds48/wet_cost.json)
+
 In a fresh Warp cache, shared FV1 kernel compilation and loading took 0.683 s and the FV2 module took a further 0.179 s. First graph capture in that cold process included Warp loading other registered modules and took 15.79 s. Reusing the captured graph had zero capture time. The device-array timings above are warm. [Cold cache evidence](compile.json)
 
-The entire 1 m Orton footprint contains 23,667,225 raster cells (13,999,625 active). For a feasibility measurement, each 5 m parent at hour 25 distributed its water across the surveyed subcells at a common level, conserving its total water and both momenta. Three consecutive half-second wet intervals required 1.52 wall seconds per simulated second with FV1 and 10.18 with FV2. CUDA pool use was 6.15 and 12.02 GB respectively. Applying those rates uniformly to a 48 h event would imply roughly 73 and 489 GPU-hours. Wetness and timestep vary through the storm, so this is a scale estimate only. A full 48-hour domain-wide 1 m reference refined again at 0.5 and 0.25 m was beyond this single-GPU investigation. The full-domain native probe measures computational feasibility; its coarse-derived initial state precludes using its fields as flood truth. [Native GPU probe](whole_native_probe.json)
+The entire 1 m Orton footprint contains 23,667,225 raster cells (13,999,625 active). For a feasibility measurement, each 5 m parent at hour 25 distributed its water across the surveyed subcells at a common level, conserving its total water and both momenta. Three consecutive half-second wet intervals required 1.52 wall seconds per simulated second with FV1 and 10.18 with FV2. CUDA pool use was 6.15 and 11.46 GB respectively. Applying those rates uniformly to a 48 h event would imply roughly 73 and 489 GPU-hours. Wetness and timestep vary through the storm, so this is a scale estimate only. A full 48-hour domain-wide 1 m reference refined again at 0.5 and 0.25 m was beyond this single-GPU investigation. The full-domain native probe measures computational feasibility; its coarse-derived initial state precludes using its fields as flood truth. [Native GPU probe](whole_native_probe.json)
+
+The replicated irregular synthetic case also favoured FV1 at its 5 m cost. FV1 used 6.80 ms for 6.61 mm final-depth RMSE against the 0.625 m MC reference. The 20 m MC run was the tested FV2 grid within that budget and had 29.12 mm RMSE. On the rainfall case the corresponding pair was 2.21 versus 1.80 mm, a difference requiring reference-uncertainty checks. The label beside each point in the figure gives grid spacing in metres. [Synthetic GPU timings and both references](synthetic_cost.json)
+
+![Seven synthetic terrain accuracy versus cost comparisons](synthetic_cost.png)
 
 ## Orton Bradley 48-hour scenario
 
@@ -79,7 +85,11 @@ The historical HIRDS v4 100-year design storm has **578 time nodes, 272.095646 m
 
 The released 5 m ordinary input files and the independent hour-25 checkpoint generated bitwise-identical fields at all three storm spacings. The public data path runs the 5 m control from dry when the historical archive is unavailable. The regression for masked stage inflow verifies equality under translation between the exterior perimeter and an internal inactive-cell boundary. The lowest coastal bed exceeds the prescribed stage by 0.1594 m at 5 m and 0.19192 m at 10 and 20 m. The directional slope is zero next to an inactive cell, so the exterior coastal ghost is dry across the entire full-event matrix. [Public input parity](hirds48/public_input_parity.json)
 
+At 20 m, FV2 exported 82,498 m³ less than FV1 over the 48 h storm. Its extra final surface storage accounted for 80,785 m³ of that difference and extra infiltration for 1,714 m³. On the original 5 m active footprint, the 20 m FV1 and FV2 maximum-depth RMSE against 5 m FV1 was 0.115 and 0.141 m. Peak inundation overlap above 1 cm was 0.655 and 0.445 respectively. The wet FV2 peak replay after the masked-stage correction reproduced 66,116 steps and all checked arrays bitwise at 20 m.
+
 The earlier 120 s wet continuations exercise full-domain state transfer and restart sensitivity. Their start times, terrain shapes and checkpoint hashes remain available. They are excluded from the design-storm hydrographs and practical rankings. [Orton continuation](orton_full_window.json) · [NZ demo continuation](nz_demo_full_window.json)
+
+The separate Purau guided-DEM package specifies a 303.62 mm external 48 h hyetograph and an empty boundary list. Applying an invented full-catchment outlet or relabelling that forcing as the Orton HIRDS event would invalidate a matched comparison. The Purau terrain controls therefore state their cut-edge boundary assumptions and forcing window.
 
 ## Engineering decision
 
@@ -105,6 +115,8 @@ python -m validation.fv2_accuracy
 python -m validation.fv2_equilibria
 python -m validation.fv2_additional
 python -m validation.fv2_terrain
+python -m validation.fv2_reference_check
+python -m validation.fv2_synthetic_cost
 python -m validation.fv2_native
 python -m validation.fv2_compile
 python -m validation.fv2_cost
@@ -117,7 +129,7 @@ python -m validation.fv2_native_storm
 python -m validation.fv2_stage_replay
 python -m validation.fv2_storm_evidence
 python -m validation.fv2_storm_tables
+python -m validation.fv2_verify_evidence
 ```
 
 Patrick Durney / Lincoln Agritech Ltd. The implementation and verification scripts use the repository software licence. The real-terrain outputs derive from the separately credited elevation data. [Attribution](../../THIRD_PARTY_NOTICES.md)
-

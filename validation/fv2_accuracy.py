@@ -25,7 +25,11 @@ def configured(*, domain, method, cap, device, mode="dense", mask=None):
         device=device,
         execution_mode=mode,
     )
-    solver = FullSWESolver(**options) if method == "fv1" else FV2Solver(limiter=method, **options)
+    if method in ("fv1", "roe"):
+        flux = "contact_hll" if method == "fv1" else "roe"
+        solver = FullSWESolver(flux_scheme=flux, **options)
+    else:
+        solver = FV2Solver(limiter=method, **options)
     solver.set_water_depth(depth=domain.initial[..., 0])
     wet = domain.initial[..., 0] > solver.dry_depth
     solver.set_momentum(
