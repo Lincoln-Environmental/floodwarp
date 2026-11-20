@@ -25,18 +25,23 @@ def traces(*, q, z, dry, axis, limiter, gravity=9.80665):
     ahead[..., 0] += ahead[..., 1]
     if limiter == "adaptive":
         ha, hb = np.roll(h, 1, axis=axis), np.roll(h, -1, axis=axis)
-        normal = vel[..., 1-axis]
+        normal = vel[..., 1 - axis]
         ua, ub = np.roll(normal, 1, axis=axis), np.roll(normal, -1, axis=axis)
         ca, cb = np.sqrt(gravity * ha), np.sqrt(gravity * hb)
-        crossing = ((ua > .8*ca) & (ub < 1.25*cb) & (hb > ha)) | ((ua > -1.25*ca) & (ub < -.8*cb) & (ha > hb))
-        shock = (ua > ub) & (np.abs(ha-hb) > 0.04*np.minimum(ha,hb)) & crossing
+        crossing = ((ua > 0.8 * ca) & (ub < 1.25 * cb) & (hb > ha)) | (
+            (ua > -1.25 * ca) & (ub < -0.8 * cb) & (ha > hb)
+        )
+        shock = (ua > ub) & (np.abs(ha - hb) > 0.04 * np.minimum(ha, hb)) & crossing
         shock &= (ha > dry) & (hb > dry) & (h > dry)
         boundary = [slice(None)] * 2
         boundary[axis] = [0, -1]
         shock[tuple(boundary)] = False
         shock = shock | np.roll(shock, 1, axis=axis) | np.roll(shock, -1, axis=axis)
-        slope = np.where(shock[..., None], limited(left=back, right=ahead, limiter="minmod"),
-                         limited(left=back, right=ahead, limiter="mc"))
+        slope = np.where(
+            shock[..., None],
+            limited(left=back, right=ahead, limiter="minmod"),
+            limited(left=back, right=ahead, limiter="mc"),
+        )
     else:
         slope = limited(left=back, right=ahead, limiter=limiter)
     # Limit each bed extrapolation to half the centre-to-centre bed change.

@@ -58,11 +58,11 @@ are portable in both directions and reconstruct scheduling caches after restore.
 ### Experimental full shallow-water FV2
 
 Select `create_model(terrain=terrain, solver_method='fv2', limiter='mc', device='cuda:0')`.
-The alternative limiter is `'minmod'`. The solver uses FP64, contact-HLL, MUSCL
+Select `'minmod'` for more dissipative reconstruction, or `'adaptive'` to use minmod around compressing near-critical stencils and MC elsewhere. The solver uses FP64, contact-HLL, MUSCL
 reconstruction, two SSP-RK2 flux evaluations, split rainfall, soil loss and
 Manning drag. Prescribed stages are sampled at the two RK times on the device.
 Choose `execution_mode='dense'` (FV2 default) or `'sparse'` for a static list of active cells and adjacent faces,
-with exact dry-face omission and dense storage. FV2 rejects culverts, SGS and alternative fluxes.
+with exact dry-face omission and dense storage. The experimental `'dynamic'` scheduler rebuilds active face tiles at each RK stage and also uses dense storage. FV2 rejects culverts, SGS and alternative fluxes.
 For an instrumented run, call `probe = model.solver.track_reconstruction(depth_edges=(.001, .01, .1, 1.))`
 before advancing. Read `probe.summary()` for counts and transported volume by depth and
 fallback reason. The two oriented arrays in `probe.maps` hold transported volume

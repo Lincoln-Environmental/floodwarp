@@ -26,6 +26,9 @@ class FV2Solver(FullSWESolver):
         # All neighbour reads finish in face kernels. The final Euler update
         # only reads its own cell and can overwrite the first-stage state.
         self._end = self._stage
+        self._shock_flags = wp.zeros(
+            count if limiter == "adaptive" else 0, dtype=wp.int32, device=self.device
+        )
         self._inverse = wp.empty(count, dtype=wp.float64, device=self.device)
         self._slopes = [wp.zeros(count, dtype=wp.vec4d, device=self.device) for _ in range(2)]
         self._amounts = wp.zeros(count, dtype=wp.vec2d, device=self.device)
@@ -48,8 +51,11 @@ class FV2Solver(FullSWESolver):
         self._face_tiles = [dense, dense]
         if self._dynamic:
             self._face_tiles = [
-                wp.zeros(1 + (self._fields["flux_" + axis].size + k.TILE_FACES - 1) // k.TILE_FACES,
-                         dtype=wp.int32, device=self.device)
+                wp.zeros(
+                    1 + (self._fields["flux_" + axis].size + k.TILE_FACES - 1) // k.TILE_FACES,
+                    dtype=wp.int32,
+                    device=self.device,
+                )
                 for axis in ("x", "y")
             ]
         if self._omit_dry and not self._active.all():
@@ -64,7 +70,9 @@ class FV2Solver(FullSWESolver):
 
     def execution_diagnostics(self):
         return dict(
-            execution="dynamic_face_tiles" if self._dynamic else ("active_mask_and_dry_face_omission" if self._omit_dry else "dense_uniform"),
+            execution="dynamic_face_tiles"
+            if self._dynamic
+            else ("active_mask_and_dry_face_omission" if self._omit_dry else "dense_uniform"),
             storage="dense",
             scheduling_bytes=sum(a.capacity for a in (*self._work_indices, *self._face_tiles)),
             scheduled_indices=[a.size for a in self._work_indices],
@@ -123,7 +131,9 @@ class FV2Solver(FullSWESolver):
 
     def restore_state(self, *, state):
         if state["configuration"].get("reconstruction") == "muscl_eta_bed_velocity_v1":
-            raise ValueError("Checkpoint configuration uses superseded FV2 bed traces that can reverse a slope")
+            raise ValueError(
+                "Checkpoint configuration uses superseded FV2 bed traces that can reverse a slope"
+            )
         super().restore_state(state=state)
 
     def numerical_configuration(self):
@@ -154,6 +164,7 @@ class FV2Solver(FullSWESolver):
             self._start,
             self._end,
             self._inverse,
+            self._shock_flags,
             f["active"],
             f["manning"],
             f["soil"],
@@ -175,12 +186,20 @@ class FV2Solver(FullSWESolver):
             if stage and type(self)._stage_forcing is not FV2Solver._stage_forcing:
                 # A manufactured residual may change depth after the Euler kernel.
                 self._launch_grid(k.inverse_depth, n, [q, self._inverse, self.dry_depth], layout=0)
+            if self._shock_flags.size:
+                self._launch_grid(
+                    k.mark_compressive_stencils,
+                    n,
+                    [q, f["active"], self._shock_flags, self.nx, self.ny, self.dry_depth, self.gravity],
+                    layout=0,
+                )
             self._launch_grid(
                 k.slopes,
                 n,
                 [
                     q,
                     self._inverse,
+                    self._shock_flags,
                     f["bed"],
                     f["active"],
                     *self._slopes,
@@ -188,7 +207,6 @@ class FV2Solver(FullSWESolver):
                     self.ny,
                     self.dry_depth,
                     self._limiter_code,
-                    self.gravity,
                 ],
                 layout=0,
             )
@@ -204,9 +222,21 @@ class FV2Solver(FullSWESolver):
                 indices = self._work_indices[axis + 1]
                 threads = indices.size or flux.size
                 if self._dynamic:
-                    self._launch(k.schedule_faces, tiles.size - 1,
-                                 [q, f["active"], f["types_" + name], flux, f["pressure_" + name],
-                                  tiles, self.nx, self.ny, axis])
+                    self._launch(
+                        k.schedule_faces,
+                        tiles.size - 1,
+                        [
+                            q,
+                            f["active"],
+                            f["types_" + name],
+                            flux,
+                            f["pressure_" + name],
+                            tiles,
+                            self.nx,
+                            self.ny,
+                            axis,
+                        ],
+                    )
                     threads = (tiles.size - 1) * k.TILE_FACES
                 self._launch(
                     k.faces,
@@ -256,6 +286,7 @@ class FV2Solver(FullSWESolver):
                     q,
                     dest,
                     self._inverse,
+                    self._shock_flags,
                     stage,
                     f["active"],
                     *self._slopes,

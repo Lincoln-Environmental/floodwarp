@@ -87,7 +87,11 @@ def test_fv2_oracle_and_restart(device, limiter, tmp_path):
         ).load_checkpoint(path=p)
 
 
-def test_fv2_large_datum_shoreline_and_isolated_barrier():
+@pytest.mark.parametrize("device", ("cpu", "cuda:0"))
+@pytest.mark.parametrize("limiter", ("mc", "minmod", "adaptive"))
+def test_fv2_large_datum_shoreline_and_isolated_barrier(device, limiter):
+    if device.startswith("cuda") and not wp.is_cuda_available():
+        pytest.skip("CUDA unavailable")
     y, x = np.indices((19, 32))
     bed = 2.0e6 + 0.25 * np.sin(0.4 * x) + 0.38 * np.cos(0.25 * y)
     bed[:, 16] = 2.0e6 + 4.0
@@ -95,7 +99,7 @@ def test_fv2_large_datum_shoreline_and_isolated_barrier():
     active[5:8, 10:12] = False
     h = np.where(active & (x < 16), np.maximum(0.0, 2.0e6 + 0.1 - bed), 0.0)
     s = FV2Solver(
-        ny=19, nx=32, dx=1.0, dy=1.0, bed_elevation=bed, manning_n=0.03, active_mask=active, device="cpu"
+        ny=19, nx=32, dx=1.0, dy=1.0, bed_elevation=bed, manning_n=0.03, active_mask=active, device=device, limiter=limiter
     )
     s.set_water_depth(depth=h)
     s.run_device_loop(duration=0.5)

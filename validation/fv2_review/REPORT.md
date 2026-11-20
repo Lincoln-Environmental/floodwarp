@@ -2,6 +2,8 @@
 
 **Retain FV1 contact-HLL as the production default.** The corrected FV2 solver reduces numerical diffusion on wave benchmarks and demonstrates second-order convergence over flat and curved beds. Correcting a spurious uphill step changed the practical hydraulic comparison. Controlled GPU timings now cover the analytical flows. A catchment decision also depends on how well the grid represents topography, where the algorithm reverts to first order, and how well the reference itself has converged. The storm hydrographs are simulated design-event responses. No observed gauge record accompanies this HIRDS storm.
 
+The subsequent shock, runtime and terrain-regime investigation starts from the corrected FV2 on dev at `85ffd69`. It retains the historical measurements below. [FV2 shock correction and regime assessment](REGIMES.md)
+
 ## Experiment and configuration
 
 Branch `feature/fv2-muscl-rk2` starts at dev `8f15ad7`, which contains the corrected FV1 Roe/HLLC investigation. The FV1 and FV2 comparisons use the same FP64 contact-HLL flux except for the runs explicitly labelled Roe or HLLC. The full 48-hour Orton Bradley experiment also preserves the archived stage-zero coastal boundary law, soil parameters, spatial rainfall pattern and forcing nodes. The 200 m terrain tiles have their own boundary conditions and cannot reproduce the whole-catchment outlet. [FV1 architecture audit](ARCHITECTURE.md) · [FV1 numerical evidence](../fv1_riemann_review/REPORT.md) · [Analytical discharge tables](FLOW_TRUTH.md)
