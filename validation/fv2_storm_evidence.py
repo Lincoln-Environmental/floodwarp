@@ -1,5 +1,6 @@
 """Summarise matched HIRDS runs on the archived 5 m footprint and at the outlet."""
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -149,17 +150,33 @@ def first_wet(*, paths, wet, hours):
     return first
 
 
+def write_hirds_series(*, directory, checkpoint):
+    forcing = json.loads((directory / "5m_contact_hll.json").read_text())["forcing"]
+    with np.load(checkpoint) as archive:
+        t, rate = archive["rain_times"], archive["rain_rates"]
+        cfg = json.loads(str(archive["metadata"]))["configuration"]
+        weighted_area = cfg["dx"] * cfg["dy"] * archive["multiplier"][archive["active"].astype(bool)].sum()
+    for values, key in ((t, "node_times_sha256"), (rate, "rate_nodes_sha256")):
+        if hashlib.sha256(values.tobytes()).hexdigest() != forcing[key]:
+            raise ValueError(f"Archived rainfall identity mismatch for {key}")
+    cumulative = np.r_[0.0, np.cumsum(np.diff(t) * (rate[1:] + rate[:-1]) * 0.5)]
+    np.testing.assert_allclose(cumulative[-1] * weighted_area, forcing["integrated_volume_m3"], rtol=1e-12)
+    np.savetxt(
+        directory / "hirds_forcing.csv",
+        np.column_stack((t, rate, rate * 3.6e6, cumulative * 1000, cumulative * weighted_area)),
+        fmt="%.17g",
+        delimiter=",",
+        comments="",
+        header="storm_time_s,rate_m_s,rate_mm_h,cumulative_mean_mm,cumulative_domain_rain_m3",
+    )
+    return t, rate
+
+
 def plot_hydrographs(*, directory, grids, methods, checkpoint, colors):
     fig, axes = plt.subplots(2, 2, figsize=(11, 7), layout="constrained")
-    with np.load(checkpoint) as archive:
-        import hashlib
-
-        forcing = json.loads((directory / "5m_contact_hll.json").read_text())["forcing"]
-        t, rate = archive["rain_times"], archive["rain_rates"]
-        if hashlib.sha256(rate.tobytes()).hexdigest() != forcing["rate_nodes_sha256"]:
-            raise ValueError("Rainfall series hash mismatch")
-        axes.flat[0].fill_between(t / 3600, rate * 3.6e6, color="#007d77")
-        axes.flat[0].set(title="Archived HIRDS v4 historical 100-year storm", ylabel="Rainfall rate (mm/h)")
+    t, rate = write_hirds_series(directory=directory, checkpoint=checkpoint)
+    axes.flat[0].fill_between(t / 3600, rate * 3.6e6, color="#007d77")
+    axes.flat[0].set(title="Archived HIRDS v4 historical 100-year storm", ylabel="Rainfall rate (mm/h)")
     labels = {
         "contact_hll": "FV1 contact-HLL",
         "roe": "FV1 Roe / HLL",
