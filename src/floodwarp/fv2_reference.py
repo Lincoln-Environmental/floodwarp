@@ -24,6 +24,12 @@ def traces(*, q, z, dry, axis, limiter):
     back[..., 0] += back[..., 1]
     ahead[..., 0] += ahead[..., 1]
     slope = limited(left=back, right=ahead, limiter=limiter)
+    # Limit each bed extrapolation to half the centre-to-centre bed change.
+    original_bed = slope[..., 1].copy()
+    bound = np.minimum(np.abs(back[..., 1]), np.abs(ahead[..., 1]))
+    constrained = np.abs(original_bed) > bound
+    slope[..., 0][constrained] *= bound[constrained] / np.abs(original_bed[constrained])
+    slope[..., 1] = np.clip(original_bed, -bound, bound)
     wet = (h > dry) & (np.roll(h, 1, axis=axis) > dry) & (np.roll(h, -1, axis=axis) > dry)
     ends = [slice(None)] * 2
     ends[axis] = [0, -1]

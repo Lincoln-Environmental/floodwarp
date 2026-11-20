@@ -10,13 +10,15 @@ from validation.fv2_accuracy import configured, manufactured_average, manufactur
 from floodwarp.fv2_reference import limited, traces
 
 
-def fixed_time_space(*, grids, dt, length, duration, device):
+def fixed_time_space(*, grids, dt, length, duration, device, bed_amplitude=0.0):
     rows = []
     for n in grids:
         reference = manufactured_average(n=n, t=duration)
         solutions = []
         for cap in (dt, dt / 2):
-            q, stats = manufactured_run(n=n, dt=cap, length=length, duration=duration, device=device)
+            q, stats = manufactured_run(
+                n=n, dt=cap, length=length, duration=duration, device=device, bed_amplitude=bed_amplitude
+            )
             solutions.append(q)
         r = np.sqrt(np.mean((solutions[-1] - reference) ** 2, axis=(0, 1)))
         rows.append(
@@ -88,9 +90,10 @@ def shallow_traces(*, seed, count, dry, limiter):
     delta = limited(left=q[:, 1, 1] - q[:, 0, 1], right=q[:, 2, 1] - q[:, 1, 1], limiter=limiter)
     dz = np.diff(bed, axis=1)
     deta = np.diff(h, axis=1) + dz
-    depth_slope = limited(left=deta[:, 0], right=deta[:, 1], limiter=limiter) - limited(
-        left=dz[:, 0], right=dz[:, 1], limiter=limiter
-    )
+    bed_slope = limited(left=dz[:, 0], right=dz[:, 1], limiter=limiter)
+    bound = np.min(np.abs(dz), axis=1)
+    factor = np.divide(bound, abs(bed_slope), out=np.ones_like(bound), where=abs(bed_slope) > bound)
+    depth_slope = factor * (limited(left=deta[:, 0], right=deta[:, 1], limiter=limiter) - bed_slope)
     delta[np.abs(depth_slope) >= 2 * h[:, 1]] = 0.0
     reference = u[:, 0]
     records = {}
@@ -117,6 +120,26 @@ if __name__ == "__main__":
     methods = ("fv1", "minmod", "mc")
     device = "cuda:0"
     spatial = fixed_time_space(grids=grid_sizes, dt=0.0009765625, length=8.0, duration=0.5, device=device)
+    bed_amplitude = 0.12
+    curved = fixed_time_space(
+        grids=grid_sizes,
+        dt=0.0009765625,
+        length=8.0,
+        duration=0.5,
+        device=device,
+        bed_amplitude=bed_amplitude,
+    )
+    from validation.fv2_accuracy import convergence
+
+    curved_time = convergence(
+        grids=(),
+        temporal_grid=16,
+        timesteps=(1 / 64, 1 / 128, 1 / 256, 1 / 512),
+        length=8.0,
+        duration=0.5,
+        device=device,
+        bed_amplitude=bed_amplitude,
+    )
     thacker = basin_cycles(
         spacings=spacings,
         methods=methods,
@@ -130,5 +153,12 @@ if __name__ == "__main__":
     shallow = shallow_traces(seed=94216, count=40000, dry=0.0001, limiter="mc")
     report_json(
         path=directory / "additional.json",
-        content=dict(fixed_time_spatial=spatial, thacker=thacker, shallow_velocity=shallow),
+        content=dict(
+            fixed_time_spatial=spatial,
+            curved_bed_spatial=curved,
+            curved_bed_temporal=curved_time,
+            bed_amplitude_m=bed_amplitude,
+            thacker=thacker,
+            shallow_velocity=shallow,
+        ),
     )

@@ -103,10 +103,15 @@ class FV2Solver(FullSWESolver):
             super()._configuration(),
             method="fv2",
             limiter=self.limiter,
-            reconstruction="muscl_eta_bed_velocity_v1",
+            reconstruction="muscl_ordered_bed_velocity_v2",
             integration="ssprk2_strang_drag",
             stage_forcing=self._stage_identity,
         )
+
+    def restore_state(self, *, state):
+        if state["configuration"].get("reconstruction") == "muscl_eta_bed_velocity_v1":
+            raise ValueError("Checkpoint configuration uses superseded FV2 bed traces that can reverse a slope")
+        super().restore_state(state=state)
 
     def numerical_configuration(self):
         return dict(solver_method="fv2", **self._configuration())

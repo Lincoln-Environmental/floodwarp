@@ -102,6 +102,8 @@ def step_event(*, tile, terrain_dx, factor, method, cap, sample, work, device, w
     for array in (*d.values(), by, tile.time, tile.rates):
         fingerprint.update(np.ascontiguousarray(array).tobytes())
     fingerprint.update(str((tile.configuration, dx, method, cap, sample, wet)).encode())
+    if method == "mc":
+        fingerprint.update(b"muscl_ordered_bed_velocity_v2")
     signature = fingerprint.hexdigest()
     if filename.exists():
         with np.load(filename) as a:
@@ -257,6 +259,6 @@ if __name__ == "__main__":
         sample=900,
         device="cuda:0",
         wet=0.01,
-        work=Path("outputs/fv2_hirds_native_tile"),
+        work=Path("outputs/fv2_hirds_native_ordered_bed"),
         output=evidence / "native_hirds48.json",
     )

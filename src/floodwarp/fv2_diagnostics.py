@@ -3,7 +3,7 @@
 import numpy as np
 import warp as wp
 
-from floodwarp.fv2_kernels import indices, neighbor, limited
+from floodwarp.fv2_kernels import indices, neighbor, surface_bed_slopes
 
 
 @wp.func
@@ -30,7 +30,8 @@ def reason(
         return 3
     la = bed[k] - bed[a]
     rb = bed[b] - bed[k]
-    dh = limited(q[k][0] - q[a][0] + la, q[b][0] - q[k][0] + rb, mc) - limited(la, rb, mc)
+    geometry = surface_bed_slopes(la, rb, q[k][0] - q[a][0], q[b][0] - q[k][0], mc)
+    dh = geometry[0] - geometry[1]
     if wp.abs(dh) >= wp.float64(2.0) * q[k][0]:
         return 2
     return 0
