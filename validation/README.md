@@ -15,6 +15,7 @@ No static-mesh or adaptive runtime is part of this release.
 | [Current run metrics review](run_metrics_review/REPORT.md) | Main v0.1.3 per-run accepted steps/dt/runtime, actual browser and installed-wheel checks; source audit of retained completed-event timings |
 | [Frozen acceptance protocol](ACCEPTANCE.md) | Meaningful depth, extent, discharge and conservation gates; unchanged |
 | Source `tests/test_full_swe.py`, `test_still_water.py`, `test_cfl.py`, `test_rotation.py`, source/infiltration tests | Analytical and invariant controls, accepted-step/CFL and conservation regressions |
+| [FV1 Riemann investigation](fv1_riemann_review/REPORT.md) | Analytical flux comparison, synthetic grid and timestep refinement, independent NumPy checks, repeated CUDA cost, and matched Orton Bradley windows on the investigation branch |
 | [Orton Bradley completed comparison](../examples/orton_bradley/COMPARISON.md) | Independent FloodWarp FV1 / LISFLOOD-FP FV1, matched 5 m full-domain 72-hour event |
 | [Numerical assessment](repair_review/FINAL.md) | Bounded independent comparisons and analytical/refinement controls, including their limitations |
 | [Original sparse qualification](sparse_review/REPORT.md), [full event](sparse_review/FULL_EVENT.md) | Exact sparse/dense state, maxima, ledger, graph and restart parity; one completed event and separate repeated short controls |

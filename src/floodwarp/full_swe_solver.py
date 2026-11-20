@@ -39,6 +39,7 @@ class FullSWESolver:
         contact_hll retains endpoint HLL mass/normal fluxes and upwinds the
         transverse velocity. legacy_hll is exact historical compatibility;
         star_hll and star_contact_hll are explicit diagnostic alternatives.
+        roe and hllc are experimental fluxes with a conservative HLL fallback.
 
         Exact-zero sparse execution with 8x8 tiles is the default. Select
         execution_mode='dense' for the retained dense reference. Scheduling
@@ -53,7 +54,7 @@ class FullSWESolver:
             raise ValueError('stage_boundary_momentum must be one of '+', '.join(modes))
         self.stage_boundary_momentum=stage_boundary_momentum
         self._stage_momentum_mode=modes.index(stage_boundary_momentum)
-        flux_schemes = ('legacy_hll','contact_hll','star_hll','star_contact_hll')
+        flux_schemes = ('legacy_hll','contact_hll','star_hll','star_contact_hll','roe','hllc')
         if flux_scheme not in flux_schemes:
             raise ValueError('flux_scheme must be one of '+', '.join(flux_schemes))
         self.flux_scheme = flux_scheme
@@ -97,7 +98,7 @@ class FullSWESolver:
             self._allocate(name="volume_" + axis, values=np.zeros(face_shape))
             self._fields["flux_" + axis] = wp.zeros(int(np.prod(face_shape)), dtype=wp.vec3d, device=self.device)
             self._fields["pressure_" + axis] = wp.zeros(int(np.prod(face_shape)), dtype=wp.vec2d, device=self.device)
-        self.ctrl = wp.zeros(15, dtype=wp.float64, device=self.device)
+        self.ctrl = wp.zeros(20 if self._flux_mode >= 4 else 15, dtype=wp.float64, device=self.device)
         self.condition = wp.ones(1, dtype=wp.int32, device=self.device)
         self.set_rainfall_hyetograph(times_s=np.array([0., 1.e100]), rates_m_s=np.zeros(2))
         self.configure_execution(mode=execution_mode, tile_size=tile_size, dense_fraction=dense_fraction)
@@ -277,15 +278,19 @@ class FullSWESolver:
         wp.launch(kernels.finish_step, dim=1,
             inputs=[self.ctrl, self.condition, self._fields["dt_histogram"], self.minimum_dt], device=self.device)
 
-    def run_device_loop(self, *, duration, use_cuda_graph=None, max_steps=10000000):
+    def run_device_loop(self, *, duration, use_cuda_graph=None, max_steps=10000000, track_flux=False):
         """Run to an exact requested time; CUDA uses a device conditional loop.
 
         No CFL/state readback occurs inside a CUDA graph. CPU fallback steps
         the identical kernels with host orchestration. Minimum dt is a failure
-        threshold, never a floor that overrides the stability bound.
+        threshold, never a floor that overrides the stability bound. Tracking
+        counts nonzero-depth Roe/HLLC face evaluations in this call only and
+        adds device atomics. Leave it disabled when measuring runtime.
         """
         if not np.isfinite(duration) or duration < 0 or max_steps < 1:
             raise ValueError("Finite nonnegative duration and positive step budget required")
+        if track_flux and self._flux_mode < 4:
+            raise ValueError('Flux outcome counts are available for roe and hllc')
         target = self.time + duration
         if duration == 0:
             return dict(steps=0, time_s=self.time, loop_seconds=0., compilation_seconds=0., graph_capture_seconds=0.)
@@ -297,6 +302,8 @@ class FullSWESolver:
         ctrl[10] = 0.
         ctrl[13] = self.steps + max_steps
         ctrl[14] = self.maximum_dt
+        if track_flux:
+            ctrl[15] = 1.
         self.ctrl.assign(ctrl)
         self.condition.fill_(1)
         began = perf_counter()
@@ -343,10 +350,14 @@ class FullSWESolver:
             raise ArithmeticError("FV1 stable timestep below configured failure threshold")
         if ctrl[7] or self.time != target:
             raise ArithmeticError(f"FV1 invalid state or step budget exhausted: t={self.time}, target={target}, errors={ctrl[7]}")
-        return dict(steps=done, time_s=self.time, loop_seconds=elapsed, compilation_seconds=compilation,
+        stats = dict(steps=done, time_s=self.time, loop_seconds=elapsed, compilation_seconds=compilation,
                     graph_capture_seconds=capture_seconds, dt_min_s=float(ctrl[4]), dt_max_s=float(ctrl[5]),
                     dt_mean_s=duration / done, dt_rms_s=float(np.sqrt(ctrl[6] / done)),
                     host_state_syncs=1 if graph else done, cuda_graph=bool(graph))
+        if track_flux:
+            stats['flux_outcomes'] = dict(zip(('faces', 'shallow_hll', 'inadmissible_hll', 'entropy_corrected'),
+                                             map(int, ctrl[16:20]), strict=True))
+        return stats
 
     def step(self, *, remaining_time=None, fixed_dt=None):
         # A requested fixed dt remains a cap; never override velocity CFL.

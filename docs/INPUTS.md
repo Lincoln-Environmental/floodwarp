@@ -36,6 +36,15 @@ walls, finite-velocity stages and contact-upwind HLL. Historical
 Factory timestep defaults remain 0.001–60 s; the native FV1 class retains its
 own 0–1 s defaults. Minimum timestep guards never authorise exceeding CFL.
 
+On the Riemann investigation branch, `flux_scheme='roe'` and
+`flux_scheme='hllc'` select experimental FV1 fluxes. They use the native
+hydrostatic reconstruction and the face-based CFL envelope. Both use HLL
+when either reconstructed state is at or below `dry_depth` or the proposed
+intermediate state is inadmissible. `run_device_loop(..., track_flux=True)`
+returns per-call face and fallback counts for these two schemes. Tracking
+adds device atomics and should be disabled for timing. See the
+[Riemann investigation](../validation/fv1_riemann_review/REPORT.md).
+
 v0.1.1 FV1 defaults to exact-zero sparse execution on the same uniform grid,
 with dense FP64 state, 8×8 tiles and a 0.65 dense-indexing fallback fraction.
 Native and factory constructors accept `execution_mode='dense'` to use the

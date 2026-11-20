@@ -162,7 +162,7 @@ def test_exactly_dry_faces_clear_flux_and_pressure_buffers():
 
 
 @pytest.mark.parametrize('device',['cpu','cuda:0'])
-@pytest.mark.parametrize('scheme',['legacy_hll','contact_hll','star_hll','star_contact_hll'])
+@pytest.mark.parametrize('scheme',['legacy_hll','contact_hll','star_hll','star_contact_hll','roe','hllc'])
 def test_dry_reconstructed_faces_preserve_numpy_operator(device,scheme):
     import warp as wp
     if device!='cpu' and not wp.is_cuda_available():pytest.skip('CUDA unavailable')

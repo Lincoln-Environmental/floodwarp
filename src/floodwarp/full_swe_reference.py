@@ -1,7 +1,7 @@
 """Independent, vectorised FP64 NumPy oracle for first-order full SWE.
 
 Cell order is south to north; conservative state is (h, hu, hv). Hydrostatic
-reconstruction follows Audusse et al. (2004), with two-wave HLL fluxes. This
+reconstruction follows Audusse et al. (2004), with selectable face fluxes. This
 module deliberately has no Warp or existing hydraulic-solver dependencies.
 """
 
@@ -81,6 +81,77 @@ def hll_flux(*, left, right, gravity, dry_depth, flux_scheme='legacy_hll'):
     return np.where((sl >= 0)[..., None], fl, np.where((sr <= 0)[..., None], fr, middle))
 
 
+def split_dissipation(*, speed, low, high):
+    transonic = (low < 0.) & (high > 0.)
+    split = transonic & (low <= speed) & (speed <= high)
+    negative = np.divide(low * (high - speed), high - low,
+                         out=np.array(np.minimum(speed, 0.)), where=split)
+    return speed - 2. * negative, transonic & ~split
+
+
+def research_flux(*, left, right, gravity, dry_depth, flux_scheme):
+    """Independent FP64 Roe viscosity / HLLC jump-condition fluxes."""
+    hl, hr = left[..., 0], right[..., 0]
+    ul = np.divide(left[..., 1:], hl[..., None], out=np.zeros_like(left[..., 1:]), where=hl[..., None] > 0.)
+    ur = np.divide(right[..., 1:], hr[..., None], out=np.zeros_like(right[..., 1:]), where=hr[..., None] > 0.)
+    u, v = ul[..., 0], ul[..., 1]
+    w, z = ur[..., 0], ur[..., 1]
+    fl = np.stack((left[..., 1], left[..., 1] * u + gravity * hl**2 / 2., left[..., 1] * v), axis=-1)
+    fr = np.stack((right[..., 1], right[..., 1] * w + gravity * hr**2 / 2., right[..., 1] * z), axis=-1)
+    cl, cr = np.sqrt(gravity * hl), np.sqrt(gravity * hr)
+    sl, sr = np.minimum(u - cl, w - cr), np.maximum(u + cl, w + cr)
+    cguess = (cl + cr) / 2. + (u - w) / 4.
+    uguess = (u + w) / 2. + cl - cr
+    wet = (hl > dry_depth) & (hr > dry_depth)
+    sl = np.where(wet & (cguess > 0.), np.minimum(sl, uguess - cguess), sl)
+    sr = np.where(wet & (cguess > 0.), np.maximum(sr, uguess + cguess), sr)
+    sl = np.where(hl <= dry_depth, np.minimum(sl, w - 2. * cr), sl)
+    sr = np.where(hr <= dry_depth, np.maximum(sr, u + 2. * cl), sr)
+    span = sr - sl
+    mixed = (sl < 0.) & (sr > 0.)
+    jump = right - left
+    hll = np.divide(sr[..., None] * fl - sl[..., None] * fr + (sl * sr)[..., None] * jump,
+                    span[..., None], out=np.zeros_like(left), where=mixed[..., None])
+    hll = np.where((sl >= 0.)[..., None], fl, np.where((sr <= 0.)[..., None], fr, hll))
+    if flux_scheme == 'hllc':
+        left_mass, right_mass = hl * (u - sl), hr * (sr - w)
+        star_h = np.divide(left_mass + right_mass, span, out=np.zeros_like(hl), where=mixed)
+        star_m = np.divide(sr * left_mass + sl * right_mass, span, out=np.zeros_like(hl), where=mixed)
+        sm = np.divide(star_m, star_h, out=np.zeros_like(hl), where=star_h > 0.)
+        use_left = sm >= 0.
+        star = np.stack((star_h, star_m, star_h * np.where(use_left, v, z)), axis=-1)
+        flux = np.where(use_left[..., None], fl + sl[..., None] * (star - left),
+                        fr + sr[..., None] * (star - right))
+        valid = wet & mixed & (star_h > dry_depth) & np.isfinite(star_h) & (sl < sm) & (sm < sr)
+        return np.where(valid[..., None], flux, hll)
+    if flux_scheme != 'roe':
+        raise ValueError('Unknown experimental flux')
+    wl, wr = np.sqrt(hl), np.sqrt(hr)
+    avg = np.divide(wl[..., None] * ul + wr[..., None] * ur, (wl + wr)[..., None],
+                    out=np.zeros_like(ul), where=wet[..., None])
+    speed, tangent = avg[..., 0], avg[..., 1]
+    c = np.sqrt(gravity * (hl + hr) / 2.)
+    lm, lp = speed - c, speed + c
+    dh, dm, dn = jump[..., 0], jump[..., 1], jump[..., 2]
+    delta = np.divide(dm - speed * dh, c, out=np.zeros_like(dh), where=wet)
+    am, ap = (dh - delta) / 2., (dh + delta) / 2.
+    middle_h = hl + am
+    valid_h = (middle_h > dry_depth) & np.isfinite(middle_h)
+    middle_u = np.divide(left[..., 1] + am * lm, middle_h, out=np.zeros_like(hl), where=valid_h)
+    middle_c = np.sqrt(gravity * np.where(valid_h, middle_h, 0.))
+    low_m, high_m = u - cl, middle_u - middle_c
+    low_p, high_p = middle_u + middle_c, w + cr
+    dminus, bad_m = split_dissipation(speed=lm, low=low_m, high=high_m)
+    dplus, bad_p = split_dissipation(speed=lp, low=low_p, high=high_p)
+    bad_m |= (low_m < 0.) & (high_m > 0.) & (high_m > sr)
+    bad_p |= (low_p < 0.) & (high_p > 0.) & (low_p < sl)
+    dm_wave, dp_wave = am * dminus, ap * dplus
+    diffusion = np.stack((dm_wave + dp_wave, lm * dm_wave + lp * dp_wave,
+                         tangent * (dm_wave + dp_wave) + np.abs(speed) * (dn - tangent * dh)), axis=-1)
+    valid = wet & valid_h & (lm >= sl) & (lp <= sr) & ~bad_m & ~bad_p
+    return np.where(valid[..., None], .5 * (fl + fr - diffusion), hll)
+
+
 def characteristic_stage_state(*, inside, depth, outward, gravity, dry_depth, selected):
     """Independent vectorised characteristic closure on a local flat sill.
 
@@ -152,7 +223,9 @@ def face_fluxes(*, state, bed, active, boundary_type, boundary_stage, axis, grav
     qls[..., 0], qrs[..., 0] = hl, hr
     qls[..., 1:] *= np.divide(hl, ql[..., 0], out=np.zeros_like(hl), where=ql[..., 0] > dry_depth)[..., None]
     qrs[..., 1:] *= np.divide(hr, qr[..., 0], out=np.zeros_like(hr), where=qr[..., 0] > dry_depth)[..., None]
-    if flux_scheme == 'legacy_hll':
+    if flux_scheme in ('roe', 'hllc'):
+        flux = research_flux(left=qls, right=qrs, gravity=gravity, dry_depth=dry_depth, flux_scheme=flux_scheme)
+    elif flux_scheme == 'legacy_hll':
         flux = hll_flux(left=qls,right=qrs,gravity=gravity,dry_depth=dry_depth)
     else:
         flux = hll_flux(left=qls,right=qrs,gravity=gravity,dry_depth=dry_depth,flux_scheme=flux_scheme)

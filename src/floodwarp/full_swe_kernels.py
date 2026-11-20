@@ -133,6 +133,108 @@ def hll(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, flux_mo
     return result
 
 
+@wp.func
+def entropy_wave(speed: wp.float64, low: wp.float64, high: wp.float64):
+    # Negative-going fluctuation of a Harten–Hyman split gravity wave.
+    if low < wp.float64(0.0) and high > wp.float64(0.0) and low <= speed and speed <= high:
+        return low * (high - speed) / (high - low)
+    return wp.min(speed, wp.float64(0.0))
+
+
+@wp.func
+def research_flux(left: wp.vec3d, right: wp.vec3d, g: wp.float64, dry: wp.float64, mode: int):
+    # Fourth component encodes the face outcome: 0 usual, 1 shallow HLL,
+    # 2 inadmissible HLL, 3 entropy-corrected Roe.
+    zero = wp.float64(0.0)
+    hl = left[0]
+    hr = right[0]
+    if hl == zero and hr == zero:
+        return wp.vec4d(zero)
+    ul = wp.vec2d(zero)
+    ur = wp.vec2d(zero)
+    if hl > zero:
+        ul = wp.vec2d(left[1], left[2]) / hl
+    if hr > zero:
+        ur = wp.vec2d(right[1], right[2]) / hr
+    cl = wp.sqrt(g * hl)
+    cr = wp.sqrt(g * hr)
+    sl = wp.min(ul[0] - cl, ur[0] - cr)
+    sr = wp.max(ul[0] + cl, ur[0] + cr)
+    # Enclose endpoint characteristics and the positive two-rarefaction fan.
+    # At a dry interface also enclose the Ritter front speed.
+    predicted = wp.float64(0.5) * (cl + cr) + wp.float64(0.25) * (ul[0] - ur[0])
+    if hl > dry and hr > dry and predicted > zero:
+        middle = wp.float64(0.5) * (ul[0] + ur[0]) + cl - cr
+        sl = wp.min(sl, middle - predicted)
+        sr = wp.max(sr, middle + predicted)
+    if hl <= dry:
+        sl = wp.min(sl, ur[0] - wp.float64(2.0) * cr)
+    if hr <= dry:
+        sr = wp.max(sr, ul[0] + wp.float64(2.0) * cl)
+    fl = wp.vec3d(left[1], left[1] * ul[0] + wp.float64(0.5) * g * hl * hl, left[1] * ul[1])
+    fr = wp.vec3d(right[1], right[1] * ur[0] + wp.float64(0.5) * g * hr * hr, right[1] * ur[1])
+    fallback = fl
+    if sr <= zero:
+        fallback = fr
+    elif sl < zero:
+        fallback = (sr * fl - sl * fr + sl * sr * (right - left)) / (sr - sl)
+    if hl <= dry or hr <= dry:
+        return wp.vec4d(fallback[0], fallback[1], fallback[2], wp.float64(1.0))
+    if mode == 5:
+        if sl >= zero or sr <= zero:
+            return wp.vec4d(fallback[0], fallback[1], fallback[2], zero)
+        # Conservative shallow-water HLLC. A shear wave has common depth
+        # and normal velocity on both sides. Its two star states differ in hv.
+        dl = hl * (ul[0] - sl)
+        dr = hr * (sr - ur[0])
+        hstar = (dl + dr) / (sr - sl)
+        if hstar > dry and wp.isfinite(hstar):
+            sm = (sr * dl + sl * dr) / (dl + dr)
+            if sl < sm and sm < sr:
+                qstar = wp.vec3d(hstar, hstar * sm, hstar * ur[1])
+                flux = fr + sr * (qstar - right)
+                if sm >= zero:
+                    qstar[2] = hstar * ul[1]
+                    flux = fl + sl * (qstar - left)
+                return wp.vec4d(flux[0], flux[1], flux[2], zero)
+        return wp.vec4d(fallback[0], fallback[1], fallback[2], wp.float64(2.0))
+
+    sqrt_l = wp.sqrt(hl)
+    sqrt_r = wp.sqrt(hr)
+    u = (sqrt_l * ul + sqrt_r * ur) / (sqrt_l + sqrt_r)
+    c = wp.sqrt(wp.float64(0.5) * g * (hl + hr))
+    lm = u[0] - c
+    lp = u[0] + c
+    jump = right - left
+    alpha_m = wp.float64(0.5) * (jump[0] - (jump[1] - u[0] * jump[0]) / c)
+    alpha_p = jump[0] - alpha_m
+    hmiddle = hl + alpha_m
+    if hmiddle <= dry or not wp.isfinite(hmiddle) or lm < sl or lp > sr:
+        return wp.vec4d(fallback[0], fallback[1], fallback[2], wp.float64(2.0))
+    rm = wp.vec3d(wp.float64(1.0), lm, u[1])
+    rp = wp.vec3d(wp.float64(1.0), lp, u[1])
+    umiddle = (left[1] + alpha_m * lm) / hmiddle
+    cmiddle = wp.sqrt(g * hmiddle)
+    low_m = ul[0] - cl
+    high_m = umiddle - cmiddle
+    low_p = umiddle + cmiddle
+    high_p = ur[0] + cr
+    if (low_m < zero and high_m > zero and high_m > sr) or (low_p < zero and high_p > zero and low_p < sl):
+        return wp.vec4d(fallback[0], fallback[1], fallback[2], wp.float64(2.0))
+    nm = entropy_wave(low=low_m, high=high_m, speed=lm)
+    np = entropy_wave(low=low_p, high=high_p, speed=lp)
+    # If a transonic interval does not bracket the Roe speed, the split is
+    # inadmissible. Use the entropy-satisfying HLL flux for that face.
+    if (low_m < zero and high_m > zero and (lm < low_m or lm > high_m)) or (low_p < zero and high_p > zero and (lp < low_p or lp > high_p)):
+        return wp.vec4d(fallback[0], fallback[1], fallback[2], wp.float64(2.0))
+    flux = fl + (nm * alpha_m) * rm + (np * alpha_p) * rp
+    flux[2] += wp.min(u[0], zero) * (jump[2] - u[1] * jump[0])
+    outcome = zero
+    if nm != wp.min(lm, zero) or np != wp.min(lp, zero):
+        outcome = wp.float64(3.0)
+    return wp.vec4d(flux[0], flux[1], flux[2], outcome)
+
+
 @wp.kernel
 def begin_step(ctrl: wp.array(dtype=wp.float64), times: wp.array(dtype=wp.float64),
                rates: wp.array(dtype=wp.float64), count: int):
@@ -532,7 +634,16 @@ def faces_at(k: int, q: wp.array(dtype=wp.vec3d), bed: wp.array(dtype=wp.float64
         flux[k] = wp.vec3d(wp.float64(0.0))
         pressure[k] = wp.vec2d(wp.float64(0.0))
         return
-    f = hll(ls, rs, g, dry, flux_mode)
+    f = wp.vec3d(wp.float64(0.0))
+    if flux_mode < 4:
+        f = hll(ls, rs, g, dry, flux_mode)
+    else:
+        evaluated = research_flux(left=ls, right=rs, g=g, dry=dry, mode=flux_mode)
+        f = wp.vec3d(evaluated[0], evaluated[1], evaluated[2])
+        if ctrl[15] != wp.float64(0.0):
+            wp.atomic_add(ctrl, 16, wp.float64(1.0))
+            if evaluated[3] > wp.float64(0.0):
+                wp.atomic_add(ctrl, 16 + int(evaluated[3]), wp.float64(1.0))
     if wall:
         f = wp.vec3d(wp.float64(0.0), f[1], wp.float64(0.0))
     if al != ar and types[k] == 2 and ((al and f[0] < wp.float64(0.0)) or (ar and f[0] > wp.float64(0.0))):
