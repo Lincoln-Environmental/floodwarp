@@ -97,6 +97,8 @@ At 10 m the completed FV1 contact-HLL, Roe/HLL, HLLC/HLL and FV2 MC outlet peaks
 
 At 20 m, FV2 exported 82,498 m³ less than FV1 over the 48 h storm. Its extra final surface storage accounted for 80,785 m³ of that difference and extra infiltration for 1,714 m³. On the original 5 m active footprint, the 20 m FV1 and FV2 maximum-depth RMSE against 5 m FV1 was 0.115 and 0.141 m. Peak inundation overlap above 1 cm was 0.655 and 0.445 respectively. Replaying storm hours 24–26 with the final FV2 implementation reproduced 66,116 accepted steps at 20 m, 93,126 at 10 m and 182,285 at 5 m. Time, depth, both momenta, maxima, soil, face fluxes, cumulative transfers and the CFL predictor matched their event checkpoints bitwise at every resolution. [Peak replay results](hirds48/stage_replay.json)
 
+A separate 5 m control isolated reconstruction on identical archived FV1 states at hours 16 and 24. Three solvers received exactly 4,096 steps of 1/128 s for each 32 s window. Holding the cell traces constant while replacing Euler and the FV1 source update with RK2 and the FV2 source update changed depths by 0.0010 and 0.0114 mm RMSE. Switching on MC reconstruction within that same RK2 implementation changed them by 3.160 and 24.737 mm. Repeating at 1/64 s gave 3.161 and 24.731 mm for the reconstruction contrast. The short-window changes are dominated by the directional water and bed reconstruction. The accumulated 48-hour response also includes feedback through wetting, drainage and infiltration. These counterfactual states have no independent observational truth. [Matched operator controls](operators.json)
+
 The storm tables report the twelve full hydrographs, maximum depth and inundation on common active support, directional transport diagnostics, independent-model discharge comparisons and separate wet-window timings. The support used for each metric is given with the table. [Whole-domain results](hirds48/RESULTS.md) · [48-hour native-tile comparison and reference sensitivity](NATIVE_STORM.md) · [Fixed-terrain controls](storm_geometry.md)
 
 ![Exact HIRDS hyetograph and full-domain simulated coastal discharge](hirds48/storm.png)
@@ -158,6 +160,7 @@ python -m validation.fv2_orton_matrix
 python -m validation.fv2_native_storm
 python -m validation.fv2_storm_geometry
 python -m validation.fv2_native_storm_evidence
+python -m validation.fv2_operator_control
 python -m validation.fv2_stage_replay
 python -m validation.fv2_storm_evidence
 python -m validation.fv2_storm_tables

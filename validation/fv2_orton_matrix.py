@@ -90,7 +90,7 @@ def geometry(*, state, factor):
     return data, info
 
 
-def replay_solver(*, data, state, factor, method, device):
+def replay_solver(*, data, state, factor, method, device, fv2_class=FV2Solver):
     config = state["configuration"].copy()
     mask = data["active"]
     config.update(
@@ -100,7 +100,7 @@ def replay_solver(*, data, state, factor, method, device):
         dy=5.0 * factor,
         flux_scheme="contact_hll" if method == "fv2_mc" else method,
     )
-    factory = FV2Solver if method == "fv2_mc" else FullSWESolver
+    factory = fv2_class if method == "fv2_mc" else FullSWESolver
     s = factory(
         **config,
         bed_elevation=data["bed"],
