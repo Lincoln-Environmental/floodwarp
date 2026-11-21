@@ -15,7 +15,7 @@ The 48 prospective physical events included six hours of rain and a common reces
 
 ## Efficiency and terrain representation
 
-The median tiled Hancock/FV1 operational runtime ratio was 2.220× on the prospective 120 × 80 m domains at 10 m spacing. The range was 1.737–3.901×. 0 of 48 met 1.5×. These tiny grids answer the matched physical comparison. The large-domain operational studies and the common-cap profiles measure a different GPU workload. [Measured GPU costs](tables/07_runtime.md) · [Full performance qualification](../../validation/hancock_long_storm_review/DECISION.md)
+On the 48 prospective 120 × 80 m events at 10 m, dense Hancock was faster in 48 cases. Its median complete-event runtime was 1.352× FV1, and 30 cases met the 1.5× target. Tiled Hancock had a median of 2.220× FV1 and met the target in 0 cases. The runs produced identical Hancock fields. Each grid had 96 cells. The ongoing operational qualification reports the measured million-cell timings separately. [Both execution modes](processed/million/policies.csv) · [Corrective audit](CORRECTIVE_AUDIT.md)
 
 Fixed-geometry and resampled-geometry experiments use the same physical extent. Their objective-specific rankings and measured cost ratios are available for the plain, fan and incised development realisations. An unresolved reference is an explicit missing comparison. [Resolution profiles](figures/06_resolution.pdf) · [Equal-cost results](tables/08_cost_accuracy.md) · [Least-cost feasible configurations](processed/pareto/least_cost.csv)
 
