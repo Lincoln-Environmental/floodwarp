@@ -24,6 +24,11 @@ def display(value):
         return "Unavailable"
     if isinstance(value, float):
         return f"{value:.4g}"
+    if isinstance(value, str) and ("." in value or "e" in value.lower()):
+        try:
+            return f"{float(value):.4g}"
+        except ValueError:
+            pass
     return str(value)
 
 

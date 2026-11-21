@@ -6,6 +6,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.ticker import LogLocator, NullFormatter, StrMethodFormatter
 import numpy as np
 import rasterio
 
@@ -20,6 +21,7 @@ COLOURS = dict(
         strict=True,
     )
 )
+GRID_MARKERS = {1: "^", 5: "s", 10: "o"}
 UNITS = {
     "depth": "Depth RMSE (m)",
     "maximum_depth": "Maximum-depth RMSE (m)",
@@ -39,12 +41,31 @@ def save(*, fig, folder, name):
     plt.close(fig)
 
 
-def legend(*, fig):
+def legend(*, fig, grids=False):
     handles = [
         Line2D([], [], color=c, marker="o", linestyle="", label=LABELS[m], markersize=4)
         for m, c in COLOURS.items()
     ]
-    fig.legend(handles=handles, loc="outside lower center", ncol=4, frameon=False)
+    if grids:
+        for spacing, symbol in GRID_MARKERS.items():
+            handles.append(
+                Line2D(
+                    [],
+                    [],
+                    marker=symbol,
+                    linestyle="",
+                    color="#555",
+                    markerfacecolor="none",
+                    label=f"{spacing:g} m",
+                    markersize=4,
+                )
+            )
+    fig.legend(
+        handles=handles,
+        loc="outside lower center",
+        ncol=5 if grids else 4,
+        frameon=False,
+    )
 
 
 def workflow(*, out):
@@ -293,7 +314,14 @@ def frontier(*, ax, rows, obj, reference=None, repeats=None):
         if repeats and r["experiment_id"] in repeats:
             lo, hi = repeats[r["experiment_id"]]
             ax.plot([lo, hi], [y, y], lw=0.7, color=COLOURS[r["method"]], alpha=0.7)
-        ax.scatter(x, y, s=14, c=COLOURS[r["method"]], alpha=0.8)
+        ax.scatter(
+            x,
+            y,
+            s=14,
+            c=COLOURS[r["method"]],
+            alpha=0.8,
+            marker=GRID_MARKERS.get(float(r["dx"]), "D"),
+        )
         if r["nondominated"] == "True":
             pts.append((x, y))
     if pts:
@@ -305,6 +333,11 @@ def frontier(*, ax, rows, obj, reference=None, repeats=None):
     ax.set(xlabel="Hydraulic runtime (s)", ylabel=UNITS[obj])
     if chosen:
         ax.set_xscale("log")
+        low, high = ax.get_xlim()
+        subs = (1, 2, 5) if high / low < 60 else (1,)
+        ax.xaxis.set_major_locator(LogLocator(base=10, subs=subs))
+        ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+        ax.xaxis.set_minor_formatter(NullFormatter())
 
 
 def costs(*, study, out):
@@ -337,7 +370,7 @@ def costs(*, study, out):
         "Dotted lines show refinement differences. Horizontal bars show repeated GPU timings.",
         fontsize=9,
     )
-    legend(fig=fig)
+    legend(fig=fig, grids=True)
     save(fig=fig, folder=out, name="07_pareto")
     # Each panel is an individual physical experiment. Curves never join different storms.
     for family in sorted({r["landform"] for r in primary}):
@@ -358,7 +391,7 @@ def costs(*, study, out):
                     reference=refs[c],
                 )
             axs[0].set_title(c, fontsize=8)
-        legend(fig=fig)
+        legend(fig=fig, grids=True)
         save(fig=fig, folder=study / "supplementary/pareto", name=family)
     exact = csv_read(study / "processed/pareto/analytical.csv")
     repeats = {
@@ -378,7 +411,7 @@ def costs(*, study, out):
                 ax.set_ylabel("Unit discharge error (m²/s)")
         axes.flat[-1].axis("off")
         fig.suptitle(c, fontsize=10)
-        legend(fig=fig)
+        legend(fig=fig, grids=True)
         save(fig=fig, folder=study / "supplementary/pareto/exact", name=c)
 
 
