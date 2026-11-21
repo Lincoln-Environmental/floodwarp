@@ -2,9 +2,9 @@
 from unittest.mock import patch
 from research.floodwarp_methods_paper import runner
 from research.floodwarp_methods_paper.evidence import source_identity as numerical_identity
-from research.floodwarp_methods_paper.qualification import launch, refinements, automatic, heldout
+from research.floodwarp_methods_paper.qualification import launch, refinements, automatic, heldout, repeats
 
-NUMERICAL=("million-terrain","million-pilots","million-storms","million-auto","large-references","large-refinements","heldout-references","million-profiles")
+NUMERICAL=("million-terrain","million-pilots","million-storms","million-auto","large-references","large-refinements","heldout-references","million-profiles","million-repeats")
 OFFLINE=("execution-policy","pareto")
 
 
@@ -17,8 +17,9 @@ def numerical(*,root,study,config,stage,arguments):
     if stage=="million-auto":
         with patch.object(launch,"cases",automatic.cases),patch.object(launch,"calculate",automatic.calculate),patch.object(launch,"identity_original",launch.identity,create=True),patch.object(launch,"identity",automatic.source):
             launch.run(root=root,study=study,config=config,stage=stage,arguments=arguments)
-    elif stage=="heldout-references":
-        with patch.object(launch,"cases",heldout.cases),patch.object(launch,"identity_original",launch.identity,create=True),patch.object(launch,"identity",heldout.source):
+    elif stage in ("heldout-references", "million-repeats"):
+        module = heldout if stage == "heldout-references" else repeats
+        with patch.object(launch,"cases",module.cases),patch.object(launch,"identity_original",launch.identity,create=True),patch.object(launch,"identity",module.source):
             launch.run(root=root,study=study,config=config,stage=stage,arguments=arguments)
     elif stage=="large-refinements":
         with patch.object(launch,"cases",refinements.expanded),patch.object(launch,"identity_original",launch.identity,create=True),patch.object(launch,"identity",refinements.source):
@@ -38,9 +39,10 @@ def source(*,root,study,stage):
         if stage=="million-auto":
             with patch.object(launch,"identity_original",launch.identity,create=True):
                 return automatic.source(root=root,study=study,stage=stage)
-        if stage=="heldout-references":
+        if stage in ("heldout-references", "million-repeats"):
+            module = heldout if stage == "heldout-references" else repeats
             with patch.object(launch,"identity_original",launch.identity,create=True):
-                return heldout.source(root=root,study=study,stage=stage)
+                return module.source(root=root,study=study,stage=stage)
         if stage=="large-refinements":
             with patch.object(launch,"identity_original",launch.identity,create=True):
                 return refinements.source(root=root,study=study,stage=stage)
@@ -49,5 +51,5 @@ def source(*,root,study,stage):
 
 
 def specifications(*, stage, config, root):
-    planner = {"large-refinements": refinements.expanded, "heldout-references": heldout.cases, "million-auto": automatic.cases}.get(stage, launch.cases)
+    planner = {"large-refinements": refinements.expanded, "heldout-references": heldout.cases, "million-repeats": repeats.cases, "million-auto": automatic.cases}.get(stage, launch.cases)
     yield from planner(stage=stage, config=config, root=root)

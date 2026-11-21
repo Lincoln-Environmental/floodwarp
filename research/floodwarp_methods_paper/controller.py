@@ -98,7 +98,7 @@ def derived_identity(*, root, study, stage):
             base=original_identity(root=root, study=study, stage=stage),
             corrective_sources={str(p.relative_to(root)):runner.checksum(p) for p in
                                 sorted((study/"qualification").glob("*")) if p.suffix in (".py",".json")},
-            corrective_inputs=[r["attempt"] for r in runner.archived(study=study,stages=("million-storms","million-auto","large-references","large-refinements","heldout-references","million-terrain","million-profiles"))],
+            corrective_inputs=[r["attempt"] for r in runner.archived(study=study,stages=("million-storms","million-auto","large-references","large-refinements","heldout-references","million-terrain","million-profiles","million-repeats"))],
             dependencies={
                 str(p.relative_to(root)): runner.checksum(p)
                 for p in dependencies
