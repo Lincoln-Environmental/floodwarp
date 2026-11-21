@@ -99,6 +99,12 @@ The domain-wide solver advisor abstained on {a["abstentions"]} held-out objectiv
 
 Retain adaptive Hancock as the development default. Use FV1 or LI when the error for the intended observable is acceptable at lower measured cost. LI also needs a suitable reduced-momentum regime. Publication or operational use of a method recommendation requires a qualified reference and credible predictive coverage on the intended domain. [Rule baselines](../tables/10_advisor.md)
 """
+    coverage = [f"{r['rule']} {fmt(r['feasible_coverage_pct'])}%" for r in adv]
+    discussion += (
+        "\nAcross held-out objectives with at least one empirically feasible option, the proportions receiving a qualified feasible selection were "
+        + ", ".join(coverage)
+        + ". This denominator includes abstentions. Predictive validation of the advisor used the 10 m grid. Finer-grid pairwise costs and errors are available as measured comparisons.\n"
+    )
     result += "\n" + synthesis.case_evidence(study=study)
     (study / "LIMITATIONS.md").write_text(synthesis.limitations(study=study))
     manuscript = study / "manuscript"

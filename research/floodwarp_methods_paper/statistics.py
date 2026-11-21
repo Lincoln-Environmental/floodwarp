@@ -78,6 +78,16 @@ def transfer_groups(*, study, settings):
         and r["reference_self"] == "False"
     }
     grouped = defaultdict(dict)
+    scores = {r["experiment_id"]: r for r in storm if r["representation"] == "sampled"}
+
+    def reference_pass(record, objective):
+        criteria = {
+            "discharge": ("discharge",),
+            "space": ("depth", "inundation"),
+            "joint": ("depth", "inundation", "discharge"),
+        }
+        return all(record["qualified_" + k] == "True" for k in criteria[objective])
+
     for r in rows:
         for method in ("hancock_adaptive", "adaptive"):
             base = baselines.get((r["case"], float(r["dx"]), method))
@@ -88,23 +98,12 @@ def transfer_groups(*, study, settings):
                 }
                 r[method + "_true_n_score"] = score(row=vals, objective=r["objective"])
                 r[method + "_true_n_id"] = base["experiment_id"]
-        r["qualified_for_objective"] = (
-            r["depth_qualified"] == "True"
-            if r["objective"] == "space"
-            else r["discharge_qualified"] == "True"
+        r["training_reference_qualified"] = reference_pass(
+            scores[r["fit_id"]], r["objective"]
         )
-        ref = next(
-            s
-            for s in storm
-            if s["experiment_id"] == r["forecast_id"]
-            and s["representation"] == "sampled"
+        r["qualified_for_objective"] = reference_pass(
+            scores[r["forecast_id"]], r["objective"]
         )
-        if r["objective"] != "discharge":
-            r["qualified_for_objective"] = (
-                r["depth_qualified"] == "True"
-                and ref["qualified_inundation"] == "True"
-                and (r["objective"] == "space" or r["discharge_qualified"] == "True")
-            )
         if r["qualified_for_objective"]:
             g = grouped[r["objective"], r["bound"]]
             g.setdefault((r["landform"], r["seed"]), []).append(float(r["improvement"]))

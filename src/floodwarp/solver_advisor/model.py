@@ -57,6 +57,16 @@ def descriptors(*, terrain, hydraulic=None):
         native_resolution=float(terrain["native"]["dx_m"]),
     )
     if hydraulic:
+        regime = hydraulic.get("expected_flow_regime")
+        if regime is not None:
+            regime = str(regime).casefold()
+            if regime == "transcritical":
+                regime = "mixed"
+            if regime not in ("subcritical", "mixed", "supercritical"):
+                raise ValueError(
+                    "Expected flow regime must be subcritical, mixed or supercritical"
+                )
+            values["expected_flow_regime"] = regime
         for key, value in hydraulic.items():
             if key in FEATURES and value is not None:
                 if not np.isfinite(value):
@@ -167,6 +177,14 @@ def recommend(
         warnings=[],
         source_revision=model["revision"],
     )
+    if (
+        "validation_spacings" in model
+        and features["resolution"] not in model["validation_spacings"]
+    ):
+        result["warnings"].append(
+            "This spacing lacks independent terrain groups for predictive validation. Its measured cost–accuracy comparisons remain exploratory."
+        )
+        return result
     if hardware and hardware.casefold() not in model["hardware"].casefold():
         result["warnings"].append(
             "No matching timing calibration on the requested GPU."
@@ -215,6 +233,10 @@ def recommend(
             r
             for r in comparable
             if r["method"] == method
+            and (
+                "expected_flow_regime" not in features
+                or r.get("sampled_regime") == features["expected_flow_regime"]
+            )
             and (objective == "runtime" or r["qualified"].get(objective, False))
         ]
         neighbors = nearest(
@@ -293,7 +315,7 @@ def recommend_dem(
     hydraulic=None,
     hardware=None,
     memory_mib=None,
-    compare_resolutions=(),
+    compare_resolutions=None,
 ):
     from floodwarp.terrain_advisor import analyse_dem
 
@@ -301,10 +323,24 @@ def recommend_dem(
     folder = Path(output)
     folder.mkdir(exist_ok=True, parents=True)
     results = []
-    for dx in dict.fromkeys((resolution, *compare_resolutions)):
+    grids = list(dict.fromkeys((resolution, *(compare_resolutions or ()))))
+    for dx in grids:
         stats = analyse_dem(
             dem=dem, resolution=dx, output=folder / ("terrain_" + str(dx) + "m")
         )
+        if dx == resolution and compare_resolutions is None:
+            observed = {
+                r["features"]["resolution"]
+                for r in model["training"]
+                if np.isclose(r["features"]["area_m2"], stats["model"]["area_m2"])
+                and r["features"]["resolution"] >= stats["native"]["dx_m"]
+            }
+            grids.extend(
+                sorted(
+                    observed.intersection(model.get("validation_spacings", observed))
+                    - set(grids)
+                )
+            )
         rec = recommend(
             model=model,
             features=descriptors(terrain=stats, hydraulic=hydraulic),

@@ -98,6 +98,20 @@ def samples(*, study, config, features):
         ):
             continue
         actual = raw[r["experiment_id"]]
+        sampled = [
+            frame["supercritical_wet_fraction"]
+            for frame in actual["samples"]
+            if frame["wet_froude_max"] is not None and frame["wet_froude_max"] > 0
+        ]
+        regime = "dry or stationary"
+        if sampled:
+            regime = (
+                "subcritical"
+                if max(sampled) == 0
+                else "supercritical"
+                if min(sampled) == 1
+                else "mixed"
+            )
         forcing = actual["forcing"]
         stats = features[key(land=r["landform"], seed=r["seed"], dx=float(r["dx"]))]
         area = stats["model"]["area_m2"]
@@ -147,6 +161,7 @@ def samples(*, study, config, features):
                     k: r["qualified_" + k] == "True" and r["reference_self"] == "False"
                     for k in config["advisor"]["tolerances"]
                 },
+                sampled_regime=regime,
                 run_id=r["experiment_id"],
             )
         )
@@ -246,11 +261,19 @@ def summary(*, rows):
         qualified = [r for r in allrows if r["feasible"] is not None]
         reg = [r["regret"] for r in qualified if r["regret"] is not None]
         predicted = [r for r in qualified if r["predicted_runtime_s"] is not None]
+        opportunities = [r for r in allrows if r["optimal"] is not None]
         ties = [r["agrees"] for r in qualified if r["agrees"] is not None]
         output.append(
             dict(
                 rule=rule,
                 decisions=len(allrows),
+                empirical_feasible_opportunities=len(opportunities),
+                successful_selections=sum(r["feasible"] is True for r in opportunities),
+                feasible_coverage_pct=100
+                * sum(r["feasible"] is True for r in opportunities)
+                / len(opportunities)
+                if opportunities
+                else None,
                 selected=sum(r["chosen"] is not None for r in allrows),
                 unqualified_selections=sum(
                     r["chosen"] is not None and r["feasible"] is None for r in allrows
@@ -341,6 +364,7 @@ def train(*, study, config, features, context, directory):
         raise ValueError("Incomplete or leaking train/validation split")
     model = dict(
         training=train,
+        validation_spacings=sorted({r["features"]["resolution"] for r in val}),
         scales=scales(rows=train),
         tolerances=settings["tolerances"],
         hardware=context["gpu"],
