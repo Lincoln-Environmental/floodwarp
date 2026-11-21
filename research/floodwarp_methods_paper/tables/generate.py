@@ -41,28 +41,77 @@ def latex(value):
     return "".join(escape.get(c, c) for c in display(value))
 
 
+def heading(key):
+    text = key.replace("_", " ")
+    for old, new in (
+        ("rmse", "RMSE"),
+        ("m3s", "m³/s"),
+        ("m2s", "m²/s"),
+        ("pct", "%"),
+        ("median ", "Median "),
+    ):
+        text = text.replace(old, new)
+    return text
+
+
+def table_panels(*, columns, rows, caption):
+    keys = [
+        key
+        for key in (
+            "rule",
+            "family",
+            "method",
+            "reference",
+            "method_a",
+            "dx_a",
+            "method_b",
+            "dx_b",
+            "objective",
+        )
+        if key in columns
+    ]
+    if len(columns) <= 7:
+        panels = [columns]
+    else:
+        rest = [key for key in columns if key not in keys]
+        panels = [["Identifier", *rest[i : i + 4]] for i in range(0, len(rest), 4)]
+    tex = [r"\begingroup", r"\small", r"\setlength{\tabcolsep}{2pt}"]
+    for i, cols in enumerate(panels):
+        width = 0.88 / len(cols)
+        descriptor = "".join(r"p{" + f"{width:.4f}" + r"\linewidth}" for k in cols)
+        panel = caption if len(panels) == 1 else f"{caption}, panel {i + 1}"
+        tex.extend(
+            [
+                r"\begin{longtable}{" + descriptor + "}",
+                r"\caption{" + latex(panel) + r"}\\",
+                r"\hline",
+                " & ".join(latex(heading(k)) for k in cols) + r" \\",
+                r"\hline\endhead",
+            ]
+        )
+        for r in rows:
+            identifier = ", ".join(display(r.get(k)).replace("_", " ") for k in keys)
+            cells = [identifier if k == "Identifier" else r.get(k) for k in cols]
+            tex.append(" & ".join(latex(v) for v in cells) + r" \\")
+        tex.append(r"\end{longtable}")
+    tex.append(r"\endgroup")
+    return tex
+
+
 def render(*, directory, name, rows, caption):
     if not rows:
         raise ValueError(f"No evidence for {name}")
     csv_write(file=directory / (name + ".csv"), rows=rows)
     columns = list(rows[0])
-    head = "| " + " | ".join(columns) + " |"
+    head = "| " + " | ".join(heading(k) for k in columns) + " |"
     lines = ["# " + caption, "", head, "| " + " | ".join("---" for _ in columns) + " |"]
-    tex = [
-        r"\begin{longtable}{" + "l" * len(columns) + "}",
-        r"\caption{" + latex(caption) + r"}\\",
-        r"\hline",
-        " & ".join(map(latex, columns)) + r" \\",
-        r"\hline\endhead",
-    ]
     for r in rows:
         lines.append(
             "| "
             + " | ".join(display(r.get(k)).replace("|", r"\|") for k in columns)
             + " |"
         )
-        tex.append(" & ".join(latex(r.get(k)) for k in columns) + r" \\")
-    tex.append(r"\end{longtable}")
+    tex = table_panels(columns=columns, rows=rows, caption=caption)
     (directory / (name + ".md")).write_text("\n".join(lines) + "\n")
     (directory / (name + ".tex")).write_text("\n".join(tex) + "\n")
 

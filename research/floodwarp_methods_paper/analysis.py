@@ -257,6 +257,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
             *list((study / "manuscript").glob("*.md")),
             study / "RESULTS.md",
             study / "DISCUSSION.md",
+            study / "LIMITATIONS.md",
         ]
     elif stage == "verify":
         result = verify(study=study, config=config)

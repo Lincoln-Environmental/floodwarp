@@ -1,6 +1,7 @@
 """Populate results and discussion from the frozen experiment outputs."""
 
 from pathlib import Path
+from research.floodwarp_methods_paper import synthesis
 from statistics import median
 from collections import defaultdict
 
@@ -98,6 +99,8 @@ The domain-wide solver advisor abstained on {a["abstentions"]} held-out objectiv
 
 Retain adaptive Hancock as the development default. Use FV1 or LI when the error for the intended observable is acceptable at lower measured cost. LI also needs a suitable reduced-momentum regime. Publication or operational use of a method recommendation requires a qualified reference and credible predictive coverage on the intended domain. [Rule baselines](../tables/10_advisor.md)
 """
+    result += "\n" + synthesis.case_evidence(study=study)
+    (study / "LIMITATIONS.md").write_text(synthesis.limitations(study=study))
     manuscript = study / "manuscript"
     (manuscript / "results.md").write_text(result)
     (manuscript / "discussion.md").write_text(discussion)

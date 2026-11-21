@@ -1,6 +1,6 @@
 # Reproducing the FloodWarp numerical methods study
 
-The manually executed master script runs from the repository root. The protocol fixes the experiments, physical controls, grouped splits and tolerance rules. The hydraulic development default is adaptive Hancock. The source and experiment identifiers in the receipts select the implementation actually measured. [Study protocol](PROTOCOL.md) · [Methods](METHODS.md) · [Results](RESULTS.md) · [Discussion](DISCUSSION.md)
+The manually executed master script runs from the repository root. The protocol fixes the experiments, physical controls, grouped splits and tolerance rules. The hydraulic development default is adaptive Hancock. The source and experiment identifiers in the receipts select the implementation actually measured. [Study protocol](PROTOCOL.md) · [Methods](METHODS.md) · [Results](RESULTS.md) · [Discussion](DISCUSSION.md) · [Unqualified investigations](LIMITATIONS.md)
 
 ```bash
 ./scripts/run_floodwarp_paper.sh

@@ -179,3 +179,7 @@ Leaflet is vendored; only optional basemap tiles require internet. Display
 reprojection never alters hydraulic inputs or outputs. Keep the matched
 benchmark profile explicit and preserve v0.1.2 artifacts. Focused controls are
 `python -m pytest -q tests/test_ui_spatial_inputs.py tests/test_ui_runner.py tests/test_ui_server.py`.
+
+## Numerical methods research
+
+Use the manual study stages to reproduce analytical comparisons, six-hour synthetic storms, terrain-resolution experiments and grouped solver selection. Benchmark results retain their implementation and hardware identities. Whole-domain recommendations include uncertainty and the option to abstain. [Paper protocol and reproduction](../research/floodwarp_methods_paper/README.md) · [Hancock optimisation and qualification](../validation/hancock_long_storm_review/DECISION.md)

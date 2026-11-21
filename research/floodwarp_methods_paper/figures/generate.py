@@ -4,9 +4,6 @@ import json
 import os
 from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import numpy as np
@@ -506,6 +503,7 @@ def advisor(*, study, out):
 
 
 def generate(*, study):
+    plt.switch_backend("Agg")
     plt.rcParams.update(
         {
             "font.family": "DejaVu Sans",
