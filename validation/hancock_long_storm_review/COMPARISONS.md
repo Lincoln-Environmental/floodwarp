@@ -33,6 +33,15 @@ For a pairwise advantage we additionally require the difference of the two forec
 | fv2 | 16 | 2.11 | 3 | 2 | 7 | 0 |
 | li | 18 | 0.34 | 0 | 9 | 5 | 11 |
 
+## Direct comparison of adaptive Hancock and adaptive FV2
+
+The selected 10 m cases have equal terrain, forcing and output cadence. Both methods are assessed against the same finer numerical reference. A lower error is credited only after the corresponding reference passes its refinement screen and the gap exceeds twice the observed refinement difference. Small differences can also arise because the two solvers share their spatial reconstruction and face flux.
+
+| Metric | Pairs | Hancock median RMSE | FV2 median RMSE | Hancock lower | FV2 lower | Within refinement margin | Reference unresolved |
+|---|---|---|---|---|---|---|---|
+| Final depth (mm) | 16 | 3.296 | 3.613 | 1 | 0 | 12 | 3 |
+| Outlet discharge (m³/s) | 16 | 0.003798 | 0.003897 | 0 | 0 | 12 | 4 |
+
 ## Hydraulic grid and DEM representation
 
 The moderate storm uses the same domain and end time at each spacing. Each entry gives hydraulic runtime in seconds, final-depth RMSE in millimetres and outlet hydrograph RMSE in m³/s. Runtime includes the production timestep policy. The final-depth RMSE can be small even where peak depth or connectivity differs. Both are also available in the full metric table.

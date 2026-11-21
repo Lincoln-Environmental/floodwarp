@@ -20,6 +20,80 @@ def table(*, headers, rows):
     return "\n".join(text + ["| " + " | ".join(map(str, r)) + " |" for r in rows])
 
 
+def hancock_fv2(*, accuracy, uncertainty):
+    primary = {
+        (r["landform"], r["storm"], r["method"]): r
+        for r in accuracy
+        if r["group"] == "primary"
+        and r["representation"] == "sampled"
+        and (
+            r["method"] == "fv2" or (r["method"] == "hancock" and r["mode"] == "tiles")
+        )
+    }
+    pairs = [
+        (primary[land, storm, "hancock"], row)
+        for (land, storm, method), row in primary.items()
+        if method == "fv2"
+    ]
+    references = {
+        (r["landform"], r["storm"]): r
+        for r in uncertainty
+        if r["representation"] == "sampled"
+    }
+    rows = []
+    for label, metric, delta, resolved in (
+        ("Final depth (mm)", "depth_rmse_m", "depth_difference_m", "depth_resolved"),
+        (
+            "Outlet discharge (m³/s)",
+            "outlet_rmse_m3s",
+            "outlet_difference_m3s",
+            "discharge_resolved",
+        ),
+    ):
+        counts = dict(hancock=0, fv2=0, inside=0, unresolved=0)
+        errors = []
+        for h, f in pairs:
+            ref = references[h["landform"], h["storm"]]
+            eh, ef = float(h[metric]), float(f[metric])
+            errors.append((eh, ef))
+            band = 2.0 * float(ref[delta])
+            if ref[resolved] != "True":
+                counts["unresolved"] += 1
+            elif eh + band < ef:
+                counts["hancock"] += 1
+            elif ef + band < eh:
+                counts["fv2"] += 1
+            else:
+                counts["inside"] += 1
+        scale = 1000.0 if metric == "depth_rmse_m" else 1.0
+        medians = np.median(errors, axis=0) * scale
+        rows.append(
+            [
+                label,
+                len(pairs),
+                f"{medians[0]:.4g}",
+                f"{medians[1]:.4g}",
+                counts["hancock"],
+                counts["fv2"],
+                counts["inside"],
+                counts["unresolved"],
+            ]
+        )
+    return table(
+        headers=[
+            "Metric",
+            "Pairs",
+            "Hancock median RMSE",
+            "FV2 median RMSE",
+            "Hancock lower",
+            "FV2 lower",
+            "Within refinement margin",
+            "Reference unresolved",
+        ],
+        rows=rows,
+    )
+
+
 def comparisons(*, review):
     land = read(file=review / "landform_tradeoffs.csv")
     accuracy = read(file=review / "accuracy.csv")
@@ -111,6 +185,11 @@ def comparisons(*, review):
             rows=rows,
         )
     )
+    lines += [
+        "## Direct comparison of adaptive Hancock and adaptive FV2",
+        "The selected 10 m cases have equal terrain, forcing and output cadence. Both methods are assessed against the same finer numerical reference. A lower error is credited only after the corresponding reference passes its refinement screen and the gap exceeds twice the observed refinement difference. Small differences can also arise because the two solvers share their spatial reconstruction and face flux.",
+        hancock_fv2(accuracy=accuracy, uncertainty=uncertainty),
+    ]
     lines += [
         "## Hydraulic grid and DEM representation",
         "The moderate storm uses the same domain and end time at each spacing. Each entry gives hydraulic runtime in seconds, final-depth RMSE in millimetres and outlet hydrograph RMSE in m³/s. Runtime includes the production timestep policy. The final-depth RMSE can be small even where peak depth or connectivity differs. Both are also available in the full metric table.",
