@@ -171,6 +171,7 @@ def convergence(*, study, out):
         ("Depth RMSE (m)", "Momentum RMSE (m²/s)"),
         strict=True,
     ):
+        orders = []
         for m, c in COLOURS.items():
             rows = sorted(
                 (float(r["dx"]), float(r[key]))
@@ -182,6 +183,20 @@ def convergence(*, study, out):
             )
             if rows:
                 ax.loglog(*zip(*rows), ".-", color=c)
+                if m in ("hancock_adaptive", "adaptive") and len(rows) > 1:
+                    p = np.log(rows[1][1] / rows[0][1]) / np.log(
+                        rows[1][0] / rows[0][0]
+                    )
+                    orders.append(f"{LABELS[m]} {p:.2f}")
+        ax.text(
+            0.03,
+            0.98,
+            "Finest-pair order\n" + "\n".join(orders),
+            transform=ax.transAxes,
+            va="top",
+            fontsize=6,
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.8),
+        )
         ax.set(xlabel="Spacing (m)", ylabel=y, title=case.replace("_", " "))
     for m, c in COLOURS.items():
         vals = sorted(
@@ -297,17 +312,30 @@ def costs(*, study, out):
     unc = csv_read(study / "processed/metrics/reference_uncertainty.csv")
     refs = {r["case"]: r for r in unc if r["representation"] == "sampled"}
     primary = [r for r in data if r["representation"] == "sampled"]
-    case = next(k for k in sorted(refs) if k.startswith("plain-18217-moderate"))
-    fig, axes = plt.subplots(1, 3, figsize=(8, 2.9), layout="constrained")
-    for ax, obj in zip(axes, ("depth", "discharge", "inundation"), strict=True):
-        frontier(
-            ax=ax,
-            rows=[r for r in primary if r["case"] == case],
-            obj=obj,
-            reference=refs[case],
-        )
+    repeat_rows = csv_read(study / "processed/metrics/operational_repeats.csv")
+    repeat_case = repeat_rows[0]["physical_case"]
+    by_method = {
+        r["method"]: (float(r["minimum_s"]), float(r["maximum_s"])) for r in repeat_rows
+    }
+    timings = {
+        r["experiment_id"]: by_method[r["method"]]
+        for r in primary
+        if r["case"] == repeat_case and float(r["dx"]) == 10
+    }
+    fig, axes = plt.subplots(2, 3, figsize=(8, 4.8), layout="constrained")
+    for axs, case in zip(axes, ("plain-18217-moderate", repeat_case), strict=True):
+        for ax, obj in zip(axs, ("depth", "discharge", "inundation"), strict=True):
+            frontier(
+                ax=ax,
+                rows=[r for r in primary if r["case"] == case],
+                obj=obj,
+                reference=refs[case],
+                repeats=timings,
+            )
+            ax.set_title(case, fontsize=8)
     fig.suptitle(
-        case + " · dotted line shows the reference refinement difference", fontsize=9
+        "Dotted lines show refinement differences. Horizontal bars show repeated GPU timings.",
+        fontsize=9,
     )
     legend(fig=fig)
     save(fig=fig, folder=out, name="07_pareto")
@@ -460,8 +488,9 @@ def advisor(*, study, out):
         ax.set(title=obj, xlabel="Mean slope (m/m)", ylabel="DEM RMSE (m)")
     legend(fig=fig)
     save(fig=fig, folder=out, name="11_selection_regimes")
-    fig, axes = plt.subplots(1, 3, figsize=(8.3, 3), layout="constrained")
-    choices = list(LABELS) + ["abstain"]
+    fig, grid = plt.subplots(2, 2, figsize=(7.3, 6.5), layout="constrained")
+    axes = grid.ravel()
+    choices = [m for m in LABELS if m != "hancock_dense"] + ["abstain"]
     matrix = np.zeros((len(choices), len(choices)))
     for r in selected:
         matrix[
@@ -474,7 +503,7 @@ def advisor(*, study, out):
         xticks=range(len(labels)),
         yticks=range(len(labels)),
         xticklabels=labels,
-        yticklabels=labels,
+        yticklabels=[*labels[:-1], "No qualified feasible option"],
         xlabel="Predicted",
         ylabel="Measured least cost",
     )
@@ -500,6 +529,36 @@ def advisor(*, study, out):
     axes[2].set_title("Mixed terrain, 10 m", fontsize=8)
     axes[2].axis("off")
     fig.colorbar(im, ax=axes[2], shrink=0.8, label="Outlet displacement (m)")
+    q = [
+        r
+        for r in selected
+        if r["objective"] == "discharge"
+        and r["predicted_error"]
+        and r["observed_error"]
+    ]
+    ax = axes[3]
+    for r in q:
+        x = float(r["observed_error"])
+        y = float(r["predicted_error"])
+        ax.plot(
+            [x, x],
+            [float(r["interval_low"]), float(r["interval_high"])],
+            color=COLOURS[r["chosen"]],
+            lw=1,
+        )
+        ax.scatter(x, y, s=12, color=COLOURS[r["chosen"]])
+    if q:
+        top = max(max(float(r["observed_error"]), float(r["interval_high"])) for r in q)
+        ax.plot([0, top], [0, top], color="#555", ls="--", lw=0.8)
+    else:
+        ax.text(
+            0.5, 0.5, "No assessable predictions", transform=ax.transAxes, ha="center"
+        )
+    ax.set(
+        xlabel="Measured outlet RMSE (m³/s)",
+        ylabel="Predicted outlet RMSE (m³/s)",
+        title="Empirical prediction intervals",
+    )
     save(fig=fig, folder=out, name="12_advisor_validation")
 
 
