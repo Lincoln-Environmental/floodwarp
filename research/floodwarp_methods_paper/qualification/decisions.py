@@ -5,7 +5,7 @@ from statistics import median
 
 import numpy as np
 from floodwarp.solver_advisor.model import recommend
-from research.floodwarp_methods_paper.metrics import csv_write
+from research.floodwarp_methods_paper.metrics import csv_read, csv_write
 
 
 def run_time(row):
@@ -138,6 +138,49 @@ def joint_resolution(*, decisions):
     return results
 
 
+def previous_validation(*, study):
+    """Immutable validation receipt audited at 360b3a3."""
+    return (
+        study / "raw_results/advisor-validate/b23f24375a6d611f22d5eca6/7a601da9a91c431f"
+    )
+
+
+def compare_versions(*, study, results):
+    prior = previous_validation(study=study)
+    if not prior.is_dir():
+        return []
+    old = {
+        (r["case"], float(r["dx"]), r["objective"]): r
+        for r in csv_read(prior / "heldout.csv")
+        if r["rule"] == "advisor"
+    }
+    pairs = []
+    for row in results:
+        key = row["case"], float(row["dx"]), row["objective"]
+        if row["rule"] != "advisor" or key not in old:
+            continue
+        a = old[key]
+        pairs.append(
+            dict(
+                case=key[0],
+                dx=key[1],
+                objective=key[2],
+                same_target=key[2] != "inundation",
+                previous_choice=a["chosen"],
+                revised_choice=row["chosen"],
+                previous_feasible=a["feasible"],
+                revised_feasible=row["feasible"],
+                previous_optimal=a["optimal"],
+                revised_optimal=row["optimal"],
+                previous_regret=a["regret"],
+                revised_regret=row["regret"],
+                previous_selected_id=a["selected_run"],
+                revised_selected_id=row["selected_run"],
+            )
+        )
+    return pairs
+
+
 def validate(*, study, model, held, decisions):
     from research.floodwarp_methods_paper.advisor import summary
 
@@ -170,6 +213,10 @@ def validate(*, study, model, held, decisions):
         )
         for variable, value in bins.items():
             groups[variable, value, row["rule"]].append(row)
+    csv_write(
+        file=study / "processed/advisor/previous_comparison.csv",
+        rows=compare_versions(study=study, results=decisions),
+    )
     strata = []
     for (axis, value, rule), g in groups.items():
         s = summary(rows=g)[0]

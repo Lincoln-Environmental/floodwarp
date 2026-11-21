@@ -196,6 +196,18 @@ def material(*, study):
             )
             + " |"
         )
+    from research.floodwarp_methods_paper.qualification.decisions import (
+        previous_validation,
+    )
+
+    prior = previous_validation(study=study) / "summary.csv"
+    old = next(r for r in csv_read(prior) if r["rule"] == "advisor")
+    audit.extend(
+        [
+            "",
+            f"The previously audited evaluation selected a method on {old['selected']} of {old['decisions']} decisions. It recorded {old['successful_selections']} successful selections, {old['abstentions']} abstentions, {float(old['median_regret_pct']):.1f}% median conditional regret and {float(old['empirical_error_interval_coverage_pct']):.1f}% empirical interval coverage. [Original immutable validation]({prior.relative_to(study)}) · [Matched old and revised decisions](processed/advisor/previous_comparison.csv)",
+        ]
+    )
     if not held:
         audit.extend(["", "Independent operational advisor validation is pending."])
     by_rule = {r["rule"]: r for r in held}
