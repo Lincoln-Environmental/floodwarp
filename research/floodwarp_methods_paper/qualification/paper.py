@@ -12,22 +12,28 @@ def number(v, places=3):
 
 def core_event(row):
     parts = row["case"].split("-")
-    return int(row["cells"]) == 1024**2 and len(parts)==4 and 701<=int(parts[1])<=708
+    return (
+        int(row["cells"]) == 1024**2 and len(parts) == 4 and 701 <= int(parts[1]) <= 708
+    )
 
 
 def operational_discussion(*, study):
-    rows = [r for r in csv_read(study/"processed/million/policies.csv") if core_event(r)]
+    rows = [
+        r for r in csv_read(study / "processed/million/policies.csv") if core_event(r)
+    ]
     if not rows:
         return ""
     time = [float(r["fastest_ratio"]) for r in rows]
     steps = [float(r["step_ratio"]) for r in rows]
     overhead = [float(r["per_step_ratio"]) for r in rows]
-    return (f"Across the {len(rows)} primary million-cell events, the faster measured explicit Hancock policy met "
-            f"1.5× FV1 in {sum(v<=1.5 for v in time)} of {len(rows)}. Its median full-event ratio was {median(time):.2f}×. "
-            f"The accepted-step ratios ranged from {min(steps):.2f} to {max(steps):.2f}, and the corresponding "
-            f"mean cost per accepted step ranged from {min(overhead):.2f} to {max(overhead):.2f} times FV1. "
-            "These factors multiply within each event. The normal timestep policy therefore matters even where "
-            "tile scheduling removes most of the dry-domain arithmetic. [Per-event costs](../tables/11_execution.md)")
+    return (
+        f"Across the {len(rows)} primary million-cell events, the faster measured explicit Hancock policy met "
+        f"1.5× FV1 in {sum(v <= 1.5 for v in time)} of {len(rows)}. Its median full-event ratio was {median(time):.2f}×. "
+        f"The accepted-step ratios ranged from {min(steps):.2f} to {max(steps):.2f}, and the corresponding "
+        f"mean cost per accepted step ranged from {min(overhead):.2f} to {max(overhead):.2f} times FV1. "
+        "These factors multiply within each event. The normal timestep policy therefore matters even where "
+        "tile scheduling removes most of the dry-domain arithmetic. [Per-event costs](../tables/11_execution.md)"
+    )
 
 
 def material(*, study):
@@ -266,6 +272,33 @@ def material(*, study):
             *inventory,
         ]
     )
+    from research.floodwarp_methods_paper import evidence
+
+    for rec in evidence.records(study=study, stages=("check",)):
+        tested = json.loads((study / rec["directory"] / "result.json").read_text())
+        audit.extend(
+            [
+                "",
+                f"The full CUDA regression receipt records **{tested['summary']}**. [Test log]({rec['log']}) · [Committed numerical source proof](manifests/corrective_source_tree.json)",
+            ]
+        )
+    attempts = csv_read(p / "metrics/attempt_catalog.csv")
+    broken = [
+        r
+        for r in attempts
+        if r["stage"] in stages.NUMERICAL and r["status"] in ("incomplete", "failed")
+    ]
+    if broken:
+        audit.extend(
+            [
+                "",
+                f"The catalogue retains {len(broken)} interrupted or failed numerical attempts outside all hydraulic and timing comparisons. [Attempt catalogue](processed/metrics/attempt_catalog.csv)",
+            ]
+        )
+        for r in broken:
+            audit.append(
+                f"- {r['stage']}, {r['case']}, {r['method']} — {r['status']}, attempt `{r['attempt']}`."
+            )
     groups = defaultdict(dict)
     for row in intervals:
         cat = groups[row["case"], row["method"]]
