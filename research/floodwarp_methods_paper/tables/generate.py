@@ -352,15 +352,21 @@ def generate(*, study, output=None):
         ("archival exact", archive),
     ):
         for (obj, bound), g in group(rows=source, keys=("objective", "bound")):
+            valid = [r for r in g if r.get("qualified_for_objective", "True") == "True"]
             transfers.append(
                 dict(
                     reference=label,
                     objective=obj,
                     bound=bound,
                     forecasts=len(g),
+                    reference_qualified=len(valid),
+                    fit_reference_qualified=sum(
+                        r.get("training_reference_qualified", "True") == "True"
+                        for r in g
+                    ),
                     median_n_multiplier=middle(rows=g, key="multiplier"),
-                    median_score_improvement=middle(rows=g, key="improvement"),
-                    deteriorations=sum(float(r["improvement"]) < 0 for r in g),
+                    median_score_improvement=middle(rows=valid, key="improvement"),
+                    deteriorations=sum(float(r["improvement"]) < 0 for r in valid),
                 )
             )
     output["09_calibration"] = (

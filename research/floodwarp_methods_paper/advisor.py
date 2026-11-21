@@ -219,6 +219,7 @@ def assess(*, model, rows, rules):
                     dict(
                         case=case,
                         terrain_id=group[0]["terrain_id"],
+                        rain_mm=group[0]["features"]["rain_mm"],
                         family=group[0]["landform"],
                         split=group[0]["split"],
                         storm=group[0]["storm"],

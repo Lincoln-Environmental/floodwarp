@@ -406,15 +406,26 @@ def calibration(*, study, out):
     fig, axes = plt.subplots(1, 3, figsize=(8, 3), layout="constrained")
     for ax, obj in zip(axes, sorted({r["objective"] for r in transfer}), strict=True):
         for i, land in enumerate(sorted({r["landform"] for r in transfer})):
-            vals = [
-                float(r["improvement"])
-                for r in transfer
-                if r["landform"] == land and r["objective"] == obj
-            ]
-            if vals:
-                ax.scatter(
-                    np.full(len(vals), i), vals, s=12, alpha=0.4, color="#0072B2"
-                )
+            for status, marker, colour in (
+                ("True", "o", "#0072B2"),
+                ("False", "x", "#777"),
+            ):
+                vals = [
+                    float(r["improvement"])
+                    for r in transfer
+                    if r["landform"] == land
+                    and r["objective"] == obj
+                    and r["qualified_for_objective"] == status
+                ]
+                if vals:
+                    ax.scatter(
+                        np.full(len(vals), i),
+                        vals,
+                        s=12,
+                        alpha=0.5,
+                        color=colour,
+                        marker=marker,
+                    )
             ax.set_xticks(
                 range(len({r["landform"] for r in transfer})),
                 sorted({r["landform"] for r in transfer}),
@@ -422,6 +433,10 @@ def calibration(*, study, out):
             )
         ax.axhline(0, color="black", lw=0.7)
         ax.set(title=obj, ylabel="Held-out score improvement")
+    fig.suptitle(
+        "Circles show qualified reference comparisons. Crosses show unresolved references.",
+        fontsize=9,
+    )
     save(fig=fig, folder=out, name="09_transfer")
 
 
@@ -480,12 +495,12 @@ def advisor(*, study, out):
             terrain = terrains[f"{r['terrain_id']}-{float(r['dx']):g}m"]
             ax.scatter(
                 terrain["model"]["mean_slope"],
-                terrain["comparison"]["elevation_rmse_m"],
+                float(r["rain_mm"]),
                 c=COLOURS.get(r["chosen"], "#aaa"),
                 marker="o" if r["chosen"] else "x",
                 s=18,
             )
-        ax.set(title=obj, xlabel="Mean slope (m/m)", ylabel="DEM RMSE (m)")
+        ax.set(title=obj, xlabel="Mean slope (m/m)", ylabel="Area-mean storm rain (mm)")
     legend(fig=fig)
     save(fig=fig, folder=out, name="11_selection_regimes")
     fig, grid = plt.subplots(2, 2, figsize=(7.3, 6.5), layout="constrained")
