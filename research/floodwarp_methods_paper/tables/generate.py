@@ -241,6 +241,20 @@ def generate(*, study, output=None):
                 median_order=middle(rows=g, key="order"),
             )
         )
+    fixed = csv_read(processed / "convergence/fixed_dt_space.csv")
+    for (case, method, metric), g in group(
+        rows=fixed, keys=("case", "method", "metric")
+    ):
+        conv.append(
+            dict(
+                case=case,
+                method=method,
+                metric=metric,
+                design="spatial at fixed dt",
+                adjacent_pairs=sum(bool(r["order"]) for r in g),
+                median_order=middle(rows=g, key="order"),
+            )
+        )
     output["05_convergence"] = (
         "Adjacent refinement orders, with space and time analysed independently",
         conv,

@@ -50,7 +50,11 @@ def scientific_ids(*, record, row):
             duration_s=row["duration_s"],
         )
         settings = dict(
-            algorithm=row["config"], method=s["method"], policy=s["policy"], dx=s["dx"]
+            algorithm=row["config"],
+            method=s["method"],
+            policy=s["policy"],
+            fixed_dt_s=s.get("fixed_dt_s"),
+            dx=s["dx"],
         )
     else:
         physical = dict(case=s["case"], group=record["stage"])
@@ -66,6 +70,7 @@ def collect(*, study):
         "check",
         "analytical",
         "convergence",
+        "fixed-dt-space",
         "synthetic",
         "long-storms",
         "resolution",

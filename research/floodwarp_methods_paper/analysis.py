@@ -20,6 +20,7 @@ from research.floodwarp_methods_paper import (
     terrain_controls,
     geometry,
 )
+from research.floodwarp_methods_paper import fixed_dt
 from research.floodwarp_methods_paper.plan import specs
 from research.floodwarp_methods_paper.runner import (
     archived,
@@ -38,13 +39,17 @@ DATA_STAGES = (
     "calibration",
     "performance",
     terrain_controls.STAGE,
+    fixed_dt.STAGE,
 )
 
 
 def completeness(*, study, config, stages):
     counts = {}
     for stage in stages:
-        planner = terrain_controls.cases if stage == terrain_controls.STAGE else specs
+        planner = {
+            terrain_controls.STAGE: terrain_controls.cases,
+            fixed_dt.STAGE: fixed_dt.cases,
+        }.get(stage, specs)
         expected = {
             digest(dict(stage=stage, settings=s, config=config))[:24]
             for s in planner(stage=stage, root=study.parents[1], config=config)
@@ -222,6 +227,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
         reference_audit.assess(study=study)
         reference_audit.integrity_by_family(study=study)
         geometry.compare(study=study)
+        fixed_dt.analyse(study=study)
         statistics.temporal_orders(study=study)
         statistics.operating(study=study)
         statistics.timing_replacements(study=study)

@@ -16,6 +16,7 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 | check | Environment, CUDA and full repository tests |
 | analytical | Nineteen primary exact domains plus waves, controls, lakes, jumps and equilibria |
 | convergence | Matched geometric refinements, fixed-grid temporal and manufactured convergence |
+| fixed-dt-space | Smooth exact gravity and shear at two common fixed timesteps across four spacings, included by convergence |
 | synthetic | Generate and independently repeat 24 seeded landforms at three grid spacings |
 | long-storms | Matched production forecasts and two reference refinements per storm |
 | resolution | Fixed and resampled terrain on matched domains |

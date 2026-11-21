@@ -13,7 +13,12 @@ from unittest.mock import patch
 from time import perf_counter
 
 from research.floodwarp_methods_paper.plan import read_config
-from research.floodwarp_methods_paper import runner, evidence, terrain_controls
+from research.floodwarp_methods_paper import (
+    runner,
+    evidence,
+    terrain_controls,
+    fixed_dt,
+)
 
 
 def offline_machine(*, root, study):
@@ -76,7 +81,9 @@ def derived_identity(*, root, study, stage):
         dict(
             geometry_inputs=[
                 r["attempt"]
-                for r in evidence.records(study=study, stages=(terrain_controls.STAGE,))
+                for r in evidence.records(
+                    study=study, stages=(terrain_controls.STAGE, fixed_dt.STAGE)
+                )
             ],
             base=original_identity(root=root, study=study, stage=stage),
             dependencies={
@@ -128,15 +135,14 @@ def select_specs(*, grid, source):
 def run(*, root, study, config_path, arguments):
     stage = arguments[0]
     selected = runner.STAGES if stage == "all" else (stage,)
-    if "resolution" in selected:
-        selected = tuple(
-            item
-            for s in selected
-            for item in (
-                ("resolution", terrain_controls.STAGE) if s == "resolution" else (s,)
-            )
-        )
-    if set(selected) - set((*runner.STAGES, terrain_controls.STAGE)):
+    extensions = {"convergence": fixed_dt, "resolution": terrain_controls}
+    supplemental = {module.STAGE: module for module in extensions.values()}
+    selected = tuple(
+        name
+        for base in selected
+        for name in ((base, extensions[base].STAGE) if base in extensions else (base,))
+    )
+    if set(selected) - set((*runner.STAGES, *supplemental)):
         raise ValueError("Unknown study stage " + stage)
     arguments, grid = grid_filter(arguments=arguments[1:])
     opts = runner.options(args=arguments)
@@ -144,15 +150,16 @@ def run(*, root, study, config_path, arguments):
     started = perf_counter()
     for group in selected:
         flags = opts.copy()
-        if group == terrain_controls.STAGE:
-            select = select_specs(grid=grid, source=terrain_controls.cases)
+        if group in supplemental:
+            module = supplemental[group]
+            select = select_specs(grid=grid, source=module.cases)
             matches = [
                 s
                 for s in select(stage=group, config=config, root=root)
                 if fnmatch.fnmatchcase(s["case"], flags["case"])
                 and flags["method"] in ("*", s["method"])
             ]
-            if not matches and stage != terrain_controls.STAGE:
+            if not matches and stage != group:
                 continue
             system = {} if flags["dry"] else runner.machine(root=root)
             with device_slot(
@@ -161,7 +168,7 @@ def run(*, root, study, config_path, arguments):
                 device=flags["device"],
                 dry=flags["dry"],
             ):
-                terrain_controls.execute(
+                module.execute(
                     root=root,
                     study=study,
                     config=config,
