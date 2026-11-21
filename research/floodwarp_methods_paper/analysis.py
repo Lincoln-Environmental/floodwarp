@@ -224,6 +224,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
         geometry.compare(study=study)
         statistics.temporal_orders(study=study)
         statistics.operating(study=study)
+        statistics.timing_replacements(study=study)
         statistics.transfer_groups(study=study, settings=config["advisor"])
         features = advisor.terrain_features(study=study, config=config, output=terrain)
         result = dict(terrain_grids=len(features), records=rows, gates=gates)

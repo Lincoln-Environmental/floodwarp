@@ -237,3 +237,47 @@ def database(*, study):
                 values,
             )
     return base / "metrics/study.sqlite"
+
+
+def timing_replacements(*, study):
+    excluded = json.loads((study / "manifests/timing_exclusions.json").read_text())
+    current = {
+        rec["experiment_id"]: (rec, row, path)
+        for rec, row, path in load(study=study, stages=("resolution",))
+    }
+    rows = []
+    for old in (study / "raw_results/synthetic").glob("*/*/receipt.json"):
+        if old.parent.name not in excluded:
+            continue
+        rec = json.loads(old.read_text())
+        replacement, new, current_dir = current[rec["experiment_id"]]
+        prior = json.loads((old.parent / "result.json").read_text())
+        same_device = all(
+            rec["context"][k] == replacement["context"][k]
+            for k in ("gpu", "warp", "source_sha256", "precision")
+        )
+        same_fields = None
+        if same_device:
+            same_fields = True
+            with (
+                np.load(old.parent / prior["fields_file"]) as a,
+                np.load(current_dir / new["fields_file"]) as b,
+            ):
+                for key in a.files:
+                    np.testing.assert_array_equal(a[key], b[key])
+            if prior["accepted_history_sha256"] != new["accepted_history_sha256"]:
+                raise ArithmeticError("Accepted history changed on timing replay")
+        rows.append(
+            dict(
+                experiment_id=rec["experiment_id"],
+                method=rec["spec"]["method"],
+                excluded_attempt=rec["attempt"],
+                isolated_attempt=replacement["attempt"],
+                excluded_hydraulic_s=prior["hydraulic_s"],
+                isolated_hydraulic_s=new["hydraulic_s"],
+                same_measured_environment=same_device,
+                identical_fields_and_accepted_steps=same_fields,
+                reason=excluded[rec["attempt"]],
+            )
+        )
+    csv_write(file=study / "processed/comparisons/timing_replacements.csv", rows=rows)
