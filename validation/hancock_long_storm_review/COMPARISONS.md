@@ -8,20 +8,20 @@ The entries are medians over the six rain events at 10 m. Depth and outlet colum
 
 | Landform | Hancock/FV1 time | FV1 depth (mm) | Hancock depth (mm) | FV1 outlet (m³/s) | Hancock outlet (m³/s) | Hancock 1 cm space–time IoU |
 |---|---|---|---|---|---|---|
-| Coastal | 1.58 | 0.54 | 0.54 | 0.0158 | 0.0064 | 0.90 |
-| Fan | 1.68 | 8.05 | 8.83 | 0.0052 | 0.0039 | 0.55 |
-| Floodplain | 1.72 | 29.29 | 3.58 | 0.0322 | 0.0086 | 0.85 |
-| Hill | 1.87 | 3.15 | 3.69 | 0.0094 | 0.0101 | 0.67 |
-| Incised | 1.89 | 4.03 | 5.59 | 0.0115 | 0.0033 | 0.55 |
-| Mixed | 2.25 | 122.55 | 28.32 | 0.1001 | 0.0480 | 0.71 |
-| Plain | 1.70 | 0.46 | 0.28 | 0.0032 | 0.0011 | 0.99 |
-| Rolling | 1.68 | 6.80 | 7.13 | 0.0094 | 0.0077 | 0.67 |
+| Coastal | 1.52 | 0.54 | 0.54 | 0.0158 | 0.0064 | 0.90 |
+| Fan | 1.61 | 7.36 | 8.25 | 0.0052 | 0.0040 | 0.52 |
+| Floodplain | 1.62 | 29.29 | 3.69 | 0.0332 | 0.0088 | 0.85 |
+| Hill | 1.81 | 3.15 | 3.69 | 0.0094 | 0.0107 | 0.63 |
+| Incised | 1.82 | 4.03 | 5.59 | 0.0115 | 0.0033 | 0.55 |
+| Mixed | 2.16 | 135.90 | 47.21 | 0.1118 | 0.0572 | 0.69 |
+| Plain | 1.64 | 0.46 | 0.28 | 0.0032 | 0.0011 | 0.99 |
+| Rolling | 1.61 | 8.41 | 8.73 | 0.0088 | 0.0071 | 0.63 |
 
 ## Resolution of the reference
 
 For a depth comparison, successive refinements must differ by at most 1 mm RMSE or 2% relative L2. For discharge they must differ by at most 5% of the finer peak over the whole hydrograph, with an exact match when the reference has zero flow. These are engineering convergence screens. They do not bound a shared formulation or boundary error. The storm comparisons use FV2 grid refinement, plus independent formulations at 1 m on selected cases. The analytical controls have separate exact references.
 
-Sampled terrain passed both screens on 32 of 48 cases.
+Sampled terrain passed both screens on 35 of 48 cases.
 
 Fixed terrain passed both screens on 1 of 3 cases.
 
@@ -29,9 +29,9 @@ For a pairwise advantage we additionally require the difference of the two forec
 
 | Method | Pairs vs FV1 | Median runtime ratio | Method lower depth error | FV1 lower depth error | Method lower outlet error | FV1 lower outlet error |
 |---|---|---|---|---|---|---|
-| hancock | 48 | 1.72 | 7 | 5 | 23 | 0 |
-| fv2 | 16 | 2.11 | 3 | 2 | 7 | 0 |
-| li | 18 | 0.34 | 0 | 9 | 5 | 11 |
+| hancock | 48 | 1.65 | 10 | 5 | 25 | 0 |
+| fv2 | 16 | 2.03 | 4 | 2 | 8 | 0 |
+| li | 18 | 0.34 | 0 | 10 | 5 | 12 |
 
 ## Direct comparison of adaptive Hancock and adaptive FV2
 
@@ -39,8 +39,8 @@ The selected 10 m cases have equal terrain, forcing and output cadence. Both met
 
 | Metric | Pairs | Hancock median RMSE | FV2 median RMSE | Hancock lower | FV2 lower | Within refinement margin | Reference unresolved |
 |---|---|---|---|---|---|---|---|
-| Final depth (mm) | 16 | 3.296 | 3.613 | 1 | 0 | 12 | 3 |
-| Outlet discharge (m³/s) | 16 | 0.003798 | 0.003897 | 0 | 0 | 12 | 4 |
+| Final depth (mm) | 16 | 3.296 | 3.613 | 1 | 0 | 13 | 2 |
+| Outlet discharge (m³/s) | 16 | 0.003798 | 0.003983 | 0 | 0 | 13 | 3 |
 
 ## Hydraulic grid and DEM representation
 
@@ -49,28 +49,28 @@ The moderate storm uses the same domain and end time at each spacing. Each entry
 | Sampled terrain | Method | 1 m | 5 m | 10 m |
 |---|---|---|---|---|
 | Plain | fv1 | 64.05 / 0.45 / 0.000898 | 5.94 / 0.166 / 0.00111 | 2.81 / 0.615 / 0.00189 |
-| Plain | hancock | 107.02 / 0.00352 / 5.83e-06 | 9.20 / 0.121 / 0.000303 | 4.79 / 0.407 / 0.000758 |
-| Plain | fv2 | 126.33 / ref | 11.45 / 0.108 / 0.000313 | 5.89 / 0.383 / 0.000782 |
+| Plain | hancock | 101.27 / 0.00352 / 5.83e-06 | 8.82 / 0.121 / 0.000303 | 4.63 / 0.407 / 0.000758 |
+| Plain | fv2 | 119.98 / ref | 11.08 / 0.108 / 0.000313 | 5.72 / 0.383 / 0.000782 |
 | Plain | li | 22.57 / 33.1 / 0.0564 | 1.05 / 33.1 / 0.0564 | 0.45 / 33.1 / 0.0563 |
 | Fan | fv1 | 14.14 / 3.4 / 0.00583 | 2.14 / 1.42 / 0.00255 | 1.31 / 6.95 / 0.00397 |
-| Fan | hancock | 41.75 / 0.0214 / 0.000265 | 3.39 / 1.11 / 0.00257 | 2.21 / 7.86 / 0.00331 |
-| Fan | fv2 | 49.41 / ref | 4.40 / 1.08 / 0.0028 | 2.80 / 7.31 / 0.00296 |
+| Fan | hancock | 39.38 / 0.0214 / 0.000265 | 3.24 / 1.11 / 0.00257 | 2.12 / 7.86 / 0.00331 |
+| Fan | fv2 | 46.76 / ref | 4.25 / 1.08 / 0.0028 | 2.71 / 7.31 / 0.00296 |
 | Incised | fv1 | 19.04 / 0.00933 / 0.0247 | 2.28 / 0.723 / 0.0236 | 1.36 / 4.54 / 0.0233 |
-| Incised | hancock | 85.40 / 0.0645 / 0.0143 | 4.23 / 1.39 / 0.0266 | 2.34 / 5.92 / 0.026 |
-| Incised | fv2 | 99.69 / 0.0701 / 0.0145 | 5.89 / 1.17 / 0.0267 | 3.38 / 5.79 / 0.0262 |
+| Incised | hancock | 80.88 / 0.0645 / 0.0143 | 4.06 / 1.39 / 0.0266 | 2.24 / 5.92 / 0.026 |
+| Incised | fv2 | 94.34 / 0.0701 / 0.0145 | 5.68 / 1.17 / 0.0267 | 3.27 / 5.79 / 0.0262 |
 
 | Fixed terrain | Method | 1 m | 5 m | 10 m |
 |---|---|---|---|---|
 | Plain | fv1 | 63.46 / 0.32 / 0.000466 | 5.95 / 0.73 / 0.00166 | 2.81 / 0.0555 / 0.00151 |
-| Plain | hancock | 107.58 / 0.000731 / 6.9e-06 | 9.11 / 0.00279 / 9.16e-05 | 4.79 / 0.271 / 0.000632 |
-| Plain | fv2 | 119.74 / ref | 11.11 / 0.00665 / 8.78e-05 | 5.89 / 0.296 / 0.000673 |
+| Plain | hancock | 101.72 / 0.000731 / 6.9e-06 | 8.72 / 0.00279 / 9.16e-05 | 4.63 / 0.271 / 0.000632 |
+| Plain | fv2 | 113.92 / ref | 10.73 / 0.00665 / 8.78e-05 | 5.72 / 0.296 / 0.000673 |
 | Plain | li | 21.97 / 33.7 / 0.0568 | 1.04 / 33.7 / 0.0568 | 0.45 / 33.7 / 0.0568 |
 | Fan | fv1 | 31.19 / 6.67 / 0.00719 | 3.02 / 2.95 / 0.0165 | 1.31 / 9.73 / 0.0231 |
-| Fan | hancock | 53.76 / 0.542 / 0.00098 | 4.51 / 4.59 / 0.00625 | 2.21 / 8.86 / 0.0239 |
-| Fan | fv2 | 59.90 / ref | 5.48 / 2.72 / 0.00468 | 2.80 / 9.37 / 0.0247 |
+| Fan | hancock | 50.93 / 0.542 / 0.00098 | 4.30 / 4.59 / 0.00625 | 2.12 / 8.86 / 0.0239 |
+| Fan | fv2 | 56.98 / ref | 5.29 / 2.72 / 0.00468 | 2.71 / 9.37 / 0.0247 |
 | Incised | fv1 | 50.20 / 37 / 0.00804 | 4.14 / 5.87 / 0.0149 | 1.36 / 7.66 / 0.0236 |
-| Incised | hancock | 69.53 / 0.247 / 0.00148 | 5.99 / 3 / 0.00432 | 2.34 / 6.65 / 0.0306 |
-| Incised | fv2 | 76.22 / ref | 7.09 / 2.18 / 0.00376 | 3.38 / 6.74 / 0.0308 |
+| Incised | hancock | 65.82 / 0.247 / 0.00148 | 5.73 / 3 / 0.00432 | 2.24 / 6.65 / 0.0306 |
+| Incised | fv2 | 72.49 / ref | 6.84 / 2.18 / 0.00376 | 3.27 / 6.74 / 0.0308 |
 
 ## Independent analytical rainfall and recession
 

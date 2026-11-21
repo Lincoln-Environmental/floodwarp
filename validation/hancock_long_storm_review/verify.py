@@ -19,6 +19,38 @@ def checksum(*, path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def hydraulic_record(value):
+    if isinstance(value, dict):
+        timing = {
+            "wall_seconds",
+            "loop_seconds",
+            "compilation_seconds",
+            "graph_capture_seconds",
+            "graph_capture_s",
+        }
+        return {k: hydraulic_record(v) for k, v in value.items() if k not in timing}
+    if isinstance(value, list):
+        return [hydraulic_record(v) for v in value]
+    return value
+
+
+def verify_analytical(*, review):
+    checked = []
+    for name, group in (
+        ("regression", "integrated_regression"),
+        ("analytical_legacy", "integrated_analytical/analytical_legacy"),
+        ("analytical_directional", "integrated_analytical/analytical_directional"),
+    ):
+        for original in sorted((review / name).glob("*.json")):
+            replay = review / group / original.name
+            if hydraulic_record(json.loads(original.read_text())) != hydraulic_record(
+                json.loads(replay.read_text())
+            ):
+                raise ArithmeticError("Analytical trajectory changed in " + str(replay))
+            checked.append(str(replay.relative_to(review)))
+    return checked
+
+
 def hydraulic_inputs(*, config, records):
     seen = {}
     for r in records:
@@ -58,6 +90,7 @@ def verify(*, review, fields, counts, baseline, methods, modules, pytest_summary
     inputs = hydraulic_inputs(config=config, records=rows)
     (review / "input_checksums.json").write_text(json.dumps(inputs, indent=2) + "\n")
     index = []
+    ledger_exceptions = []
     for f, r in zip(files, rows, strict=True):
         samples = r["samples"]
         if samples[-1]["t_s"] != r["hours"] * 3600 or samples[-1]["t_s"] < 28800:
@@ -68,9 +101,24 @@ def verify(*, review, fields, counts, baseline, methods, modules, pytest_summary
             raise ArithmeticError("Mass or timestep failure in " + r["name"])
         end_rain = next(s["rain_m3"] for s in samples if s["t_s"] == 21600)
         np.testing.assert_allclose(end_rain, r["rain_m3"], rtol=4e-12, atol=1e-10)
-        np.testing.assert_allclose(
+        matches_rain = np.isclose(
             r["rain_m3"], r["expected_rain_m3"], rtol=1e-10, atol=1e-8
         )
+        if not matches_rain:
+            audit = json.loads((review / "li_rain_audit.json").read_text())
+            if (
+                r["method"] != "li"
+                or audit["run"] != r["name"]
+                or r["rain_m3"] != audit["native_m3"]
+                or r["steps"] != audit["steps"]
+                or audit["maximum_applied_depth_difference_m"] != 0.0
+                or audit["source_accounting_modes"] != [[1, 0, 1]]
+            ):
+                raise ArithmeticError("Unreconciled rainfall ledger for " + r["name"])
+            np.testing.assert_allclose(
+                audit["compensated_m3"], r["expected_rain_m3"], rtol=1e-12, atol=1e-10
+            )
+            ledger_exceptions.append(audit)
         archive = fields / (r["name"] + ".npz")
         if r["group"] not in ("large", "terrain_large") and not archive.exists():
             raise FileNotFoundError(archive)
@@ -160,11 +208,13 @@ def verify(*, review, fields, counts, baseline, methods, modules, pytest_summary
         ],
         text=True,
     ).strip()
+    analytic = verify_analytical(review=review)
     info = dict(
         git_base=baseline,
         checked_out_head=subprocess.check_output(
             ["git", "rev-parse", "HEAD"], text=True
         ).strip(),
+        identical_analytical_records=analytic,
         qualifications="Local working-tree implementation on the recorded development baseline",
         python=platform.python_version(),
         platform=platform.platform(),
@@ -182,6 +232,7 @@ def verify(*, review, fields, counts, baseline, methods, modules, pytest_summary
         graph_kernel_profiles=len(profiles),
         large_dense_parity_pairs=len(large),
         primary_dense_parity_pairs=len(parity),
+        native_rain_ledger_screen_exceptions=ledger_exceptions,
         pytest=pytest_summary,
         precision="FP64",
         seed=json.loads((review / "cases.json").read_text())["seed"],

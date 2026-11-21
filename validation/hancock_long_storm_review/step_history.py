@@ -16,7 +16,7 @@ from validation.hancock_long_storm_review.landforms import storm_model
 def accepted_dt(ctrl: wp.array(dtype=wp.float64), times: wp.array(dtype=wp.float64)):
     if ctrl[7] == wp.float64(0.0) and ctrl[2] <= ctrl[17]:
         index = int(ctrl[3]) - 1
-        if index >= 0 and index < times.size:
+        if index >= 0 and index < times.shape[0]:
             times[index] = ctrl[2]
 
 

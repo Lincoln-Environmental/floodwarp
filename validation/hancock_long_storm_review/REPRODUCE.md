@@ -122,6 +122,7 @@ label the timing source in the exported event table.
 .venv/bin/python -m validation.hancock_long_storm_review.integrated
 .venv/bin/python -m validation.hancock_long_storm_review.step_history
 .venv/bin/python -m validation.hancock_long_storm_review.kernel_tables
+.venv/bin/python -m validation.hancock_long_storm_review.li_rain_audit
 FLOODWARP_PROFILE_FILE=integrated_profile.json FLOODWARP_PROFILE_ONLY=1 .venv/bin/python -m validation.hancock_long_storm_review.performance
 FLOODWARP_REGRESSION_RESULTS=validation/hancock_long_storm_review/integrated_regression .venv/bin/python -m validation.hancock_long_storm_review.regression
 FLOODWARP_ANALYTICAL_RESULTS=validation/hancock_long_storm_review/integrated_analytical .venv/bin/python -m validation.hancock_long_storm_review.analytical

@@ -1,18 +1,51 @@
-# Hancock qualification checkpoint
+# Engineering decision for adaptive Hancock
 
-The integrated solver completed the 48 primary storm pairs and the larger plain, coastal and mixed-terrain comparisons on an RTX 4070 Ti SUPER. The fine-grid replays and additional reference refinements are in progress. All primary events include six hours of rain and at least two hours of recession.
+All wall times below use warmed, synchronised FP64 execution on the RTX 4070 Ti SUPER. The original development head was `0180327`. The tiled scheduler is available at `2914077` and the constant-capacity source operator at `e63c936`. The original timings and physical arrays remain available for comparison.
 
-| Complete-event comparison | Tiled Hancock / sparse FV1 |
-|---|---:|
-| Median of the 48 small-domain events | 1.65× |
-| Largest small-domain penalty, mixed terrain with spatial rain | 2.58× |
-| Spatial rainfall on the plain, 250,000 / 500,000 cells | 1.33× / 1.18× |
-| Spatial rainfall on the plain, one / two million cells | 1.12× / 1.06× |
-| Uniform rainfall on the plain, two million cells | 1.65× |
-| Coastal uniform and mixed spatial rainfall, 250,000 cells | 1.70× / 1.84× |
+## Fixed-timestep cost
 
-The mostly dry 655,360-cell common-step control improved from 90.70 ms for historical dense Hancock to 32.56 ms with tiles at the scheduler revision. FV1 took 31.82 ms. The two-million-cell spatial storm subsequently took 16.96 s using integrated tiled Hancock and 15.94 s using FV1. Keep adaptive Hancock as the development default and select tiles explicitly when the expected hydraulic footprint is spatially restricted. [Detailed architecture, validation and limitations](REPORT.md)
+| Case | Baseline FV1 ms | Baseline dense ms | Integrated FV1 ms | Integrated dense ms | Integrated tiles ms | Tiles/FV1 |
+|---|---|---|---|---|---|---|
+| stoker | 153.38 | 147.02 | 154.48 | 147.32 | 153.48 | 0.99× |
+| dry_patch | 31.78 | 90.70 | 32.05 | 90.68 | 32.73 | 1.02× |
 
-The 16 matched 10 m comparisons give median final-depth RMSEs of 3.30 mm for Hancock and 3.61 mm for FV2. Median outlet RMSEs were 0.00380 and 0.00390 m³/s. Successive refinement has not yet qualified every reference hydrograph, especially in the steep incised catchment. [Matched hydraulic comparisons](COMPARISONS.md)
+## Production timestep cost
 
-The integrated implementation passed 1,874 tests, with 25 skipped. A checkpoint generated on the original development revision restored and reproduced all 28 saved state arrays under four Hancock execution modes. [Test receipt](test_results.json) · [Historical checkpoint comparison](checkpoint/results.json) · [Verified event records](integrated_events)
+Primary events cover eight landforms and six rainfall patterns on a common 384-cell grid. Each ran through six hours of rainfall and two hours of recession. The moderate plain ran for 24 hours.
+
+The median tiled Hancock/FV1 runtime ratio was 1.649×. 2 of 48 pairs met 1.5×. The largest ratio was 2.583× for mixed terrain under spatial rainfall. It required 12,455 accepted steps versus 9,477 for FV1.
+
+| Landform | Median tiles/FV1 wall | Median tiles/FV1 steps | Largest sampled cell Froude |
+|---|---|---|---|
+| coastal | 1.521 | 1.065 | 0.15 |
+| fan | 1.610 | 1.074 | 0.68 |
+| floodplain | 1.620 | 1.138 | 0.31 |
+| hill | 1.808 | 1.177 | 1.02 |
+| incised | 1.820 | 1.178 | 1.46 |
+| mixed | 2.160 | 1.350 | 1.06 |
+| plain | 1.635 | 1.049 | 0.10 |
+| rolling | 1.613 | 1.095 | 0.56 |
+
+| Landform | Rain | Cells | Wet % | Scheduled % | FV1 s | Dense s | Tiles s | Tiles/FV1 |
+|---|---|---|---|---|---|---|---|---|
+| coastal | moderate | 250,000 | 99.5 | 100.0 | 10.29 | 16.37 | 17.53 | 1.703 |
+| mixed | spatial | 250,000 | 13.6 | 27.7 | 6.27 | 19.80 | 11.52 | 1.836 |
+| plain | moderate | 250,000 | 99.9 | 100.0 | 9.17 | 13.82 | 14.83 | 1.616 |
+| plain | moderate | 500,000 | 100.0 | 100.0 | 17.17 | 27.67 | 29.40 | 1.712 |
+| plain | moderate | 1,000,000 | 100.0 | 100.0 | 34.99 | 55.68 | 58.38 | 1.668 |
+| plain | moderate | 2,000,000 | 100.0 | 100.0 | 69.73 | 110.62 | 115.09 | 1.651 |
+| plain | moving | 250,000 | 0.8 | 2.8 | 0.65 | 1.97 | 0.78 | 1.207 |
+| plain | spatial | 250,000 | 16.2 | 26.4 | 2.38 | 5.61 | 3.15 | 1.326 |
+| plain | spatial | 500,000 | 15.0 | 21.0 | 4.20 | 11.79 | 4.94 | 1.177 |
+| plain | spatial | 1,000,000 | 13.9 | 19.1 | 8.23 | 25.63 | 9.25 | 1.124 |
+| plain | spatial | 2,000,000 | 13.5 | 16.8 | 15.94 | 53.05 | 16.96 | 1.064 |
+
+## Hydraulic accuracy
+
+The source specialisation matched the stored hydraulic outputs in 265 replays. The dense and sparse schedules agreed in all 96 small primary and 20 large pairs. All six independent accepted-timestep histories matched across dense, fixed-mask and tiles. Of the 48 finely resampled terrain/event references, 35 met both the depth and hydrograph refinement screens. The landform and 1, 5 and 10 m tables report errors and identify unresolved comparisons. [Accuracy and resolution tables](COMPARISONS.md)
+
+## Recommendation
+
+Keep adaptive Hancock as the development default. Select tiled execution explicitly for spatially restricted events on larger domains. Widespread rainfall, fine-grid outlet storage and shallow moving fronts can each move the full-event runtime above the target. FV1 remains appropriate where its errors meet the application tolerance. LI requires independent qualification of its reduced momentum and outlet boundary for the intended observable. The CPU and CUDA structure tests qualify quasi-steady links, with a first-order time split and a separate structure-volume ledger.
+
+A single-GPU strip crossover and one expanding footprint support an experimental switching policy. Additional GPU architectures, independent downstream controls and broader accuracy qualification are needed before changing public release or scheduling defaults. [Architecture, hydraulic mechanisms and limitations](REPORT.md) · [Complete operational metrics](event_summary.csv) · [Physical input and test provenance](provenance.json)
