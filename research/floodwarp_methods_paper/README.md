@@ -31,6 +31,7 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 | large-refinements | Additional reference grids and matched wet initial-state mappings |
 | heldout-references | Fine-grid hydraulic sensitivity of the reserved plain and mixed catchments |
 | million-profiles | Separate complete graph-instrumented replays of sparse, wet and mixed events |
+| million-repeats | Repeat sparse plain and wet floodplain controls twice on the same GPU, in addition to each original timing |
 | execution-policy | Reconstruct measured dense, tiled and prospective automatic execution comparisons |
 | pareto | Reconstruct observable-specific measured frontiers and reference eligibility |
 | terrain-features | Read the simulation archives, derive hydraulic errors, compare grids, map terrain and compute Pareto sets |
@@ -59,6 +60,7 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 ./scripts/run_floodwarp_paper.sh large-refinements
 ./scripts/run_floodwarp_paper.sh heldout-references
 ./scripts/run_floodwarp_paper.sh million-profiles
+./scripts/run_floodwarp_paper.sh million-repeats
 ./scripts/run_floodwarp_paper.sh execution-policy
 ./scripts/run_floodwarp_paper.sh pareto
 ./scripts/run_floodwarp_paper.sh terrain-features

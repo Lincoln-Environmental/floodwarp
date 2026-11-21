@@ -72,8 +72,15 @@ def assess(*, study):
         for m in ("fv1", "adaptive", "li"):
             if m not in methods or "hancock_adaptive" not in methods:
                 continue
-            a=min((methods[k] for k in ("hancock_dense","hancock_adaptive") if k in methods),key=runtime)
-            b=methods[m]
+            a = min(
+                (
+                    methods[k]
+                    for k in ("hancock_dense", "hancock_adaptive")
+                    if k in methods
+                ),
+                key=runtime,
+            )
+            b = methods[m]
             for objective, metric in OBJECTIVES.items():
                 if objective == "memory":
                     continue
@@ -142,8 +149,14 @@ def integrity_by_family(*, study):
                 landform=land,
                 events=len(groups),
                 median_tiles_fv1_time_ratio=median(ratios("runtime_s")),
-                median_dense_fv1_time_ratio=median(runtime(d["hancock_dense"])/runtime(d["fv1"]) for d in groups),
-                median_hancock_fv1_time_ratio=median(min(runtime(d["hancock_dense"]),runtime(d["hancock_adaptive"]))/runtime(d["fv1"]) for d in groups),
+                median_dense_fv1_time_ratio=median(
+                    runtime(d["hancock_dense"]) / runtime(d["fv1"]) for d in groups
+                ),
+                median_hancock_fv1_time_ratio=median(
+                    min(runtime(d["hancock_dense"]), runtime(d["hancock_adaptive"]))
+                    / runtime(d["fv1"])
+                    for d in groups
+                ),
                 median_hancock_fv1_steps_ratio=median(ratios("steps")),
                 discharge_qualified=len(q),
                 hancock_discharge_rmse_m3s=median(

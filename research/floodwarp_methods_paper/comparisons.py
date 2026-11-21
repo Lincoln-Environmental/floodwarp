@@ -25,9 +25,19 @@ def pairwise(*, study, config):
             and r["reference_setup"] == "False"
         ):
             group[r["case"], r["representation"]].append(r)
+    operational_path = study / "processed/million/observations.csv"
+    if operational_path.exists():
+        for r in csv_read(operational_path):
+            if r["stage"] in ("million-storms", "million-auto"):
+                group[r["case"], r["representation"]].append(r)
     pairs = []
     feasible = []
     for (case, rep), records in group.items():
+        cohort = (
+            "operational"
+            if records[0]["stage"].startswith("million-")
+            else "120 × 80 m controls"
+        )
         for objective, metric in OBJECTIVES.items():
             if objective == "memory":
                 continue
@@ -45,6 +55,7 @@ def pairwise(*, study, config):
             won = min(met, key=time_key) if met else None
             feasible.append(
                 dict(
+                    cohort=cohort,
                     case=case,
                     representation=rep,
                     objective=objective,
@@ -62,8 +73,15 @@ def pairwise(*, study, config):
                 ("fv1", 1, "hancock_adaptive", 5),
                 ("li", 10, "hancock_adaptive", 10),
             ]
-            combos += [(a, ad, mode, bd) for a, ad, _, bd in combos
-                       for mode in ("hancock_dense", "fastest qualified Hancock")]
+            combos += [
+                (a, ad, mode, bd)
+                for a, ad, _, bd in combos
+                for mode in (
+                    "hancock_dense",
+                    "hancock_auto",
+                    "fastest qualified Hancock",
+                )
+            ]
             for am, ad, bm, bd in combos:
                 a = next(
                     (r for r in records if r["method"] == am and float(r["dx"]) == ad),
@@ -74,23 +92,29 @@ def pairwise(*, study, config):
                     None,
                 )
                 if bm == "fastest qualified Hancock":
-                    options = [r for r in eligible if float(r["dx"]) == bd
-                               and r["method"] in ("hancock_dense", "hancock_adaptive")]
+                    options = [
+                        r
+                        for r in eligible
+                        if float(r["dx"]) == bd
+                        and r["method"]
+                        in ("hancock_dense", "hancock_adaptive", "hancock_auto")
+                    ]
                     b = min(options, key=time_key) if options else None
                 if not (a and b):
                     continue
                 pairs.append(
                     dict(
+                        cohort=cohort,
                         case=case,
                         representation=rep,
                         objective=objective,
                         method_a=am,
                         dx_a=ad,
                         method_b=bm,
-                        execution_b=b["mode"],
+                        execution_b=b.get("mode", b.get("execution_mode")),
                         dx_b=bd,
-                        error_a=a[metric],
-                        error_b=b[metric],
+                        error_a=a.get(metric),
+                        error_b=b.get(metric),
                         time_a_s=a["runtime_s"],
                         time_b_s=b["runtime_s"],
                         cost_ratio=float(b["runtime_s"]) / float(a["runtime_s"]),
@@ -111,6 +135,7 @@ def pairwise(*, study, config):
                 b = min(affordable, key=metric_value(metric)) if affordable else None
                 pairs.append(
                     dict(
+                        cohort=cohort,
                         case=case,
                         representation=rep,
                         objective=objective,
@@ -118,7 +143,7 @@ def pairwise(*, study, config):
                         dx_a=a["dx"],
                         method_b="FV2 within FV1 budget",
                         dx_b=b["dx"] if b else None,
-                        error_a=a[metric],
+                        error_a=a.get(metric),
                         error_b=b[metric] if b else None,
                         time_a_s=a["runtime_s"],
                         time_b_s=b["runtime_s"] if b else None,

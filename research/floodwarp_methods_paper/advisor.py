@@ -41,8 +41,13 @@ def terrain_features(*, study, config, output):
         with np.load(folder / "terrain_1m.npz") as data:
             z = data["elevation_m"][::-1].copy()
         for dx in config["storms"]["practical_grids"]:
+            with np.load(folder / f"terrain_{dx:g}m.npz") as represented:
+                bed = represented["elevation_m"][::-1].copy()
             stats, native, coarse = analyse_array(
-                elevation=z, native_resolution=1.0, resolution=float(dx)
+                elevation=z,
+                native_resolution=1.0,
+                resolution=float(dx),
+                represented_elevation=bed,
             )
             features[key(land=family, seed=seed, dx=dx)] = stats
             if seed == config["synthetic"]["seeds"][0]:
@@ -161,9 +166,21 @@ def samples(*, study, config, features):
                 features=descriptors(terrain=stats, hydraulic=physical),
                 runtime_s=float(r["runtime_s"]),
                 memory_mib=float(r["memory_mib"]),
-                errors={k: float(r[v]) for k, v in OBJECTIVES.items() if k != "memory"},
+                errors={
+                    k: 1 - float(r["final_iou_1cm"])
+                    if k == "inundation"
+                    else float(r[v])
+                    for k, v in OBJECTIVES.items()
+                    if k != "memory"
+                },
                 qualified={
-                    k: r["qualified_" + k] == "True" and r["reference_self"] == "False"
+                    k: r[
+                        "qualified_final_inundation"
+                        if k == "inundation"
+                        else "qualified_" + k
+                    ]
+                    == "True"
+                    and r["reference_self"] == "False"
                     for k in config["advisor"]["tolerances"]
                 },
                 sampled_regime=regime,
@@ -172,7 +189,8 @@ def samples(*, study, config, features):
             )
         )
     from research.floodwarp_methods_paper.qualification import advisor_data
-    return selected + advisor_data.samples(study=study,config=config)
+
+    return selected + advisor_data.samples(study=study, config=config)
 
 
 def assess(*, model, rows, rules):
@@ -183,16 +201,23 @@ def assess(*, model, rows, rules):
     for (case, dx), group in groups.items():
         for objective, tol in model["tolerances"].items():
             actual = {r["method"]: r for r in group if r["qualified"][objective]}
-            terrain=group[0]["features"]
-            admissible=not terrain.get("critical_connection_lost") and not (
-                terrain.get("lost_channel_fraction",0)>0 and objective in ("inundation","discharge","peak_timing","peak_discharge"))
-            affordable = [r for r in actual.values() if admissible and r["errors"][objective] <= tol]
+            terrain = group[0]["features"]
+            admissible = not terrain.get("critical_connection_lost") and not (
+                terrain.get("lost_channel_fraction", 0) > 0
+                and objective
+                in ("inundation", "discharge", "peak_timing", "peak_discharge")
+            )
+            affordable = [
+                r
+                for r in actual.values()
+                if admissible and r["errors"][objective] <= tol
+            ]
             best = min(affordable, key=runtime) if affordable else None
             for rule in rules:
                 prediction = None
-                if rule=="oracle":
-                    method=best["method"] if best else None
-                    status="measured least-cost feasible option"
+                if rule == "oracle":
+                    method = best["method"] if best else None
+                    status = "measured least-cost feasible option"
                 elif rule in ("fv1", "hancock_dense", "hancock_adaptive"):
                     method = rule
                     status = "fixed rule"
@@ -216,7 +241,9 @@ def assess(*, model, rows, rules):
                     )
                 choice = actual.get(method)
                 feasible = (
-                    None if choice is None else admissible and choice["errors"][objective] <= tol
+                    None
+                    if choice is None
+                    else admissible and choice["errors"][objective] <= tol
                 )
                 regret = (
                     choice["runtime_s"] / best["runtime_s"] - 1
@@ -232,8 +259,10 @@ def assess(*, model, rows, rules):
                         split=group[0]["split"],
                         storm=group[0]["storm"],
                         dx=dx,
-                        cells=terrain["cells"], wet_fraction=group[0].get("wet_fraction"),
-                        mean_slope=terrain["mean_slope"], terrain_admissible=admissible,
+                        cells=terrain["cells"],
+                        wet_fraction=group[0].get("wet_fraction"),
+                        mean_slope=terrain["mean_slope"],
+                        terrain_admissible=admissible,
                         objective=objective,
                         tolerance=tol,
                         rule=rule,
@@ -300,9 +329,17 @@ def summary(*, rows):
                 if qualified
                 else None,
                 agreement_pct=100 * np.mean(ties) if ties else None,
-                agreement_all_feasible_pct=100*sum(r["agrees"] is True for r in opportunities)/len(opportunities) if opportunities else None,
-                false_feasible_per_decision_pct=100*sum(r["feasible"] is False for r in allrows)/len(allrows),
-                abstention_pct=100*sum(r["chosen"] is None for r in allrows)/len(allrows),
+                agreement_all_feasible_pct=100
+                * sum(r["agrees"] is True for r in opportunities)
+                / len(opportunities)
+                if opportunities
+                else None,
+                false_feasible_per_decision_pct=100
+                * sum(r["feasible"] is False for r in allrows)
+                / len(allrows),
+                abstention_pct=100
+                * sum(r["chosen"] is None for r in allrows)
+                / len(allrows),
                 median_regret_pct=100 * np.median(reg) if reg else None,
                 cheaper_acceptable=sum(r["cheaper_option"] is True for r in qualified),
                 abstentions=sum(r["chosen"] is None for r in allrows),
@@ -366,9 +403,12 @@ def train(*, study, config, features, context, directory):
     rows = samples(study=study, config=config, features=features)
     settings = config["advisor"]
     from research.floodwarp_methods_paper.qualification import advisor_data
-    split=advisor_data.split_groups(rows=rows,heldout_family=settings["heldout_family"])
-    train=split["development"]
-    val=split["validation"]
+
+    split = advisor_data.split_groups(
+        rows=rows, heldout_family=settings["heldout_family"]
+    )
+    train = split["development"]
+    val = split["validation"]
     if (
         not train
         or not val
@@ -381,15 +421,17 @@ def train(*, study, config, features, context, directory):
         validation_spacings=sorted({r["features"]["resolution"] for r in val}),
         scales=scales(rows=train),
         tolerances=settings["tolerances"],
+        inundation_target="one minus final 1 cm depth IoU on common physical support",
         hardware=context["gpu"],
         revision=context["git_sha"],
         quantile=settings["quantile"],
     )
     from research.floodwarp_methods_paper.qualification import decisions
-    decisions.scale_fit(model=model,training=train,validation=val)
+
+    decisions.scale_fit(model=model, training=train, validation=val)
     for rule in ("advisor", "slope"):
         tune(model=model, training=train, validation=val, settings=settings, rule=rule)
-    advisor_data.interval_calibration(model=model,rows=val)
+    advisor_data.interval_calibration(model=model, rows=val)
     model["training_terrain_ids"] = sorted({r["terrain_id"] for r in train})
     model["validation_terrain_ids"] = sorted({r["terrain_id"] for r in val})
     write_json(path=directory / "model.json", data=model)
@@ -435,10 +477,13 @@ def validate(*, study, config, features, directory):
     ):
         raise ArithmeticError("Held-out group leakage")
     results = assess(
-        model=model, rows=held, rules=("advisor", "fv1", "hancock_dense", "slope","oracle")
+        model=model,
+        rows=held,
+        rules=("advisor", "fv1", "hancock_dense", "slope", "oracle"),
     )
     from research.floodwarp_methods_paper.qualification import decisions
-    decisions.validate(study=study,model=model,held=held,decisions=results)
+
+    decisions.validate(study=study, model=model, held=held, decisions=results)
     totals = summary(rows=results)
     for folder in (directory, study / "processed/advisor"):
         csv_write(file=folder / "heldout.csv", rows=results)

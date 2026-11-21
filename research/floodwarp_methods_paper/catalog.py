@@ -35,9 +35,18 @@ def scientific_ids(*, record, row):
             duration_h=s["hours"],
             physical_n=round(f["roughness"] / s["multiplier"], 14),
         )
+        if "coastal_stage_m" in f:
+            physical.update(
+                {
+                    k: f[k]
+                    for k in ("coastal_stage_hours", "coastal_stage_m", "stage_hold_s")
+                }
+            )
+        if "end_s" in s:
+            physical["duration_h"] = s["end_s"] / 3600
         settings = dict(
-            algorithm=f["numerical"],
-            execution=row["mode"],
+            algorithm=row["numerical"] if "numerical" in row else f["numerical"],
+            execution=row.get("execution", row.get("mode")),
             model_n=f["roughness"],
             resolution=s["dx"],
         )
@@ -78,6 +87,9 @@ def collect(*, study):
         "calibration",
         "performance",
     }
+    from research.floodwarp_methods_paper.qualification.stages import NUMERICAL
+
+    stages.update(NUMERICAL)
     exceptions = study / "manifests/timing_exclusions.json"
     excluded = json.loads(exceptions.read_text()) if exceptions.is_file() else {}
     rows = []

@@ -96,9 +96,27 @@ def derived_identity(*, root, study, stage):
                 )
             ],
             base=original_identity(root=root, study=study, stage=stage),
-            corrective_sources={str(p.relative_to(root)):runner.checksum(p) for p in
-                                sorted((study/"qualification").glob("*")) if p.suffix in (".py",".json")},
-            corrective_inputs=[r["attempt"] for r in runner.archived(study=study,stages=("million-storms","million-auto","large-references","large-refinements","heldout-references","million-terrain","million-profiles","million-repeats"))],
+            corrective_sources={
+                str(p.relative_to(root)): runner.checksum(p)
+                for p in sorted((study / "qualification").glob("*"))
+                if p.suffix in (".py", ".json")
+            },
+            corrective_inputs=[
+                r["attempt"]
+                for r in runner.archived(
+                    study=study,
+                    stages=(
+                        "million-storms",
+                        "million-auto",
+                        "large-references",
+                        "large-refinements",
+                        "heldout-references",
+                        "million-terrain",
+                        "million-profiles",
+                        "million-repeats",
+                    ),
+                )
+            ],
             dependencies={
                 str(p.relative_to(root)): runner.checksum(p)
                 for p in dependencies
@@ -147,8 +165,15 @@ def select_specs(*, grid, source):
 
 def run(*, root, study, config_path, arguments):
     from research.floodwarp_methods_paper.qualification import stages as large
+
     stage = arguments[0]
-    order = (*runner.SIMULATIONS, *large.NUMERICAL, "terrain-features", *large.OFFLINE, *runner.STAGES[9:])
+    order = (
+        *runner.SIMULATIONS,
+        *large.NUMERICAL,
+        "terrain-features",
+        *large.OFFLINE,
+        *runner.STAGES[9:],
+    )
     selected = order if stage == "all" else (stage,)
     raw_options = arguments[1:]
     extensions = {"convergence": fixed_dt, "resolution": terrain_controls}
@@ -176,21 +201,44 @@ def run(*, root, study, config_path, arguments):
             elif group in runner.SIMULATIONS:
                 source = runner.specs
             elif group not in large.OFFLINE:
-                print(group, "global report; run this stage separately for all archived cases")
+                print(
+                    group,
+                    "global report; run this stage separately for all archived cases",
+                )
                 continue
             else:
                 source = None
             if source is not None:
-                specs = select_specs(grid=grid, source=source)(stage=group, config=config, root=root)
-                if not any(fnmatch.fnmatchcase(s["case"], flags["case"]) and flags["method"] in ("*", s["method"]) for s in specs):
+                specs = select_specs(grid=grid, source=source)(
+                    stage=group, config=config, root=root
+                )
+                if not any(
+                    fnmatch.fnmatchcase(s["case"], flags["case"])
+                    and flags["method"] in ("*", s["method"])
+                    for s in specs
+                ):
                     continue
                 matched = True
         if group in large.NUMERICAL:
-            large.numerical(root=root,study=study,config=config,stage=group,arguments=raw_options)
+            large.numerical(
+                root=root,
+                study=study,
+                config=config,
+                stage=group,
+                arguments=raw_options,
+            )
             continue
         if group in large.OFFLINE:
             from research.floodwarp_methods_paper.qualification import reporting
-            reporting.offline(study=study,root=root,stage=group,config=config,flags=flags,grid=grid)
+
+            reporting.offline(
+                study=study,
+                root=root,
+                stage=group,
+                config=config,
+                flags=flags,
+                grid=grid,
+            )
             continue
         if group in supplemental:
             module = supplemental[group]

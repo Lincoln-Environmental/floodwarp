@@ -197,7 +197,7 @@ def verify(*, study, config):
     figs = list((study / "figures").glob("[0-9]*.pdf"))
     if (
         table_count != 13
-        or len(figs) != 17
+        or len(figs) != 18
         or not all(p.with_suffix(e).is_file() for p in figs for e in (".svg", ".png"))
     ):
         raise ValueError("Publication output count mismatch")
@@ -222,7 +222,8 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
         catalog.collect(study=study)
         rows = metrics.build(study=study, config=config)
         from research.floodwarp_methods_paper.qualification import reporting
-        expanded=reporting.aggregate(study=study,config=config)
+
+        expanded = reporting.aggregate(study=study, config=config)
         comparisons.pairwise(study=study, config=config)
         comparisons.historical(root=root, study=study)
         reference_audit.independent(study=study)
@@ -235,7 +236,9 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
         statistics.timing_replacements(study=study)
         statistics.transfer_groups(study=study, settings=config["advisor"])
         features = advisor.terrain_features(study=study, config=config, output=terrain)
-        result = dict(terrain_grids=len(features), records=rows, gates=gates, expanded=expanded)
+        result = dict(
+            terrain_grids=len(features), records=rows, gates=gates, expanded=expanded
+        )
         paths = [
             *(p for p in processed.rglob("*.csv") if p.parent.name != "advisor"),
             terrain,
@@ -274,6 +277,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
         paths = [
             *(study / "figures").glob("[0-9]*.*"),
             *(study / "supplementary/pareto").rglob("*"),
+            *(study / "supplementary/operational_storms").rglob("*"),
         ]
     elif stage == "manuscript":
         from research.floodwarp_methods_paper.manuscript.generate import generate
@@ -288,8 +292,9 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
         ]
     elif stage == "verify":
         from research.floodwarp_methods_paper.qualification import reporting
+
         result = verify(study=study, config=config)
-        result["expanded"]=reporting.verification(study=study,config=config)
+        result["expanded"] = reporting.verification(study=study, config=config)
     else:
         raise ValueError(stage)
     result["output_sha256"] = hashes(study=study, paths=paths)

@@ -139,6 +139,9 @@ def storm_metrics(*, study, config):
                 fine_dx=spacing(fine),
                 coarse_dx=spacing(coarse),
             )
+            final_iou_change = 1 - delta["final_iou_1cm"]
+            uncertainty["final_inundation_change"] = final_iou_change
+            uncertainty["qualified_final_inundation"] = final_iou_change <= 0.05
             uncertainty.update(
                 {k: delta[v] for k, v in OBJECTIVES.items() if k != "memory"}
             )
@@ -189,8 +192,17 @@ def storm_metrics(*, study, config):
                 )
                 metrics.update({"qualified_" + k: v for k, v in qualified.items()})
                 if max(s["outlet_m3s"] for s in row["samples"]) <= 0:
-                    metrics["qualified_peak_timing"]=False
-                metrics.update({"reference_change_" + k: delta[v] for k, v in OBJECTIVES.items() if k != "memory"})
+                    metrics["qualified_peak_timing"] = False
+                metrics["qualified_final_inundation"] = uncertainty[
+                    "qualified_final_inundation"
+                ]
+                metrics.update(
+                    {
+                        "reference_change_" + k: delta[v]
+                        for k, v in OBJECTIVES.items()
+                        if k != "memory"
+                    }
+                )
                 results.append(metrics)
     return results, uncertainties
 
@@ -275,16 +287,22 @@ def grid_key(row):
 
 def config_fields(*, method, dx):
     from floodwarp.solver_advisor.model import configuration
-    fields = configuration(method)
-    return dict(**fields, configuration=" / ".join((*fields.values(), f"{float(dx):g} m")))
 
+    fields = configuration(method)
+    return dict(
+        **fields, configuration=" / ".join((*fields.values(), f"{float(dx):g} m"))
+    )
 
 
 def is_true(value):
-    return value is True or value == "True" or isinstance(value, np.bool_) and bool(value)
+    return (
+        value is True or value == "True" or isinstance(value, np.bool_) and bool(value)
+    )
 
 
-def pareto(*, rows, keys, objectives, cost, include_unresolved=False, exact_reference=False):
+def pareto(
+    *, rows, keys, objectives, cost, include_unresolved=False, exact_reference=False
+):
     groups = defaultdict(list)
     for row in rows:
         groups[tuple(row[k] for k in keys)].append(row)
@@ -295,21 +313,36 @@ def pareto(*, rows, keys, objectives, cost, include_unresolved=False, exact_refe
             for r in group:
                 value = r.get(metric)
                 valid = value not in ("", None) and np.isfinite(float(value))
-                valid = valid and r.get(cost) not in (None, "") and np.isfinite(float(r[cost])) and float(r[cost]) > 0
+                valid = (
+                    valid
+                    and r.get(cost) not in (None, "")
+                    and np.isfinite(float(r[cost]))
+                    and float(r[cost]) > 0
+                )
                 ref_ok = objective == "memory" or (
-                    not is_true(r.get("reference_self")) and is_true(r.get("qualified_" + objective, True))
+                    not is_true(r.get("reference_self"))
+                    and is_true(r.get("qualified_" + objective, True))
                 )
                 if valid and ref_ok:
                     measured.append((float(value), float(r[cost]), r["experiment_id"]))
-            by_id = {key: (err, t) for err,t,key in measured}
-            changes = {r["experiment_id"]: r.get("reference_change_" + objective) for r in group}
+            by_id = {key: (err, t) for err, t, key in measured}
+            changes = {
+                r["experiment_id"]: r.get("reference_change_" + objective)
+                for r in group
+            }
             for r in group:
                 pair = by_id.get(r["experiment_id"])
                 if pair is None and not include_unresolved:
                     continue
-                dominated = None if pair is None else sum(
-                    error <= pair[0] and time <= pair[1] and (error < pair[0] or time < pair[1])
-                    for error,time,_ in measured
+                dominated = (
+                    None
+                    if pair is None
+                    else sum(
+                        error <= pair[0]
+                        and time <= pair[1]
+                        and (error < pair[0] or time < pair[1])
+                        for error, time, _ in measured
+                    )
                 )
                 radius = changes[r["experiment_id"]]
                 if objective == "memory" or exact_reference:
@@ -322,18 +355,36 @@ def pareto(*, rows, keys, objectives, cost, include_unresolved=False, exact_refe
                         peer_radius = changes[peer]
                         if objective == "memory" or exact_reference:
                             peer_radius = 0.0
-                        if peer == r["experiment_id"] or time > pair[1] or peer_radius in (None, ""):
+                        if (
+                            peer == r["experiment_id"]
+                            or time > pair[1]
+                            or peer_radius in (None, "")
+                        ):
                             continue
                         upper = error + float(peer_radius)
                         lower = max(0.0, pair[0] - float(radius))
                         if upper <= lower and (upper < lower or time < pair[1]):
                             robust += 1
-                result.append(dict(**{k:r[k] for k in keys}, objective=objective,method=r["method"],dx=r["dx"],
-                                   **config_fields(method=r["method"],dx=r["dx"]),experiment_id=r["experiment_id"],
-                                   error=r.get(metric),runtime_s=r.get(cost),eligible=pair is not None,
-                                   nondominated=None if pair is None else dominated==0,dominator_count=dominated,
-                                   reference_change=radius,sensitivity_dominator_count=robust,
-                                   sensitivity_nondominated=None if robust is None else robust==0))
+                result.append(
+                    dict(
+                        **{k: r[k] for k in keys},
+                        objective=objective,
+                        method=r["method"],
+                        dx=r["dx"],
+                        **config_fields(method=r["method"], dx=r["dx"]),
+                        experiment_id=r["experiment_id"],
+                        error=r.get(metric),
+                        runtime_s=r.get(cost),
+                        eligible=pair is not None,
+                        nondominated=None if pair is None else dominated == 0,
+                        dominator_count=dominated,
+                        reference_change=radius,
+                        sensitivity_dominator_count=robust,
+                        sensitivity_nondominated=None
+                        if robust is None
+                        else robust == 0,
+                    )
+                )
     return result
 
 
@@ -498,7 +549,13 @@ def build(*, study, config):
         "metrics/reference_uncertainty": uncertainty,
         "convergence/orders": orders(rows=exact),
         "pareto/storms": pc,
-        "pareto/storm_eligibility": pareto(rows=operating,keys=("case","landform","representation"),objectives=OBJECTIVES,cost="runtime_s",include_unresolved=True),
+        "pareto/storm_eligibility": pareto(
+            rows=operating,
+            keys=("case", "landform", "representation"),
+            objectives=OBJECTIVES,
+            cost="runtime_s",
+            include_unresolved=True,
+        ),
         "pareto/analytical": analytical_front,
         "comparisons/calibration": calibration,
         "comparisons/transfer": transfer,
@@ -525,6 +582,8 @@ def build(*, study, config):
         db.execute(
             "CREATE TABLE experiments (experiment_id TEXT, attempt TEXT PRIMARY KEY, stage TEXT, spec_json TEXT, provenance_json TEXT, directory TEXT)"
         )
+        from research.floodwarp_methods_paper.qualification.stages import NUMERICAL
+
         db.executemany(
             "INSERT INTO experiments VALUES (?,?,?,?,?,?)",
             [
@@ -547,6 +606,8 @@ def build(*, study, config):
                         "calibration",
                         "synthetic",
                         "terrain-initial-controls",
+                        "fixed-dt-space",
+                        *NUMERICAL,
                     ),
                 )
             ],
