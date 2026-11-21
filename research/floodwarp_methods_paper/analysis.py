@@ -14,7 +14,7 @@ from research.floodwarp_methods_paper import (
     statistics,
     reference_audit,
 )
-from research.floodwarp_methods_paper import catalog
+from research.floodwarp_methods_paper import catalog, evidence
 from research.floodwarp_methods_paper.plan import specs
 from research.floodwarp_methods_paper.runner import (
     archived,
@@ -42,7 +42,9 @@ def completeness(*, study, config, stages):
             digest(dict(stage=stage, settings=s, config=config))[:24]
             for s in specs(stage=stage, root=study.parents[1], config=config)
         }
-        complete = {r["experiment_id"] for r in archived(study=study, stages=(stage,))}
+        complete = {
+            r["experiment_id"] for r in evidence.records(study=study, stages=(stage,))
+        }
         missing = expected - complete
         if missing:
             raise ValueError(

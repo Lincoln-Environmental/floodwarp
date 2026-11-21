@@ -72,6 +72,8 @@ def collect(*, study):
         "calibration",
         "performance",
     }
+    exceptions = study / "manifests/timing_exclusions.json"
+    excluded = json.loads(exceptions.read_text()) if exceptions.is_file() else {}
     rows = []
     for initial in sorted((study / "raw_results").glob("*/*/*/attempt.json")):
         origin = json.loads(initial.read_text())
@@ -97,6 +99,7 @@ def collect(*, study):
                 method=r["spec"]["method"],
                 timing_repeat=r["spec"].get("repeat"),
                 status=r["status"],
+                timing_exclusion=excluded.get(r["attempt"]),
                 elapsed_s=r.get("wall_s"),
                 receipt_sha256=checksum(receipt) if receipt.exists() else None,
                 log_sha256=checksum(study / r["log"])

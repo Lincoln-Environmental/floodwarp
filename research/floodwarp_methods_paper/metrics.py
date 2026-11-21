@@ -8,6 +8,7 @@ import sqlite3
 import numpy as np
 
 from research.floodwarp_methods_paper.runner import archived
+from research.floodwarp_methods_paper import evidence
 from validation.hancock_long_storm_review.accuracy import compare, read_fields
 
 
@@ -38,7 +39,7 @@ def csv_read(file):
 
 def load(*, study, stages):
     runs = {}
-    for rec in archived(study=study, stages=stages):
+    for rec in evidence.records(study=study, stages=stages):
         key = (rec["stage"], rec["experiment_id"])
         path = study / rec["directory"]
         if key not in runs or path.stat().st_mtime > runs[key][2].stat().st_mtime:

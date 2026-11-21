@@ -1,5 +1,7 @@
 """Manual stage entry point with archive-only regeneration and offline rendering."""
 
+from contextlib import contextmanager
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -10,12 +12,12 @@ from unittest.mock import patch
 from time import perf_counter
 
 from research.floodwarp_methods_paper.plan import read_config
-from research.floodwarp_methods_paper import runner
+from research.floodwarp_methods_paper import runner, evidence
 
 
 def offline_machine(*, root, study):
     # Predictions of runtime retain the hardware used to obtain the observations.
-    raw = runner.archived(study=study, stages=("long-storms", "analytical"))
+    raw = evidence.records(study=study, stages=("long-storms", "analytical"))
     source = raw[0]["context"] if raw else {}
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=root, text=True
@@ -55,6 +57,7 @@ def derived_identity(*, root, study, stage):
         study / "manuscript/generate.py",
         study / "configs/analytical/methods.json",
         study / "supplementary/environment.json",
+        study / "manifests/timing_exclusions.json",
     ]
     for name in (
         "METHODS.md",
@@ -83,12 +86,47 @@ def derived_identity(*, root, study, stage):
 original_identity = runner.source_identity
 
 
+@contextmanager
+def device_slot(*, study, stage, device, dry):
+    if dry or stage not in runner.SIMULATIONS or stage == "synthetic":
+        yield
+        return
+    locks = study / "manifests/devices"
+    locks.mkdir(exist_ok=True, parents=True)
+    key = "cuda:0" if device == "cuda" else device
+    with (locks / (runner.digest(key)[:12] + ".lock")).open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def grid_filter(*, arguments):
+    other = []
+    grid = {}
+    values = iter(arguments)
+    for token in values:
+        if token in ("--dx", "--dem"):
+            grid[token[2:]] = float(next(values))
+        else:
+            other.append(token)
+    return other, grid
+
+
+def select_specs(*, grid, source):
+    def generator(*, stage, config, root):
+        for s in source(stage=stage, config=config, root=root):
+            if all(s.get(k) == v for k, v in grid.items()):
+                yield s
+
+    return generator
+
+
 def run(*, root, study, config_path, arguments):
     stage = arguments[0]
     selected = runner.STAGES if stage == "all" else (stage,)
     if set(selected) - set(runner.STAGES):
         raise ValueError("Unknown study stage " + stage)
-    opts = runner.options(args=arguments[1:])
+    arguments, grid = grid_filter(arguments=arguments[1:])
+    opts = runner.options(args=arguments)
     config = read_config(path=config_path)
     started = perf_counter()
     for group in selected:
@@ -104,7 +142,14 @@ def run(*, root, study, config_path, arguments):
         identity = (
             original_identity if group in runner.SIMULATIONS else derived_identity
         )
-        with patch.object(runner, "source_identity", identity):
+        select = select_specs(grid=grid, source=runner.specs)
+        with (
+            device_slot(
+                study=study, stage=group, device=flags["device"], dry=flags["dry"]
+            ),
+            patch.object(runner, "source_identity", identity),
+            patch.object(runner, "specs", select),
+        ):
             runner.run_stage(
                 stage=group,
                 opts=flags,
@@ -116,6 +161,7 @@ def run(*, root, study, config_path, arguments):
         if (
             not flags["dry"]
             and group == "analytical"
+            and not grid
             and flags["case"] == "*"
             and flags["method"] == "*"
         ):
