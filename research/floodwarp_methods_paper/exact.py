@@ -33,7 +33,7 @@ def evaluate(*,stage,spec,study,root,config,context,directory):
         case=Case("accelerating","sheet",0.05,0.08,0.12,0.3,0.0,0.0,400.,40.,4.,0.,(0.,))
         temporal(case=case,dx=5.,timesteps=settings["temporal_steps"],methods=("fv1","low_froude_hll","euler_mc","hancock_adaptive","adaptive"),gravity=settings["gravity"],device=settings["device"],output=directory/"fixed_grid.json")
         rows={}
-        for integ in ("euler","hancock","rk2"):
+        for integ in ("euler","hancock","fv2"):
             rows[integ]=convergence(grids=(16,32,64,128),temporal_grid=16,timesteps=(1/64,1/128,1/256,1/512),length=8.,duration=0.5,device=settings["device"],bed_amplitude=0.04,limiter="adaptive" if integ!="euler" else "mc",integrator=integ)
         return dict(manufactured=rows)
     case=next(c for c in design() if c.name==spec["case"])
