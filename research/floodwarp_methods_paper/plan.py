@@ -28,7 +28,7 @@ def specs(*, stage, config, root):
     elif stage in ("analytical","convergence"):
         domains=json.loads((root/"validation/fv1_diffusion_review/domains.json").read_text())
         for domain in domains:
-            if stage=="convergence" and domain["family"] not in ("pulse","front","gravity"):
+            if stage=="convergence" and domain["family"] not in ("pulse","front","gravity_pulse"):
                 continue
             if stage=="convergence" and domain["name"] not in ("front_steep","gravity_pulse","shear_pulse","front_gentle"):
                 continue
