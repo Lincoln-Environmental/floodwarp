@@ -139,3 +139,16 @@ The graph profiler uses two additional timestamp kernels bracketing each
 launch. Their overhead changes timings. The full-event table groups donor
 budgets and continuity with flux/update. In the interval table these kernels
 are included in control/other. Fused FV1 operations share one measured time.
+
+
+## Historical checkpoint
+
+The `checkpoint/` directory contains a public-API checkpoint created at
+`0180327`, its continuing simulation's 28 arrays and their checksum record.
+Run `.venv/bin/python -m validation.hancock_long_storm_review.checkpoint_audit`
+to compare the four current schedulers with that continuation. To independently
+regenerate the fixture, use the old checkout's `src` as the working directory,
+set `FLOODWARP_HISTORICAL_FIXTURE=1` and provide a fresh absolute directory
+in `FLOODWARP_CHECKPOINT_AUDIT`. Execute the current audit script on Python's
+standard input so imports resolve from that checkout. The driver checks the
+imported implementation's Git revision before creating the reference.
