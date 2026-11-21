@@ -209,6 +209,28 @@ def material(*, study):
         audit.append(
             f"| {obj} | {len(g)} | {sum(r['original_qualified'] == 'True' for r in g)} | {sum(r['qualified'] == 'True' for r in g)} |"
         )
+    components = csv_read(p / "million/resolution_components.csv")
+    geometry_controls = [r for r in components if r["method"] == "hancock_dense"]
+    if geometry_controls:
+        audit.extend(
+            [
+                "",
+                "These paired Hancock controls hold the physical domain and continuous forcing fixed. "
+                "A change in hydraulic spacing can change the cell-sampled rain integral. At fixed hydraulic "
+                "spacing the bed comparisons reuse the same rainfall raster. RMSE measures the difference between "
+                "two forecasts. The signed ledger columns give the second forecast minus the first. "
+                "[All methods, run IDs and formulation interactions](processed/million/resolution_components.csv)",
+                "",
+                "| Case | Paired change | Depth difference (mm RMSE) | Initial storage Δ (m³) | Integrated rain Δ (m³) | Infiltration Δ (m³) |",
+                "|---|---|---:|---:|---:|---:|",
+            ]
+        )
+        for row in geometry_controls:
+            audit.append(
+                f"| {row['case']} | {row['mechanism']} | {1000 * float(row['depth_rmse_m']):.3f} | "
+                f"{float(row['initial_storage_change_m3']):+.3f} | {float(row['right_minus_left_rain_m3']):+.3f} | "
+                f"{float(row['right_minus_left_infiltration_m3']):+.3f} |"
+            )
     fast_peaks = [
         row
         for row in raw

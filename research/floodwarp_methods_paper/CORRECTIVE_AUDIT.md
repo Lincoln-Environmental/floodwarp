@@ -1,6 +1,6 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 123 numerical records remain outstanding. Values below cover completed events.
+**Qualification in progress.** 114 numerical records remain outstanding. Values below cover completed events.
 
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
@@ -66,6 +66,13 @@ Depth, wet-depth and maximum-depth comparisons use area averages on the common p
 | Observable | Reassessed small cases | Originally qualified | Qualified on both finer checks |
 |---|---:|---:|---:|
 
+These paired Hancock controls hold the physical domain and continuous forcing fixed. A change in hydraulic spacing can change the cell-sampled rain integral. At fixed hydraulic spacing the bed comparisons reuse the same rainfall raster. RMSE measures the difference between two forecasts. The signed ledger columns give the second forecast minus the first. [All methods, run IDs and formulation interactions](processed/million/resolution_components.csv)
+
+| Case | Paired change | Depth difference (mm RMSE) | Initial storage Δ (m³) | Integrated rain Δ (m³) | Infiltration Δ (m³) |
+|---|---|---:|---:|---:|---:|
+| plain-709-spatial-1000x1000 | grid on fixed 10 m bed | 0.724 | +0.000 | -0.108 | -95.415 |
+| plain-709-spatial-1000x1000 | resampled bed at 1 m | 2.034 | +0.000 | -0.000 | +1.266 |
+
 The fast-event outlet records support a direct comparison of interval means from the same accepted face volumes. Times below are the ends of the intervals containing the maximum mean discharge. [Fine-interval peak observations](processed/million/observations.csv) · [15-minute hydrographs](processed/million/hydrographs_900s.csv)
 
 | Landform | Method | Peak at 60 s (m³/s) | Peak at 900 s (m³/s) | Attenuation from averaging | Peak interval end, 60 s / 900 s (s) |
@@ -112,7 +119,7 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | million-pilots | 6 | 6 |
 | million-storms | 62 | 62 |
 | million-auto | 18 | 18 |
-| large-references | 5 | 77 |
+| large-references | 14 | 77 |
 | large-refinements | 0 | 29 |
 | heldout-references | 0 | 5 |
 | million-profiles | 0 | 9 |
@@ -139,13 +146,13 @@ Preflight selected the faster explicit schedule on 13 of 14 measured grids of at
 
 | Observable | Eligible | Empirical frontier | Frontier under reference sensitivity | Unresolved |
 |---|---:|---:|---:|---:|
-| depth | 15 | 8 | 9 | 65 |
-| discharge | 0 | 0 | 0 | 80 |
-| inundation | 15 | 5 | 9 | 65 |
-| maximum_depth | 15 | 8 | 9 | 65 |
+| depth | 26 | 13 | 13 | 54 |
+| discharge | 14 | 5 | 7 | 66 |
+| inundation | 22 | 8 | 11 | 58 |
+| maximum_depth | 26 | 13 | 13 | 54 |
 | memory | 80 | 15 | 15 | 0 |
-| peak_discharge | 0 | 0 | 0 | 80 |
-| peak_timing | 6 | 1 | 1 | 74 |
+| peak_discharge | 4 | 2 | 2 | 76 |
+| peak_timing | 10 | 3 | 3 | 70 |
 
 Final 1 cm inundation is the common prediction target in the enlarged advisor. The historical paper also retains time-integrated inundation results. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)
 
@@ -156,15 +163,15 @@ Each entry uses the measured error plus the reported refinement sensitivity. Tol
 | Physical event | Final depth | Final inundation | Outlet hydrograph |
 |---|---|---|---|
 | coastal-703-moderate-10240x10240 | unresolved | unresolved | unresolved |
-| fan-705-spatial-5120x5120 | unresolved | unresolved | unresolved |
+| fan-705-spatial-5120x5120 | fv1, 5 m | unresolved | no tested option |
 | fan-711-spatial-10000x5000 | unresolved | unresolved | unresolved |
 | floodplain-702-moderate-10240x10240 | unresolved | unresolved | unresolved |
 | hill-706-back-10240x10240 | unresolved | unresolved | unresolved |
 | incised-707-spatial-10240x10240 | unresolved | unresolved | unresolved |
 | mixed-708-spatial-10240x10240 | unresolved | unresolved | unresolved |
 | mixed-714-spatial-20480x10240 | unresolved | unresolved | unresolved |
-| plain-701-spatial-10240x10240 | unresolved | unresolved | unresolved |
-| plain-709-spatial-1000x1000 | fv1, 10 m | hancock_auto, 5 m | unresolved |
+| plain-701-spatial-10240x10240 | fv1, 10 m | hancock_adaptive, 10 m | unresolved |
+| plain-709-spatial-1000x1000 | fv1, 10 m | hancock_auto, 5 m | fv1, 10 m |
 | plain-710-spatial-5000x5000 | unresolved | unresolved | unresolved |
 | plain-712-spatial-20480x10240 | unresolved | unresolved | unresolved |
 | plain-715-spatial-10240x10240 | fv1, 10 m | fv1, 10 m | unresolved |

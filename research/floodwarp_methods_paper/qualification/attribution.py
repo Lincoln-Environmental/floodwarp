@@ -54,6 +54,16 @@ def build(*, study, config):
                         to_id=right["id"],
                         initial_storage_change_m3=right["data"]["initial_m3"]
                         - left["data"]["initial_m3"],
+                        right_minus_left_rain_m3=right["data"]["rain_m3"]
+                        - left["data"]["rain_m3"],
+                        right_minus_left_infiltration_m3=right["data"][
+                            "infiltration_m3"
+                        ]
+                        - left["data"]["infiltration_m3"],
+                        right_minus_left_final_storage_m3=right["data"][
+                            "final_storage_m3"
+                        ]
+                        - left["data"]["final_storage_m3"],
                         **delta,
                     )
                 )
