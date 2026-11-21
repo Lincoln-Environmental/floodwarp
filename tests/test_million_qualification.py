@@ -137,6 +137,29 @@ def test_reference_flags_survive_csv_and_policy_ties():
     assert front[0]["configuration"] != front[1]["configuration"]
 
 
+def test_short_interval_fronts_use_only_matched_forecasts():
+    from research.floodwarp_methods_paper.qualification.observations import (
+        short_interval_forecast,
+    )
+
+    config = {"synthetic": {"dimensions_m": [120, 80]}}
+    candidate = dict(
+        stage="large-references",
+        dimensions_m="120x80",
+        representation="sampled",
+        reference_setup="False",
+    )
+    assert short_interval_forecast(row=candidate, config=config)
+    for other in (
+        dict(candidate, reference_setup=True),
+        dict(candidate, reference_setup="True"),
+        dict(candidate, representation="fixed-10m-sampled"),
+        dict(candidate, stage="long-storms"),
+        dict(candidate, dimensions_m="10240x10240"),
+    ):
+        assert not short_interval_forecast(row=other, config=config)
+
+
 def test_separate_landforms_and_reject_invalid_grid():
     shared = dict(terrain_id="same", landform="plain")
     with pytest.raises(ValueError, match="leakage"):
