@@ -1,6 +1,7 @@
 """Distinguish attempts, timing repetitions and independent physical realisations."""
 
 import json
+import fcntl
 from collections import Counter
 from pathlib import Path
 
@@ -74,6 +75,28 @@ def scientific_ids(*, record, row):
     )
 
 
+def attempt_status(*, study, record):
+    """A terminated worker can leave an initial receipt but no terminal receipt."""
+    if record["status"] != "running":
+        return record["status"]
+    manifest = (
+        study / "manifests" / record["stage"] / (record["execution_id"] + ".json")
+    )
+    lock = manifest.with_suffix(".lock")
+    if (
+        not manifest.is_file()
+        or json.loads(manifest.read_text())["attempt"] != record["attempt"]
+        or not lock.is_file()
+    ):
+        return "incomplete"
+    with lock.open("rb") as stream:
+        try:
+            fcntl.flock(stream, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return "running"
+    return "incomplete"
+
+
 def collect(*, study):
     stages = {
         "check",
@@ -116,7 +139,7 @@ def collect(*, study):
                 case=r["spec"]["case"],
                 method=r["spec"]["method"],
                 timing_repeat=r["spec"].get("repeat"),
-                status=r["status"],
+                status=attempt_status(study=study, record=r),
                 timing_exclusion=excluded.get(r["attempt"]),
                 elapsed_s=r.get("wall_s"),
                 receipt_sha256=checksum(receipt) if receipt.exists() else None,

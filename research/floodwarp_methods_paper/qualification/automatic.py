@@ -66,7 +66,7 @@ def calculate(*,stage,spec,study,root,config,context,directory):
     return result
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     root=Path(__file__).resolve().parents[3]
     output=root/"src/floodwarp/solver_advisor/execution_policy.json"
     fit(root=root,output=output)

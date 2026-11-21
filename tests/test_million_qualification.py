@@ -334,3 +334,21 @@ def test_reconstructed_physical_identity_across_schedules():
     source = stages.source(root=root, study=study, stage="million-storms")
     assert source == stages.source(root=root, study=study, stage="million-storms")
     assert source != stages.source(root=root, study=study, stage="million-auto")
+
+
+def test_interrupted_and_superseded_attempts_remain_visible(tmp_path):
+    import fcntl
+    from research.floodwarp_methods_paper.catalog import attempt_status
+
+    record = dict(
+        stage="million-storms", execution_id="case", attempt="first", status="running"
+    )
+    manifest = tmp_path / "manifests/million-storms/case.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps(record))
+    with manifest.with_suffix(".lock").open("w") as lock:
+        assert attempt_status(study=tmp_path, record=record) == "incomplete"
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        assert attempt_status(study=tmp_path, record=record) == "running"
+        manifest.write_text(json.dumps(dict(record, attempt="second")))
+        assert attempt_status(study=tmp_path, record=record) == "incomplete"
