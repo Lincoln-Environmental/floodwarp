@@ -268,46 +268,55 @@ def grid_key(row):
     return row["dx"]
 
 
-def pareto(*, rows, keys, objectives, cost):
+def config_fields(*, method, dx):
+    policies = {
+        "fv1": ("FV1", "contact HLL", "sparse"),
+        "low_froude_hll": ("FV1", "low-Froude HLL", "sparse"),
+        "euler_mc": ("MUSCL–Euler", "MC", "dense"),
+        "hancock_adaptive": ("Hancock", "adaptive", "tiles"),
+        "hancock_dense": ("Hancock", "adaptive", "dense"),
+        "adaptive": ("FV2 RK2", "adaptive", "dense"),
+        "li": ("LI", "native", "native"),
+    }
+    formulation, limiter, mode = policies[method]
+    return dict(formulation=formulation, limiter_flux=limiter, execution_mode=mode,
+                configuration=f"{formulation} / {limiter} / {mode} / {float(dx):g} m")
+
+
+def is_true(value):
+    return value is True or value == "True" or isinstance(value, np.bool_) and bool(value)
+
+
+def pareto(*, rows, keys, objectives, cost, include_unresolved=False):
     groups = defaultdict(list)
-    for r in rows:
-        groups[tuple(r[k] for k in keys)].append(r)
+    for row in rows:
+        groups[tuple(row[k] for k in keys)].append(row)
     result = []
     for group in groups.values():
         for objective, metric in objectives.items():
-            eligible = [
-                r
-                for r in group
-                if r.get(metric) is not None
-                and (
-                    objective == "memory"
-                    or (
-                        not r.get("reference_self")
-                        and r.get("qualified_" + objective, True)
-                    )
+            measured = []
+            for r in group:
+                value = r.get(metric)
+                valid = value not in ("", None) and np.isfinite(float(value))
+                valid = valid and r.get(cost) not in (None, "") and np.isfinite(float(r[cost])) and float(r[cost]) > 0
+                ref_ok = objective == "memory" or (
+                    not is_true(r.get("reference_self")) and is_true(r.get("qualified_" + objective, True))
                 )
-            ]
-            for r in eligible:
-                better = [
-                    q
-                    for q in eligible
-                    if q[metric] <= r[metric]
-                    and q[cost] <= r[cost]
-                    and (q[metric] < r[metric] or q[cost] < r[cost])
-                ]
-                result.append(
-                    dict(
-                        **{k: r[k] for k in keys},
-                        objective=objective,
-                        method=r["method"],
-                        dx=r["dx"],
-                        experiment_id=r["experiment_id"],
-                        error=r[metric],
-                        runtime_s=r[cost],
-                        nondominated=not better,
-                        dominator_count=len(better),
-                    )
+                if valid and ref_ok:
+                    measured.append((float(value), float(r[cost]), r["experiment_id"]))
+            by_id = {key: (err, t) for err,t,key in measured}
+            for r in group:
+                pair = by_id.get(r["experiment_id"])
+                if pair is None and not include_unresolved:
+                    continue
+                dominated = None if pair is None else sum(
+                    error <= pair[0] and time <= pair[1] and (error < pair[0] or time < pair[1])
+                    for error,time,_ in measured
                 )
+                result.append(dict(**{k:r[k] for k in keys}, objective=objective,method=r["method"],dx=r["dx"],
+                                   **config_fields(method=r["method"],dx=r["dx"]),experiment_id=r["experiment_id"],
+                                   error=r.get(metric),runtime_s=r.get(cost),eligible=pair is not None,
+                                   nondominated=None if pair is None else dominated==0,dominator_count=dominated))
     return result
 
 
@@ -471,6 +480,7 @@ def build(*, study, config):
         "metrics/reference_uncertainty": uncertainty,
         "convergence/orders": orders(rows=exact),
         "pareto/storms": pc,
+        "pareto/storm_eligibility": pareto(rows=operating,keys=("case","landform","representation"),objectives=OBJECTIVES,cost="runtime_s",include_unresolved=True),
         "pareto/analytical": analytical_front,
         "comparisons/calibration": calibration,
         "comparisons/transfer": transfer,

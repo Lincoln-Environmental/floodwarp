@@ -228,7 +228,7 @@ def terrain(*, z, dx, areas, channel_area, window_m):
 
 
 def analyse_array(
-    *, elevation, native_resolution, resolution, window_m=30.0, channel_area_m2=None
+    *, elevation, native_resolution, resolution, window_m=30.0, channel_area_m2=None, represented_elevation=None
 ):
     z = np.asarray(elevation, dtype=float)
     if z.ndim != 2 or not np.isfinite(z).any() or np.isinf(z).any():
@@ -251,6 +251,11 @@ def analyse_array(
     coarse, areas, interior_std = aggregate(
         z=z, source=native_resolution, target=resolution
     )
+    if represented_elevation is not None:
+        actual = np.asarray(represented_elevation, dtype=float)
+        if actual.shape != coarse.shape or not np.array_equal(np.isfinite(actual), areas > 0):
+            raise ValueError("Represented bed must match the active coarse raster")
+        coarse = actual
     model, mmap = terrain(
         z=coarse, dx=resolution, areas=areas, channel_area=threshold, window_m=window_m
     )

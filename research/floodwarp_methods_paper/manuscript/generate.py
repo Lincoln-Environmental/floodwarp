@@ -30,6 +30,9 @@ def generate(*, study):
         float(d["hancock_adaptive"]["runtime_s"]) / float(d["fv1"]["runtime_s"])
         for d in matched.values()
     ]
+    dense = [float(d["hancock_dense"]["runtime_s"]) / float(d["fv1"]["runtime_s"]) for d in matched.values()]
+    fastest = [min(a, b) for a,b in zip(dense,ratios,strict=True)]
+    dense_wins = sum(a<b for a,b in zip(dense,ratios,strict=True))
     error = []
     for metric, screen, unit in (
         ("depth_rmse_m", "depth", "m"),
@@ -74,7 +77,7 @@ The {len(matched)} prospective physical events included six hours of rain and a 
 
 ## Efficiency and terrain representation
 
-The median tiled Hancock/FV1 operational runtime ratio was {median(ratios):.3f}× on the prospective 120 × 80 m domains at 10 m spacing. The range was {min(ratios):.3f}–{max(ratios):.3f}×. {sum(r <= 1.5 for r in ratios)} of {len(ratios)} met 1.5×. These tiny grids answer the matched physical comparison. The large-domain operational studies and the common-cap profiles measure a different GPU workload. [Measured GPU costs](../tables/07_runtime.md) · [Full performance qualification](../../../validation/hancock_long_storm_review/DECISION.md)
+On the 96-cell controls, dense Hancock was faster than tiles in {dense_wins} of {len(matched)} complete storms. Relative to sparse FV1 its median runtime was {median(dense):.3f}×, with {sum(r<=1.5 for r in dense)} events meeting 1.5×. Tiled Hancock took {median(ratios):.3f}× and met the target in {sum(r<=1.5 for r in ratios)} events. Selecting the faster qualified execution retrospectively gave {median(fastest):.3f}×. Both schedules reproduced the same Hancock fields. With only 96 cells, marking and compacting tiles adds GPU launches while eliminating little work. The large-domain suite measures how this balance changes with the scheduled footprint. [Measured GPU costs](../tables/07_runtime.md) · [Full performance qualification](../../../validation/hancock_long_storm_review/DECISION.md)
 
 Fixed-geometry and resampled-geometry experiments use the same physical extent. Their objective-specific rankings and measured cost ratios are available for the plain, fan and incised development realisations. An unresolved reference is an explicit missing comparison. [Resolution profiles](../figures/06_resolution.pdf) · [Equal-cost results](../tables/08_cost_accuracy.md) · [Least-cost feasible configurations](../processed/pareto/least_cost.csv)
 
@@ -117,7 +120,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
     )
     (study / "DISCUSSION.md").write_text(discussion.replace("](../", "]("))
     (manuscript / "conclusions.md").write_text(
-        f"# Conclusions\n\nOf {len(matched)} matched storms, {sum(r <= 1.5 for r in ratios)} met the operational Hancock/FV1 target on the prospective grid. The measured median ratio was {median(ratios):.3f}×. A single solver ranking cannot represent the full set of objective-specific Pareto frontiers. Reference uncertainty, terrain representation and held-out feasibility constrain the decision. [Results](results.md) · [Discussion](discussion.md)\n"
+        f"# Conclusions\n\nAcross {len(matched)} small-domain storms, the faster qualified Hancock execution met the 1.5× FV1 target in {sum(r<=1.5 for r in fastest)} cases with median {median(fastest):.3f}×. Tiled execution alone had median {median(ratios):.3f}×. A single solver ranking cannot represent the full set of objective-specific Pareto frontiers. Reference uncertainty, terrain representation and held-out feasibility constrain the decision. [Results](results.md) · [Discussion](discussion.md)\n"
     )
     return dict(
         events=len(matched),

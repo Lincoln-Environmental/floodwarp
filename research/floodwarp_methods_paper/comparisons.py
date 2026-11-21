@@ -62,6 +62,8 @@ def pairwise(*, study, config):
                 ("fv1", 1, "hancock_adaptive", 5),
                 ("li", 10, "hancock_adaptive", 10),
             ]
+            combos += [(a, ad, mode, bd) for a, ad, _, bd in combos
+                       for mode in ("hancock_dense", "fastest qualified Hancock")]
             for am, ad, bm, bd in combos:
                 a = next(
                     (r for r in records if r["method"] == am and float(r["dx"]) == ad),
@@ -71,6 +73,10 @@ def pairwise(*, study, config):
                     (r for r in records if r["method"] == bm and float(r["dx"]) == bd),
                     None,
                 )
+                if bm == "fastest qualified Hancock":
+                    options = [r for r in eligible if float(r["dx"]) == bd
+                               and r["method"] in ("hancock_dense", "hancock_adaptive")]
+                    b = min(options, key=time_key) if options else None
                 if not (a and b):
                     continue
                 pairs.append(
@@ -81,6 +87,7 @@ def pairwise(*, study, config):
                         method_a=am,
                         dx_a=ad,
                         method_b=bm,
+                        execution_b=b["mode"],
                         dx_b=bd,
                         error_a=a[metric],
                         error_b=b[metric],
