@@ -149,10 +149,12 @@ def water_exchange(
     if f0 == cond and infil == wp.float64(0.0) and cond == wp.float64(0.0):
         factor = wp.where(q[0] > wp.float64(0.0), wp.float64(1.0), wp.float64(0.0))
         return wp.vec4d(q[0] + added, factor, added, wp.float64(0.0))
-    initial = (f0 - cond) * wp.exp(-soil / fd)
     base = infil + cond
-    mid = wp.float64(0.5) * wp.min(q[0] + added, dt * (base + initial))
-    removed = wp.min(q[0] + added, dt * (base + initial * decay(mid / fd)))
+    removed = wp.min(q[0] + added, dt * base)
+    if f0 != cond:
+        initial = (f0 - cond) * wp.exp(-soil / fd)
+        mid = wp.float64(0.5) * wp.min(q[0] + added, dt * (base + initial))
+        removed = wp.min(q[0] + added, dt * (base + initial * decay(mid / fd)))
     h = (q[0] + added) - removed
     factor = wp.float64(0.0)
     if h > wp.float64(0.0) and q[0] > wp.float64(0.0):

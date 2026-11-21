@@ -17,7 +17,7 @@ from validation.hancock_long_storm_review.landforms import storm_model
 
 
 @wp.func
-def candidate_exchange(
+def reference_exchange(
     q: wp.vec3d,
     soil: wp.float64,
     rain: wp.float64,
@@ -32,9 +32,10 @@ def candidate_exchange(
     if f0 == cond and infil == wp.float64(0.0) and cond == wp.float64(0.0):
         factor = wp.where(q[0] > wp.float64(0.0), wp.float64(1.0), wp.float64(0.0))
         return wp.vec4d(q[0] + added, factor, added, wp.float64(0.0))
-    if f0 != cond:
-        return hydraulic.water_exchange(q, soil, rain, dt, infil, f0, fd, cond)
-    removed = wp.min(q[0] + added, dt * (infil + cond))
+    initial = (f0 - cond) * wp.exp(-soil / fd)
+    base = infil + cond
+    mid = wp.float64(0.5) * wp.min(q[0] + added, dt * (base + initial))
+    removed = wp.min(q[0] + added, dt * (base + initial * hydraulic.decay(mid / fd)))
     h = (q[0] + added) - removed
     factor = wp.float64(0.0)
     if h > wp.float64(0.0) and q[0] > wp.float64(0.0):
@@ -101,7 +102,7 @@ def capacity_sources(
             state = wp.float64(0.5) * (start[k] + end[k])
         state = hydraulic.drag(state, n[k], dt, g, dry)
         history += amounts[k][1]
-    change = candidate_exchange(
+    change = reference_exchange(
         state, history, rate, dt, infil[k], f0[k], fd[k], cond[k]
     )
     state = wp.vec3d(change[0], state[1] * change[1], state[2] * change[1])
@@ -121,7 +122,7 @@ def capacity_sources(
         maximum[k] = wp.max(maximum[k], state[0])
 
 
-class CapacityHancock(HancockSolver):
+class ReferenceHancock(HancockSolver):
     def _launch_grid(self, kernel, count, inputs, *, layout):
         replacement = capacity_sources if kernel is hydraulic.split_sources else kernel
         return super()._launch_grid(
@@ -138,7 +139,7 @@ def measure(*, review, config, device, intervals, dimensions, cases, repeats):
     for storm, mode in cases:
         reference = None
         for trial in range(repeats):
-            pairs = [("original", HancockSolver), ("specialized", CapacityHancock)]
+            pairs = [("original", ReferenceHancock), ("specialized", HancockSolver)]
             if trial % 2:
                 pairs.reverse()
             for name, constructor in pairs:
@@ -185,7 +186,7 @@ def measure(*, review, config, device, intervals, dimensions, cases, repeats):
                         intervals_s=parts,
                     )
                 )
-                (review / "capacity.json").write_text(json.dumps(rows, indent=2) + "\n")
+                (review / "integrated_capacity.json").write_text(json.dumps(rows, indent=2) + "\n")
 
 
 if __name__ == "__main__":
