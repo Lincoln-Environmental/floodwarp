@@ -327,9 +327,12 @@ def build(*, study, config):
             row = performance(item=i, case=case, rep=rep)
             if fine:
                 row.update(differences(a=i, b=fine))
-            row["selected_mode"] = (
-                i["data"].get("preflight", {}).get("selected", row["execution_mode"])
+            preflight = i["data"].get("preflight", {})
+            row["selected_mode"] = preflight.get("selected", row["execution_mode"])
+            row["preflight_estimated_work_fraction"] = preflight.get(
+                "scheduled_estimate"
             )
+            row["preflight_rain_fraction"] = preflight.get("rain_fraction")
             row["reference_id"] = fine["id"] if fine else None
             row["reference_self"] = bool(fine and i["id"] == fine["id"])
             row["reference_setup"] = i["stage"] not in (

@@ -371,6 +371,32 @@ def material(*, study):
                 f"The prospective preflight used tiled execution in {sum(r['selected_policy'] == 'tiles' for r in auto)} of {len(auto)} measured grids of at least one million cells. Its measured excess runtime over the fastest explicit observation had a median of {median(relative):+.1f}% and a maximum of {max(relative):+.1f}%. Separate executions include timing variability.",
             ]
         )
+        measured = [r for r in auto if r.get("preflight_estimated_work_fraction")]
+        if measured:
+            misses = [r for r in measured if r["selected_fastest_explicit"] == "False"]
+            audit.extend(
+                [
+                    "",
+                    f"Preflight selected the faster explicit schedule on {len(measured) - len(misses)} of "
+                    f"{len(measured)} measured grids of at least one million cells. The work estimate uses the "
+                    "initial state and prescribed rain footprint. The matched tile run measures the work actually "
+                    "scheduled over the entire event. [Per-event estimates and observations](processed/million/policies.csv)",
+                ]
+            )
+            if misses:
+                audit.extend(
+                    [
+                        "",
+                        "| Event | Δx (m) | Chosen policy | Rain footprint | Estimated scheduled | Observed tiled work | Auto cost above fastest |",
+                        "|---|---:|---|---:|---:|---:|---:|",
+                    ]
+                )
+                for row in sorted(misses, key=case_order):
+                    audit.append(
+                        f"| {row['case']} | {number(row['dx'])} | {row['selected_policy']} | "
+                        f"{float(row['preflight_rain_fraction']):.1%} | {float(row['preflight_estimated_work_fraction']):.1%} | "
+                        f"{float(row['work_fraction']):.1%} | {float(row['auto_regret_pct']):+.1f}% |"
+                    )
     fronts = csv_read(p / "million/pareto.csv")
     if fronts:
         audit.extend(

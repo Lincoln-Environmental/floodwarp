@@ -58,6 +58,12 @@ def policies(*, rows):
                 auto_s=runtime(auto),
                 auto_id=auto["experiment_id"],
                 selected_policy=auto["selected_mode"],
+                preflight_estimated_work_fraction=auto.get(
+                    "preflight_estimated_work_fraction"
+                ),
+                preflight_rain_fraction=auto.get("preflight_rain_fraction"),
+                selected_fastest_explicit=auto["selected_mode"]
+                == best["execution_mode"],
                 auto_ratio=runtime(auto) / runtime(fv),
                 auto_regret_pct=100 * (runtime(auto) / runtime(best) - 1),
             )
