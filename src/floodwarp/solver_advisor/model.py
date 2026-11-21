@@ -29,7 +29,16 @@ FEATURES = (
     "log_cells",
     "log_area",
 )
-CANDIDATES = ("li", "fv1", "low_froude_hll", "euler_mc", "hancock_dense", "hancock_adaptive", "hancock_auto", "adaptive")
+CANDIDATES = (
+    "li",
+    "fv1",
+    "low_froude_hll",
+    "euler_mc",
+    "hancock_dense",
+    "hancock_adaptive",
+    "hancock_auto",
+    "adaptive",
+)
 
 
 def load_model(*, path=None):
@@ -53,11 +62,15 @@ def descriptors(*, terrain, hydraulic=None):
         connectivity_change=float(c["changed_outlet_fraction"]),
         area_m2=float(m["area_m2"]),
         cells=m["cells"],
-        log_cells=float(np.log(m["cells"])), log_area=float(np.log(m["area_m2"])),
-        critical_connection_lost=bool(c.get("native_connected") and not c.get("represented_connected", True)),
-        lost_channel_fraction=c.get("channel_loss_fraction") or 0.,
-        barrier_lowering_m=float(c.get("max_local_barrier_lowering_m", c.get("barrier_lowering_p95_m", 0))),
-
+        log_cells=float(np.log(m["cells"])),
+        log_area=float(np.log(m["area_m2"])),
+        critical_connection_lost=bool(
+            c.get("native_connected") and not c.get("represented_connected", True)
+        ),
+        lost_channel_fraction=c.get("channel_loss_fraction") or 0.0,
+        barrier_lowering_m=float(
+            c.get("max_local_barrier_lowering_m", c.get("barrier_lowering_p95_m", 0))
+        ),
         rows=m["rows"],
         columns=m["columns"],
         resolution=float(m["dx_m"]),
@@ -75,7 +88,11 @@ def descriptors(*, terrain, hydraulic=None):
                 )
             values["expected_flow_regime"] = regime
         for key, value in hydraulic.items():
-            if key in (*FEATURES, "maximum_barrier_lowering_m") and key not in ("log_area","log_cells") and value is not None:
+            if (
+                key in (*FEATURES, "maximum_barrier_lowering_m")
+                and key not in ("log_area", "log_cells")
+                and value is not None
+            ):
                 if not np.isfinite(value):
                     raise ValueError("Hydraulic inputs must be finite")
                 values[key] = float(value)
@@ -147,12 +164,26 @@ def nearest(*, rows, query, model, k, slope_only=False):
 
 def configuration(method):
     labels = {
-        "fv1": ("FV1","contact HLL","sparse"), "low_froude_hll": ("FV1","low-Froude HLL","sparse"),
-        "euler_mc": ("MUSCL–Euler","MC","dense"), "hancock_dense": ("Hancock","adaptive","dense"),
-        "hancock_auto": ("Hancock","adaptive","auto"), "hancock_adaptive": ("Hancock","adaptive","tiles"), "adaptive": ("FV2 RK2","adaptive","dense"),
-        "li": ("LI","native","native")}
+        "fv1": ("FV1", "contact HLL", "sparse"),
+        "low_froude_hll": ("FV1", "low-Froude HLL", "sparse"),
+        "euler_mc": ("MUSCL–Euler", "MC", "dense"),
+        "hancock_dense": ("Hancock", "adaptive", "dense"),
+        "hancock_auto": ("Hancock", "adaptive", "auto"),
+        "hancock_adaptive": ("Hancock", "adaptive", "tiles"),
+        "adaptive": ("FV2 RK2", "adaptive", "dense"),
+        "li": ("LI", "native", "native"),
+    }
     formulation, limiter, execution = labels[method]
-    return dict(formulation=formulation,limiter_flux=limiter,execution_mode=execution)
+    return dict(formulation=formulation, limiter_flux=limiter, execution_mode=execution)
+
+
+def runtime_projection(*, row, features, cell_power, duration_power):
+    """Local timing estimate; zero exponents reproduce the unscaled measured neighbour."""
+    value = row["runtime_s"]
+    for key, power in (("cells", cell_power), ("forecast_duration_h", duration_power)):
+        if power and features.get(key) and row["features"].get(key):
+            value *= (features[key] / row["features"][key]) ** power
+    return value
 
 
 def candidate_cost(row):
@@ -194,11 +225,20 @@ def recommend(
         warnings=[],
         source_revision=model["revision"],
     )
-    if features.get("critical_connection_lost") or (
-        features.get("maximum_barrier_lowering_m") is not None and
-        features.get("barrier_lowering_m", 0.) > features["maximum_barrier_lowering_m"]
-    ) or features.get("lost_channel_fraction", 0) > 0 and objective in ("inundation", "discharge", "peak_timing", "peak_discharge"):
-        result.update(status="refine_terrain", reason="The represented DEM loses a required hydraulic connection or exceeds the specified barrier tolerance.")
+    if (
+        features.get("critical_connection_lost")
+        or (
+            features.get("maximum_barrier_lowering_m") is not None
+            and features.get("barrier_lowering_m", 0.0)
+            > features["maximum_barrier_lowering_m"]
+        )
+        or features.get("lost_channel_fraction", 0) > 0
+        and objective in ("inundation", "discharge", "peak_timing", "peak_discharge")
+    ):
+        result.update(
+            status="refine_terrain",
+            reason="The represented DEM loses a required hydraulic connection or exceeds the specified barrier tolerance.",
+        )
         return result
     if (
         "validation_spacings" in model
@@ -241,9 +281,17 @@ def recommend(
     # 96-cell or metre-grid timing to fill a missing million-cell observation.
     if "size_factor" in model and "cells" in features:
         factor = model["size_factor"]
-        comparable=[r for r in comparable if features["cells"]/factor <= r["features"]["cells"] <= features["cells"]*factor]
+        comparable = [
+            r
+            for r in comparable
+            if features["cells"] / factor
+            <= r["features"]["cells"]
+            <= features["cells"] * factor
+        ]
         if not comparable:
-            result["warnings"].append("No comparable measured cell count at the requested resolution.")
+            result["warnings"].append(
+                "No comparable measured cell count at the requested resolution."
+            )
             return result
     for key, scale in model["scales"].items():
         if key not in features or scale["high"] != scale["low"]:
@@ -268,10 +316,14 @@ def recommend(
                 "expected_flow_regime" not in features
                 or r.get("sampled_regime") == features["expected_flow_regime"]
             )
-            and (objective == "runtime" or r["qualified"].get(objective, False))
         ]
+        hydraulic = (
+            pool
+            if objective == "runtime"
+            else [r for r in pool if r["qualified"].get(objective, False)]
+        )
         neighbors = nearest(
-            rows=pool,
+            rows=hydraulic,
             query=features,
             model=model,
             k=model[prefix + "k"],
@@ -280,8 +332,32 @@ def recommend(
         if len(neighbors) < 2 or neighbors[0][0] > model[prefix + "distance_limit"]:
             continue
         ns = [r for _, r in neighbors]
-        runtime = np.array([r["runtime_s"] for r in ns])
-        memory = float(max(r["memory_mib"] for r in ns))
+        cost_neighbours = nearest(
+            rows=pool,
+            query=features,
+            model=model,
+            k=model[prefix + "k"],
+            slope_only=slope_only,
+        )
+        times = [r for _, r in cost_neighbours]
+        runtime = np.array(
+            [
+                runtime_projection(
+                    row=r,
+                    features=features,
+                    cell_power=model.get("cell_power", 0.0),
+                    duration_power=model.get("duration_power", 0.0),
+                )
+                for r in times
+            ]
+        )
+        memory = float(
+            max(
+                r["memory_mib"]
+                * max(1.0, features.get("cells", 1) / r["features"].get("cells", 1))
+                for r in times
+            )
+        )
         bounds = [None, None]
         value = None
         if objective != "runtime":
@@ -294,8 +370,8 @@ def recommend(
                 if missing
                 else float(np.quantile(errors, model["quantile"])),
             ]
-            pad = model.get("interval_padding", {}).get(objective, 0.)
-            bounds = [max(0.,bounds[0]-pad),bounds[1]+pad]
+            pad = model.get("interval_padding", {}).get(objective, 0.0)
+            bounds = [max(0.0, bounds[0] - pad), bounds[1] + pad]
         feasible = (objective == "runtime" or bounds[1] <= tolerance) and (
             memory_mib is None or memory <= memory_mib
         )
@@ -312,6 +388,7 @@ def recommend(
                 nearest_distance=neighbors[0][0],
                 terrain_count=len(ns),
                 evidence_ids=[r["run_id"] for r in ns],
+                timing_evidence_ids=[r["run_id"] for r in times],
             )
         )
     result["candidates"].sort(key=candidate_cost)

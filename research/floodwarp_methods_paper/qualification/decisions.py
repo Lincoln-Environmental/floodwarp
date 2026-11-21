@@ -170,27 +170,41 @@ def validate(*, study, model, held, decisions):
 
 def scale_fit(*, model, training, validation):
     """Choose the scale window on absolute held-out log cost, charging an unavailable forecast."""
-    from floodwarp.solver_advisor.model import nearest
+    from floodwarp.solver_advisor.model import nearest, runtime_projection
 
     trials = []
     for factor in (1.0, 2.0, 4.0):
-        losses = []
-        for r in validation:
-            f = r["features"]
+        peers = []
+        for row in validation:
+            f = row["features"]
             pool = [
                 a
                 for a in training
-                if a["method"] == r["method"]
+                if a["method"] == row["method"]
                 and a["features"]["resolution"] == f["resolution"]
                 and f["cells"] / factor <= a["features"]["cells"] <= f["cells"] * factor
             ]
-            n = nearest(rows=pool, query=f, model=model, k=3)
-            if len(n) >= 2:
-                losses.append(
-                    abs(np.log(median(a["runtime_s"] for _, a in n) / r["runtime_s"]))
-                )
-            else:
-                losses.append(np.log(4.0))
-        trials.append((float(np.mean(losses)), factor))
-    model["size_factor"] = min(trials)[1]
+            neighbors = nearest(rows=pool, query=f, model=model, k=3)
+            peers.append((row, neighbors))
+        for cell_power in (0.0, 0.5, 1.0):
+            for duration_power in (0.0, 1.0):
+                losses = defaultdict(list)
+                for row, neighbors in peers:
+                    cost = np.log(4.0)
+                    if len(neighbors) >= 2:
+                        times = [
+                            runtime_projection(
+                                row=a,
+                                features=row["features"],
+                                cell_power=cell_power,
+                                duration_power=duration_power,
+                            )
+                            for _, a in neighbors
+                        ]
+                        cost = abs(np.log(median(times) / row["runtime_s"]))
+                    losses[row["terrain_id"]].append(cost)
+                # Independent terrain groups contribute equally, regardless of method count.
+                mean_loss = float(np.mean([np.mean(v) for v in losses.values()]))
+                trials.append((mean_loss, factor, cell_power, duration_power))
+    _, model["size_factor"], model["cell_power"], model["duration_power"] = min(trials)
     model["validation_scale_losses"] = trials
