@@ -12,6 +12,7 @@ from research.floodwarp_methods_paper.qualification import (
     heldout,
     repeats,
     recession,
+    profiled,
 )
 
 NUMERICAL = (
@@ -64,6 +65,15 @@ def numerical(*, root, study, config, stage, arguments):
             launch.run(
                 root=root, study=study, config=config, stage=stage, arguments=arguments
             )
+    elif stage == "million-profiles":
+        with (
+            patch.object(launch, "calculate", profiled.calculate),
+            patch.object(launch, "identity_original", launch.identity, create=True),
+            patch.object(launch, "identity", profiled.source),
+        ):
+            launch.run(
+                root=root, study=study, config=config, stage=stage, arguments=arguments
+            )
     elif stage == "large-refinements":
         with (
             patch.object(launch, "cases", refinements.expanded),
@@ -106,6 +116,11 @@ def source(*, root, study, stage):
                 launch, "identity_original", launch.identity, create=True
             ):
                 return module.source(root=root, study=study, stage=stage)
+        if stage == "million-profiles":
+            with patch.object(
+                launch, "identity_original", launch.identity, create=True
+            ):
+                return profiled.source(root=root, study=study, stage=stage)
         if stage == "large-refinements":
             with patch.object(
                 launch, "identity_original", launch.identity, create=True

@@ -30,7 +30,7 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 | large-references | Same-domain refinements and fast hydrograph controls |
 | large-refinements | Additional reference grids and matched wet initial-state mappings |
 | heldout-references | Fine-grid hydraulic sensitivity of the reserved plain and mixed catchments |
-| million-profiles | Separate complete graph-instrumented replays of sparse, wet and mixed events |
+| million-profiles | Separate complete graph-instrumented replays of sparse, wet and mixed events, with a fresh process for each GPU pool high-water mark |
 | million-repeats | Repeat sparse plain and wet floodplain controls twice on the same GPU, in addition to each original timing |
 | recession-controls | Follow the dry plain for 48 hours and test widespread downstream rainfall on the same DEM for 24 hours |
 | execution-policy | Reconstruct measured dense, tiled and prospective automatic execution comparisons |

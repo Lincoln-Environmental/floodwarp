@@ -121,6 +121,7 @@ def aggregate(*, study, config):
             )
     metrics.csv_write(file=p / "million/terrain.csv", rows=geo)
     profiles = []
+    pools = []
     from validation.hancock_long_storm_review.graph_profile import category
 
     for rec in observations.current(
@@ -128,6 +129,16 @@ def aggregate(*, study, config):
     ):
         d = json.loads((study / rec["directory"] / "result.json").read_text())
         s = rec["spec"]
+        pools.append(
+            dict(
+                case=s["case"],
+                method=s["method"],
+                cells=d["cells"],
+                live_mib=d["live_pool_mib"],
+                peak_mib=d["isolated_peak_pool_mib"],
+                experiment_id=rec["experiment_id"],
+            )
+        )
         for name, val in d["stage_seconds"].items():
             profiles.append(
                 dict(
@@ -144,6 +155,7 @@ def aggregate(*, study, config):
                 )
             )
     metrics.csv_write(file=p / "million/graph_profile.csv", rows=profiles)
+    metrics.csv_write(file=p / "million/profile_memory.csv", rows=pools)
     repetitions = defaultdict(list)
     for stage in ("million-storms", "million-repeats"):
         for rec in observations.current(study=study, config=config, stage=stage):
