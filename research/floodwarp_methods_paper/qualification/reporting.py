@@ -274,6 +274,20 @@ def offline_system(*, root, study):
 
 
 def verification(*, study, config):
+    from research.floodwarp_methods_paper.source_trees import verify_tree
+    import json
+
+    proof = json.loads((study / "manifests/corrective_source_tree.json").read_text())
+    reproduced = verify_tree(
+        root=study.parents[1],
+        revision=proof["commit"],
+        stages=stages.NUMERICAL,
+        corrective=True,
+    )
+    if reproduced != proof:
+        raise ValueError(
+            "Committed numerical tree differs from corrective source manifest"
+        )
     counts = {}
     pairs = 0
     for stage in stages.NUMERICAL:
@@ -289,6 +303,8 @@ def verification(*, study, config):
                 f"{stage}: {len(expected)} expected, {len(found)} complete"
             )
         for r in found:
+            if r["context"]["source_sha256"] != proof["source_sha256"][stage]:
+                raise ValueError(f"Source tree cannot reproduce {r['experiment_id']}")
             runner.verify_artifacts(record=r, study=study)
         counts[stage] = len(found)
     groups = observations.load_events(

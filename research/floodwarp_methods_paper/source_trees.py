@@ -9,7 +9,7 @@ import tarfile
 from research.floodwarp_methods_paper.runner import source_identity, write_json
 
 
-def verify_tree(*, root, revision, stages):
+def verify_tree(*, root, revision, stages, corrective=False):
     sha = subprocess.check_output(
         ["git", "rev-parse", revision + "^{commit}"], cwd=root, text=True
     ).strip()
@@ -26,6 +26,18 @@ def verify_tree(*, root, revision, stages):
         Path("validation/fv1_diffusion_review/domains.json"),
         Path("validation/hancock_long_storm_review/cases.json"),
     }
+    if corrective:
+        directories += (
+            study / "qualification",
+            Path("src/floodwarp/terrain_advisor"),
+            Path("src/floodwarp/solver_advisor"),
+        )
+        special.update(
+            (
+                study / "qualification/design.json",
+                Path("src/floodwarp/solver_advisor/execution_policy.json"),
+            )
+        )
     tree = subprocess.check_output(
         ["git", "ls-tree", "-r", "--name-only", sha], cwd=root, text=True
     ).splitlines()
@@ -41,8 +53,13 @@ def verify_tree(*, root, revision, stages):
         directory = Path(work)
         with tarfile.open(fileobj=BytesIO(data), mode="r:") as archive:
             archive.extractall(directory, filter="data")
+        identity = source_identity
+        if corrective:
+            from research.floodwarp_methods_paper.qualification.stages import source
+
+            identity = source
         fingerprints = {
-            stage: source_identity(root=directory, study=directory / study, stage=stage)
+            stage: identity(root=directory, study=directory / study, stage=stage)
             for stage in stages
         }
     return dict(commit=sha, source_sha256=fingerprints)
