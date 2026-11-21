@@ -1,0 +1,453 @@
+{
+  "seed": 7319,
+  "dimensions_m": [
+    240,
+    160
+  ],
+  "sample_seconds": 900,
+  "landforms": {
+    "plain": [
+      0.00015,
+      0.015,
+      "dry"
+    ],
+    "floodplain": [
+      0.001,
+      0.19,
+      "channel"
+    ],
+    "coastal": [
+      0.0004,
+      0.07,
+      "pond"
+    ],
+    "rolling": [
+      0.008,
+      0.1,
+      "dry"
+    ],
+    "fan": [
+      0.018,
+      0.17,
+      "dry"
+    ],
+    "hill": [
+      0.035,
+      0.3,
+      "channel"
+    ],
+    "incised": [
+      0.085,
+      0.6,
+      "channel"
+    ],
+    "mixed": [
+      0.07,
+      0.22,
+      "pond"
+    ]
+  },
+  "hours": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    5.75,
+    6
+  ],
+  "storms_mm_h": {
+    "moderate": [
+      8,
+      12,
+      16,
+      20,
+      16,
+      12,
+      8,
+      0
+    ],
+    "intense": [
+      6,
+      10,
+      20,
+      80,
+      32,
+      14,
+      6,
+      0
+    ],
+    "front": [
+      60,
+      42,
+      25,
+      16,
+      10,
+      6,
+      3,
+      0
+    ],
+    "back": [
+      8,
+      10,
+      12,
+      16,
+      24,
+      64,
+      40,
+      0
+    ],
+    "spatial": [
+      8,
+      14,
+      22,
+      34,
+      26,
+      14,
+      6,
+      0
+    ],
+    "soil": [
+      8,
+      14,
+      24,
+      42,
+      20,
+      12,
+      6,
+      0
+    ]
+  },
+  "storm_duration_h": 6,
+  "end_hours": 8,
+  "extended_event": {
+    "landform": "plain",
+    "storm": "moderate",
+    "hours": 24
+  },
+  "solver_groups": {
+    "cost": [
+      [
+        "fv1",
+        "sparse"
+      ],
+      [
+        "hancock",
+        "dense"
+      ],
+      [
+        "hancock",
+        "sparse"
+      ],
+      [
+        "hancock",
+        "tiles"
+      ]
+    ],
+    "reference": [
+      [
+        "fv2",
+        "dense"
+      ]
+    ],
+    "inertial": [
+      [
+        "li",
+        "native"
+      ]
+    ],
+    "refinement": [
+      [
+        "fv1",
+        "sparse"
+      ],
+      [
+        "hancock",
+        "tiles"
+      ],
+      [
+        "fv2",
+        "dense"
+      ]
+    ],
+    "directional": [
+      [
+        "hancock",
+        "tiles"
+      ]
+    ]
+  },
+  "suites": {
+    "primary": [
+      {
+        "solvers": "cost"
+      },
+      {
+        "solvers": "reference",
+        "storms": [
+          "moderate",
+          "spatial"
+        ]
+      },
+      {
+        "solvers": "inertial",
+        "landforms": [
+          "plain",
+          "coastal",
+          "floodplain"
+        ]
+      }
+    ],
+    "directional": [
+      {
+        "solvers": "directional"
+      }
+    ],
+    "reference": [
+      {
+        "solvers": "reference",
+        "grids": [
+          [
+            5,
+            5
+          ],
+          [
+            2.5,
+            2.5
+          ]
+        ]
+      }
+    ],
+    "refinement": [
+      {
+        "solvers": "refinement",
+        "landforms": [
+          "plain",
+          "fan",
+          "incised"
+        ],
+        "storms": [
+          "moderate"
+        ],
+        "grids": [
+          [
+            5,
+            5
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            5,
+            10
+          ],
+          [
+            1,
+            10
+          ]
+        ]
+      },
+      {
+        "solvers": "inertial",
+        "landforms": [
+          "plain"
+        ],
+        "storms": [
+          "moderate"
+        ],
+        "grids": [
+          [
+            5,
+            5
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            5,
+            10
+          ],
+          [
+            1,
+            10
+          ]
+        ]
+      }
+    ],
+    "large": [
+      {
+        "solvers": "cost",
+        "landforms": [
+          "plain"
+        ],
+        "storms": [
+          "spatial",
+          "moderate"
+        ],
+        "dimensions_m": [
+          [
+            5000,
+            5000
+          ],
+          [
+            10000,
+            5000
+          ],
+          [
+            10000,
+            10000
+          ],
+          [
+            20000,
+            10000
+          ]
+        ],
+        "interval_s": 1800,
+        "hours": 8
+      }
+    ],
+    "moving": [
+      {
+        "solvers": "cost",
+        "landforms": [
+          "plain"
+        ],
+        "storms": [
+          "moving"
+        ],
+        "dimensions_m": [
+          [
+            5000,
+            5000
+          ]
+        ],
+        "hours": 8
+      }
+    ],
+    "terrain_large": [
+      {
+        "solvers": "cost",
+        "landforms": [
+          "coastal"
+        ],
+        "storms": [
+          "moderate"
+        ],
+        "dimensions_m": [
+          [
+            5000,
+            5000
+          ]
+        ],
+        "hours": 8,
+        "interval_s": 1800
+      },
+      {
+        "solvers": "cost",
+        "landforms": [
+          "mixed"
+        ],
+        "storms": [
+          "spatial"
+        ],
+        "dimensions_m": [
+          [
+            5000,
+            5000
+          ]
+        ],
+        "hours": 8,
+        "interval_s": 1800
+      }
+    ],
+    "resolution_check": [
+      {
+        "solvers": "reference",
+        "landforms": [
+          "rolling"
+        ],
+        "storms": [
+          "spatial"
+        ],
+        "grids": [
+          [
+            1.25,
+            1.25
+          ]
+        ]
+      },
+      {
+        "solvers": "reference",
+        "landforms": [
+          "floodplain"
+        ],
+        "storms": [
+          "intense"
+        ],
+        "grids": [
+          [
+            1.25,
+            1.25
+          ]
+        ]
+      },
+      {
+        "solvers": "reference",
+        "landforms": [
+          "mixed"
+        ],
+        "storms": [
+          "spatial"
+        ],
+        "grids": [
+          [
+            1.25,
+            1.25
+          ]
+        ]
+      }
+    ],
+    "fine_check": [
+      {
+        "solvers": "reference",
+        "landforms": [
+          "incised"
+        ],
+        "storms": [
+          "moderate"
+        ],
+        "grids": [
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      {
+        "solvers": "reference",
+        "landforms": [
+          "incised",
+          "fan"
+        ],
+        "storms": [
+          "moderate"
+        ],
+        "grids": [
+          [
+            2.5,
+            10
+          ]
+        ]
+      }
+    ]
+  },
+  "default_hydraulic_dem_grids_m": [
+    [
+      10,
+      10
+    ]
+  ]
+}

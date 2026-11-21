@@ -80,7 +80,7 @@ def test_saved_direct_options_retain_historical_method(options, method, limiter)
 def test_default_rejects_unsupported_structures_and_sgs():
     terrain = terrain_from_array(elevation=np.zeros((3, 4)), dx=2., dy=2.,
                                  row_order="south_to_north", vertical_datum="local")
-    with pytest.raises(ValueError, match="solver_method='fv1'"):
+    with pytest.raises(ValueError, match="structure records"):
         create_model(terrain=terrain, structures=[object()])
     with pytest.raises(ValueError, match="solver_method='li'"):
         create_model(terrain=terrain, hydraulic_geometry_mode="traditional")

@@ -1,8 +1,19 @@
 """FP64 MUSCL, hydrostatic balance and transactional SSP-RK2 stage kernels."""
 
+from typing import Any
+
 import warp as wp
+from floodwarp.hancock_tiles import scheduled_index, scheduled_kernel
 
 from floodwarp.full_swe_kernels import hll_speeds, stage_boundary_state, low_froude_pressure
+
+
+# Legacy trial control has 18 slots. Optional Hancock directional bounds
+# append the largest x and y signal rates (inverse seconds) for the trial.
+LEGACY_CONTROL_SIZE = 18
+X_SIGNAL_RATE = 18
+Y_SIGNAL_RATE = 19
+DIRECTIONAL_CONTROL_SIZE = 20
 
 
 # FV2-only HLL flux reusing the wave bounds already needed for the CFL.
@@ -44,13 +55,6 @@ def hll_fv2_precomputed(
         if flux_mode == -1 and left[0] > dry and right[0] > dry:
             result[1] += low_froude_pressure(left[0],right[0],ul[0],ur[0],wp.sqrt(g*left[0]),wp.sqrt(g*right[0]),sl,sr)
     return result
-
-
-@wp.func
-def scheduled_index(thread: int, work: wp.array(dtype=wp.int32)):
-    if work.shape[0] > 0:
-        return work[thread]
-    return thread
 
 
 @wp.func
@@ -177,7 +181,7 @@ def wet_inverse(h: wp.float64, dry: wp.float64):
     return wp.float64(0.0)
 
 
-@wp.kernel
+@scheduled_kernel
 def split_sources(
     q: wp.array(dtype=wp.vec3d),
     start: wp.array(dtype=wp.vec3d),
@@ -200,9 +204,11 @@ def split_sources(
     g: wp.float64,
     dry: wp.float64,
     stage: int,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     if active[k] == 0:
         return
     dt = ctrl[2] * wp.float64(0.5)
@@ -280,7 +286,7 @@ def stencil_rule(
     return 1
 
 
-@wp.kernel
+@scheduled_kernel
 def mark_compressive_stencils(
     q: wp.array(dtype=wp.vec3d),
     active: wp.array(dtype=wp.int32),
@@ -289,9 +295,11 @@ def mark_compressive_stencils(
     ny: int,
     dry: wp.float64,
     gravity: wp.float64,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     h = q[k][0]
     if active[k] == 0 or h <= dry:
         return
@@ -313,14 +321,16 @@ def mark_compressive_stencils(
                         wp.atomic_or(flags, far, bit)
 
 
-@wp.kernel
+@scheduled_kernel
 def inverse_depth(
     q: wp.array(dtype=wp.vec3d),
     inverse: wp.array(dtype=wp.float64),
     dry: wp.float64,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     value = wp.float64(0.0)
     if q[k][0] > dry:
         value = wp.float64(1.0) / q[k][0]
@@ -374,7 +384,7 @@ def slope(
     return s
 
 
-@wp.kernel
+@scheduled_kernel
 def slopes(
     q: wp.array(dtype=wp.vec3d),
     inverse: wp.array(dtype=wp.float64),
@@ -387,9 +397,11 @@ def slopes(
     ny: int,
     dry: wp.float64,
     mc: int,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     sx[k] = slope(k, 0, q, inverse, flags, bed, active, nx, ny, dry, mc)
     sy[k] = slope(k, 1, q, inverse, flags, bed, active, nx, ny, dry, mc)
 
@@ -524,7 +536,7 @@ def schedule_faces(
             pressure[k] = wp.vec2d(wp.float64(0.0))
 
 
-@wp.kernel
+@scheduled_kernel
 def faces(
     q: wp.array(dtype=wp.vec3d),
     inverse: wp.array(dtype=wp.float64),
@@ -548,7 +560,7 @@ def faces(
     flux_mode: int,
     sparse: int,
     tiles: wp.array(dtype=wp.int32),
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     thread = wp.tid()
     k = thread
@@ -561,6 +573,8 @@ def faces(
             return
     else:
         k = scheduled_index(thread, work)
+        if k < 0:
+            return
     pair = indices(k, axis, nx, ny)
     a = pair[0]
     b = pair[1]
@@ -616,7 +630,10 @@ def faces(
         f = hll_fv2_precomputed(l, r, g, dry, flux_mode, speeds)
         speed = wp.max(wp.abs(speeds[0]), wp.abs(speeds[1]))
     if speed > zero:
-        wp.atomic_min(ctrl, 17, wp.float64(0.5) * spacing * cfl / speed)
+        if ctrl.shape[0] == DIRECTIONAL_CONTROL_SIZE:
+            wp.atomic_max(ctrl, X_SIGNAL_RATE + axis, speed / spacing)
+        else:
+            wp.atomic_min(ctrl, 17, wp.float64(0.5) * spacing * cfl / speed)
     if al != ar and types[k] <= 1:
         f = wp.vec3d(zero, f[1], zero)
     if al != ar and types[k] == 2 and ((al and f[0] < zero) or (ar and f[0] > zero)):
@@ -628,7 +645,7 @@ def faces(
     pressure[k] = wp.float64(0.5) * g * wp.vec2d(l[0] * l[0], r[0] * r[0])
 
 
-@wp.kernel
+@scheduled_kernel
 def donor_budget(
     q: wp.array(dtype=wp.vec3d),
     theta: wp.array(dtype=wp.float64),
@@ -638,9 +655,11 @@ def donor_budget(
     nx: int,
     dx: wp.float64,
     dy: wp.float64,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     zero = wp.float64(0.0)
     dt = ctrl[2]
     w = k + k / nx
@@ -654,7 +673,7 @@ def donor_budget(
     theta[k] = factor
 
 
-@wp.kernel
+@scheduled_kernel
 def limit_faces(
     f: wp.array(dtype=wp.vec3d),
     theta: wp.array(dtype=wp.float64),
@@ -662,16 +681,18 @@ def limit_faces(
     nx: int,
     ny: int,
     axis: int,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     pair = indices(k, axis, nx, ny)
     donor = wp.where(f[k][0] >= wp.float64(0.0), pair[0], pair[1])
     if donor >= 0 and active[donor] != 0:
         f[k] *= theta[donor]
 
 
-@wp.kernel
+@scheduled_kernel
 def euler(
     q: wp.array(dtype=wp.vec3d),
     source_state: wp.array(dtype=wp.vec3d),
@@ -692,9 +713,11 @@ def euler(
     dy: wp.float64,
     g: wp.float64,
     dry: wp.float64,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     if stage == 0 and flags.shape[0] > 0:
         flags[k] = 0
     if active[k] == 0 or ctrl[2] > ctrl[17] or ctrl[7] != wp.float64(0.0):
@@ -727,7 +750,7 @@ def euler(
         inverse[k] = wet_inverse(v[0], dry)
 
 
-@wp.kernel
+@scheduled_kernel
 def accept_faces(
     first: wp.array(dtype=wp.vec3d),
     second: wp.array(dtype=wp.vec3d),
@@ -741,10 +764,12 @@ def accept_faces(
     ny: int,
     axis: int,
     width: wp.float64,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     if ctrl[2] <= ctrl[17] and ctrl[7] == wp.float64(0.0):
         k = scheduled_index(wp.tid(), work)
+        if k < 0:
+            return
         mean = wp.float64(0.5) * (first[k] + second[k])
         flux[k] = mean
         volume[k] += ctrl[2] * width * mean[0]
@@ -766,6 +791,16 @@ def predictor(ctrl: wp.array(dtype=wp.float64), previous: wp.array(dtype=wp.floa
     if previous[0] > wp.float64(0.0):
         ctrl[2] = wp.min(ctrl[2], previous[0])
     ctrl[17] = wp.float64(1.0e100)
+    if ctrl.shape[0] == DIRECTIONAL_CONTROL_SIZE:
+        ctrl[X_SIGNAL_RATE] = wp.float64(0.0)
+        ctrl[Y_SIGNAL_RATE] = wp.float64(0.0)
+
+
+@wp.kernel
+def directional_bound(ctrl: wp.array(dtype=wp.float64), cfl: wp.float64):
+    rate = ctrl[X_SIGNAL_RATE] + ctrl[Y_SIGNAL_RATE]
+    if rate > wp.float64(0.0):
+        ctrl[17] = cfl / rate
 
 
 @wp.kernel

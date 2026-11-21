@@ -182,8 +182,11 @@ def diagnostics(*, model):
     residual = (solver.initial_volume + ledger['rain'] + ledger.get('other_sources', 0.) +
         ledger.get('additional_sources', 0.) + ledger['boundary_inflow'] -
         ledger['infiltration'] - ledger['boundary_outflow'] - storage)
-    return dict(time_s=model_time(model=model), storage_m3=storage, residual_m3=residual,
-                numerical=solver.numerical_configuration(), **ledger)
+    result = dict(time_s=model_time(model=model), storage_m3=storage, residual_m3=residual,
+                  numerical=solver.numerical_configuration(), **ledger)
+    if result["numerical"].get("solver_method") == "fv1_hancock" and "structures" in result["numerical"]:
+        result["structure_transfers"] = solver.get_structure_diagnostics()
+    return result
 
 
 def save_checkpoint(*, model, path: Path):

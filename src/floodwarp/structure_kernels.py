@@ -55,7 +55,7 @@ def _circular_area(diameter: WP_FLOAT, depth: WP_FLOAT) -> WP_FLOAT:
 
 
 @wp.func
-def _structure_q(
+def structure_discharge(
     kind: wp.int32,
     eta_a: WP_FLOAT,
     eta_b: WP_FLOAT,
@@ -72,6 +72,7 @@ def _structure_q(
     weir_factor: WP_FLOAT,
     one_way: wp.int32,
     max_q: WP_FLOAT,
+    gravity: WP_FLOAT,
 ) -> WP_FLOAT:
     delta = eta_a - eta_b
     if one_way == 1 and delta <= WP_FLOAT(0.0):
@@ -111,8 +112,8 @@ def _structure_q(
         head = wp.abs(delta)
         # Manning friction expressed as an equivalent quadratic energy loss.
         loss = WP_FLOAT(1.0) + entrance_loss + exit_loss
-        loss += WP_FLOAT(2.0) * WP_FLOAT(G) * manning * manning * length / wp.pow(hydraulic_radius, WP_FLOAT(4.0 / 3.0))
-        q = area * wp.sqrt(WP_FLOAT(2.0) * WP_FLOAT(G) * head / wp.max(WP_FLOAT(1.0), loss))
+        loss += WP_FLOAT(2.0) * gravity * manning * manning * length / wp.pow(hydraulic_radius, WP_FLOAT(4.0 / 3.0))
+        q = area * wp.sqrt(WP_FLOAT(2.0) * gravity * head / wp.max(WP_FLOAT(1.0), loss))
     q = wp.min(q, max_q)
     return q if forward else -q
 
@@ -149,7 +150,7 @@ def calculate_structure_requests(
     b = endpoint_slot_b[s]
     eta_a = endpoint_stage[a]
     eta_b = endpoint_stage[b]
-    q = _structure_q(kind[s], eta_a, eta_b, width[s], height[s], invert_a[s], invert_b[s], length[s], manning[s], entrance_loss[s], exit_loss[s], crest[s], weir_length[s], weir_factor[s], one_way[s], max_q[s])
+    q = structure_discharge(kind[s], eta_a, eta_b, width[s], height[s], invert_a[s], invert_b[s], length[s], manning[s], entrance_loss[s], exit_loss[s], crest[s], weir_length[s], weir_factor[s], one_way[s], max_q[s], WP_FLOAT(G))
     signed_volume = q * dt
     requested_volume[s] = signed_volume
     instantaneous_q[s] = q

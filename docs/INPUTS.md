@@ -76,9 +76,9 @@ Select `solver_method="fv1_muscl_euler"` for the spatial reconstruction control 
 the FV2 split source operators. The final shared face flux is the accepted
 transport for the entire step. Hancock samples prescribed stages at the
 midpoint. CUDA graphs and FV2 scheduling modes are available. The methods
-reject hydraulic structures and SGS, and record their own integration identity
+record their own integration identity
 in checkpoints. Hancock exposes the last trial's local predictor failures
-through `predictor_fallback_cells()`.
+through `predictor_fallback_cells()`. Hancock supports circular and box culverts, weirs and bridge openings through the Python factories. See [Hancock structures](HANCOCK_STRUCTURES.md). MUSCL–Euler rejects structures. Both methods reject SGS.
 
 Select `flux_scheme="low_froude_hll"` with FV1 or Hancock to test
 Froude-scaled normal momentum dissipation. The ordinary development configuration uses adaptive Hancock with contact-HLL. See the [analytical accuracy and cost study](../validation/fv1_diffusion_review/REPORT.md).
@@ -187,3 +187,18 @@ continuation beyond the final supplied rainfall node using the native zero-rain
 recession law. The existing default still requires full forcing coverage.
 Non-default forcing end semantics enter checkpoint identity; no hydraulic
 operator, source law, precision, CFL or checkpoint serializer is changed.
+
+### Experimental Hancock scheduling and timestep controls
+
+For mostly dry GPU runs, select `solver_method="hancock", execution_mode="tiles"`.
+The 32 × 4 tile schedule includes active sources, positive depth, prescribed-stage
+faces and a stencil halo. The solver rebuilds it on device for every trial.
+Dense, static-mask sparse and dynamic face scheduling remain selectable.
+The public Hancock default continues to use dense execution.
+
+Hancock also accepts `cfl_policy="directional"` for experimental runs.
+It uses the same CFL coefficient with the sum of the maximum x and y signal
+rates over both the predictor cells and reconstructed faces. Both policies
+check the actual midpoint trial before acceptance. The directional policy
+is recorded in checkpoint identity. Use the default `cfl_policy="legacy"`
+for historical checkpoints. See the [synthetic qualification](../validation/hancock_long_storm_review/REPORT.md).

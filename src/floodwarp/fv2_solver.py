@@ -3,6 +3,7 @@
 import numpy as np
 import warp as wp
 
+from floodwarp import hancock_tiles
 from floodwarp import full_swe_kernels as fv1
 from floodwarp import fv2_kernels as k
 from floodwarp.solver_defaults import DEFAULT_FULL_SWE_FLUX, DEFAULT_HANCOCK_LIMITER
@@ -17,7 +18,10 @@ class FV2Solver(FullSWESolver):
         self, *, limiter="mc", execution_mode="dense", structures=(), flux_scheme=DEFAULT_FULL_SWE_FLUX, **options
     ):
         if structures:
-            raise ValueError(f"{self.method_name} does not support stage-consistent culvert exchange. Select solver_method='fv1' for full-SWE culverts.")
+            raise ValueError(
+                f"{self.method_name} does not support culvert exchange. "
+                "Select solver_method='hancock' for full-SWE structures."
+            )
         if limiter not in ("mc", "minmod", "adaptive"):
             raise ValueError(f"{self.method_name} requires limiter mc, minmod or adaptive")
         if flux_scheme != "contact_hll" and not (
@@ -28,7 +32,9 @@ class FV2Solver(FullSWESolver):
         self.limiter = limiter
         self._limiter_code = {"minmod": 0, "mc": 1, "adaptive": 2}[limiter]
         super().__init__(execution_mode=execution_mode, flux_scheme=flux_scheme, **options)
-        self.ctrl = wp.zeros(18, dtype=wp.float64, device=self.device)
+        directional = getattr(self, "cfl_policy", "legacy") == "directional"
+        control_size = k.DIRECTIONAL_CONTROL_SIZE if directional else k.LEGACY_CONTROL_SIZE
+        self.ctrl = wp.zeros(control_size, dtype=wp.float64, device=self.device)
         count = self.nx * self.ny
         self._start = wp.zeros(count, dtype=wp.vec3d, device=self.device)
         self._stage = wp.zeros(count, dtype=wp.vec3d, device=self.device)
@@ -38,7 +44,7 @@ class FV2Solver(FullSWESolver):
         if self.method_name == "fv1_hancock":
             self._predicted = self._stage
             self._fuse_prediction = True
-            self._predictor_fallback = wp.zeros(count, dtype=wp.int32, device=self.device)
+            self._predictor_fallback = wp.zeros(count, dtype=wp.uint8, device=self.device)
         self._shock_flags = wp.zeros(
             count if limiter == "adaptive" else 0, dtype=wp.int32, device=self.device
         )
@@ -56,13 +62,20 @@ class FV2Solver(FullSWESolver):
         self.set_stage_series(axis="x", series=None)
         self.set_stage_series(axis="y", series=None)
         self._diagnostics = None
+        self._structures = None
 
     def configure_execution(self, *, mode, tile_size=8, dense_fraction=0.65):
-        if mode not in ("dense", "sparse", "dynamic"):
-            raise ValueError("FV2 execution mode must be dense, sparse or dynamic")
+        if mode == "tiles" and self.method_name != "fv1_hancock":
+            raise ValueError("Tile scheduling requires Hancock")
+        if mode not in ("dense", "sparse", "dynamic", "tiles"):
+            raise ValueError("Unknown execution mode. Choose dense, sparse, dynamic or Hancock tiles.")
         if tile_size != 8 or dense_fraction != .65:
             raise ValueError(f"{self.method_name} does not use FV1 tile_size or dense_fraction tuning. "
                              "Omit these overrides or select solver_method='fv1'.")
+        self._tiles = (
+            hancock_tiles.HancockTiles(nx=self.nx, ny=self.ny, device=self.device)
+            if mode == "tiles" else None
+        )
         self._omit_dry = int(mode != "dense")
         self._dynamic = mode == "dynamic"
         dense = wp.empty(0, dtype=wp.int32, device=self.device)
@@ -77,7 +90,7 @@ class FV2Solver(FullSWESolver):
                 )
                 for axis in ("x", "y")
             ]
-        if self._omit_dry and not self._active.all():
+        if self._tiles is None and self._omit_dry and not self._active.all():
             mask = self._active
             live_x = np.pad(mask, ((0, 0), (1, 0))) | np.pad(mask, ((0, 0), (0, 1)))
             live_y = np.pad(mask, ((1, 0), (0, 0))) | np.pad(mask, ((0, 1), (0, 0)))
@@ -88,6 +101,8 @@ class FV2Solver(FullSWESolver):
         self._graph = None
 
     def execution_diagnostics(self):
+        if self._tiles is not None:
+            return self._tiles.diagnostics()
         return dict(
             execution="dynamic_face_tiles"
             if self._dynamic
@@ -156,6 +171,8 @@ class FV2Solver(FullSWESolver):
                 "Checkpoint configuration uses superseded FV2 bed traces that can reverse a slope"
             )
         super().restore_state(state=state)
+        if self._tiles is not None:
+            self._tiles.previous.fill_(1)
 
     def numerical_configuration(self):
         return dict(solver_method=self.method_name, **self._configuration())
@@ -164,6 +181,12 @@ class FV2Solver(FullSWESolver):
         wp.launch(kernel=kernel, dim=count, inputs=inputs, device=self.device)
 
     def _launch_grid(self, kernel, count, inputs, *, layout):
+        if self._tiles is not None:
+            self._launch(
+                kernel=kernel.tile_kernel, count=self._tiles.threads,
+                inputs=[*inputs, self._tiles.grids[layout]],
+            )
+            return
         indices = self._work_indices[layout]
         self._launch(kernel, indices.size or count, [*inputs, indices])
 
@@ -180,6 +203,11 @@ class FV2Solver(FullSWESolver):
         for axis, sample in zip(("x", "y"), self._samples, strict=True):
             if self._stage_identity[axis] is not None:
                 self._launch(k.forcing_time, 1, [*self._stage_series[axis], sample, ctrl, 0])
+        if self._tiles is not None:
+            self._tiles.enqueue(
+                solver=self,
+                distributed_forcing=type(self)._stage_forcing is not FV2Solver._stage_forcing,
+            )
         source_args = [
             self.q,
             self._start,
@@ -283,6 +311,9 @@ class FV2Solver(FullSWESolver):
                 tiles = self._face_tiles[axis]
                 indices = self._work_indices[axis + 1]
                 threads = indices.size or flux.size
+                if self._tiles is not None:
+                    indices = self._tiles.grids[axis + 1]
+                    threads = self._tiles.threads
                 if self._dynamic:
                     self._launch(
                         k.schedule_faces,
@@ -301,7 +332,7 @@ class FV2Solver(FullSWESolver):
                     )
                     threads = (tiles.size - 1) * k.TILE_FACES
                 self._launch(
-                    k.faces,
+                    k.faces.tile_kernel if self._tiles is not None else k.faces,
                     threads,
                     [
                         face_q,
@@ -329,6 +360,8 @@ class FV2Solver(FullSWESolver):
                         indices,
                     ],
                 )
+            if self.ctrl.size == k.DIRECTIONAL_CONTROL_SIZE:
+                self._launch(k.directional_bound, 1, [ctrl, self.cfl])
             self._launch_grid(
                 k.donor_budget,
                 n,
@@ -370,6 +403,8 @@ class FV2Solver(FullSWESolver):
         self._launch(k.validate_trial, 1, [ctrl, self.minimum_dt])
         if self._diagnostics is not None:
             self._diagnostics.enqueue(solver=self)
+        if self._structures is not None:
+            self._structures.snapshot(solver=self)
         self._launch_grid(k.split_sources, n, [*source_args, 1 if self.method_name == "fv2" else 2], layout=0)
         for axis, name, width in ((0, "x", self.dy), (1, "y", self.dx)):
             flux = f["flux_" + name]
@@ -392,10 +427,23 @@ class FV2Solver(FullSWESolver):
                 ],
                 layout=axis + 1,
             )
+        if self._structures is not None:
+            self._structures.enqueue(solver=self)
+        if self._tiles is not None:
+            self._launch(
+                kernel=hancock_tiles.commit_tiles, count=self._tiles.size,
+                inputs=[self._tiles.current, self._tiles.previous, ctrl],
+            )
         self._launch(k.finish, 1, [ctrl, f["fv2_cfl_predictor"], self.condition, f["dt_histogram"]])
 
     def _load_extra_step_modules(self):
         wp.load_module(module=k, device=self.device)
+        if self._tiles is not None:
+            wp.load_module(module=hancock_tiles, device=self.device)
+        if self._structures is not None:
+            from floodwarp import hancock_structures
+
+            wp.load_module(module=hancock_structures, device=self.device)
         if self.method_name == "fv1_hancock":
             from floodwarp import fv1_plus_kernels
 
@@ -424,8 +472,26 @@ class HancockSolver(FV2Solver):
     method_name = "fv1_hancock"
     integration = "unsplit_hancock_strang_drag"
 
-    def __init__(self, *, limiter=DEFAULT_HANCOCK_LIMITER, **options):
+    def __init__(self, *, limiter=DEFAULT_HANCOCK_LIMITER, cfl_policy="legacy", structures=(), **options):
+        if cfl_policy not in ("legacy", "directional"):
+            raise ValueError("Hancock CFL policy must be legacy or directional")
+        self.cfl_policy = cfl_policy
         super().__init__(limiter=limiter, **options)
+        if structures:
+            from floodwarp.hancock_structures import HancockStructures
+
+            self._structures = HancockStructures(solver=self, structures=structures)
+
+    def get_structure_diagnostics(self):
+        return self._structures.diagnostics() if self._structures is not None else []
+
+    def _configuration(self):
+        configuration = super()._configuration()
+        if self._structures is not None:
+            configuration["structures"] = dict(version="hancock_post_surface_links_v1", sha256=self._structures.identity)
+        if self.cfl_policy == "directional":
+            configuration["cfl_policy"] = self.cfl_policy
+        return configuration
 
     def predictor_fallback_cells(self):
         """Cells with an inadmissible half-time reconstruction in the last trial."""

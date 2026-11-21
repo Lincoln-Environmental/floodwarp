@@ -2,6 +2,12 @@
 
 New full-SWE models on dev select adaptive MUSCL–Hancock. Explicit FV1 uses the verified sparse path, also the default in v0.1.3. See the [default qualification](../validation/hancock_default_review/REPORT.md).
 
+The 6-hour synthetic storm study includes explicit tiled Hancock execution,
+an optional directional CFL control and transactional hydraulic structures.
+Use the complete-event runtime and reference uncertainty when choosing an
+execution mode. [Measurements and limitations](../validation/hancock_long_storm_review/REPORT.md)
+and [structure inputs](HANCOCK_STRUCTURES.md).
+
 Work on dev. main receives ordinary validated merges/fast-forwards. This
 repository has independent history; do not change the original Overlander
 research checkout as part of FloodWarp maintenance.

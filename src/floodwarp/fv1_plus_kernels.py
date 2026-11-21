@@ -1,7 +1,10 @@
 """Local two-dimensional Taylor predictor for the experimental MUSCL–Hancock scheme."""
 
+from typing import Any
+
 import warp as wp
-from floodwarp.fv2_kernels import scheduled_index, wet_inverse, slope
+from floodwarp.hancock_tiles import scheduled_index, scheduled_kernel
+from floodwarp.fv2_kernels import DIRECTIONAL_CONTROL_SIZE, X_SIGNAL_RATE, Y_SIGNAL_RATE, wet_inverse, slope
 
 
 @wp.func
@@ -16,7 +19,7 @@ def predict_cell(
     sx: wp.array(dtype=wp.vec4d),
     sy: wp.array(dtype=wp.vec4d),
     active: wp.array(dtype=wp.int32),
-    fallback: wp.array(dtype=wp.int32),
+    fallback: wp.array(dtype=wp.uint8),
     ctrl: wp.array(dtype=wp.float64),
     dx: wp.float64,
     dy: wp.float64,
@@ -31,7 +34,7 @@ def predict_cell(
     inverse_mid[k] = inverse[k]
     sx[k] = x
     sy[k] = y
-    fallback[k] = 0
+    fallback[k] = wp.uint8(0)
     if h <= dry or active[k] == 0:
         return
     u = base[1] * inverse[k]
@@ -50,18 +53,23 @@ def predict_cell(
     if not wp.isfinite(candidate):
         wp.atomic_min(ctrl, 7, wp.float64(-1.0))
     elif candidate[0] <= dry + excursion:
-        fallback[k] = 1
+        fallback[k] = wp.uint8(1)
         sx[k] = wp.vec4d(zero)
         sy[k] = wp.vec4d(zero)
     else:
         out[k] = candidate
         inverse_mid[k] = wet_inverse(candidate[0], dry)
     c = wp.sqrt(g * h)
-    rate = wp.max((wp.abs(u) + c) / dx, (wp.abs(v) + c) / dy)
-    wp.atomic_min(ctrl, 17, wp.float64(0.5) * cfl / rate)
+    ax = (wp.abs(u) + c) / dx
+    ay = (wp.abs(v) + c) / dy
+    if ctrl.shape[0] == DIRECTIONAL_CONTROL_SIZE:
+        wp.atomic_max(ctrl, X_SIGNAL_RATE, ax)
+        wp.atomic_max(ctrl, Y_SIGNAL_RATE, ay)
+    else:
+        wp.atomic_min(ctrl, 17, wp.float64(0.5) * cfl / wp.max(ax, ay))
 
 
-@wp.kernel
+@scheduled_kernel
 def predict(
     q: wp.array(dtype=wp.vec3d),
     out: wp.array(dtype=wp.vec3d),
@@ -70,22 +78,24 @@ def predict(
     sx: wp.array(dtype=wp.vec4d),
     sy: wp.array(dtype=wp.vec4d),
     active: wp.array(dtype=wp.int32),
-    fallback: wp.array(dtype=wp.int32),
+    fallback: wp.array(dtype=wp.uint8),
     ctrl: wp.array(dtype=wp.float64),
     dx: wp.float64,
     dy: wp.float64,
     g: wp.float64,
     dry: wp.float64,
     cfl: wp.float64,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     predict_cell(
         k, sx[k], sy[k], q, out, inverse, inverse_mid, sx, sy, active, fallback, ctrl, dx, dy, g, dry, cfl
     )
 
 
-@wp.kernel
+@scheduled_kernel
 def slopes_predict(
     q: wp.array(dtype=wp.vec3d),
     out: wp.array(dtype=wp.vec3d),
@@ -94,7 +104,7 @@ def slopes_predict(
     sx: wp.array(dtype=wp.vec4d),
     sy: wp.array(dtype=wp.vec4d),
     active: wp.array(dtype=wp.int32),
-    fallback: wp.array(dtype=wp.int32),
+    fallback: wp.array(dtype=wp.uint8),
     ctrl: wp.array(dtype=wp.float64),
     dx: wp.float64,
     dy: wp.float64,
@@ -106,9 +116,11 @@ def slopes_predict(
     nx: int,
     ny: int,
     mc: int,
-    work: wp.array(dtype=wp.int32),
+    work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
+    if k < 0:
+        return
     x = slope(k, 0, q, inverse, flags, bed, active, nx, ny, dry, mc)
     y = slope(k, 1, q, inverse, flags, bed, active, nx, ny, dry, mc)
     predict_cell(k, x, y, q, out, inverse, inverse_mid, sx, sy, active, fallback, ctrl, dx, dy, g, dry, cfl)
