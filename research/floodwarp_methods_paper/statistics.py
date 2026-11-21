@@ -250,6 +250,8 @@ def timing_replacements(*, study):
         if old.parent.name not in excluded:
             continue
         rec = json.loads(old.read_text())
+        if rec["experiment_id"] not in current:
+            continue
         replacement, new, current_dir = current[rec["experiment_id"]]
         prior = json.loads((old.parent / "result.json").read_text())
         same_device = all(
