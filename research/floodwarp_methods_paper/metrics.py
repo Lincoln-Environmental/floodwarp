@@ -7,7 +7,7 @@ import sqlite3
 
 import numpy as np
 
-from research.floodwarp_methods_paper.runner import archived
+from research.floodwarp_methods_paper.runner import archived, digest
 from research.floodwarp_methods_paper import evidence
 from validation.hancock_long_storm_review.accuracy import compare, read_fields
 
@@ -162,6 +162,14 @@ def storm_metrics(*, study, config):
                     attempt=rec["attempt"],
                     reference_id=fine[0]["experiment_id"],
                     source_group="prospective",
+                    hydraulic_identity=digest(
+                        dict(
+                            fields=rec["artifacts"][row["fields_file"]],
+                            spacing=s["dx"],
+                            q=[f["outlet_m3s"] for f in row["samples"]],
+                            section=[f["section_m3s"] for f in row["samples"]],
+                        )
+                    ),
                     stage=rec["stage"],
                     method=s["method"],
                     mode=row["mode"],
@@ -311,6 +319,7 @@ def pareto(
         groups[tuple(row[k] for k in keys)].append(row)
     result = []
     for group in groups.values():
+        fields = {r["experiment_id"]: r.get("hydraulic_identity") for r in group}
         for objective, metric in objectives.items():
             measured = []
             for r in group:
@@ -363,6 +372,15 @@ def pareto(
                             or time > pair[1]
                             or peer_radius in (None, "")
                         ):
+                            continue
+                        if (
+                            objective != "memory"
+                            and fields[peer]
+                            and fields[peer] == r.get("hydraulic_identity")
+                            and time < pair[1]
+                            and error == pair[0]
+                        ):
+                            robust += 1
                             continue
                         upper = error + float(peer_radius)
                         lower = max(0.0, pair[0] - float(radius))

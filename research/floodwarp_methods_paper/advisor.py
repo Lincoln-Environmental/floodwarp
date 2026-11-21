@@ -411,6 +411,11 @@ def tune(*, model, training, validation, settings, rule):
 
 
 def train(*, study, config, features, context, directory):
+    from research.floodwarp_methods_paper.qualification import advisor_data
+
+    advisor_data.verified_partition(
+        study=study, config=config, partitions=("development", "validation")
+    )
     rows = samples(
         study=study,
         config=config,
@@ -465,6 +470,9 @@ def train(*, study, config, features, context, directory):
 
 
 def validate(*, study, config, features, directory):
+    from research.floodwarp_methods_paper.qualification import advisor_data
+
+    advisor_data.verified_partition(study=study, config=config, partitions=("test",))
     frozen = study / "processed/advisor/model.json"
     model_hash = checksum(frozen)
     fit_records = archived(study=study, stages=("advisor-train",))

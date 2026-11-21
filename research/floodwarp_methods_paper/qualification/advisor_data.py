@@ -19,6 +19,46 @@ def group_is_selected(*, settings, heldout_family, partitions):
     return partition in partitions
 
 
+def verified_partition(*, study, config, partitions):
+    """Reject a partially indexed experiment matrix before fitting or testing the packaged model."""
+    from research.floodwarp_methods_paper import runner
+    from research.floodwarp_methods_paper.qualification import stages
+
+    path = study / "processed/million/observations.csv"
+    indexed = (
+        {(r["stage"], r["experiment_id"]) for r in metrics.csv_read(path)}
+        if path.is_file()
+        else set()
+    )
+    missing = []
+    for stage in (
+        "million-storms",
+        "million-auto",
+        "large-references",
+        "large-refinements",
+        "heldout-references",
+    ):
+        completed = {
+            r["experiment_id"] for r in current(study=study, stage=stage, config=config)
+        }
+        for spec in stages.specifications(
+            stage=stage, config=config, root=study.parents[1]
+        ):
+            if not group_is_selected(
+                settings=spec,
+                heldout_family=config["advisor"]["heldout_family"],
+                partitions=partitions,
+            ):
+                continue
+            exp = runner.digest(dict(stage=stage, settings=spec, config=config))[:24]
+            if exp not in completed or (stage, exp) not in indexed:
+                missing.append((stage, exp))
+    if missing:
+        raise ValueError(
+            f"Missing {len(missing)} completed and indexed runs for {partitions}. First missing {missing[0]}."
+        )
+
+
 def samples(*, study, config, partitions=("development", "validation", "test")):
     base = study / "processed/million/observations.csv"
     if not base.exists():

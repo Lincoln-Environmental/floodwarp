@@ -259,6 +259,9 @@ def test_joint_spacing_selection_uses_forecast_before_observation():
 
 
 def test_published_cost_figure_and_table_from_archived_csv(tmp_path):
+    import matplotlib
+
+    matplotlib.use("Agg")
     from research.floodwarp_methods_paper.tables.generate import render
     from research.floodwarp_methods_paper.qualification.plots import scale_cost
 

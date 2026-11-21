@@ -35,7 +35,7 @@ def pairwise(*, study, config):
     for (case, rep), records in group.items():
         cohort = (
             "operational"
-            if records[0]["stage"].startswith("million-")
+            if records[0]["stage"] not in ("long-storms", "resolution")
             else "120 × 80 m controls"
         )
         for objective, metric in OBJECTIVES.items():

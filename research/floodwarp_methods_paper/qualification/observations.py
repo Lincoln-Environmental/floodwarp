@@ -218,6 +218,14 @@ def performance(*, item, case, rep):
     coarse = integral(record=v, seconds=900)
     fine = [f["outlet_m3s"] for f in v["frames"]]
     row.update(
+        hydraulic_identity=runner.digest(
+            dict(
+                fields=v["hashes"],
+                spacing=s["dx"],
+                q=fine,
+                section=[f["section_m3s"] for f in v["frames"]],
+            )
+        ),
         outlet_peak_m3s=max(fine),
         outlet_net_m3=float(np.sum(coarse) * 900),
         dt_max_s=max(f["dt_max_s"] for f in v["frames"]),
@@ -265,6 +273,15 @@ def build(*, study, config):
             if fine
             else None
         )
+        dimensions = items[0]["spec"]["dimensions"]
+        area = int(np.prod(dimensions))
+        cohort = (
+            "120 × 80 m controls"
+            if area == 9600
+            else "1 km² resolution"
+            if area == 1000000
+            else "regional catchments"
+        )
         valid = fine and coarse and cross
         gates = {}
         spread = {}
@@ -279,6 +296,10 @@ def build(*, study, config):
                         case=case,
                         representation=rep,
                         objective=obj,
+                        cohort=cohort,
+                        area_m2=area,
+                        coarse_dx_m=spacing(coarse),
+                        fine_dx_m=spacing(fine),
                         qualified=ok,
                         coarse_id=coarse["id"],
                         fine_id=fine["id"],
@@ -296,6 +317,8 @@ def build(*, study, config):
                             case=case,
                             representation=rep,
                             objective=obj,
+                            cohort=cohort,
+                            area_m2=area,
                             qualified=False,
                             reason="missing independent refinement or fine formulation",
                         )

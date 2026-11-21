@@ -414,11 +414,14 @@ def generate(*, study, output=None):
             dict(
                 objective=k,
                 representation=rep,
+                cohort=cohort,
                 physical_cases=len(g),
                 qualified=sum(r["qualified"] == "True" for r in g),
                 unresolved=sum(r["qualified"] != "True" for r in g),
             )
-            for (k, rep), g in group(rows=refs, keys=("objective", "representation"))
+            for (k, rep, cohort), g in group(
+                rows=refs, keys=("objective", "representation", "cohort")
+            )
         ],
     )
     strat = csv_read(processed / "advisor/validation_strata.csv")
