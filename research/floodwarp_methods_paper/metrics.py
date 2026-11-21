@@ -348,6 +348,7 @@ def fits(*, rows, config):
                     n=m * config["storms"]["manning_n"],
                     fit_score=best,
                     baseline_score=score(row=base, objective=objective),
+                    bounded_search_hydraulic_s=sum(r["runtime_s"] for r in subset),
                     unique_search_hydraulic_s=sum(r["runtime_s"] for r in fitted),
                     candidate_count=len(subset),
                     fit_id=identifier,
