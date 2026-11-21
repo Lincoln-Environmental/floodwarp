@@ -127,8 +127,22 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         )
     )
     (study / "DISCUSSION.md").write_text(discussion.replace("](../", "]("))
+    conclusions = [
+        "# Conclusions",
+        f"Across {len(matched)} small-domain storms, the faster qualified Hancock execution met the "
+        f"1.5× FV1 target in {sum(r <= 1.5 for r in fastest)} cases with median {median(fastest):.3f}×. "
+        f"Tiled execution alone had median {median(ratios):.3f}×.",
+        paper.operational_discussion(study=study),
+        f"The frozen advisor made a qualified feasible selection in {fmt(a['feasible_coverage_pct'])}% "
+        f"of held-out decisions with a measured feasible option. It abstained on {a['abstentions']} of "
+        f"{a['decisions']} decisions. Terrain loss and reference uncertainty limit recommendations for "
+        "specific sites and observables. [Held-out comparisons](../tables/10_advisor.md)",
+        "Retain adaptive Hancock as the development default. Keep explicit execution overrides and "
+        "select FV1 when the measured error is acceptable for the intended observable. "
+        "[Results](results.md) · [Discussion](discussion.md)",
+    ]
     (manuscript / "conclusions.md").write_text(
-        f"# Conclusions\n\nAcross {len(matched)} small-domain storms, the faster qualified Hancock execution met the 1.5× FV1 target in {sum(r <= 1.5 for r in fastest)} cases with median {median(fastest):.3f}×. Tiled execution alone had median {median(ratios):.3f}×. A single solver ranking cannot represent the full set of objective-specific Pareto frontiers. Reference uncertainty, terrain representation and held-out feasibility constrain the decision. [Results](results.md) · [Discussion](discussion.md)\n"
+        "\n\n".join(filter(None, conclusions)) + "\n"
     )
     return dict(
         events=len(matched),
