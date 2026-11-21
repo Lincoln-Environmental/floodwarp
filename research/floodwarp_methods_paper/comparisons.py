@@ -53,6 +53,14 @@ def pairwise(*, study, config):
                 if float(r[metric]) <= config["advisor"]["tolerances"][objective]
             ]
             won = min(met, key=time_key) if met else None
+            tolerant = [
+                r
+                for r in met
+                if r.get("reference_change_" + objective) not in ("", None)
+                and float(r[metric]) + float(r["reference_change_" + objective])
+                <= config["advisor"]["tolerances"][objective]
+            ]
+            robust = min(tolerant, key=time_key) if tolerant else None
             feasible.append(
                 dict(
                     cohort=cohort,
@@ -62,6 +70,10 @@ def pairwise(*, study, config):
                     tolerance=config["advisor"]["tolerances"][objective],
                     qualified_options=len(eligible),
                     feasible=len(met),
+                    sensitivity_feasible=len(tolerant),
+                    sensitivity_method=robust["method"] if robust else None,
+                    sensitivity_dx=robust["dx"] if robust else None,
+                    sensitivity_run_id=robust["experiment_id"] if robust else None,
                     method=won["method"] if won else None,
                     dx=won["dx"] if won else None,
                     runtime_s=won["runtime_s"] if won else None,

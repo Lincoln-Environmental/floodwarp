@@ -300,11 +300,39 @@ def material(*, study):
             "Final 1 cm inundation is the common prediction target in the enlarged advisor. The historical paper also retains time-integrated inundation results. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)",
         ]
     )
+    feasible = csv_read(p / "pareto/least_cost.csv")
+    winners = defaultdict(dict)
+    for row in feasible:
+        if row.get("cohort") != "operational" or row["representation"] != "sampled":
+            continue
+        method = row.get("sensitivity_method")
+        value = (
+            f"{method}, {number(row['sensitivity_dx'])} m"
+            if method
+            else ("no tested option" if int(row["qualified_options"]) else "unresolved")
+        )
+        winners[row["case"]][row["objective"]] = value
+    if winners:
+        audit.extend(
+            [
+                "",
+                "## Cheapest measured method and grid meeting tolerance",
+                "",
+                "Each entry uses the measured error plus the reported refinement sensitivity. Tolerances are prescribed in the advisor configuration. No tested option means a qualified comparison existed but the conservative criterion was missed.",
+                "",
+                "| Physical event | Final depth | Final inundation | Outlet hydrograph |",
+                "|---|---|---|---|",
+            ]
+        )
+        for case, result in sorted(winners.items()):
+            audit.append(
+                f"| {case} | {result['depth']} | {result['inundation']} | {result['discharge']} |"
+            )
     summary = "\n\n".join(
         [
             "## Million-cell operational controls",
             outcome,
-            "The partial-domain rain and widespread inundation cases have different scheduling and timestep costs. [Complete operational records](../tables/11_execution.md) · [Costs by scheduled footprint](../figures/13_execution_cost.pdf) · [Finer reference checks](../tables/12_reference_qualification.md).",
+            "The partial-domain rain and widespread inundation cases have different scheduling and timestep costs. [Complete operational records](../tables/11_execution.md) · [Costs by scheduled footprint](../figures/13_execution_cost.pdf) · [Finer reference checks](../tables/12_reference_qualification.md) · [Operational hydrographs](../figures/18_operational_storms.pdf).",
             "## Held-out evidence at operational scale",
             diagnosis
             + " [Scale-specific denominators](../tables/13_advisor_scale.md).",
