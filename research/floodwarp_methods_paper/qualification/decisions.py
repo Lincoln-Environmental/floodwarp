@@ -36,6 +36,12 @@ def runtime_predictions(*, model, rows):
                 chosen = res["method"]
             actual = methods.get(chosen)
             target = methods.get("fv1", group[0])
+            candidate = (
+                next((c for c in res["candidates"] if c["method"] == chosen), None)
+                if res
+                else None
+            )
+            interval = candidate["runtime_range_s"] if candidate else (None, None)
             predictions.append(
                 dict(
                     case=case,
@@ -51,6 +57,17 @@ def runtime_predictions(*, model, rows):
                     abstained=chosen is None,
                     measured_s=actual["runtime_s"] if actual else None,
                     predicted_s=res.get("runtime_s") if res else None,
+                    lower_s=interval[0],
+                    upper_s=interval[1],
+                    interval_covered=interval[0] <= actual["runtime_s"] <= interval[1]
+                    if candidate and actual
+                    else None,
+                    absolute_timing_error_pct=100
+                    * abs(res["runtime_s"] / actual["runtime_s"] - 1)
+                    if candidate and actual
+                    else None,
+                    selected_run=actual["run_id"] if actual else None,
+                    oracle_run=best["run_id"],
                     regret_pct=100 * (actual["runtime_s"] / best["runtime_s"] - 1)
                     if actual
                     else None,

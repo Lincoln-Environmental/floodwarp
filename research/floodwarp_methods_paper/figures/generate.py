@@ -594,7 +594,7 @@ def advisor(*, study, out):
             color=COLOURS.get(r["chosen"], "#704d9f"),
             lw=1,
         )
-        ax.scatter(x, y, s=12, color=COLOURS[r["chosen"]])
+        ax.scatter(x, y, s=12, color=COLOURS.get(r["chosen"], "#704d9f"))
     if q:
         top = max(max(float(r["observed_error"]), float(r["interval_high"])) for r in q)
         ax.plot([0, top], [0, top], color="#555", ls="--", lw=0.8)
