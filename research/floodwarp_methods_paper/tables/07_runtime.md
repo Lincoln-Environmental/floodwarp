@@ -1,0 +1,27 @@
+# Operational GPU cost and live process-pool memory
+
+| matrix | method | runs | Median hydraulic s | Median steps | Median pool MiB |
+| --- | --- | --- | --- | --- | --- |
+| prospective 10 m storms | FV2 RK2 | 48 | 1.634 | 1.639e+04 | 0.04831 |
+| prospective 10 m storms | MUSCL–Euler | 48 | 0.8932 | 1.516e+04 | 0.04309 |
+| prospective 10 m storms | FV1 | 48 | 0.7448 | 1.419e+04 | 0.02573 |
+| prospective 10 m storms | Hancock tiles | 48 | 1.814 | 1.611e+04 | 0.04359 |
+| prospective 10 m storms | Hancock dense | 48 | 1.08 | 1.611e+04 | 0.04354 |
+| prospective 10 m storms | Local inertia | 48 | 0.1552 | 3418 | 0.03254 |
+| prospective 10 m storms | Low-Froude FV1 | 48 | 0.8321 | 1.473e+04 | 0.02573 |
+| archival 1000000 cells | fv1 sparse | 2 | 21.61 | 1.161e+04 | 248.3 |
+| archival 1000000 cells | hancock dense | 2 | 40.66 | 1.223e+04 | 428.4 |
+| archival 1000000 cells | hancock sparse | 2 | 39.02 | 1.223e+04 | 428.4 |
+| archival 1000000 cells | hancock tiles | 2 | 33.81 | 1.223e+04 | 428.5 |
+| archival 2000000 cells | fv1 sparse | 2 | 42.84 | 1.172e+04 | 496.6 |
+| archival 2000000 cells | hancock dense | 2 | 81.83 | 1.233e+04 | 856.6 |
+| archival 2000000 cells | hancock sparse | 2 | 78.67 | 1.233e+04 | 856.6 |
+| archival 2000000 cells | hancock tiles | 2 | 66.03 | 1.233e+04 | 856.9 |
+| archival 250000 cells | fv1 sparse | 5 | 6.274 | 1.33e+04 | 62.11 |
+| archival 250000 cells | hancock dense | 5 | 13.82 | 1.355e+04 | 107.1 |
+| archival 250000 cells | hancock sparse | 5 | 13.89 | 1.355e+04 | 107.1 |
+| archival 250000 cells | hancock tiles | 5 | 11.52 | 1.355e+04 | 107.2 |
+| archival 500000 cells | fv1 sparse | 2 | 10.68 | 1.135e+04 | 124.2 |
+| archival 500000 cells | hancock dense | 2 | 19.73 | 1.196e+04 | 214.2 |
+| archival 500000 cells | hancock sparse | 2 | 18.91 | 1.196e+04 | 214.2 |
+| archival 500000 cells | hancock tiles | 2 | 17.17 | 1.196e+04 | 214.3 |
