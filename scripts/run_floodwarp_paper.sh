@@ -30,6 +30,6 @@ main() {
             "$python_bin" -m pip install -e '.[raster,plot,test]'
         fi
     fi
-    "$python_bin" -m research.floodwarp_methods_paper.runner "$stage" "$@"
+    "$python_bin" -m research.floodwarp_methods_paper.controller "$stage" "$@"
 }
 main "$@"

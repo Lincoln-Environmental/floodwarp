@@ -2,7 +2,6 @@
 
 from collections import defaultdict
 import json
-from pathlib import Path
 
 from affine import Affine
 import numpy as np
@@ -104,7 +103,26 @@ def samples(*, study, config, features):
         area = stats["model"]["area_m2"]
         rates = np.asarray(forcing["rain_rates_ms"]) * 3.6e6
         # Physical inputs available before integration. The forcing module integrates the prescribed hyetograph.
+        hours = np.asarray(forcing["rain_times_s"]) / 3600
+        depth_mm = float(np.trapezoid(rates, hours))
+        delta = np.diff(hours)
+        centroid = (
+            np.sum(
+                delta
+                * (
+                    hours[:-1] * (2 * rates[:-1] + rates[1:])
+                    + hours[1:] * (rates[:-1] + 2 * rates[1:])
+                )
+                / 6
+            )
+            / depth_mm
+        )
         physical = dict(
+            forecast_duration_h=float(r["hours"]),
+            rain_centroid_h=float(centroid),
+            spatial_mean_multiplier=actual["expected_rain_m3"]
+            * 1000
+            / (area * depth_mm),
             rain_mm=actual["expected_rain_m3"] * 1000 / area,
             peak_mm_h=float(rates.max()),
             rain_duration_h=6,

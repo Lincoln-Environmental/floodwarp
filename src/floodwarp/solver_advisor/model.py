@@ -19,6 +19,9 @@ FEATURES = (
     "rain_mm",
     "peak_mm_h",
     "rain_duration_h",
+    "forecast_duration_h",
+    "rain_centroid_h",
+    "spatial_mean_multiplier",
     "manning_n",
     "initial_mean_m",
     "infiltration_mean_mm_h",
@@ -48,6 +51,8 @@ def descriptors(*, terrain, hydraulic=None):
         connectivity_change=float(c["changed_outlet_fraction"]),
         area_m2=float(m["area_m2"]),
         cells=m["cells"],
+        rows=m["rows"],
+        columns=m["columns"],
         resolution=float(m["dx_m"]),
         native_resolution=float(terrain["native"]["dx_m"]),
     )
@@ -184,6 +189,21 @@ def recommend(
             "Domain area lies outside the accuracy-training range at this spacing."
         )
         return result
+    for key in ("rows", "columns", "native_resolution"):
+        values = {r["features"][key] for r in comparable if key in r["features"]}
+        if key in features and values and features[key] not in values:
+            result["warnings"].append(
+                f"The benchmark does not cover the requested {key}."
+            )
+            return result
+    for key, scale in model["scales"].items():
+        if key not in features or scale["high"] != scale["low"]:
+            continue
+        if not np.isclose(features[key], scale["low"], rtol=1e-9, atol=1e-12):
+            result["warnings"].append(
+                f"The benchmark contains only one observed value for {key}."
+            )
+            return result
     missing = [f for f in FEATURES if f not in features]
     if missing:
         result["warnings"].append(
