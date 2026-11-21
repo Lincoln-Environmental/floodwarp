@@ -150,7 +150,7 @@ def build(*,study,config):
             row["reference_id"]=fine["id"] if fine else None
             row["reference_self"]=bool(fine and i["id"]==fine["id"])
             row["reference_setup"]=i["stage"]!="million-storms" and not (rep=="sampled" and spacing(i)==10)
-            row.update({"qualified_"+obj:bool(gates.get(obj,False)) for obj in metrics.OBJECTIVES})
+            row.update({"qualified_"+obj:bool(gates.get(obj,False) and fine and spacing(i)>spacing(fine)) for obj in metrics.OBJECTIVES})
             row["qualified_memory"]=True
             results.append(row)
             for frame in i["data"]["spatial"]:

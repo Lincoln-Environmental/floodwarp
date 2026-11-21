@@ -385,6 +385,8 @@ def train(*, study, config, features, context, directory):
         revision=context["git_sha"],
         quantile=settings["quantile"],
     )
+    from research.floodwarp_methods_paper.qualification import decisions
+    decisions.scale_fit(model=model,training=train,validation=val)
     for rule in ("advisor", "slope"):
         tune(model=model, training=train, validation=val, settings=settings, rule=rule)
     advisor_data.interval_calibration(model=model,rows=val)
@@ -435,6 +437,8 @@ def validate(*, study, config, features, directory):
     results = assess(
         model=model, rows=held, rules=("advisor", "fv1", "hancock_dense", "slope","oracle")
     )
+    from research.floodwarp_methods_paper.qualification import decisions
+    decisions.validate(study=study,model=model,held=held,decisions=results)
     totals = summary(rows=results)
     for folder in (directory, study / "processed/advisor"):
         csv_write(file=folder / "heldout.csv", rows=results)

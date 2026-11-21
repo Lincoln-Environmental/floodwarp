@@ -382,6 +382,21 @@ def generate(*, study, output=None):
         "Independent solver selection assessment",
         csv_read(processed / "advisor/summary.csv"),
     )
+    large=processed/"million"
+    policy=csv_read(large/"policies.csv")
+    output["11_execution"]=("Complete-event production cost at operational scales",[
+        dict(case=r["case"],dx=r["dx"],cells=r["cells"],fv1_s=r["fv1_s"],dense_s=r["dense_s"],
+             tiles_s=r["tiles_s"],auto_s=r.get("auto_s"),fastest_ratio=r["fastest_ratio"],
+             work_fraction=r["work_fraction"],step_ratio=r["step_ratio"]) for r in policy if int(r["cells"])>=250000])
+    refs=csv_read(large/"reference_checks.csv")
+    output["12_reference_qualification"]=("Per-observable independent refinement and cross-formulation screens",[
+        dict(objective=k,representation=rep,physical_cases=len(g),qualified=sum(r["qualified"]=="True" for r in g),
+             unresolved=sum(r["qualified"]!="True" for r in g)) for (k,rep),g in group(rows=refs,keys=("objective","representation"))])
+    strat=csv_read(processed/"advisor/validation_strata.csv")
+    output["13_advisor_scale"]=("Independent held-out feasibility and cost across computational scales",[
+        {k:r[k] for k in ("group","rule","decisions","empirical_feasible_opportunities","feasible_coverage_pct","abstention_pct",
+                          "false_feasible","agreement_all_feasible_pct","median_regret_pct","empirical_error_interval_coverage_pct")}
+        for r in strat if r["axis"]=="scale"])
     for name, (caption, data) in output.items():
         render(directory=out, name=name, rows=data, caption=caption)
     return {name: len(rows) for name, (_, rows) in output.items()}

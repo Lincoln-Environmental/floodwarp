@@ -538,7 +538,7 @@ def advisor(*, study, out):
     save(fig=fig, folder=out, name="11_selection_regimes")
     fig, grid = plt.subplots(2, 2, figsize=(7.3, 6.5), layout="constrained")
     axes = grid.ravel()
-    choices = [*LABELS, "abstain"]
+    choices = [*LABELS, "hancock_auto", "abstain"]
     matrix = np.zeros((len(choices), len(choices)))
     for r in selected:
         matrix[
@@ -546,7 +546,7 @@ def advisor(*, study, out):
             choices.index(r["chosen"] or "abstain"),
         ] += 1
     im = axes[0].imshow(matrix, cmap="Blues")
-    labels = [LABELS.get(m, m) for m in choices]
+    labels = [LABELS.get(m, "Hancock auto" if m=="hancock_auto" else m) for m in choices]
     axes[0].set(
         xticks=range(len(labels)),
         yticks=range(len(labels)),
@@ -591,7 +591,7 @@ def advisor(*, study, out):
         ax.plot(
             [x, x],
             [float(r["interval_low"]), float(r["interval_high"])],
-            color=COLOURS[r["chosen"]],
+            color=COLOURS.get(r["chosen"], "#704d9f"),
             lw=1,
         )
         ax.scatter(x, y, s=12, color=COLOURS[r["chosen"]])
@@ -639,6 +639,8 @@ def generate(*, study):
         advisor,
     ):
         render(study=study, out=out)
+    from research.floodwarp_methods_paper.qualification import plots
+    plots.generate(study=study)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),
         supplementary_figures=len(
