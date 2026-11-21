@@ -54,6 +54,6 @@ main() {
         echo 'Run check to establish the environment' >&2
         return 1
     fi
-    "$python_bin" -m research.floodwarp_methods_paper.controller "$stage" "$@"
+    exec "$python_bin" -m research.floodwarp_methods_paper.controller "$stage" "$@"
 }
 main "$@"
