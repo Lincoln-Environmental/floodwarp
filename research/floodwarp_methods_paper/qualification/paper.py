@@ -23,7 +23,7 @@ def operational_discussion(*, study):
     steps = [float(r["step_ratio"]) for r in rows]
     overhead = [float(r["per_step_ratio"]) for r in rows]
     return (f"Across the {len(rows)} primary million-cell events, the faster measured explicit Hancock policy met "
-            f"1.5× FV1 in {sum(v<=1.5 for v in time)} cases. Its median full-event ratio was {median(time):.2f}×. "
+            f"1.5× FV1 in {sum(v<=1.5 for v in time)} of {len(rows)}. Its median full-event ratio was {median(time):.2f}×. "
             f"The accepted-step ratios ranged from {min(steps):.2f} to {max(steps):.2f}, and the corresponding "
             f"mean cost per accepted step ranged from {min(overhead):.2f} to {max(overhead):.2f} times FV1. "
             "These factors multiply within each event. The normal timestep policy therefore matters even where "

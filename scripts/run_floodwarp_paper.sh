@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
     cat <<'HELP'
-Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--force] [--dry-run]
+Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--resume | --force] [--dry-run]
 Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
         million-terrain million-pilots million-storms million-auto large-references large-refinements heldout-references million-profiles million-repeats recession-controls execution-policy pareto
         terrain-features advisor-train advisor-validate tables figures manuscript verify all
@@ -40,9 +40,22 @@ bootstrap() {
 
 main() {
     if [[ $# == 0 || $1 == --help || $1 == -h ]]; then usage; return; fi
-    local stage=$1 python_bin root dry=false flag
+    local stage=$1 python_bin root dry=false force=false resume=false flag
+    local -a selected_options=()
     shift
-    for flag in "$@"; do if [[ $flag == --dry-run ]]; then dry=true; fi; done
+    for flag in "$@"; do
+        case "$flag" in
+            --resume) resume=true; continue ;;
+            --force) force=true ;;
+            --dry-run) dry=true ;;
+        esac
+        selected_options+=("$flag")
+    done
+    if [[ $resume == true && $force == true ]]; then
+        echo 'Choose either --resume or --force.' >&2
+        return 2
+    fi
+    export MPLBACKEND="${MPLBACKEND:-Agg}"
     root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
     cd "$root"
     python_bin=${FLOODWARP_PAPER_PYTHON:-"$root/.venv/bin/python"}
@@ -55,6 +68,6 @@ main() {
         echo 'Run check to establish the environment' >&2
         return 1
     fi
-    exec "$python_bin" -m research.floodwarp_methods_paper.controller "$stage" "$@"
+    exec "$python_bin" -m research.floodwarp_methods_paper.controller "$stage" "${selected_options[@]}"
 }
 main "$@"
