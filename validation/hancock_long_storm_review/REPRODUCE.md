@@ -58,6 +58,7 @@ FLOODWARP_STORM_SUITE=directional .venv/bin/python -m validation.hancock_long_st
 FLOODWARP_STORM_SUITE=reference .venv/bin/python -m validation.hancock_long_storm_review.storms
 FLOODWARP_STORM_SUITE=refinement .venv/bin/python -m validation.hancock_long_storm_review.storms
 .venv/bin/python -m validation.hancock_long_storm_review.sheet_cycle
+.venv/bin/python -m validation.hancock_long_storm_review.opening_event
 .venv/bin/python -m validation.hancock_long_storm_review.structures
 FLOODWARP_STRUCTURE_DEVICE=cpu .venv/bin/python -m validation.hancock_long_storm_review.structures
 ```
