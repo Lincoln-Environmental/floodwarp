@@ -5,6 +5,7 @@ usage() {
     cat <<'HELP'
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--force] [--dry-run]
 Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
+        million-terrain million-pilots million-storms large-references million-profiles
         terrain-features advisor-train advisor-validate tables figures manuscript verify all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
 Running check creates a Python 3.14 environment if needed and verifies the pinned packages.
@@ -54,6 +55,11 @@ main() {
         echo 'Run check to establish the environment' >&2
         return 1
     fi
+    case "$stage" in
+        million-terrain|million-pilots|million-storms|large-references|million-profiles)
+            exec "$python_bin" -m research.floodwarp_methods_paper.qualification.launch "$stage" "$@"
+            ;;
+    esac
     exec "$python_bin" -m research.floodwarp_methods_paper.controller "$stage" "$@"
 }
 main "$@"
