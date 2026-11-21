@@ -1,6 +1,6 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 124 numerical records remain outstanding. Values below cover completed events.
+**Qualification in progress.** 123 numerical records remain outstanding. Values below cover completed events.
 
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
@@ -75,6 +75,14 @@ The fast-event outlet records support a direct comparison of interval means from
 | mixed | fv1 | 41.363 | 41.153 | 0.51% | 27060 / 27900 |
 | mixed | hancock_dense | 38.700 | 38.542 | 0.41% | 26160 / 26100 |
 
+The following medians use one 80 × 80 m control window per terrain realisation at each diagnostic resolution. The opening is eight metres wide on the continuous bed. The displaced-outlet fraction counts native cells whose filled-DEM drainage outlet moves more than two model cells.
+
+| Diagnostic grid (m) | Width of opening (cells) | Connections lost / windows | Barrier lowering, p95 (m) | Saddle elevation RMSE (m) | Change in depression storage (m³) | Displaced outlets |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 8 | 0 / 15 | 0.0000 | 0.0000 | +0.00 | 0.0% |
+| 5 | 1.6 | 9 / 15 | 0.0422 | 0.0016 | +2.47 | 17.6% |
+| 10 | 0.8 | 11 / 15 | 0.1172 | 0.0059 | +18.17 | 35.9% |
+
 At the prescribed test stage, 11 of 15 independent case windows lost the metre-grid connection on the 10 m represented terrain. The stage is 1 cm above the lowest native through-going spill elevation. Each window covers 80 × 80 m around the known control and retains its physical coordinates. Whole-domain metrics use the full represented raster. [Terrain diagnostics](processed/million/terrain.csv) · [Fixed-bed and initial-water controls](processed/million/resolution_components.csv) · [Reference screens](processed/million/reference_checks.csv)
 
 ## Held-out operational recommendations
@@ -104,7 +112,7 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | million-pilots | 6 | 6 |
 | million-storms | 62 | 62 |
 | million-auto | 18 | 18 |
-| large-references | 4 | 77 |
+| large-references | 5 | 77 |
 | large-refinements | 0 | 29 |
 | heldout-references | 0 | 5 |
 | million-profiles | 0 | 9 |

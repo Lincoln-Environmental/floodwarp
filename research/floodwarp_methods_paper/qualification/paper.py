@@ -245,6 +245,41 @@ def material(*, study):
     audit.extend(
         [
             "",
+            "The following medians use one 80 × 80 m control window per terrain realisation at each diagnostic resolution. "
+            "The opening is eight metres wide on the continuous bed. The displaced-outlet fraction counts native cells "
+            "whose filled-DEM drainage outlet moves more than two model cells.",
+            "",
+            "| Diagnostic grid (m) | Width of opening (cells) | Connections lost / windows | Barrier lowering, p95 (m) | Saddle elevation RMSE (m) | Change in depression storage (m³) | Displaced outlets |",
+            "|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for resolution in sorted({float(r["diagnostic_dx"]) for r in terrain}):
+        unique = {
+            r["case"]: r for r in terrain if float(r["diagnostic_dx"]) == resolution
+        }
+        group = list(unique.values())
+        lost = sum(
+            r["native_connected"] == "True" and r["represented_connected"] == "False"
+            for r in group
+        )
+        medians = [
+            median(float(r[k]) for r in group)
+            for k in (
+                "opening_width_cells",
+                "barrier_lowering_p95_m",
+                "saddle_elevation_rmse_m",
+                "storage_change_m3",
+                "changed_outlet_fraction",
+            )
+        ]
+        width, barrier, saddle, storage, outlets = medians
+        audit.append(
+            f"| {resolution:g} | {width:g} | {lost} / {len(group)} | {barrier:.4f} | "
+            f"{saddle:.4f} | {storage:+.2f} | {outlets:.1%} |"
+        )
+    audit.extend(
+        [
+            "",
             f"At the prescribed test stage, {losses} of {len(windows)} independent case windows lost the metre-grid connection on the 10 m represented terrain. The stage is 1 cm above the lowest native through-going spill elevation. Each window covers 80 × 80 m around the known control and retains its physical coordinates. Whole-domain metrics use the full represented raster. [Terrain diagnostics](processed/million/terrain.csv) · [Fixed-bed and initial-water controls](processed/million/resolution_components.csv) · [Reference screens](processed/million/reference_checks.csv)",
             "",
             "## Held-out operational recommendations",
