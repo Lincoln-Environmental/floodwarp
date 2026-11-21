@@ -114,6 +114,7 @@ def derived_identity(*, root, study, stage):
                         "million-terrain",
                         "million-profiles",
                         "million-repeats",
+                        "recession-controls",
                     ),
                 )
             ],

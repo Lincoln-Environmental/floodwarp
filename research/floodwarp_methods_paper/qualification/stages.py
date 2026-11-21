@@ -11,6 +11,7 @@ from research.floodwarp_methods_paper.qualification import (
     automatic,
     heldout,
     repeats,
+    recession,
 )
 
 NUMERICAL = (
@@ -23,6 +24,7 @@ NUMERICAL = (
     "heldout-references",
     "million-profiles",
     "million-repeats",
+    "recession-controls",
 )
 OFFLINE = ("execution-policy", "pareto")
 
@@ -40,12 +42,14 @@ def terrain_identity(*, root, study, stage):
 
 
 def numerical(*, root, study, config, stage, arguments):
-    if stage == "million-auto":
+    if stage in ("million-auto", "recession-controls"):
+        module = automatic if stage == "million-auto" else recession
         with (
-            patch.object(launch, "cases", automatic.cases),
-            patch.object(launch, "calculate", automatic.calculate),
+            patch.object(launch, "cases", module.cases),
+            patch.object(launch, "calculate_original", launch.calculate, create=True),
+            patch.object(launch, "calculate", module.calculate),
             patch.object(launch, "identity_original", launch.identity, create=True),
-            patch.object(launch, "identity", automatic.source),
+            patch.object(launch, "identity", module.source),
         ):
             launch.run(
                 root=root, study=study, config=config, stage=stage, arguments=arguments
@@ -90,11 +94,12 @@ def source(*, root, study, stage):
                 launch, "identity_original", launch.identity, create=True
             ):
                 return terrain_identity(root=root, study=study, stage=stage)
-        if stage == "million-auto":
+        if stage in ("million-auto","recession-controls"):
+            module = automatic if stage == "million-auto" else recession
             with patch.object(
                 launch, "identity_original", launch.identity, create=True
             ):
-                return automatic.source(root=root, study=study, stage=stage)
+                return module.source(root=root, study=study, stage=stage)
         if stage in ("heldout-references", "million-repeats"):
             module = heldout if stage == "heldout-references" else repeats
             with patch.object(
@@ -114,6 +119,7 @@ def specifications(*, stage, config, root):
         "large-refinements": refinements.expanded,
         "heldout-references": heldout.cases,
         "million-repeats": repeats.cases,
+        "recession-controls": recession.cases,
         "million-auto": automatic.cases,
     }.get(stage, launch.cases)
     yield from planner(stage=stage, config=config, root=root)
