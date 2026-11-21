@@ -1,6 +1,7 @@
 """Warmed fixed-step GPU controls and occupancy sweep on identical bed and fronts."""
 
 import json
+import os
 from pathlib import Path
 from time import perf_counter
 
@@ -84,7 +85,8 @@ if __name__ == "__main__":
     length, width, dx, cap, duration, repeats = 1024.0, 640.0, 1.0, 1 / 32, 2.0, 7
     fractions = (0.0, 0.005, 0.03, 0.12, 0.35, 0.55, 0.7, 0.85, 1.0)
     measure(
-        output=directory / "final_profile.json",
+        output=directory
+        / os.environ.get("FLOODWARP_PROFILE_FILE", "final_profile.json"),
         cases=cases,
         methods=methods,
         length=length,
@@ -95,6 +97,8 @@ if __name__ == "__main__":
         repeats=repeats,
         device=device,
     )
+    if os.environ.get("FLOODWARP_PROFILE_ONLY") == "1":
+        raise SystemExit(0)
     sweep(
         directory=directory,
         device=device,

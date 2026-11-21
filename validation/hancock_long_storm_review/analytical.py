@@ -1,6 +1,7 @@
 """Verify optional directional CFL and both tile policies against independent solutions."""
 
 from contextlib import contextmanager
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -91,7 +92,7 @@ def run_controls(
 
 
 if __name__ == "__main__":
-    review = Path(__file__).parent
+    review = Path(os.environ.get("FLOODWARP_ANALYTICAL_RESULTS", Path(__file__).parent))
     policies = ("legacy", "directional")
     settings = dict(
         device="cuda:0",

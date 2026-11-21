@@ -11,6 +11,7 @@ import subprocess
 import numpy as np
 
 from validation.hancock_long_storm_review.landforms import physical_fields
+from validation.hancock_long_storm_review.storms import experiment_cases
 
 
 def checksum(*, path):
@@ -114,6 +115,41 @@ def verify(*, review, fields, counts, baseline, methods, modules, pytest_summary
         }
         if not set(methods) <= actual:
             raise ValueError("Missing matched solver or scheduler")
+    large = json.loads((review / "large_parity.json").read_text())
+    if len(large) != 20 or not all(r["matched"] for r in large):
+        raise ArithmeticError("Large-event schedule comparison failed")
+    profiles = {f.stem for f in (review / "graph_profiles").glob("*.json")}
+    if profiles != {r["name"] for r in primary}:
+        raise ValueError("Incomplete graph kernel profiles")
+    if len(json.loads((review / "storm_kernel_profiles.json").read_text())) != 6:
+        raise ValueError("Incomplete uncaptured storm profiles")
+    dt = json.loads((review / "accepted_dt.json").read_text())
+    hashes = Counter((r["steps"], r["dt_sha256"]) for r in dt)
+    if len(hashes) != 6 or any(count != 3 for count in hashes.values()):
+        raise ArithmeticError("Dense, fixed and tiled accepted histories differ")
+    receipts = {}
+    for suite in (
+        "primary",
+        "large",
+        "terrain_large",
+        "refinement",
+        "moving",
+        "directional",
+    ):
+        receipt = review / "integrated_events" / (suite + ".verified")
+        entries = set(receipt.read_text().splitlines())
+        expected = sum(
+            c["method"] in ("hancock", "fv2")
+            for c in experiment_cases(config=config, suite=suite)
+        )
+        if len(entries) != expected:
+            raise ValueError("Incomplete source parity checks for " + suite)
+        receipts[suite] = dict(
+            count=len(entries), receipt_sha256=checksum(path=receipt)
+        )
+        for name in entries:
+            if not (review / "integrated_events" / (name + ".json")).is_file():
+                raise ValueError("Missing integrated run " + name)
     (review / "event_checksums.json").write_text(json.dumps(index, indent=2) + "\n")
     paths = [*review.glob("*.py"), review / "cases.json", *modules]
     device = subprocess.check_output(
@@ -140,6 +176,12 @@ def verify(*, review, fields, counts, baseline, methods, modules, pytest_summary
         source_sha256={str(p.relative_to(Path.cwd())): checksum(path=p) for p in paths},
         baseline_results_sha256=checksum(path=review / "baseline.json"),
         event_group_counts=counts,
+        integrated_operator_checks=receipts,
+        scheduler_implementation="29140772eb63c52bb5d8d765d0e7531c51a1d7ac",
+        integrated_operator_implementation="e63c936",
+        graph_kernel_profiles=len(profiles),
+        large_dense_parity_pairs=len(large),
+        primary_dense_parity_pairs=len(parity),
         pytest=pytest_summary,
         precision="FP64",
         seed=json.loads((review / "cases.json").read_text())["seed"],

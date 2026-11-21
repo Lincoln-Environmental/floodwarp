@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 
 import numpy as np
+
+from validation.hancock_long_storm_review.dataset import records
 from scipy.ndimage import label
 
 
@@ -163,9 +165,7 @@ def large_parity(*, runs):
 def assess(
     *, review, fields, support, thresholds, depth_tol, depth_relative_tol, outlet_tol
 ):
-    rows = [
-        json.loads(f.read_text()) for f in sorted((review / "events").glob("*.json"))
-    ]
+    rows = records(review=review)
     (review / "large_parity.json").write_text(
         json.dumps(large_parity(runs=rows), indent=2) + "\n"
     )

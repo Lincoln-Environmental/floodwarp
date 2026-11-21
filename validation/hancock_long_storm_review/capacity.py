@@ -186,7 +186,9 @@ def measure(*, review, config, device, intervals, dimensions, cases, repeats):
                         intervals_s=parts,
                     )
                 )
-                (review / "integrated_capacity.json").write_text(json.dumps(rows, indent=2) + "\n")
+                (review / "integrated_capacity.json").write_text(
+                    json.dumps(rows, indent=2) + "\n"
+                )
 
 
 if __name__ == "__main__":

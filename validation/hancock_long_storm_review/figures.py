@@ -7,6 +7,8 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
+from validation.hancock_long_storm_review.dataset import records as event_records
+
 from validation.hancock_long_storm_review.landforms import physical_fields
 
 
@@ -140,9 +142,7 @@ def render(*, review, fields, event_choice, colours):
     import matplotlib.pyplot as plt
 
     config = json.loads((review / "cases.json").read_text())
-    rows = [
-        json.loads(p.read_text()) for p in sorted((review / "events").glob("*.json"))
-    ]
+    rows = event_records(review=review)
     primary = [r for r in rows if r["group"] == "primary"]
     fig, axs = plt.subplots(2, 4, figsize=(13, 5), layout="constrained")
     for ax, (land, spec) in zip(axs.flat, config["landforms"].items(), strict=True):

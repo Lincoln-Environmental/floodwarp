@@ -1,10 +1,11 @@
 """Event, landform, wet-fraction and uncertainty tables from measured results."""
 
 import csv
-import json
 from pathlib import Path
 
 import numpy as np
+
+from validation.hancock_long_storm_review.dataset import records
 
 
 def write_rows(*, path, rows):
@@ -16,7 +17,7 @@ def write_rows(*, path, rows):
 
 
 def summarise(*, root, edges):
-    runs = [json.loads(p.read_text()) for p in sorted((root / "events").glob("*.json"))]
+    runs = records(review=root)
     base = {
         (
             r["landform"],
@@ -54,6 +55,7 @@ def summarise(*, root, edges):
                 method=r["method"],
                 mode=r["mode"],
                 duration_h=r["hours"],
+                timing_dataset=r["timing_dataset"],
                 hydraulic_s=r["hydraulic_s"],
                 loop_s=r["loop_s"],
                 ratio_fv1=r["hydraulic_s"] / fv["hydraulic_s"] if fv else None,

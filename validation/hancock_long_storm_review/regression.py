@@ -1,5 +1,6 @@
 """Replay the retained analytical drivers with a scheduling-only override."""
 
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -81,7 +82,12 @@ def replay(
 
 
 if __name__ == "__main__":
-    output = Path("validation/hancock_long_storm_review/regression")
+    output = Path(
+        os.environ.get(
+            "FLOODWARP_REGRESSION_RESULTS",
+            "validation/hancock_long_storm_review/regression",
+        )
+    )
     archive = Path("validation/fv1_diffusion_review")
     controls = (
         ("sloping_ritter", 0.05),

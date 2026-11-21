@@ -6,6 +6,8 @@ from pathlib import Path
 
 import numpy as np
 
+from validation.hancock_long_storm_review.dataset import records as event_records
+
 
 def rows(*, path):
     with path.open() as f:
@@ -138,7 +140,7 @@ def compare_pairs(*, review):
 
 
 def physical_summary(*, review):
-    records = [json.loads(f.read_text()) for f in (review / "events").glob("*.json")]
+    records = event_records(review=review)
     summary = {}
     for group in sorted({r["group"] for r in records}):
         data = [r for r in records if r["group"] == group]

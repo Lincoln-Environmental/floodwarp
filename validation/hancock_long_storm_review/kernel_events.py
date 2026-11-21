@@ -70,8 +70,8 @@ def attribute(*, review, config, pairs, methods, device):
                 checks["storage"], run["final_m3"], rtol=1.0e-13, atol=1.0e-12
             )
             records.append(dict(run=run["name"], samples=samples))
-            temp=archive.with_suffix(".tmp")
-            temp.write_text(json.dumps(records,separators=(",",":"))+"\n")
+            temp = archive.with_suffix(".tmp")
+            temp.write_text(json.dumps(records, separators=(",", ":")) + "\n")
             temp.replace(archive)
 
 
