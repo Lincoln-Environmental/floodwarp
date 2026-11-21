@@ -200,6 +200,12 @@ def material(*, study):
         "| Observable | Reassessed small cases | Originally qualified | Qualified on both finer checks |",
         "|---|---:|---:|---:|",
     ]
+    historical_cases = {r["case"] for r in small}
+    original = [
+        r
+        for r in csv_read(p / "metrics/reference_uncertainty.csv")
+        if r["case"] in historical_cases and r["representation"] == "sampled"
+    ]
     for obj in sorted({r["objective"] for r in renewed}):
         g = [
             r
@@ -208,6 +214,22 @@ def material(*, study):
         ]
         audit.append(
             f"| {obj} | {len(g)} | {sum(r['original_qualified'] == 'True' for r in g)} | {sum(r['qualified'] == 'True' for r in g)} |"
+        )
+    if original:
+        missing = {
+            obj: sum(r["qualified_" + obj] != "True" for r in original)
+            for obj in ("depth", "inundation", "discharge")
+        }
+        audit.extend(
+            [
+                "",
+                f"The original {len(original)} sampled-terrain storm comparisons had unresolved references in "
+                f"{missing['depth']} final-depth, {missing['inundation']} inundation and {missing['discharge']} "
+                "hydrograph cases. The fine-cadence subset has a separate measured Pareto frontier. Its final "
+                "1 cm inundation and 60-second hydrographs retain their own reference and timing identities. "
+                "[Original screening](processed/metrics/reference_uncertainty.csv) · "
+                "[Short-interval frontier and eligibility](processed/million/short_interval_pareto.csv)",
+            ]
         )
     components = csv_read(p / "million/resolution_components.csv")
     geometry_controls = [r for r in components if r["method"] == "hancock_dense"]

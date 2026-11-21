@@ -393,4 +393,25 @@ def build(*, study, config):
         include_unresolved=True,
     )
     metrics.csv_write(file=path / "pareto.csv", rows=fronts)
+    short_controls = [
+        row for row in results if short_interval_forecast(row=row, config=config)
+    ]
+    short_fronts = metrics.pareto(
+        rows=short_controls,
+        keys=("case", "representation", "interval_s"),
+        objectives=metrics.OBJECTIVES,
+        cost="runtime_s",
+        include_unresolved=True,
+    )
+    metrics.csv_write(file=path / "short_interval_pareto.csv", rows=short_fronts)
     return results
+
+
+def short_interval_forecast(*, row, config):
+    dimensions = "x".join(str(n) for n in config["synthetic"]["dimensions_m"])
+    return (
+        row["stage"] == "large-references"
+        and row["dimensions_m"] == dimensions
+        and row["representation"] == "sampled"
+        and not metrics.is_true(row["reference_setup"])
+    )

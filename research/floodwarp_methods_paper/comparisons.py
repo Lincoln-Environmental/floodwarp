@@ -24,20 +24,23 @@ def pairwise(*, study, config):
             r["stage"] in ("long-storms", "resolution")
             and r["reference_setup"] == "False"
         ):
-            group[r["case"], r["representation"]].append(r)
+            group[r["case"], r["representation"], "120 × 80 m controls"].append(r)
     operational_path = study / "processed/million/observations.csv"
     if operational_path.exists():
+        from research.floodwarp_methods_paper.qualification.observations import (
+            short_interval_forecast,
+        )
+
         for r in csv_read(operational_path):
             if r["stage"] in ("million-storms", "million-auto", "recession-controls"):
-                group[r["case"], r["representation"]].append(r)
+                group[r["case"], r["representation"], "operational"].append(r)
+            elif short_interval_forecast(row=r, config=config):
+                group[r["case"], r["representation"], "short-interval controls"].append(
+                    r
+                )
     pairs = []
     feasible = []
-    for (case, rep), records in group.items():
-        cohort = (
-            "operational"
-            if records[0]["stage"] not in ("long-storms", "resolution")
-            else "120 × 80 m controls"
-        )
+    for (case, rep, cohort), records in group.items():
         for objective, metric in OBJECTIVES.items():
             if objective == "memory":
                 continue
