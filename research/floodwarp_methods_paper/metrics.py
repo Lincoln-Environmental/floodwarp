@@ -141,7 +141,10 @@ def storm_metrics(*, study, config):
             )
             final_iou_change = 1 - delta["final_iou_1cm"]
             uncertainty["final_inundation_change"] = final_iou_change
-            uncertainty["qualified_final_inundation"] = final_iou_change <= 0.05
+            uncertainty["qualified_final_inundation"] = (
+                final_iou_change <= 0.05
+                and bool((fields[fine[0]["attempt"]]["depth"] > 0.01).any())
+            )
             uncertainty.update(
                 {k: delta[v] for k, v in OBJECTIVES.items() if k != "memory"}
             )

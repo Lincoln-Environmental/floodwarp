@@ -14,7 +14,12 @@ def group_key(spec):
     return (spec["landform"], spec["seed"], tuple(spec["dimensions"]), spec["dx"])
 
 
-def samples(*, study, config):
+def group_is_selected(*, settings, heldout_family, partitions):
+    partition = "test" if settings["landform"] == heldout_family else settings["split"]
+    return partition in partitions
+
+
+def samples(*, study, config, partitions=("development", "validation", "test")):
     base = study / "processed/million/observations.csv"
     if not base.exists():
         return []
@@ -33,6 +38,12 @@ def samples(*, study, config):
         study=study, stage="million-auto", config=config
     ):
         s = rec["spec"]
+        if not group_is_selected(
+            settings=s,
+            heldout_family=config["advisor"]["heldout_family"],
+            partitions=partitions,
+        ):
+            continue
         row = values.get(rec["experiment_id"])
         if row is None:
             continue

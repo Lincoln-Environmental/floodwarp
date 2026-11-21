@@ -1,6 +1,6 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 190 numerical records remain outstanding. Values below cover completed events.
+**Qualification in progress.** 191 numerical records remain outstanding. Values below cover completed events.
 
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
@@ -28,18 +28,20 @@ For 96 cells, compacting the footprint costs extra launches and leaves little hy
 
 ## Operational storm matrix
 
-The 6 matched 1,024 × 1,024 comparisons covered 6 landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in 1 of 6 complete events. Its median ratio was 1.68×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
+The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in 1 of 8 complete events. Its median ratio was 1.69×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
 
-| Complete event | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| coastal-703-moderate-10240x10240 | 1048576 | 10 | 8 | 67.651 | 105.3 | 107.89 | unresolved | 1.56 | 1.06 |
-| fan-705-spatial-5120x5120 | 1048576 | 5 | 8 | 22.542 | 78.177 | 37.264 | unresolved | 1.65 | 1.42 |
-| floodplain-702-moderate-10240x10240 | 1048576 | 10 | 12 | 101 | 171.69 | 175.58 | unresolved | 1.7 | 1.12 |
-| hill-706-back-10240x10240 | 1048576 | 10 | 8 | 104.27 | 226.84 | 232.48 | unresolved | 2.18 | 1.45 |
-| plain-701-spatial-10240x10240 | 1048576 | 10 | 8 | 8.633 | 27.231 | 9.6535 | unresolved | 1.12 | 1.1 |
-| rolling-704-soil-5120x5120 | 1048576 | 5 | 8 | 70.34 | 156.65 | 144.93 | unresolved | 2.06 | 1.28 |
+| Complete event | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps | Fastest / FV1 per step |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| coastal-703-moderate-10240x10240 | 1048576 | 10 | 8 | 67.651 | 105.3 | 107.89 | unresolved | 1.56 | 1.06 | 1.47 |
+| fan-705-spatial-5120x5120 | 1048576 | 5 | 8 | 22.542 | 78.177 | 37.264 | unresolved | 1.65 | 1.42 | 1.16 |
+| floodplain-702-moderate-10240x10240 | 1048576 | 10 | 12 | 101 | 171.69 | 175.58 | unresolved | 1.7 | 1.12 | 1.51 |
+| hill-706-back-10240x10240 | 1048576 | 10 | 8 | 104.27 | 226.84 | 232.48 | unresolved | 2.18 | 1.45 | 1.5 |
+| incised-707-spatial-10240x10240 | 1048576 | 10 | 8 | 28.372 | 118.26 | 56.092 | unresolved | 1.98 | 1.62 | 1.22 |
+| mixed-708-spatial-10240x10240 | 1048576 | 10 | 8 | 30.451 | 124.16 | 51.032 | unresolved | 1.68 | 1.47 | 1.14 |
+| plain-701-spatial-10240x10240 | 1048576 | 10 | 8 | 8.633 | 27.231 | 9.6535 | unresolved | 1.12 | 1.1 | 1.02 |
+| rolling-704-soil-5120x5120 | 1048576 | 5 | 8 | 70.34 | 156.65 | 144.93 | unresolved | 2.06 | 1.28 | 1.61 |
 
-The archive contains 22 complete operational forecasts across the scale and fixed-area designs. The largest measured primary grid has 1,048,576 cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.
+The archive contains 29 complete operational forecasts across the scale and fixed-area designs. The largest measured primary grid has 1,048,576 cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.
 
 ## Mechanisms, measured cost and Pareto evidence
 
@@ -77,24 +79,25 @@ The primary event timings cover a single reference GPU and normal timestep polic
 |---|---:|---:|
 | million-terrain | 18 | 18 |
 | million-pilots | 6 | 6 |
-| million-storms | 22 | 62 |
+| million-storms | 29 | 62 |
 | million-auto | 0 | 18 |
 | large-references | 0 | 77 |
 | large-refinements | 0 | 29 |
 | heldout-references | 0 | 5 |
 | million-profiles | 0 | 9 |
 | million-repeats | 0 | 12 |
+| recession-controls | 0 | 8 |
 
 ## Measured configurations by observable
 
 | Observable | Eligible | Empirical frontier | Frontier under reference sensitivity | Unresolved |
 |---|---:|---:|---:|---:|
-| depth | 0 | 0 | 0 | 22 |
-| discharge | 0 | 0 | 0 | 22 |
-| inundation | 0 | 0 | 0 | 22 |
-| maximum_depth | 0 | 0 | 0 | 22 |
-| memory | 22 | 7 | 7 | 0 |
-| peak_discharge | 0 | 0 | 0 | 22 |
-| peak_timing | 0 | 0 | 0 | 22 |
+| depth | 0 | 0 | 0 | 29 |
+| discharge | 0 | 0 | 0 | 29 |
+| inundation | 0 | 0 | 0 | 29 |
+| maximum_depth | 0 | 0 | 0 | 29 |
+| memory | 29 | 9 | 9 | 0 |
+| peak_discharge | 0 | 0 | 0 | 29 |
+| peak_timing | 0 | 0 | 0 | 29 |
 
 Final 1 cm inundation is the common prediction target in the enlarged advisor. The historical paper also retains time-integrated inundation results. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)

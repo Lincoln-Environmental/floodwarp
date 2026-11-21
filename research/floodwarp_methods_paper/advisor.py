@@ -93,10 +93,19 @@ def terrain_features(*, study, config, output):
     return features
 
 
-def samples(*, study, config, features):
+def samples(
+    *, study, config, features, partitions=("development", "validation", "test")
+):
+    from research.floodwarp_methods_paper import evidence
+    from research.floodwarp_methods_paper.qualification import advisor_data
+
+    family = config["advisor"]["heldout_family"]
     raw = {
-        rec["experiment_id"]: r
-        for rec, r, _ in load(study=study, stages=("long-storms", "resolution"))
+        rec["experiment_id"]: study / rec["directory"] / "result.json"
+        for rec in evidence.records(study=study, stages=("long-storms", "resolution"))
+        if advisor_data.group_is_selected(
+            settings=rec["spec"], heldout_family=family, partitions=partitions
+        )
     }
     selected = []
     for r in csv_read(study / "processed/metrics/storms.csv"):
@@ -107,7 +116,9 @@ def samples(*, study, config, features):
             or r["method"] not in CANDIDATES
         ):
             continue
-        actual = raw[r["experiment_id"]]
+        if r["experiment_id"] not in raw:
+            continue
+        actual = json.loads(raw[r["experiment_id"]].read_text())
         sampled = [
             frame["supercritical_wet_fraction"]
             for frame in actual["samples"]
@@ -188,9 +199,9 @@ def samples(*, study, config, features):
                 run_id=r["experiment_id"],
             )
         )
-    from research.floodwarp_methods_paper.qualification import advisor_data
-
-    return selected + advisor_data.samples(study=study, config=config)
+    return selected + advisor_data.samples(
+        study=study, config=config, partitions=partitions
+    )
 
 
 def assess(*, model, rows, rules):
@@ -400,7 +411,12 @@ def tune(*, model, training, validation, settings, rule):
 
 
 def train(*, study, config, features, context, directory):
-    rows = samples(study=study, config=config, features=features)
+    rows = samples(
+        study=study,
+        config=config,
+        features=features,
+        partitions=("development", "validation"),
+    )
     settings = config["advisor"]
     from research.floodwarp_methods_paper.qualification import advisor_data
 
@@ -466,7 +482,7 @@ def validate(*, study, config, features, directory):
     ):
         raise ArithmeticError("Packaged advisor differs from the frozen model")
     model = json.loads(frozen.read_text())
-    rows = samples(study=study, config=config, features=features)
+    rows = samples(study=study, config=config, features=features, partitions=("test",))
     held = [
         r
         for r in rows

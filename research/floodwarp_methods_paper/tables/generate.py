@@ -399,6 +399,9 @@ def generate(*, study, output=None):
                 fastest_ratio=r["fastest_ratio"],
                 work_fraction=r["work_fraction"],
                 step_ratio=r["step_ratio"],
+                per_step_ratio=r["per_step_ratio"],
+                fastest_measured_policy=r["fastest_all_policy"],
+                fastest_measured_ratio=r["fastest_all_ratio"],
             )
             for r in policy
             if int(r["cells"]) >= 250000

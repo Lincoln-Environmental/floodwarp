@@ -70,6 +70,10 @@ def differences(*, a, b):
         wet_depth_rmse_m=rmse(h[wet], ref[wet]) if wet.any() else None,
         max_depth_rmse_m=rmse(aa["maximum"], bb["maximum"]),
         outlet_rmse_m3s=rmse(q, qr),
+        internal_rmse_m3s=rmse(
+            np.array([f["section_m3s"] for f in a["data"]["frames"]]),
+            np.array([f["section_m3s"] for f in b["data"]["frames"]]),
+        ),
         absolute_peak_error_m3s=float(abs(q.max() - qr.max())),
         signed_volume_error_m3=float(np.sum((q - qr) * np.diff(np.r_[0, t]))),
         absolute_peak_time_error_s=float(abs(t[q.argmax()] - t[qr.argmax()]))
@@ -117,7 +121,9 @@ def eligible(*, deltas, reference, objectives):
         gates[obj] = spread[obj] is not None and spread[obj] <= limits[obj]
         if obj in ("peak_discharge", "peak_timing", "discharge") and q == 0:
             gates[obj] = False
-        if obj == "inundation" and not (h >= 0.01).any():
+        if obj in ("peak_discharge", "peak_timing") and peak <= 0:
+            gates[obj] = False
+        if obj == "inundation" and not (h > 0.01).any():
             gates[obj] = False
     return gates, spread
 
@@ -136,6 +142,7 @@ def load_events(
         "large-references",
         "large-refinements",
         "heldout-references",
+        "recession-controls",
     ),
 ):
     group = defaultdict(list)
@@ -190,6 +197,7 @@ def performance(*, item, case, rep):
         "rejected",
         "dt_mean_s",
         "dt_min_s",
+        "setup_s",
         "graph_capture_s",
         "preload_s",
         "extraction_s",
@@ -211,6 +219,12 @@ def performance(*, item, case, rep):
     fine = [f["outlet_m3s"] for f in v["frames"]]
     row.update(
         outlet_peak_m3s=max(fine),
+        outlet_net_m3=float(np.sum(coarse) * 900),
+        dt_max_s=max(f["dt_max_s"] for f in v["frames"]),
+        peak_wet_fraction=max(f["wet_fraction"] for f in v["spatial"]),
+        peak_scheduled_fraction=max(f["active_fraction"] for f in v["spatial"]),
+        final_wet_fraction=v["spatial"][-1]["wet_fraction"],
+        final_area_1cm_m2=v["spatial"][-1]["cm_fraction"] * np.prod(s["dimensions"]),
         outlet_peak_900s_m3s=float(coarse.max()),
         peak_end_s=v["frames"][int(np.argmax(fine))]["t_s"] if max(fine) > 0 else None,
         peak_900s_end_s=900 * (1 + int(coarse.argmax())) if coarse.max() > 0 else None,
@@ -298,11 +312,15 @@ def build(*, study, config):
             row["reference_setup"] = i["stage"] not in (
                 "million-storms",
                 "million-auto",
+                "recession-controls",
             ) and not (rep == "sampled" and spacing(i) == 10)
             row.update(
                 {
                     "qualified_" + obj: bool(
-                        gates.get(obj, False) and fine and spacing(i) > spacing(fine)
+                        gates.get(obj, False)
+                        and fine
+                        and spacing(i) > spacing(fine)
+                        and row.get(metrics.OBJECTIVES[obj]) is not None
                     )
                     for obj in metrics.OBJECTIVES
                 }
@@ -338,7 +356,11 @@ def build(*, study, config):
     ):
         metrics.csv_write(file=path / (name + ".csv"), rows=rows)
     fronts = metrics.pareto(
-        rows=[r for r in results if r["stage"] in ("million-storms", "million-auto")],
+        rows=[
+            r
+            for r in results
+            if r["stage"] in ("million-storms", "million-auto", "recession-controls")
+        ],
         keys=("case", "representation", "landform"),
         objectives=metrics.OBJECTIVES,
         cost="runtime_s",

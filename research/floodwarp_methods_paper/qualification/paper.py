@@ -22,7 +22,13 @@ def material(*, study):
         for r in pol
         if int(r["cells"]) >= 1000000 and r["representation"] == "sampled"
     ]
-    million = [r for r in large if int(r["cells"]) == 1024**2]
+    million = [
+        r
+        for r in large
+        if int(r["cells"]) == 1024**2
+        and len(r["case"].split("-")) == 4
+        and 701 <= int(r["case"].split("-")[1]) <= 708
+    ]
     validation_path = p / "advisor/validation_strata.csv"
     grouped = csv_read(validation_path) if validation_path.is_file() else []
     held = [
@@ -65,8 +71,8 @@ def material(*, study):
             f"| {label} | {len(vals)} | {median(vals):.3f} | {sum(x <= 1.5 for x in vals)} |"
         )
     operational = [
-        "| Complete event | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Complete event | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps | Fastest / FV1 per step |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for r in sorted(large, key=case_order):
         operational.append(
@@ -83,11 +89,16 @@ def material(*, study):
                     number(r.get("auto_s"), 5),
                     number(r["fastest_ratio"]),
                     number(r["step_ratio"]),
+                    number(r.get("per_step_ratio")),
                 ]
             )
             + " |"
         )
-    event_rows = [r for r in raw if r["stage"] in ("million-storms", "million-auto")]
+    event_rows = [
+        r
+        for r in raw
+        if r["stage"] in ("million-storms", "million-auto", "recession-controls")
+    ]
     best = [float(r["fastest_ratio"]) for r in million]
     outcome = f"The {len(million)} matched 1,024 × 1,024 comparisons covered {len({r['landform'] for r in million})} landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in {sum(v <= 1.5 for v in best)} of {len(best)} complete events. Its median ratio was {number(median(best) if best else None)}×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations."
     audit = [

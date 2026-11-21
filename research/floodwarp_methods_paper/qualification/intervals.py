@@ -54,7 +54,11 @@ def compare(*, events, study):
     records = []
     for items in events.values():
         for item in items:
-            if item["stage"] in ("million-storms", "million-auto"):
+            if item["stage"] in (
+                "million-storms",
+                "million-auto",
+                "recession-controls",
+            ):
                 records.extend(history(item=item, seconds=900))
     peers = {
         (r["case"], r["dx"], r["end_s"]): r for r in records if r["method"] == "fv1"

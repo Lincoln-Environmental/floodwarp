@@ -314,10 +314,10 @@ def event_panel(*, records, cases, output, name):
             ax.axvline(6, color=".4", ls=":", lw=0.8)
     for row, label in enumerate(
         (
-            "Catchment rain (mm/h)",
+            "Rainfall (mm/h)",
             "Outlet flow (m³/s)",
-            "Positive-depth fraction",
-            "GPU time per 15 min (s)",
+            "Wet fraction",
+            "GPU time (s)\nper 15 min",
         )
     ):
         axes[row, 0].set_ylabel(label)
@@ -351,7 +351,11 @@ def generate(*, study):
             if int(r["cells"]) == 1024**2 and r["method"] == "hancock_adaptive"
         }
     )
-    main = [case for case in complete if case.split("-")[1] in ("701", "702", "708")]
+    main = [
+        case
+        for case in complete
+        if len(case.split("-")) == 4 and case.split("-")[1] in ("701", "702", "708")
+    ]
     if main:
         event_panel(
             records=histories, cases=main, output=out, name="18_operational_storms"

@@ -39,6 +39,10 @@ def policies(*, rows):
             step_ratio=float(t["steps"]) / float(fv["steps"]),
             dense_ratio=runtime(d) / runtime(fv),
             tiles_ratio=runtime(t) / runtime(fv),
+            fv1_ms_per_step=1000 * runtime(fv) / float(fv["steps"]),
+            fastest_hancock_ms_per_step=1000 * runtime(best) / float(best["steps"]),
+            per_step_ratio=(runtime(best) / float(best["steps"]))
+            / (runtime(fv) / float(fv["steps"])),
             fastest_mode=best["method"],
             fastest_ratio=runtime(best) / runtime(fv),
             fv1_id=fv["experiment_id"],
@@ -90,7 +94,11 @@ def aggregate(*, study, config):
         if r["stage"] in ("long-storms", "resolution")
         and r["reference_setup"] == "False"
     ]
-    primary = [r for r in results if r["stage"] in ("million-storms", "million-auto")]
+    primary = [
+        r
+        for r in results
+        if r["stage"] in ("million-storms", "million-auto", "recession-controls")
+    ]
     policy = policies(rows=small) + policies(rows=primary)
     metrics.csv_write(file=p / "million/policies.csv", rows=policy)
     geo = []
@@ -274,7 +282,12 @@ def verification(*, study, config):
     groups = observations.load_events(
         study=study,
         config=config,
-        include=("million-storms", "million-auto", "million-profiles"),
+        include=(
+            "million-storms",
+            "million-auto",
+            "million-profiles",
+            "recession-controls",
+        ),
     )
     for items in groups.values():
         by_dx = defaultdict(list)

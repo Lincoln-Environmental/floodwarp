@@ -28,7 +28,7 @@ def pairwise(*, study, config):
     operational_path = study / "processed/million/observations.csv"
     if operational_path.exists():
         for r in csv_read(operational_path):
-            if r["stage"] in ("million-storms", "million-auto"):
+            if r["stage"] in ("million-storms", "million-auto", "recession-controls"):
                 group[r["case"], r["representation"]].append(r)
     pairs = []
     feasible = []

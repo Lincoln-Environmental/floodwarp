@@ -94,7 +94,7 @@ def source(*, root, study, stage):
                 launch, "identity_original", launch.identity, create=True
             ):
                 return terrain_identity(root=root, study=study, stage=stage)
-        if stage in ("million-auto","recession-controls"):
+        if stage in ("million-auto", "recession-controls"):
             module = automatic if stage == "million-auto" else recession
             with patch.object(
                 launch, "identity_original", launch.identity, create=True
