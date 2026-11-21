@@ -26,8 +26,10 @@ FEATURES = (
     "initial_mean_m",
     "infiltration_mean_mm_h",
     "downstream_stage_m",
+    "log_cells",
+    "log_area",
 )
-CANDIDATES = ("li", "fv1", "low_froude_hll", "euler_mc", "hancock_adaptive", "adaptive")
+CANDIDATES = ("li", "fv1", "low_froude_hll", "euler_mc", "hancock_dense", "hancock_adaptive", "hancock_auto", "adaptive")
 
 
 def load_model(*, path=None):
@@ -51,6 +53,11 @@ def descriptors(*, terrain, hydraulic=None):
         connectivity_change=float(c["changed_outlet_fraction"]),
         area_m2=float(m["area_m2"]),
         cells=m["cells"],
+        log_cells=float(np.log(m["cells"])), log_area=float(np.log(m["area_m2"])),
+        critical_connection_lost=bool(c.get("native_connected") and not c.get("represented_connected", True)),
+        lost_channel_fraction=c.get("channel_loss_fraction") or 0.,
+        barrier_lowering_m=float(c.get("max_local_barrier_lowering_m", c.get("barrier_lowering_p95_m", 0))),
+
         rows=m["rows"],
         columns=m["columns"],
         resolution=float(m["dx_m"]),
@@ -68,7 +75,7 @@ def descriptors(*, terrain, hydraulic=None):
                 )
             values["expected_flow_regime"] = regime
         for key, value in hydraulic.items():
-            if key in FEATURES and value is not None:
+            if key in (*FEATURES, "maximum_barrier_lowering_m") and key not in ("log_area","log_cells") and value is not None:
                 if not np.isfinite(value):
                     raise ValueError("Hydraulic inputs must be finite")
                 values[key] = float(value)
@@ -138,6 +145,16 @@ def nearest(*, rows, query, model, k, slope_only=False):
     return selected
 
 
+def configuration(method):
+    labels = {
+        "fv1": ("FV1","contact HLL","sparse"), "low_froude_hll": ("FV1","low-Froude HLL","sparse"),
+        "euler_mc": ("MUSCL–Euler","MC","dense"), "hancock_dense": ("Hancock","adaptive","dense"),
+        "hancock_auto": ("Hancock","adaptive","auto"), "hancock_adaptive": ("Hancock","adaptive","tiles"), "adaptive": ("FV2 RK2","adaptive","dense"),
+        "li": ("LI","native","native")}
+    formulation, limiter, execution = labels[method]
+    return dict(formulation=formulation,limiter_flux=limiter,execution_mode=execution)
+
+
 def candidate_cost(row):
     return row["runtime_median_s"]
 
@@ -177,6 +194,12 @@ def recommend(
         warnings=[],
         source_revision=model["revision"],
     )
+    if features.get("critical_connection_lost") or (
+        features.get("maximum_barrier_lowering_m") is not None and
+        features.get("barrier_lowering_m", 0.) > features["maximum_barrier_lowering_m"]
+    ) or features.get("lost_channel_fraction", 0) > 0 and objective in ("inundation", "discharge", "peak_timing", "peak_discharge"):
+        result.update(status="refine_terrain", reason="The represented DEM loses a required hydraulic connection or exceeds the specified barrier tolerance.")
+        return result
     if (
         "validation_spacings" in model
         and features["resolution"] not in model["validation_spacings"]
@@ -213,6 +236,14 @@ def recommend(
             result["warnings"].append(
                 f"The benchmark does not cover the requested {key}."
             )
+            return result
+    # Restrict empirical runtimes to measured domain-size neighbours. Never use a
+    # 96-cell or metre-grid timing to fill a missing million-cell observation.
+    if "size_factor" in model and "cells" in features:
+        factor = model["size_factor"]
+        comparable=[r for r in comparable if features["cells"]/factor <= r["features"]["cells"] <= features["cells"]*factor]
+        if not comparable:
+            result["warnings"].append("No comparable measured cell count at the requested resolution.")
             return result
     for key, scale in model["scales"].items():
         if key not in features or scale["high"] != scale["low"]:
@@ -263,12 +294,15 @@ def recommend(
                 if missing
                 else float(np.quantile(errors, model["quantile"])),
             ]
+            pad = model.get("interval_padding", {}).get(objective, 0.)
+            bounds = [max(0.,bounds[0]-pad),bounds[1]+pad]
         feasible = (objective == "runtime" or bounds[1] <= tolerance) and (
             memory_mib is None or memory <= memory_mib
         )
         result["candidates"].append(
             dict(
                 method=method,
+                **configuration(method),
                 runtime_median_s=float(np.median(runtime)),
                 runtime_range_s=[float(runtime.min()), float(runtime.max())],
                 error_median=value,
@@ -287,6 +321,7 @@ def recommend(
         result.update(
             status="recommended",
             method=selected["method"],
+            **configuration(selected["method"]),
             runtime_s=selected["runtime_median_s"],
             error_range=selected["error_range"],
             confidence="empirical neighbourhood; see held-out coverage",

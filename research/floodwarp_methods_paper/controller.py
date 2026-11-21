@@ -96,6 +96,9 @@ def derived_identity(*, root, study, stage):
                 )
             ],
             base=original_identity(root=root, study=study, stage=stage),
+            corrective_sources={str(p.relative_to(root)):runner.checksum(p) for p in
+                                sorted((study/"qualification").glob("*")) if p.suffix in (".py",".json")},
+            corrective_inputs=[r["attempt"] for r in runner.archived(study=study,stages=("million-storms","million-auto","large-references","large-refinements","million-terrain","million-profiles"))],
             dependencies={
                 str(p.relative_to(root)): runner.checksum(p)
                 for p in dependencies
@@ -143,8 +146,11 @@ def select_specs(*, grid, source):
 
 
 def run(*, root, study, config_path, arguments):
+    from research.floodwarp_methods_paper.qualification import stages as large
     stage = arguments[0]
-    selected = runner.STAGES if stage == "all" else (stage,)
+    order = (*runner.SIMULATIONS, *large.NUMERICAL, "terrain-features", *large.OFFLINE, *runner.STAGES[9:])
+    selected = order if stage == "all" else (stage,)
+    raw_options = arguments[1:]
     extensions = {"convergence": fixed_dt, "resolution": terrain_controls}
     supplemental = {module.STAGE: module for module in extensions.values()}
     selected = tuple(
@@ -152,7 +158,7 @@ def run(*, root, study, config_path, arguments):
         for base in selected
         for name in ((base, extensions[base].STAGE) if base in extensions else (base,))
     )
-    if set(selected) - set((*runner.STAGES, *supplemental)):
+    if set(selected) - set((*order, *supplemental)):
         raise ValueError("Unknown study stage " + stage)
     arguments, grid = grid_filter(arguments=arguments[1:])
     opts = runner.options(args=arguments)
@@ -160,6 +166,13 @@ def run(*, root, study, config_path, arguments):
     started = perf_counter()
     for group in selected:
         flags = opts.copy()
+        if group in large.NUMERICAL:
+            large.numerical(root=root,study=study,config=config,stage=group,arguments=raw_options)
+            continue
+        if group in large.OFFLINE:
+            from research.floodwarp_methods_paper.qualification import reporting
+            reporting.offline(study=study,root=root,stage=group,config=config,flags=flags,grid=grid)
+            continue
         if group in supplemental:
             module = supplemental[group]
             select = select_specs(grid=grid, source=module.cases)

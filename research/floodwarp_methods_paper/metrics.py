@@ -269,18 +269,10 @@ def grid_key(row):
 
 
 def config_fields(*, method, dx):
-    policies = {
-        "fv1": ("FV1", "contact HLL", "sparse"),
-        "low_froude_hll": ("FV1", "low-Froude HLL", "sparse"),
-        "euler_mc": ("MUSCL–Euler", "MC", "dense"),
-        "hancock_adaptive": ("Hancock", "adaptive", "tiles"),
-        "hancock_dense": ("Hancock", "adaptive", "dense"),
-        "adaptive": ("FV2 RK2", "adaptive", "dense"),
-        "li": ("LI", "native", "native"),
-    }
-    formulation, limiter, mode = policies[method]
-    return dict(formulation=formulation, limiter_flux=limiter, execution_mode=mode,
-                configuration=f"{formulation} / {limiter} / {mode} / {float(dx):g} m")
+    from floodwarp.solver_advisor.model import configuration
+    fields = configuration(method)
+    return dict(**fields, configuration=" / ".join((*fields.values(), f"{float(dx):g} m")))
+
 
 
 def is_true(value):

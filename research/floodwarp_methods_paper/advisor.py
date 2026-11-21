@@ -167,10 +167,12 @@ def samples(*, study, config, features):
                     for k in config["advisor"]["tolerances"]
                 },
                 sampled_regime=regime,
+                wet_fraction=float(r["wet_fraction"]),
                 run_id=r["experiment_id"],
             )
         )
-    return selected
+    from research.floodwarp_methods_paper.qualification import advisor_data
+    return selected + advisor_data.samples(study=study,config=config)
 
 
 def assess(*, model, rows, rules):
@@ -181,11 +183,17 @@ def assess(*, model, rows, rules):
     for (case, dx), group in groups.items():
         for objective, tol in model["tolerances"].items():
             actual = {r["method"]: r for r in group if r["qualified"][objective]}
-            affordable = [r for r in actual.values() if r["errors"][objective] <= tol]
+            terrain=group[0]["features"]
+            admissible=not terrain.get("critical_connection_lost") and not (
+                terrain.get("lost_channel_fraction",0)>0 and objective in ("inundation","discharge","peak_timing","peak_discharge"))
+            affordable = [r for r in actual.values() if admissible and r["errors"][objective] <= tol]
             best = min(affordable, key=runtime) if affordable else None
             for rule in rules:
                 prediction = None
-                if rule in ("fv1", "hancock_adaptive"):
+                if rule=="oracle":
+                    method=best["method"] if best else None
+                    status="measured least-cost feasible option"
+                elif rule in ("fv1", "hancock_dense", "hancock_adaptive"):
                     method = rule
                     status = "fixed rule"
                 else:
@@ -208,7 +216,7 @@ def assess(*, model, rows, rules):
                     )
                 choice = actual.get(method)
                 feasible = (
-                    None if choice is None else choice["errors"][objective] <= tol
+                    None if choice is None else admissible and choice["errors"][objective] <= tol
                 )
                 regret = (
                     choice["runtime_s"] / best["runtime_s"] - 1
@@ -224,6 +232,8 @@ def assess(*, model, rows, rules):
                         split=group[0]["split"],
                         storm=group[0]["storm"],
                         dx=dx,
+                        cells=terrain["cells"], wet_fraction=group[0].get("wet_fraction"),
+                        mean_slope=terrain["mean_slope"], terrain_admissible=admissible,
                         objective=objective,
                         tolerance=tol,
                         rule=rule,
@@ -290,6 +300,9 @@ def summary(*, rows):
                 if qualified
                 else None,
                 agreement_pct=100 * np.mean(ties) if ties else None,
+                agreement_all_feasible_pct=100*sum(r["agrees"] is True for r in opportunities)/len(opportunities) if opportunities else None,
+                false_feasible_per_decision_pct=100*sum(r["feasible"] is False for r in allrows)/len(allrows),
+                abstention_pct=100*sum(r["chosen"] is None for r in allrows)/len(allrows),
                 median_regret_pct=100 * np.median(reg) if reg else None,
                 cheaper_acceptable=sum(r["cheaper_option"] is True for r in qualified),
                 abstentions=sum(r["chosen"] is None for r in allrows),
@@ -352,16 +365,10 @@ def tune(*, model, training, validation, settings, rule):
 def train(*, study, config, features, context, directory):
     rows = samples(study=study, config=config, features=features)
     settings = config["advisor"]
-    train = [
-        r
-        for r in rows
-        if r["split"] == "development" and r["landform"] != settings["heldout_family"]
-    ]
-    val = [
-        r
-        for r in rows
-        if r["split"] == "validation" and r["landform"] != settings["heldout_family"]
-    ]
+    from research.floodwarp_methods_paper.qualification import advisor_data
+    split=advisor_data.split_groups(rows=rows,heldout_family=settings["heldout_family"])
+    train=split["development"]
+    val=split["validation"]
     if (
         not train
         or not val
@@ -370,6 +377,7 @@ def train(*, study, config, features, context, directory):
         raise ValueError("Incomplete or leaking train/validation split")
     model = dict(
         training=train,
+        size_factor=2.0,
         validation_spacings=sorted({r["features"]["resolution"] for r in val}),
         scales=scales(rows=train),
         tolerances=settings["tolerances"],
@@ -379,6 +387,7 @@ def train(*, study, config, features, context, directory):
     )
     for rule in ("advisor", "slope"):
         tune(model=model, training=train, validation=val, settings=settings, rule=rule)
+    advisor_data.interval_calibration(model=model,rows=val)
     model["training_terrain_ids"] = sorted({r["terrain_id"] for r in train})
     model["validation_terrain_ids"] = sorted({r["terrain_id"] for r in val})
     write_json(path=directory / "model.json", data=model)
@@ -424,7 +433,7 @@ def validate(*, study, config, features, directory):
     ):
         raise ArithmeticError("Held-out group leakage")
     results = assess(
-        model=model, rows=held, rules=("advisor", "fv1", "hancock_adaptive", "slope")
+        model=model, rows=held, rules=("advisor", "fv1", "hancock_dense", "slope","oracle")
     )
     totals = summary(rows=results)
     for folder in (directory, study / "processed/advisor"):

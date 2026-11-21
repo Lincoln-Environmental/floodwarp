@@ -525,9 +525,9 @@ def advisor(*, study, out):
         for r in selected:
             if r["objective"] != obj:
                 continue
-            terrain = terrains[f"{r['terrain_id']}-{float(r['dx']):g}m"]
+            slope = float(r["mean_slope"])
             ax.scatter(
-                terrain["model"]["mean_slope"],
+                slope,
                 float(r["rain_mm"]),
                 c=COLOURS.get(r["chosen"], "#aaa"),
                 marker="o" if r["chosen"] else "x",
@@ -538,7 +538,7 @@ def advisor(*, study, out):
     save(fig=fig, folder=out, name="11_selection_regimes")
     fig, grid = plt.subplots(2, 2, figsize=(7.3, 6.5), layout="constrained")
     axes = grid.ravel()
-    choices = [m for m in LABELS if m != "hancock_dense"] + ["abstain"]
+    choices = [*LABELS, "abstain"]
     matrix = np.zeros((len(choices), len(choices)))
     for r in selected:
         matrix[
@@ -565,7 +565,7 @@ def advisor(*, study, out):
         if v:
             axes[1].scatter(np.full(len(v), i), v, s=9, alpha=0.5)
     axes[1].set(
-        xticks=range(4),
+        xticks=range(len({r["rule"] for r in rows})),
         xticklabels=sorted({r["rule"] for r in rows}),
         ylabel="Feasible runtime regret (%)",
     )
