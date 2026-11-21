@@ -28,8 +28,9 @@ def offline_machine(*, root, study):
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=root, text=True
     ).strip()
+    hardware = {k: v for k, v in source.items() if k not in ("source_sha256", "device")}
     return dict(
-        source,
+        hardware,
         git_sha=revision,
         analysis_cpu=platform.machine(),
         gpu=source.get("gpu", "unavailable"),
