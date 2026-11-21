@@ -114,6 +114,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
     from research.floodwarp_methods_paper.qualification import paper
 
     audit, extension = paper.material(study=study)
+    discussion += "\n" + paper.operational_discussion(study=study) + "\n"
     (study / "CORRECTIVE_AUDIT.md").write_text(audit)
     result += "\n" + synthesis.case_evidence(study=study) + "\n" + extension + "\n"
     (study / "LIMITATIONS.md").write_text(synthesis.limitations(study=study))

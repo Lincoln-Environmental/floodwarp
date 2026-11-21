@@ -10,6 +10,26 @@ def number(v, places=3):
     return "unresolved" if v in ("", None) else f"{float(v):.{places}g}"
 
 
+def core_event(row):
+    parts = row["case"].split("-")
+    return int(row["cells"]) == 1024**2 and len(parts)==4 and 701<=int(parts[1])<=708
+
+
+def operational_discussion(*, study):
+    rows = [r for r in csv_read(study/"processed/million/policies.csv") if core_event(r)]
+    if not rows:
+        return ""
+    time = [float(r["fastest_ratio"]) for r in rows]
+    steps = [float(r["step_ratio"]) for r in rows]
+    overhead = [float(r["per_step_ratio"]) for r in rows]
+    return (f"Across the {len(rows)} primary million-cell events, the faster measured explicit Hancock policy met "
+            f"1.5× FV1 in {sum(v<=1.5 for v in time)} cases. Its median full-event ratio was {median(time):.2f}×. "
+            f"The accepted-step ratios ranged from {min(steps):.2f} to {max(steps):.2f}, and the corresponding "
+            f"mean cost per accepted step ranged from {min(overhead):.2f} to {max(overhead):.2f} times FV1. "
+            "These factors multiply within each event. The normal timestep policy therefore matters even where "
+            "tile scheduling removes most of the dry-domain arithmetic. [Per-event costs](../tables/11_execution.md)")
+
+
 def material(*, study):
     p = study / "processed"
     pol = csv_read(p / "million/policies.csv")
@@ -22,13 +42,7 @@ def material(*, study):
         for r in pol
         if int(r["cells"]) >= 1000000 and r["representation"] == "sampled"
     ]
-    million = [
-        r
-        for r in large
-        if int(r["cells"]) == 1024**2
-        and len(r["case"].split("-")) == 4
-        and 701 <= int(r["case"].split("-")[1]) <= 708
-    ]
+    million = [r for r in large if core_event(r)]
     validation_path = p / "advisor/validation_strata.csv"
     grouped = csv_read(validation_path) if validation_path.is_file() else []
     held = [
