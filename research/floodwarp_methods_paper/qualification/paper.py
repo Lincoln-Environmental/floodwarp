@@ -36,6 +36,35 @@ def operational_discussion(*, study):
     )
 
 
+def timestep_attribution(*, events):
+    if not events:
+        return ""
+    accepted = sum(int(row["hancock_steps"]) for row in events)
+    rejected = sum(int(row["rejected"]) for row in events)
+    first_order = sum(int(row["fv1_steps"]) for row in events)
+    ratio, family, steps, retries = max(
+        (
+            float(row["step_ratio"]),
+            row["landform"],
+            int(row["hancock_steps"]),
+            int(row["rejected"]),
+        )
+        for row in events
+    )
+    return (
+        f"Across the {len(events)} primary events Hancock accepted {accepted:,} steps and rejected {rejected:,} trials "
+        f"({100 * rejected / (accepted + rejected):.2f}% of trials). FV1 accepted {first_order:,} steps. "
+        f"The {family} case had the largest accepted-step ratio ({ratio:.2f}×), with {retries:,} retries for "
+        f"{steps:,} accepted steps. Rejections explain little of the event-wide step count. "
+        "Earlier instrumented wet fronts located the restrictive signal at a reconstructed wet/dry face. "
+        "A separate incised outlet case was limited by the cell-centred gravity-wave speed. "
+        "The million-cell receipts measure the accepted and rejected counts. Identifying the limiting face or "
+        "cell at each step would require instrumenting those runs. "
+        "[Per-event timestep records](processed/million/observations.csv) · "
+        "[Earlier CFL attribution](../../validation/hancock_long_storm_review/REPORT.md#timestep-attribution)"
+    )
+
+
 def material(*, study):
     p = study / "processed"
     pol = csv_read(p / "million/policies.csv")
@@ -159,6 +188,8 @@ def material(*, study):
         f"The archive contains {len(event_rows)} complete operational forecasts across the scale and fixed-area designs. The largest measured primary grid has {max((int(r['cells']) for r in event_rows), default=0):,} cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.",
         "",
         "## Mechanisms, measured cost and Pareto evidence",
+        "",
+        timestep_attribution(events=million),
         "",
         "The steps-ratio column isolates restrictions from the remaining per-step cost. The scheduling table records wet and padded work fractions. The complete graph replays measure individual kernel categories independently of uninstrumented wall time. Dominated, tied and unresolved configurations are traceable to individual runs. Allocation footprint and runtime each have a distinct objective. [Execution rows](processed/million/policies.csv) · [Large-domain Pareto decisions](processed/million/pareto.csv) · [Kernel attribution](processed/million/graph_profile.csv) · [Equal-budget comparisons](tables/08_cost_accuracy.md)",
         "",
