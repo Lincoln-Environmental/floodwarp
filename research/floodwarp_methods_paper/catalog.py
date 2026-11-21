@@ -69,6 +69,7 @@ def collect(*, study):
         "synthetic",
         "long-storms",
         "resolution",
+        "terrain-initial-controls",
         "calibration",
         "performance",
     }

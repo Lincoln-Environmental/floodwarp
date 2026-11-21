@@ -14,7 +14,12 @@ from research.floodwarp_methods_paper import (
     statistics,
     reference_audit,
 )
-from research.floodwarp_methods_paper import catalog, evidence
+from research.floodwarp_methods_paper import (
+    catalog,
+    evidence,
+    terrain_controls,
+    geometry,
+)
 from research.floodwarp_methods_paper.plan import specs
 from research.floodwarp_methods_paper.runner import (
     archived,
@@ -32,15 +37,17 @@ DATA_STAGES = (
     "resolution",
     "calibration",
     "performance",
+    terrain_controls.STAGE,
 )
 
 
 def completeness(*, study, config, stages):
     counts = {}
     for stage in stages:
+        planner = terrain_controls.cases if stage == terrain_controls.STAGE else specs
         expected = {
             digest(dict(stage=stage, settings=s, config=config))[:24]
-            for s in specs(stage=stage, root=study.parents[1], config=config)
+            for s in planner(stage=stage, root=study.parents[1], config=config)
         }
         complete = {
             r["experiment_id"] for r in evidence.records(study=study, stages=(stage,))
@@ -84,7 +91,14 @@ def verify(*, study, config):
     nr = 0
     parity = 0
     for rec, row, folder in metrics.load(
-        study=study, stages=("long-storms", "resolution", "calibration", "performance")
+        study=study,
+        stages=(
+            "long-storms",
+            "resolution",
+            "calibration",
+            "performance",
+            terrain_controls.STAGE,
+        ),
     ):
         if "samples" not in row:
             continue
@@ -112,18 +126,18 @@ def verify(*, study, config):
             ):
                 raise ArithmeticError("Accepted history failed " + rec["experiment_id"])
         h = digest([f[k] for k in forcing_keys])
-        key = (s["case"], s["dx"], s["dem"], s["multiplier"])
+        key = (s["case"], s["dx"], s["dem"], s["multiplier"], s.get("initial_geometry"))
         if key in groups and h != groups[key]:
             raise ArithmeticError("Unmatched forcing " + str(key))
         groups[key] = h
         nr += 1
     matched = {}
     for rec, row, folder in metrics.load(
-        study=study, stages=("long-storms", "resolution")
+        study=study, stages=("long-storms", "resolution", terrain_controls.STAGE)
     ):
         s = rec["spec"]
         if s["method"] in ("hancock_dense", "hancock_adaptive"):
-            key = s["case"], s["dx"], s["dem"]
+            key = s["case"], s["dx"], s["dem"], s.get("initial_geometry")
             matched.setdefault(key, {})[s["method"]] = (row, folder)
     for key, pair in matched.items():
         if len(pair) != 2:
@@ -207,6 +221,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
         reference_audit.independent(study=study)
         reference_audit.assess(study=study)
         reference_audit.integrity_by_family(study=study)
+        geometry.compare(study=study)
         statistics.temporal_orders(study=study)
         statistics.operating(study=study)
         statistics.transfer_groups(study=study, settings=config["advisor"])

@@ -1,0 +1,7 @@
+# Initial-state control for terrain attribution
+
+This amendment was recorded during execution of the plain resolution matrix, before evaluating the fan resolution or advisor outcomes. Inspection of the terrain generator showed that initial channel depth is defined from the represented valley position. Resampling the fan bed can therefore change initial depth and momentum. The development plain and incised catchment start dry. Rainfall and infiltration use physical cell coordinates independently of the DEM sampling operator.
+
+Retain all planned fixed-DEM and resampled-DEM runs. Add fourteen fan runs at 5 m and 1 m, covering each of the seven execution choices. They use the fixed 10 m bed and copy initial depth and longitudinal momentum from the corresponding continuous-terrain sample at the same hydraulic grid spacing. Preserve roughness, boundaries, rain, infiltration, solver controls and accepted-step recording. Pair each new run with its sampled-bed counterpart after verifying equal forcing and initial-state hashes. Separately compare the new and original fixed-bed runs to quantify the initial-state effect. Calculate final-depth and outlet differences on common support and report a difference of signed difference fields between the two spacings. No primary metric, reference-qualification threshold or held-out split changes.
+
+The explicit `terrain-initial-controls` command runs the added cases. A full `resolution` or `all` run includes them. The fresh runs and numerical source fingerprints have separate identities.

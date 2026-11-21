@@ -517,6 +517,7 @@ def build(*, study, config):
                         "performance",
                         "calibration",
                         "synthetic",
+                        "terrain-initial-controls",
                     ),
                 )
             ],

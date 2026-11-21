@@ -11,6 +11,10 @@ from research.floodwarp_methods_paper.runner import archived, digest, source_ide
 
 @lru_cache(maxsize=64)
 def implementation(study, stage):
+    if stage == "terrain-initial-controls":
+        from research.floodwarp_methods_paper import terrain_controls
+
+        return terrain_controls.source(root=study.parents[1], study=study, stage=stage)
     return source_identity(root=study.parents[1], study=study, stage=stage)
 
 

@@ -19,6 +19,7 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 | synthetic | Generate and independently repeat 24 seeded landforms at three grid spacings |
 | long-storms | Matched production forecasts and two reference refinements per storm |
 | resolution | Fixed and resampled terrain on matched domains |
+| terrain-initial-controls | Added paired fan runs with matched initial channel water at both spacings, included by resolution |
 | calibration | Physical roughness controls, bounded training and held-out transfer |
 | performance | Repeated operational forecasts and common-cap GPU controls |
 | terrain-features | Read the simulation archives, derive hydraulic errors, compare grids, map terrain and compute Pareto sets |

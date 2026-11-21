@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
     cat <<'HELP'
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--force] [--dry-run]
-Stages: check analytical convergence synthetic long-storms resolution calibration performance
+Stages: check analytical convergence synthetic long-storms resolution terrain-initial-controls calibration performance
         terrain-features advisor-train advisor-validate tables figures manuscript verify all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
 Running check creates a Python 3.14 environment if needed and verifies the pinned packages.

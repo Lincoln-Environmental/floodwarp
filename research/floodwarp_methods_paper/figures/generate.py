@@ -229,40 +229,41 @@ def terrains(*, study, out):
 
 
 def resolution(*, study, out):
-    rows = csv_read(study / "processed/metrics/storms.csv")
-    fig, axes = plt.subplots(2, 3, figsize=(8, 4.5), layout="constrained")
+    rows = csv_read(study / "processed/comparisons/terrain_attribution.csv")
+    fig, axes = plt.subplots(2, 3, figsize=(8, 4.8), layout="constrained")
     for col, land in enumerate(("plain", "fan", "incised")):
-        target = next(
-            r["case"]
-            for r in rows
-            if r["stage"] == "resolution" and r["landform"] == land
-        )
-        for rep, style in (("sampled", "-"), ("fixed", "--")):
-            for m in ("fv1", "hancock_adaptive", "adaptive"):
-                for ax, k in zip(
-                    axes[:, col], ("depth_rmse_m", "outlet_rmse_m3s"), strict=True
-                ):
-                    data = sorted(
-                        {
-                            (float(r["dx"]), float(r[k]))
-                            for r in rows
-                            if r["landform"] == land
-                            and r["representation"] == rep
-                            and r["method"] == m
-                            and r["case"] == target
-                            and r["stage"] in ("resolution", "long-storms")
-                            and r["reference_setup"] == "False"
-                            and r["reference_self"] == "False"
-                        }
+        for ax, observable, units in zip(
+            axes[:, col],
+            ("depth", "discharge"),
+            ("Depth RMSE (m)", "Outlet RMSE (m³/s)"),
+            strict=True,
+        ):
+            for field, style in (
+                ("fixed_geometry_numerical_rmse", "-"),
+                ("matched_initial_bed_effect_rmse", "--"),
+            ):
+                for method in ("fv1", "hancock_adaptive", "adaptive"):
+                    pts = sorted(
+                        (float(r["dx"]), float(r[field]))
+                        for r in rows
+                        if (r["family"], r["observable"], r["method"])
+                        == (land, observable, method)
                     )
-                    if data:
-                        ax.plot(
-                            *zip(*data), marker="o", linestyle=style, color=COLOURS[m]
-                        )
-        axes[0, col].set(title=land, ylabel="Final depth RMSE (m)")
-        axes[1, col].set(xlabel="Hydraulic spacing (m)", ylabel="Outlet RMSE (m³/s)")
+                    ax.plot(
+                        *zip(*pts),
+                        linestyle=style,
+                        marker="o",
+                        ms=3,
+                        color=COLOURS[method],
+                    )
+            ax.set(
+                xlabel="Hydraulic spacing (m)",
+                ylabel=units,
+                xticks=(1, 5, 10),
+                title=land,
+            )
     fig.suptitle(
-        "Continuous terrain samples (solid) and fixed 10 m geometry (dashed)",
+        "Fixed-bed refinement (solid) and bed change at identical initial state (dashed)",
         fontsize=9,
     )
     legend(fig=fig)

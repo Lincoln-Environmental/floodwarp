@@ -66,3 +66,38 @@ def test_timing_repeats_share_hydraulic_identity_across_stages():
         record=record, row=dict(row, forcing=dict(forcing, terrain_sha256="alternate"))
     )
     assert different[0] != ids[0] and different[1] != ids[1]
+
+
+def test_fan_control_preserves_bed_and_replaces_only_initial_state():
+    import json
+    from pathlib import Path
+
+    import numpy as np
+
+    from research.floodwarp_methods_paper.plan import read_config
+    from research.floodwarp_methods_paper.terrain_controls import fixed_initial
+    from research.floodwarp_methods_paper.terrain.generators.generate import fields
+
+    root = Path(__file__).resolve().parents[1]
+    config = read_config(
+        path=root / "research/floodwarp_methods_paper/configs/study.json"
+    )
+    template = json.loads(
+        (root / "validation/hancock_long_storm_review/cases.json").read_text()
+    )
+    options = dict(
+        design=config["synthetic"],
+        template=template,
+        family="fan",
+        seed=18217,
+        initial="channel",
+        dx=1,
+    )
+    controlled, _ = fixed_initial(**options, dem=10)
+    original, _ = fields(**options, dem=10)
+    sampled, _ = fields(**options, dem=1)
+    assert not np.array_equal(original[1], sampled[1])
+    for index in (0, 3, 4):
+        np.testing.assert_array_equal(controlled[index], original[index])
+    for index in (1, 2):
+        np.testing.assert_array_equal(controlled[index], sampled[index])
