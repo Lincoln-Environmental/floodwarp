@@ -39,24 +39,33 @@ def offline_machine(*, root, study):
     )
 
 
-def missing_output(*, study, stage):
-    manifests = runner.archived(study=study, stages=(stage,))
-    if not manifests:
+def missing_output(*, root, study, stage, config, system, device):
+    # Checkout timestamps are independent of the original experiment order.
+    [settings] = runner.specs(stage=stage, config=config, root=root)
+    case = runner.digest(dict(stage=stage, settings=settings, config=config))[:24]
+    inputs = runner.archived(
+        study=study, stages=runner.STAGES[: runner.STAGES.index(stage)]
+    )
+    execution = runner.digest(
+        dict(
+            case=case,
+            source=derived_identity(root=root, study=study, stage=stage),
+            hardware=[system["gpu"], system["warp"], system["python"], device],
+            inputs=[record["attempt"] for record in inputs],
+        )
+    )[:24]
+    manifest = study / "manifests" / stage / (execution + ".json")
+    if not manifest.is_file():
         return False
-    record = max(manifests, key=receipt_time(study))
+    record = json.loads(manifest.read_text())
+    if record["status"] != "complete":
+        return False
     result = json.loads((study / record["directory"] / "result.json").read_text())
     for name, expected in result.get("output_sha256", {}).items():
         path = study / name
         if not path.exists() or runner.checksum(path) != expected:
             return True
     return False
-
-
-def receipt_time(study):
-    def modified(record):
-        return (study / record["directory"] / "receipt.json").stat().st_mtime_ns
-
-    return modified
 
 
 def derived_identity(*, root, study, stage):
@@ -184,7 +193,14 @@ def run(*, root, study, config_path, arguments):
                 system = runner.machine(root=root)
             else:
                 system = offline_machine(root=root, study=study)
-                if missing_output(study=study, stage=group):
+                if missing_output(
+                    root=root,
+                    study=study,
+                    stage=group,
+                    config=config,
+                    system=system,
+                    device=flags["device"],
+                ):
                     flags["force"] = True
         identity = (
             original_identity if group in runner.SIMULATIONS else derived_identity
