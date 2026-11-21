@@ -22,7 +22,12 @@ from research.floodwarp_methods_paper.metrics import (
     csv_write,
     load,
 )
-from research.floodwarp_methods_paper.runner import write_json
+from research.floodwarp_methods_paper.runner import (
+    write_json,
+    archived,
+    checksum,
+    digest,
+)
 
 
 def key(*, land, seed, dx):
@@ -390,7 +395,23 @@ def train(*, study, config, features, context, directory):
 
 
 def validate(*, study, config, features, directory):
-    model = json.loads((study / "processed/advisor/model.json").read_text())
+    frozen = study / "processed/advisor/model.json"
+    model_hash = checksum(frozen)
+    fit_records = archived(study=study, stages=("advisor-train",))
+    matches = [
+        r
+        for r in fit_records
+        if r["config_sha256"] == digest(config)
+        and r["artifacts"].get("model.json") == model_hash
+    ]
+    if not matches:
+        raise ArithmeticError("The model does not match an immutable training receipt")
+    if (
+        checksum(study.parents[1] / "src/floodwarp/solver_advisor/model.json")
+        != model_hash
+    ):
+        raise ArithmeticError("Packaged advisor differs from the frozen model")
+    model = json.loads(frozen.read_text())
     rows = samples(study=study, config=config, features=features)
     held = [
         r
@@ -409,5 +430,8 @@ def validate(*, study, config, features, directory):
         csv_write(file=folder / "heldout.csv", rows=results)
         csv_write(file=folder / "summary.csv", rows=totals)
     return dict(
-        total=len(results), groups=len({r["terrain_id"] for r in held}), rules=totals
+        total=len(results),
+        groups=len({r["terrain_id"] for r in held}),
+        rules=totals,
+        frozen_model_sha256=model_hash,
     )
