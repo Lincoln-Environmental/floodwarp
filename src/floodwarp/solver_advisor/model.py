@@ -209,6 +209,7 @@ def recommend(
         result["warnings"].append(
             "Missing hydraulic descriptors broaden uncertainty: " + ", ".join(missing)
         )
+    prefix = "slope_" if slope_only and "slope_k" in model else ""
     for method in CANDIDATES:
         pool = [
             r
@@ -217,9 +218,13 @@ def recommend(
             and (objective == "runtime" or r["qualified"].get(objective, False))
         ]
         neighbors = nearest(
-            rows=pool, query=features, model=model, k=model["k"], slope_only=slope_only
+            rows=pool,
+            query=features,
+            model=model,
+            k=model[prefix + "k"],
+            slope_only=slope_only,
         )
-        if len(neighbors) < 2 or neighbors[0][0] > model["distance_limit"]:
+        if len(neighbors) < 2 or neighbors[0][0] > model[prefix + "distance_limit"]:
             continue
         ns = [r for _, r in neighbors]
         runtime = np.array([r["runtime_s"] for r in ns])

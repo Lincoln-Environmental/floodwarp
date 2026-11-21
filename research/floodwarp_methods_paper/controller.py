@@ -64,6 +64,7 @@ def derived_identity(*, root, study, stage):
         dependencies.append(study / name)
     for name in (
         "fv1_diffusion_review/calibration/transfers.json",
+        "fv1_diffusion_review/local_inertia.json",
         "hancock_long_storm_review/event_summary.csv",
     ):
         dependencies.append(root / "validation" / name)

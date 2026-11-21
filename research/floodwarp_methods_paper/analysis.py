@@ -5,7 +5,13 @@ import sqlite3
 
 import numpy as np
 
-from research.floodwarp_methods_paper import advisor, comparisons, metrics, statistics
+from research.floodwarp_methods_paper import (
+    advisor,
+    comparisons,
+    metrics,
+    statistics,
+    reference_audit,
+)
 from research.floodwarp_methods_paper.plan import specs
 from research.floodwarp_methods_paper.runner import (
     archived,
@@ -174,6 +180,9 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
         rows = metrics.build(study=study, config=config)
         comparisons.pairwise(study=study, config=config)
         comparisons.historical(root=root, study=study)
+        reference_audit.independent(study=study)
+        reference_audit.assess(study=study)
+        reference_audit.integrity_by_family(study=study)
         statistics.temporal_orders(study=study)
         statistics.operating(study=study)
         statistics.transfer_groups(study=study, settings=config["advisor"])

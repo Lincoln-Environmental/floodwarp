@@ -287,6 +287,39 @@ def summary(*, rows):
     return output
 
 
+def tune(*, model, training, validation, settings, rule):
+    slope_only = rule == "slope"
+    prefix = "slope_" if slope_only else ""
+    distances = []
+    for row in validation:
+        peers = [
+            r
+            for r in training
+            if r["method"] == row["method"]
+            and r["features"]["resolution"] == row["features"]["resolution"]
+        ]
+        neighbours = nearest(
+            rows=peers, query=row["features"], model=model, k=1, slope_only=slope_only
+        )
+        if neighbours:
+            distances.append(neighbours[0][0])
+    model[prefix + "distance_limit"] = float(
+        np.quantile(distances, settings["coverage_quantile"])
+    )
+    criteria = []
+    for k in settings["neighbours"]:
+        model[prefix + "k"] = k
+        predictions = assess(model=model, rows=validation, rules=(rule,))
+        false = sum(r["feasible"] is False for r in predictions)
+        missed = sum(
+            r["optimal"] is not None and r["feasible"] is not True for r in predictions
+        )
+        regret = sum(r["regret"] for r in predictions if r["regret"] is not None)
+        criteria.append((false, missed, regret, k))
+    model[prefix + "k"] = min(criteria)[-1]
+    model[prefix + "validation_selection"] = [list(row) for row in criteria]
+
+
 def train(*, study, config, features, context, directory):
     rows = samples(study=study, config=config, features=features)
     settings = config["advisor"]
@@ -314,35 +347,8 @@ def train(*, study, config, features, context, directory):
         revision=context["git_sha"],
         quantile=settings["quantile"],
     )
-    distances = []
-    for r in val:
-        peers = [
-            q
-            for q in train
-            if q["method"] == r["method"]
-            and q["features"]["resolution"] == r["features"]["resolution"]
-        ]
-        nn = nearest(rows=peers, query=r["features"], model=model, k=1)
-        if nn:
-            distances.append(nn[0][0])
-    model["distance_limit"] = float(
-        np.quantile(distances, settings["coverage_quantile"])
-    )
-    criteria = []
-    for k in settings["neighbours"]:
-        model["k"] = k
-        pred = assess(model=model, rows=val, rules=("advisor",))
-        # Per validation objective with a feasible option: penalize inaccurate decisions, then missed feasible choices.
-        false = sum(r["feasible"] is False for r in pred)
-        missed = sum(
-            r["optimal"] and r["feasible"] is not True
-            for r in pred
-            if r["optimal"] is not None
-        )
-        reg = sum(r["regret"] for r in pred if r["regret"] is not None)
-        criteria.append((false, missed, reg, k))
-    model["k"] = min(criteria)[-1]
-    model["validation_selection"] = [list(x) for x in criteria]
+    for rule in ("advisor", "slope"):
+        tune(model=model, training=train, validation=val, settings=settings, rule=rule)
     model["training_terrain_ids"] = sorted({r["terrain_id"] for r in train})
     model["validation_terrain_ids"] = sorted({r["terrain_id"] for r in val})
     write_json(path=directory / "model.json", data=model)
