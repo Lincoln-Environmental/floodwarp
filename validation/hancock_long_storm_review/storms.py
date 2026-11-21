@@ -115,7 +115,9 @@ def event(
         ledger = diagnostics(model=model)
         active = {} if li else s.execution_diagnostics()
         w = h > s.dry_depth
-        speed = np.hypot(state[..., 1], state[..., 2])[w] / h[w]
+        depths = h[w]
+        speed = np.hypot(state[..., 1][w], state[..., 2][w]) / depths
+        froude = speed / np.sqrt(float(s.gravity) * depths)
         samples.append(
             dict(
                 t_s=t,
@@ -129,6 +131,13 @@ def event(
                 rain_m3=ledger["rain"],
                 loss_m3=ledger["infiltration"],
                 max_speed_ms=speed.max(initial=0.0),
+                wet_froude_p95=float(np.quantile(froude, 0.95))
+                if froude.size
+                else None,
+                wet_froude_max=float(froude.max()) if froude.size else None,
+                supercritical_wet_fraction=float((froude > 1.0).mean())
+                if froude.size
+                else None,
                 max_abs_residual_m3=abs(ledger["residual_m3"]),
                 steps=stats["steps"],
                 dt_min_s=stats["dt_min_s"],

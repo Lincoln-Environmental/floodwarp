@@ -2,6 +2,8 @@
 
 The investigation started from local and remote `dev` at `018032761146a915bd6089f858a97500715e3758`. The controls ran on one RTX 4070 Ti SUPER with 16 GiB, driver 595.99.02, Python 3.14.7 and Warp 1.17.0. All new hydraulic inputs are synthetic. The executable benchmark uses FP64. The historical qualification files remain available at their original paths.
 
+The measurements below document the scheduler development sequence. The integrated-source engineering decision includes operational timings after the constant-capacity optimisation. [Integrated results and recommendation](DECISION.md)
+
 ## Where the 2.85× penalty came from
 
 The 1,024 × 640 control advances 2 s in 64 accepted steps of 0.03125 s. Seven synchronised repetitions after warmup and capture gave the following median hydraulic wall times. Each Hancock scheduler produced the same final conservative-state hash for a given case.
@@ -12,9 +14,9 @@ The 1,024 × 640 control advances 2 s in 64 accepted steps of 0.03125 s. Seven s
 | Baseline dense Hancock | 147.02 | 90.70 |
 | Baseline fixed-mask Hancock | 147.48 | 75.48 |
 | Baseline dynamic face tiles | 147.66 | 91.83 |
-| Final production FV1 control | 153.77 | 31.82 |
-| Final dense Hancock | 146.94 | 90.48 |
-| Final Hancock cell and face tiles | 152.83 | 32.56 |
+| Scheduler revision FV1 control | 153.77 | 31.82 |
+| Scheduler revision dense Hancock | 146.94 | 90.48 |
+| Scheduler revision Hancock cell and face tiles | 152.83 | 32.56 |
 
 Dense Hancock evaluates two source half-steps, the shock stencil, the fused spatial reconstruction and predictor, both face grids, donor budgets, face limiting, the Euler update and two accepted-volume passes over the entire raster. Its fixed list follows the terrain validity mask. Every terrain cell is valid in the dry-strip benchmark. Dynamic face tiles reduce the HLL work but scan face runs serially within a thread, clear excluded scratch and leave the other grid passes intact. FV1 already restricts its hydraulic passes to the post-source wet footprint and halo. The step counts and retries were identical in this control.
 
@@ -121,6 +123,10 @@ The additional 250,000-cell tests expose terrain dependence at a common size and
 
 
 On the 10 m primary grids, the largest sampled wet-cell speeds were 0.887 m/s for Hancock and 0.277 m/s for FV1, both on the incised intense storm. In the incised 1 m moderate storm, Hancock reached 0.670 m/s and FV2 0.670 m/s. These are output-time cell averages above the momentum threshold. Faster reconstructed face signals between outputs can restrict the timestep. [Measured speeds and timesteps](event_summary.csv)
+
+In the incised 1 m event, 15 of 16 sampled trial bounds came from cell-centred characteristic speeds. At 11,700 s the tightest sampled bound was 0.07113 s, at outlet cell (row 76, column 239). Its pre-flux depth was 0.797 m and normal velocity −0.0156 m/s. At this output FV2 had 0.796 m maximum depth, whereas FV1 had only 0.0752 m. The last five cells along this channel had an approximately level 0.240 m water surface with Hancock. These different outlet storage predictions explain much of the timestep ratio. The native SWE FREE exit extrapolates the interior state and prevents incoming mass. Subcritical drainage and pool elevation therefore remain sensitive to the outlet model. Agreement between the two higher-order implementations cannot validate that pool as physical truth.
+
+In the mixed 10 m spatial event, 22 of 26 sampled trial bounds came from faces. At 20,700 s a face at (9, 7) adjoined a dry cell. The reconstructed wet trace was 0.156 mm deep at 1.112 m/s normal velocity. The largest cell-average speed in the same pre-flux state was 0.0512 m/s. This case has a real shallow-trace conditioning penalty, distinct from the incised outlet gravity-wave restriction. The audit independently reproduced the solver's selected global bound on every sampled trial. [Locations, mechanisms and face states](storm_cfl.json)
 
 Restricting proposal growth to 5% per accepted timestep reduced rejected trials from 4,703 to 2,865 in the mixed spatial storm. Runtime fell from 1.487 to 1.366 s while final depth changed by 0.00130 mm RMSE. On the incised moderate, coastal moderate and fan back-loaded controls the same growth rule cost 1–2% more runtime. The measured retry benefit is concentrated in the mixed wetting transition. The ordinary timestep policy remains appropriate as the common qualification policy. [All 16 predictor-growth trials](retry_growth.json)
 

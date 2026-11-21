@@ -125,6 +125,13 @@ FLOODWARP_REGRESSION_RESULTS=validation/hancock_long_storm_review/integrated_reg
 FLOODWARP_ANALYTICAL_RESULTS=validation/hancock_long_storm_review/integrated_analytical .venv/bin/python -m validation.hancock_long_storm_review.analytical
 OVERLANDER_TEST_FULL_SWE_CUDA=1 FLOODWARP_TEST_RENDER=1 .venv/bin/python -m pytest -q -rs > /tmp/floodwarp_hancock_integrated_tests.log
 .venv/bin/python -m validation.hancock_long_storm_review.test_evidence
+.venv/bin/python -m validation.hancock_long_storm_review.accuracy
+.venv/bin/python -m validation.hancock_long_storm_review.interpret
+.venv/bin/python -m validation.hancock_long_storm_review.summarize
+.venv/bin/python -m validation.hancock_long_storm_review.results_text
+.venv/bin/python -m validation.hancock_long_storm_review.figures
+.venv/bin/python -m validation.hancock_long_storm_review.verify
+.venv/bin/python -m validation.hancock_long_storm_review.decision
 ```
 
 The graph profiler uses two additional timestamp kernels bracketing each
