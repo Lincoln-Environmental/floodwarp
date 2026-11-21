@@ -116,7 +116,7 @@ def event(
         active = {} if li else s.execution_diagnostics()
         w = h > s.dry_depth
         depths = h[w]
-        speed = np.hypot(state[..., 1][w], state[..., 2][w]) / depths
+        speed = np.hypot(state[..., 1], state[..., 2])[w] / depths
         froude = speed / np.sqrt(float(s.gravity) * depths)
         samples.append(
             dict(

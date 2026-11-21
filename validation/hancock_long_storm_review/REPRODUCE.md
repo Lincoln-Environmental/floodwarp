@@ -50,6 +50,7 @@ examines each trial on CPU, including rejected ones.
 .venv/bin/python -m validation.hancock_long_storm_review.storms
 FLOODWARP_STORM_SUITE=large .venv/bin/python -m validation.hancock_long_storm_review.storms
 FLOODWARP_STORM_SUITE=terrain_large .venv/bin/python -m validation.hancock_long_storm_review.storms
+FLOODWARP_STORM_SUITE=remaining_refinements .venv/bin/python -m validation.hancock_long_storm_review.storms
 FLOODWARP_STORM_SUITE=fine_check .venv/bin/python -m validation.hancock_long_storm_review.storms
 FLOODWARP_STORM_SUITE=resolution_check .venv/bin/python -m validation.hancock_long_storm_review.storms
 FLOODWARP_STORM_SUITE=moving .venv/bin/python -m validation.hancock_long_storm_review.storms

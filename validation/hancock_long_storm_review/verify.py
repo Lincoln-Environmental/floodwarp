@@ -202,6 +202,7 @@ if __name__ == "__main__":
         terrain_large=8,
         resolution_check=3,
         fine_check=3,
+        remaining_refinements=14,
     )
     baseline = "018032761146a915bd6089f858a97500715e3758"
     methods = (
