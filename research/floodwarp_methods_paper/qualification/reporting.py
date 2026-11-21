@@ -84,6 +84,11 @@ def offline(*,study,root,stage,config,flags,grid):
         for r in rows:
             if not fnmatch.fnmatchcase(r["case"],match["case"]): continue
             if "dx" in grid and float(r["dx"])!=grid["dx"]: continue
+            if "dem" in grid:
+                representation = r["representation"]
+                dem = float(r["dx"]) if representation == "sampled" else 10 if representation == "fixed" else float(representation.split("-")[1].removesuffix("m"))
+                if dem != grid["dem"]:
+                    continue
             if stage=="pareto" and not fnmatch.fnmatchcase(r["method"],match["method"]):continue
             if stage=="execution-policy" and match["method"] not in ("*","fv1","hancock_dense","hancock_auto","hancock_adaptive"):continue
             selected.append(r)
@@ -100,11 +105,9 @@ def offline_system(*,root,study):
 
 
 def verification(*,study,config):
-    from research.floodwarp_methods_paper.qualification import matrix,refinements,automatic
     counts={}; pairs=0
     for stage in stages.NUMERICAL:
-        planner={"large-refinements":refinements.expanded,"million-auto":automatic.cases}.get(stage,matrix.cases)
-        expected={runner.digest(dict(stage=stage,settings=s,config=config))[:24] for s in planner(stage=stage,config=config,root=study.parents[1])}
+        expected={runner.digest(dict(stage=stage,settings=s,config=config))[:24] for s in stages.specifications(stage=stage,config=config,root=study.parents[1])}
         found=observations.current(study=study,stage=stage,config=config)
         if {r["experiment_id"] for r in found}!=expected:
             raise ValueError(f"{stage}: {len(expected)} expected, {len(found)} complete")

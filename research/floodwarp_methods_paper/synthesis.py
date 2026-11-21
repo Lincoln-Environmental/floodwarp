@@ -85,7 +85,7 @@ def limitations(*, study):
     lines += [
         "",
         "- Reference error on general catchments is estimated from numerical refinements. Independently exact storm-cycle evidence is limited to analytical geometries and forcing. Two formulations can share a topographic or outlet error.",
-        "- Fixed and resampled terrain at 1 m and 5 m were compared on three development realisations. The remaining families lack a prospective matched 1 m operational matrix. The larger scaling runs quantify cost on the original qualification geometries.",
+        "- Fixed and resampled terrain at 1 m and 5 m were compared on three development realisations. The remaining families lack a prospective matched 1 m operational matrix. The corrective suite adds independent larger domain sizes and targeted refinements with their own observable-specific screens.",
         "- Analytical timestep and spatial convergence rates depend on smoothness, source splitting, limiter activity and reference precision. Values near roundoff have limited order interpretation.",
         "- The 15-minute outlet interval bounds timing resolution and smooths subinterval peaks. Area averages to 10 m can obscure very narrow wet connections.",
         "- Roughness transfer uses one prospective fitted terrain and event. The original bounded analytical study covers additional training physics. Repeated objectives, bounds and timings share terrain and forcing.",

@@ -98,7 +98,7 @@ The practical outcome depends on the accuracy objective. The Pareto archive iden
 
 Bounded Manning fits target integrated transport or depth and extent. A change that compensates for attenuation on one hydrograph can alter recession or peak timing on the next. The grouped transfer results quantify the effect of applying the fitted physical value unchanged. The first- and higher-order solvers at the prescribed roughness remain the comparison controls. [Transfer trials](../processed/comparisons/transfer.csv)
 
-The domain-wide solver advisor abstained on {a["abstentions"]} held-out objectives. Its runtime forecast had median absolute percentage error {fmt(a["runtime_median_absolute_pct_error"])}% for assessable choices. Compare coverage and failed choices together with cost. A low conditional regret can reflect abstention on difficult cases. The validation set used seven independent terrain groups. The training area was 9,600 m². Only three development terrain families have prospective 1 m and 5 m forecasts of every formulation. The larger performance matrix used different areas and does not qualify accuracy or advisor recommendations there. Additional independent domains, stage controls, storms, GPUs and surveyed hydraulic structures are needed before using forecasts for release decisions.
+The domain-wide solver advisor abstained on {a["abstentions"]} held-out objectives. Its runtime forecast had median absolute percentage error {fmt(a["runtime_median_absolute_pct_error"])}% for assessable choices. Compare coverage and failed choices together with cost. A low conditional regret can reflect abstention on difficult cases. The original small-domain training cases covered 9,600 m². The expanded splits include independent larger terrain and event realisations. Large-domain accuracy recommendations require a qualified reference for the requested observable, sufficient training support at the requested scale and admissible terrain representation. Additional independent domains, stage controls, storms, GPUs and surveyed hydraulic structures are needed before using forecasts for release decisions.
 
 Retain adaptive Hancock as the development default. Use FV1 or LI when the error for the intended observable is acceptable at lower measured cost. LI also needs a suitable reduced-momentum regime. Publication or operational use of a method recommendation requires a qualified reference and credible predictive coverage on the intended domain. [Rule baselines](../tables/10_advisor.md)
 """
@@ -106,9 +106,12 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
     discussion += (
         "\nAcross held-out objectives with at least one empirically feasible option, the proportions receiving a qualified feasible selection were "
         + ", ".join(coverage)
-        + ". This denominator includes abstentions. Predictive validation of the advisor used the 10 m grid. Finer-grid pairwise costs and errors are available as measured comparisons.\n"
+        + ". This denominator includes abstentions. The stratified validation tables identify the resolutions and sizes with independent predictive evidence.\n"
     )
-    result += "\n" + synthesis.case_evidence(study=study)
+    from research.floodwarp_methods_paper.qualification import paper
+    audit,extension=paper.material(study=study)
+    (study/"CORRECTIVE_AUDIT.md").write_text(audit)
+    result += "\n" + synthesis.case_evidence(study=study) + "\n" + extension + "\n"
     (study / "LIMITATIONS.md").write_text(synthesis.limitations(study=study))
     manuscript = study / "manuscript"
     (manuscript / "results.md").write_text(result)

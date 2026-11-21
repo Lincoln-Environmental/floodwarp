@@ -23,6 +23,16 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 | terrain-initial-controls | Added paired fan runs with matched initial channel water at both spacings, included by resolution |
 | calibration | Physical roughness controls, bounded training and held-out transfer |
 | performance | Repeated operational forecasts and common-cap GPU controls |
+| million-terrain | Generate full-grid descriptors and georeferenced native and represented control windows |
+| million-pilots | Check allocations, timestep behaviour and complete physical-input identities on the reference GPU |
+| million-storms | Full six-hour rainfall and recession forecasts at fixed grid counts and fixed physical extent |
+| million-auto | Measure the frozen preflight policy on the same complete events |
+| large-references | Same-domain refinements and fast hydrograph controls |
+| large-refinements | Additional reference grids and matched wet initial-state mappings |
+| heldout-references | Fine-grid hydraulic sensitivity of the reserved plain and mixed catchments |
+| million-profiles | Separate complete graph-instrumented replays of sparse, wet and mixed events |
+| execution-policy | Reconstruct measured dense, tiled and prospective automatic execution comparisons |
+| pareto | Reconstruct observable-specific measured frontiers and reference eligibility |
 | terrain-features | Read the simulation archives, derive hydraulic errors, compare grids, map terrain and compute Pareto sets |
 | advisor-train | Train on development groups, select model parameters on validation groups and freeze |
 | advisor-validate | Assess the frozen advisor and three rules on whole held-out groups |
@@ -40,6 +50,17 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 ./scripts/run_floodwarp_paper.sh resolution
 ./scripts/run_floodwarp_paper.sh calibration
 ./scripts/run_floodwarp_paper.sh performance
+./scripts/run_floodwarp_paper.sh million-terrain
+./scripts/run_floodwarp_paper.sh million-pilots
+./scripts/run_floodwarp_paper.sh million-storms --case 'plain-701-*' --method hancock_dense --dx 10
+./scripts/run_floodwarp_paper.sh million-storms
+./scripts/run_floodwarp_paper.sh million-auto
+./scripts/run_floodwarp_paper.sh large-references
+./scripts/run_floodwarp_paper.sh large-refinements
+./scripts/run_floodwarp_paper.sh heldout-references
+./scripts/run_floodwarp_paper.sh million-profiles
+./scripts/run_floodwarp_paper.sh execution-policy
+./scripts/run_floodwarp_paper.sh pareto
 ./scripts/run_floodwarp_paper.sh terrain-features
 ./scripts/run_floodwarp_paper.sh advisor-train
 ./scripts/run_floodwarp_paper.sh advisor-validate
@@ -53,7 +74,7 @@ Use `--dx` and `--dem` to select a hydraulic spacing and represented DEM spacing
 
 ### Trace an observation
 
-Start with the physical case, representation and observable in `processed/pareto/storms.csv`. Its experiment ID identifies a row in the SQLite `experiments` table with a numerical specification, source SHA, device and raw directory. Within the raw directory, `result.json` contains the accepted-step totals, hydrographs, forcing fingerprints, signed volumes and timings. The compressed NumPy files hold physical fields and the per-step history. A parallel `manifests` entry and terminal receipt record artifact digests. The current manifest selects the archived attempt for reproduction. The 250,000–2,000,000-cell runs and bounded analytical fits predate the paper protocol and retain their original provenance. [Results schema](manifests/SCHEMA.md) · [Archival qualification](../../validation/hancock_long_storm_review/DECISION.md)
+Start with the physical case, representation and observable in `processed/pareto/storms.csv`. Its experiment ID identifies a row in the SQLite `experiments` table with a numerical specification, source SHA, device and raw directory. Within the raw directory, `result.json` contains the accepted-step totals, hydrographs, forcing fingerprints, signed volumes and timings. The compressed NumPy files hold physical fields and the per-step history. A parallel `manifests` entry and terminal receipt record artifact digests. The current manifest selects the archived attempt for reproduction. The earlier large-grid timings and bounded analytical fits retain their original provenance. The corrective full-event forecasts have separate receipts under the million-cell and reference stages. They store accepted counts and timestep extrema per output interval, compressed common-support fields, native state hashes and interval face transports. [Results schema](manifests/SCHEMA.md) · [Archival qualification](../../validation/hancock_long_storm_review/DECISION.md)
 
 ### Apply the advisor
 
@@ -69,3 +90,12 @@ The Python API is `floodwarp.solver_advisor.recommend_dem(dem=path, resolution=1
 The six standard hydraulic objectives are final depth, maximum depth, inundation, discharge, peak discharge and peak timing. Their CLI keys and default tolerances are in the advisor configuration. Choosing `runtime` selects by measured operational cost subject to supported hardware and optional memory constraints. [Tolerance definitions](configs/advisor/design.json) · [Held-out performance](tables/10_advisor.md)
 
 The exact measured numerical sources are available together at `894a375762c9cbcbf24a4b612532ca2628ea7a01`. The completed paper commit adds all archived data and regeneration tools. The manifest verifies the numerical source fingerprints against Git blob contents. [Numerical tree proof](manifests/numerical_source_tree.json)
+
+
+### Operational qualification
+
+The 120 × 80 m controls contain 96 cells at 10 m. Use the corrective observations to assess operational performance. The design identifies eight 1,024 × 1,024 landforms, three 2,048 × 1,024 events, and matched 1,000 × 1,000 m and 10,240 × 10,240 m physical-domain studies. Cells, spacing, storm duration and initial state are explicit for every forecast. [Event design](qualification/design.json) · [Corrective audit](CORRECTIVE_AUDIT.md)
+
+For an experimental automatic schedule, construct the Hancock model and set its initial state, rainfall multiplier and boundary configuration first. Call `configure_hancock_execution(solver=model.solver, execution_mode="auto")` from `floodwarp.solver_advisor.execution` before the first advance. Keep its returned preflight record with the configuration. The decision is made once. Explicit dense, fixed-mask sparse and tiled execution remain available. [Calibration data and thresholds](../../src/floodwarp/solver_advisor/execution_policy.json)
+
+Use `processed/million/reference_checks.csv` to identify resolved observables. The strict empirical Pareto column describes dominance of the measured points. The sensitivity column requires the competitor's upper error to be below the candidate's lower error, or an exact endpoint tie with a lower runtime. Each interval uses the measured reference changes. These envelopes describe sensitivity to the tested references. [Measured configurations](processed/million/pareto.csv)

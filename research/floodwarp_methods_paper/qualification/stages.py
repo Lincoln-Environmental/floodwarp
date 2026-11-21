@@ -2,9 +2,9 @@
 from unittest.mock import patch
 from research.floodwarp_methods_paper import runner
 from research.floodwarp_methods_paper.evidence import source_identity as numerical_identity
-from research.floodwarp_methods_paper.qualification import launch, refinements, automatic
+from research.floodwarp_methods_paper.qualification import launch, refinements, automatic, heldout
 
-NUMERICAL=("million-terrain","million-pilots","million-storms","million-auto","large-references","large-refinements","million-profiles")
+NUMERICAL=("million-terrain","million-pilots","million-storms","million-auto","large-references","large-refinements","heldout-references","million-profiles")
 OFFLINE=("execution-policy","pareto")
 
 
@@ -16,6 +16,9 @@ def terrain_identity(*,root,study,stage):
 def numerical(*,root,study,config,stage,arguments):
     if stage=="million-auto":
         with patch.object(launch,"cases",automatic.cases),patch.object(launch,"calculate",automatic.calculate),patch.object(launch,"identity_original",launch.identity,create=True),patch.object(launch,"identity",automatic.source):
+            launch.run(root=root,study=study,config=config,stage=stage,arguments=arguments)
+    elif stage=="heldout-references":
+        with patch.object(launch,"cases",heldout.cases),patch.object(launch,"identity_original",launch.identity,create=True),patch.object(launch,"identity",heldout.source):
             launch.run(root=root,study=study,config=config,stage=stage,arguments=arguments)
     elif stage=="large-refinements":
         with patch.object(launch,"cases",refinements.expanded),patch.object(launch,"identity_original",launch.identity,create=True),patch.object(launch,"identity",refinements.source):
@@ -35,8 +38,16 @@ def source(*,root,study,stage):
         if stage=="million-auto":
             with patch.object(launch,"identity_original",launch.identity,create=True):
                 return automatic.source(root=root,study=study,stage=stage)
+        if stage=="heldout-references":
+            with patch.object(launch,"identity_original",launch.identity,create=True):
+                return heldout.source(root=root,study=study,stage=stage)
         if stage=="large-refinements":
             with patch.object(launch,"identity_original",launch.identity,create=True):
                 return refinements.source(root=root,study=study,stage=stage)
         return launch.identity(root=root,study=study,stage=stage)
 
+
+
+def specifications(*, stage, config, root):
+    planner = {"large-refinements": refinements.expanded, "heldout-references": heldout.cases, "million-auto": automatic.cases}.get(stage, launch.cases)
+    yield from planner(stage=stage, config=config, root=root)

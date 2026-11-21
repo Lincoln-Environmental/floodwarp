@@ -79,6 +79,7 @@ def assess(*, study):
                     continue
                 qualified = (
                     a["qualified_" + objective] == "True"
+                    and b["qualified_" + objective] == "True"
                     and a["reference_self"] == "False"
                     and b["reference_self"] == "False"
                 )

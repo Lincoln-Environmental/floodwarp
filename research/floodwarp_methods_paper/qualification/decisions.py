@@ -36,6 +36,52 @@ def runtime_predictions(*,model,rows):
     return predictions
 
 
+def predicted_cost(row):
+    return row["predicted_runtime_s"], row["dx"], row["chosen"]
+
+
+def observed_cost(row):
+    return row["observed_runtime_s"], row["dx"], row["chosen"]
+
+
+def by_spacing(row):
+    return row["dx"]
+
+
+def joint_resolution(*, decisions):
+    """Choose across spacings of the same held-out physical event, before inspecting its error."""
+    groups = defaultdict(list)
+    for row in decisions:
+        groups[row["terrain_id"], row["case"], row["objective"]].append(row)
+    results = []
+    for (terrain, case, objective), group in groups.items():
+        grids = sorted({r["dx"] for r in group})
+        if len(grids) < 2:
+            continue
+        feasible = [r for r in group if r["rule"] == "oracle" and r["feasible"]]
+        best = min(feasible, key=observed_cost) if feasible else None
+        for rule in sorted({r["rule"] for r in group}):
+            candidates = [r for r in group if r["rule"] == rule and r["chosen"] is not None]
+            if rule == "oracle":
+                selected = best
+            elif rule in ("advisor", "slope"):
+                candidates = [r for r in candidates if r["predicted_runtime_s"] is not None]
+                selected = min(candidates, key=predicted_cost) if candidates else None
+            else:
+                # Fixed methods use the coarsest supplied grid as the baseline.
+                selected = max(candidates, key=by_spacing) if candidates else None
+            results.append(dict(terrain_id=terrain, case=case, objective=objective, rule=rule,
+                available_dx_m=",".join(f"{dx:g}" for dx in grids),
+                chosen=selected["chosen"] if selected else None, dx=selected["dx"] if selected else None,
+                selected_run=selected["selected_run"] if selected else None,
+                feasible=selected["feasible"] if selected else None,
+                abstained=selected is None, optimal=best["chosen"] if best else None,
+                optimal_dx=best["dx"] if best else None, optimal_run=best["selected_run"] if best else None,
+                regret_pct=100*(selected["observed_runtime_s"]/best["observed_runtime_s"]-1)
+                    if best and selected and selected["feasible"] else None))
+    return results
+
+
 def validate(*,study,model,held,decisions):
     from research.floodwarp_methods_paper.advisor import summary
     groups=defaultdict(list)
@@ -53,6 +99,7 @@ def validate(*,study,model,held,decisions):
         s=summary(rows=g)[0]
         strata.append(dict(axis=axis,group=value,**s))
     csv_write(file=study/"processed/advisor/validation_strata.csv",rows=strata)
+    csv_write(file=study/"processed/advisor/joint_resolution.csv", rows=joint_resolution(decisions=decisions))
     csv_write(file=study/"processed/advisor/runtime_only.csv",rows=runtime_predictions(model=model,rows=held))
 
 

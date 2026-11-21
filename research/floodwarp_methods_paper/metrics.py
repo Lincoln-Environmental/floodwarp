@@ -126,7 +126,9 @@ def storm_metrics(*, study, config):
                         np.argmax([s["outlet_m3s"] for s in fine[1]["samples"]])
                     ]["outlet_m3s"]
                 ),
-                peak_timing=delta["absolute_peak_time_error_s"] <= 900,
+                peak_timing=max(s["outlet_m3s"] for s in fine[1]["samples"]) > 0
+                and max(s["outlet_m3s"] for s in coarse[1]["samples"]) > 0
+                and delta["absolute_peak_time_error_s"] <= 900,
                 memory=True,
             )
             uncertainty = dict(
@@ -186,6 +188,9 @@ def storm_metrics(*, study, config):
                     control_sha=rec["context"]["source_sha256"],
                 )
                 metrics.update({"qualified_" + k: v for k, v in qualified.items()})
+                if max(s["outlet_m3s"] for s in row["samples"]) <= 0:
+                    metrics["qualified_peak_timing"]=False
+                metrics.update({"reference_change_" + k: delta[v] for k, v in OBJECTIVES.items() if k != "memory"})
                 results.append(metrics)
     return results, uncertainties
 
@@ -279,7 +284,7 @@ def is_true(value):
     return value is True or value == "True" or isinstance(value, np.bool_) and bool(value)
 
 
-def pareto(*, rows, keys, objectives, cost, include_unresolved=False):
+def pareto(*, rows, keys, objectives, cost, include_unresolved=False, exact_reference=False):
     groups = defaultdict(list)
     for row in rows:
         groups[tuple(row[k] for k in keys)].append(row)
@@ -297,6 +302,7 @@ def pareto(*, rows, keys, objectives, cost, include_unresolved=False):
                 if valid and ref_ok:
                     measured.append((float(value), float(r[cost]), r["experiment_id"]))
             by_id = {key: (err, t) for err,t,key in measured}
+            changes = {r["experiment_id"]: r.get("reference_change_" + objective) for r in group}
             for r in group:
                 pair = by_id.get(r["experiment_id"])
                 if pair is None and not include_unresolved:
@@ -305,10 +311,29 @@ def pareto(*, rows, keys, objectives, cost, include_unresolved=False):
                     error <= pair[0] and time <= pair[1] and (error < pair[0] or time < pair[1])
                     for error,time,_ in measured
                 )
+                radius = changes[r["experiment_id"]]
+                if objective == "memory" or exact_reference:
+                    radius = 0.0
+                robust = None
+                if pair is not None and radius not in (None, ""):
+                    robust = 0
+                    # These are sensitivity envelopes, not statistical confidence intervals.
+                    for error, time, peer in measured:
+                        peer_radius = changes[peer]
+                        if objective == "memory" or exact_reference:
+                            peer_radius = 0.0
+                        if peer == r["experiment_id"] or time > pair[1] or peer_radius in (None, ""):
+                            continue
+                        upper = error + float(peer_radius)
+                        lower = max(0.0, pair[0] - float(radius))
+                        if upper <= lower and (upper < lower or time < pair[1]):
+                            robust += 1
                 result.append(dict(**{k:r[k] for k in keys}, objective=objective,method=r["method"],dx=r["dx"],
                                    **config_fields(method=r["method"],dx=r["dx"]),experiment_id=r["experiment_id"],
                                    error=r.get(metric),runtime_s=r.get(cost),eligible=pair is not None,
-                                   nondominated=None if pair is None else dominated==0,dominator_count=dominated))
+                                   nondominated=None if pair is None else dominated==0,dominator_count=dominated,
+                                   reference_change=radius,sensitivity_dominator_count=robust,
+                                   sensitivity_nondominated=None if robust is None else robust==0))
     return result
 
 
@@ -453,6 +478,7 @@ def build(*, study, config):
     )
     analytical_front = pareto(
         rows=[r for r in exact if r["stage"] == "analytical"],
+        exact_reference=True,
         keys=("case",),
         objectives=dict(
             depth="depth_rmse_m",

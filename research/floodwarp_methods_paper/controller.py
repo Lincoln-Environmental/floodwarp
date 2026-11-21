@@ -98,7 +98,7 @@ def derived_identity(*, root, study, stage):
             base=original_identity(root=root, study=study, stage=stage),
             corrective_sources={str(p.relative_to(root)):runner.checksum(p) for p in
                                 sorted((study/"qualification").glob("*")) if p.suffix in (".py",".json")},
-            corrective_inputs=[r["attempt"] for r in runner.archived(study=study,stages=("million-storms","million-auto","large-references","large-refinements","million-terrain","million-profiles"))],
+            corrective_inputs=[r["attempt"] for r in runner.archived(study=study,stages=("million-storms","million-auto","large-references","large-refinements","heldout-references","million-terrain","million-profiles"))],
             dependencies={
                 str(p.relative_to(root)): runner.checksum(p)
                 for p in dependencies
@@ -164,8 +164,27 @@ def run(*, root, study, config_path, arguments):
     opts = runner.options(args=arguments)
     config = read_config(path=config_path)
     started = perf_counter()
+    scoped = bool(grid) or opts["case"] != "*" or opts["method"] != "*"
+    matched = False
     for group in selected:
         flags = opts.copy()
+        if stage == "all" and scoped:
+            if group in large.NUMERICAL:
+                source = large.specifications
+            elif group in supplemental:
+                source = supplemental[group].cases
+            elif group in runner.SIMULATIONS:
+                source = runner.specs
+            elif group not in large.OFFLINE:
+                print(group, "global report; run this stage separately for all archived cases")
+                continue
+            else:
+                source = None
+            if source is not None:
+                specs = select_specs(grid=grid, source=source)(stage=group, config=config, root=root)
+                if not any(fnmatch.fnmatchcase(s["case"], flags["case"]) and flags["method"] in ("*", s["method"]) for s in specs):
+                    continue
+                matched = True
         if group in large.NUMERICAL:
             large.numerical(root=root,study=study,config=config,stage=group,arguments=raw_options)
             continue
@@ -244,6 +263,8 @@ def run(*, root, study, config_path, arguments):
             from research.floodwarp_methods_paper.comparisons import exact_check
 
             print("Analytical qualification", exact_check(study=study), flush=True)
+    if stage == "all" and scoped and not matched:
+        raise ValueError("No numerical cases matched the requested filters")
     print("total_experiment_wall_s", round(perf_counter() - started, 3))
 
 

@@ -107,3 +107,74 @@ def test_scaled_configuration_identity_and_sampling():
     assert runner.digest(a)==runner.digest(dict(reversed(tuple(a.items()))))
     assert runner.digest(a)!=runner.digest(dict(a,seed=a["seed"]+1))
 
+
+
+def test_refinement_sensitivity_preserves_unresolved_error_order():
+    base = dict(case="plain", method="fv1", dx=10, qualified_depth=True, reference_change_depth=.002)
+    rows = [
+        dict(base, experiment_id="a", error=.010, time=1),
+        dict(base, experiment_id="b", error=.012, time=2),
+        dict(base, experiment_id="c", error=.016, time=3),
+    ]
+    frontier = metrics.pareto(rows=rows, keys=("case",), objectives={"depth": "error"}, cost="time")
+    assert [r["nondominated"] for r in frontier] == [True, False, False]
+    assert [r["sensitivity_nondominated"] for r in frontier] == [True, True, False]
+
+
+def test_joint_spacing_selection_uses_forecast_before_observation():
+    from research.floodwarp_methods_paper.qualification.decisions import joint_resolution
+
+    rows = []
+    for dx, predicted, measured in ((5, 4., 9.), (10, 5., 8.)):
+        for rule in ("advisor", "oracle", "fv1"):
+            rows.append(dict(terrain_id="plain-8", case="same-area", objective="depth", dx=dx,
+                             predicted_runtime_s=predicted, observed_runtime_s=measured,
+                             chosen="fv1", feasible=True, rule=rule, selected_run=f"actual-{dx}"))
+    results = {r["rule"]:r for r in joint_resolution(decisions=rows)}
+    assert results["advisor"]["dx"] == 5
+    assert results["advisor"]["optimal_dx"] == 10
+    assert results["advisor"]["regret_pct"] == pytest.approx(12.5)
+    assert results["fv1"]["selected_run"] == "actual-10"
+
+
+def test_published_cost_figure_and_table_from_archived_csv(tmp_path):
+    from research.floodwarp_methods_paper.tables.generate import render
+    from research.floodwarp_methods_paper.qualification.plots import scale_cost
+
+    _, study = study_paths()
+    rows = metrics.csv_read(study/"processed/metrics/storms.csv")
+    from research.floodwarp_methods_paper.qualification.reporting import policies
+    group = [r for r in rows if r["representation"]=="sampled" and r["dx"]=="10" and r["stage"]=="long-storms"]
+    records = policies(rows=group)
+    assert len(records) == 48
+    scale_cost(rows=records, out=tmp_path)
+    assert (tmp_path/"13_execution_cost.pdf").read_bytes().startswith(b"%PDF")
+    assert (tmp_path/"13_execution_cost.png").read_bytes().startswith(b"\x89PNG")
+    assert "<svg" in (tmp_path/"13_execution_cost.svg").read_text()
+    render(directory=tmp_path, name="reconstructed", rows=records, caption="Measured small-domain controls")
+    data = metrics.csv_read(tmp_path/"reconstructed.csv")
+    assert len(data) == len(records)
+    assert data[0]["dense_id"] in (tmp_path/"reconstructed.md").read_text()
+
+
+def test_reconstructed_physical_identity_across_schedules():
+    from research.floodwarp_methods_paper.events import create_event
+    from research.floodwarp_methods_paper.qualification import stages
+
+    root, study = study_paths()
+    config = read_config(path=study/"configs/study.json")
+    template = json.loads((root/"validation/hancock_long_storm_review/cases.json").read_text())
+    spec = dict(landform="fan", storm="spatial", initial="dry", seed=702, dx=10, dem=10,
+                hours=8, multiplier=1.)
+    fingerprints = []
+    for method in ("hancock_dense","hancock_adaptive","fv1"):
+        _, _, fields = create_event(config=config, template=template, spec=dict(spec, method=method), device="cpu")
+        fields.pop("numerical")
+        fingerprints.append(runner.digest(fields))
+    assert len(set(fingerprints)) == 1
+    _, _, altered = create_event(config=config, template=template, spec=dict(spec, seed=703,method="fv1"), device="cpu")
+    altered.pop("numerical")
+    assert runner.digest(altered) != fingerprints[0]
+    source = stages.source(root=root,study=study,stage="million-storms")
+    assert source == stages.source(root=root,study=study,stage="million-storms")
+    assert source != stages.source(root=root,study=study,stage="million-auto")

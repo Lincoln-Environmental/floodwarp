@@ -89,7 +89,7 @@ def spacing(item):
     return item["spec"]["dx"]
 
 
-def load_events(*,study,config,include=("million-storms","million-auto","large-references","large-refinements")):
+def load_events(*,study,config,include=("million-storms","million-auto","large-references","large-refinements","heldout-references")):
     group=defaultdict(list)
     for stage in include:
         for rec in current(study=study,stage=stage,config=config):
@@ -111,6 +111,8 @@ def performance(*,item,case,rep):
     for key in ("cells","steps","rejected","dt_mean_s","dt_min_s","graph_capture_s","preload_s","extraction_s","end_to_end_s",
                 "wet_fraction","scheduled_fraction","rain_m3","infiltration_m3","initial_m3","final_storage_m3","inflow_m3","outflow_m3","residual_m3"):
         row[key]=v[key]
+    row["end_to_end_before_receipt_s"]=row["end_to_end_s"]
+    row["end_to_end_s"]=item["receipt"]["wall_s"]
     coarse=integral(record=v,seconds=900)
     fine=[f["outlet_m3s"] for f in v["frames"]]
     row.update(outlet_peak_m3s=max(fine),outlet_peak_900s_m3s=float(coarse.max()),
@@ -149,8 +151,9 @@ def build(*,study,config):
             row["selected_mode"]=i["data"].get("preflight",{}).get("selected",row["execution_mode"])
             row["reference_id"]=fine["id"] if fine else None
             row["reference_self"]=bool(fine and i["id"]==fine["id"])
-            row["reference_setup"]=i["stage"]!="million-storms" and not (rep=="sampled" and spacing(i)==10)
+            row["reference_setup"]=i["stage"] not in ("million-storms","million-auto") and not (rep=="sampled" and spacing(i)==10)
             row.update({"qualified_"+obj:bool(gates.get(obj,False) and fine and spacing(i)>spacing(fine)) for obj in metrics.OBJECTIVES})
+            row.update({"reference_change_"+obj:v for obj,v in spread.items()})
             row["qualified_memory"]=True
             results.append(row)
             for frame in i["data"]["spatial"]:
