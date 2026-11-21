@@ -209,6 +209,34 @@ def material(*, study):
         audit.append(
             f"| {obj} | {len(g)} | {sum(r['original_qualified'] == 'True' for r in g)} | {sum(r['qualified'] == 'True' for r in g)} |"
         )
+    fast_peaks = [
+        row
+        for row in raw
+        if row["stage"] == "million-storms"
+        and float(row["interval_s"]) == 60
+        and row["method"] in ("fv1", "hancock_dense")
+        and float(row["outlet_peak_m3s"]) > 0
+    ]
+    if fast_peaks:
+        audit.extend(
+            [
+                "",
+                "The fast-event outlet records support a direct comparison of interval means from the same accepted face volumes. "
+                "Times below are the ends of the intervals containing the maximum mean discharge. "
+                "[Fine-interval peak observations](processed/million/observations.csv) · [15-minute hydrographs](processed/million/hydrographs_900s.csv)",
+                "",
+                "| Landform | Method | Peak at 60 s (m³/s) | Peak at 900 s (m³/s) | Attenuation from averaging | Peak interval end, 60 s / 900 s (s) |",
+                "|---|---|---:|---:|---:|---:|",
+            ]
+        )
+        for row in sorted(fast_peaks, key=case_order):
+            fine = float(row["outlet_peak_m3s"])
+            coarse = float(row["outlet_peak_900s_m3s"])
+            audit.append(
+                f"| {row['landform']} | {row['method']} | {fine:.3f} | {coarse:.3f} | "
+                f"{100 * (1 - coarse / fine):.2f}% | {float(row['peak_end_s']):.0f} / "
+                f"{float(row['peak_900s_end_s']):.0f} |"
+            )
     windows = {r["case"]: r for r in terrain if float(r["diagnostic_dx"]) == 10}
     losses = sum(
         r["native_connected"] == "True" and r["represented_connected"] == "False"

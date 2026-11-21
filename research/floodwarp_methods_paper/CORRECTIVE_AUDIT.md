@@ -1,6 +1,6 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 126 numerical records remain outstanding. Values below cover completed events.
+**Qualification in progress.** 124 numerical records remain outstanding. Values below cover completed events.
 
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
@@ -66,6 +66,15 @@ Depth, wet-depth and maximum-depth comparisons use area averages on the common p
 | Observable | Reassessed small cases | Originally qualified | Qualified on both finer checks |
 |---|---:|---:|---:|
 
+The fast-event outlet records support a direct comparison of interval means from the same accepted face volumes. Times below are the ends of the intervals containing the maximum mean discharge. [Fine-interval peak observations](processed/million/observations.csv) · [15-minute hydrographs](processed/million/hydrographs_900s.csv)
+
+| Landform | Method | Peak at 60 s (m³/s) | Peak at 900 s (m³/s) | Attenuation from averaging | Peak interval end, 60 s / 900 s (s) |
+|---|---|---:|---:|---:|---:|
+| incised | fv1 | 48.367 | 48.285 | 0.17% | 19440 / 19800 |
+| incised | hancock_dense | 47.527 | 47.170 | 0.75% | 17100 / 17100 |
+| mixed | fv1 | 41.363 | 41.153 | 0.51% | 27060 / 27900 |
+| mixed | hancock_dense | 38.700 | 38.542 | 0.41% | 26160 / 26100 |
+
 At the prescribed test stage, 11 of 15 independent case windows lost the metre-grid connection on the 10 m represented terrain. The stage is 1 cm above the lowest native through-going spill elevation. Each window covers 80 × 80 m around the known control and retains its physical coordinates. Whole-domain metrics use the full represented raster. [Terrain diagnostics](processed/million/terrain.csv) · [Fixed-bed and initial-water controls](processed/million/resolution_components.csv) · [Reference screens](processed/million/reference_checks.csv)
 
 ## Held-out operational recommendations
@@ -95,7 +104,7 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | million-pilots | 6 | 6 |
 | million-storms | 62 | 62 |
 | million-auto | 18 | 18 |
-| large-references | 2 | 77 |
+| large-references | 4 | 77 |
 | large-refinements | 0 | 29 |
 | heldout-references | 0 | 5 |
 | million-profiles | 0 | 9 |
