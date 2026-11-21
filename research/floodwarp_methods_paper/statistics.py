@@ -218,7 +218,17 @@ def database(*, study):
                 types.append('"' + k + '" ' + kind)
             db.execute('DROP TABLE IF EXISTS "' + name + '"')
             db.execute('CREATE TABLE "' + name + '" (' + ",".join(types) + ")")
-            values = [tuple(v if v != "" else None for v in r.values()) for r in rows]
+            values = [
+                tuple(
+                    None
+                    if r[k] == ""
+                    else float(r[k])
+                    if typ.endswith(" REAL")
+                    else r[k]
+                    for k, typ in zip(columns, types, strict=True)
+                )
+                for r in rows
+            ]
             db.executemany(
                 'INSERT INTO "'
                 + name

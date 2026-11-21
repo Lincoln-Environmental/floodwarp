@@ -79,9 +79,9 @@ def middle(*, rows, key):
     return median(values) if values else None
 
 
-def generate(*, study):
+def generate(*, study, output=None):
     processed = study / "processed"
-    out = study / "tables"
+    out = study / "tables" if output is None else output
     output = {}
     definitions = json.loads((study / "configs/analytical/methods.json").read_text())
     output["01_methods"] = ("Formulations and governing equations", definitions)

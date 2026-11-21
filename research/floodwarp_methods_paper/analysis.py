@@ -2,6 +2,8 @@
 
 import json
 import sqlite3
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 
@@ -12,6 +14,7 @@ from research.floodwarp_methods_paper import (
     statistics,
     reference_audit,
 )
+from research.floodwarp_methods_paper import catalog
 from research.floodwarp_methods_paper.plan import specs
 from research.floodwarp_methods_paper.runner import (
     archived,
@@ -144,9 +147,27 @@ def verify(*, study, config):
             if not rows:
                 continue
             name = "_".join(path.relative_to(study / "processed").with_suffix("").parts)
-            n = db.execute('SELECT COUNT(*) FROM "' + name + '"').fetchone()[0]
-            if n != len(rows):
-                raise ValueError("SQL count differs for " + name)
+            info = db.execute('PRAGMA table_info("' + name + '")').fetchall()
+            columns = [v[1] for v in info]
+            numeric = [v[2] == "REAL" for v in info]
+            values = db.execute('SELECT * FROM "' + name + '" ORDER BY rowid')
+            for row, stored in zip(rows, values, strict=True):
+                expected = tuple(
+                    None if row[k] == "" else float(row[k]) if num else row[k]
+                    for k, num in zip(columns, numeric, strict=True)
+                )
+                if expected != stored:
+                    raise ValueError("SQL value differs for " + name)
+    from research.floodwarp_methods_paper.tables.generate import generate
+
+    with TemporaryDirectory() as temporary:
+        render = Path(temporary)
+        generate(study=study, output=render)
+        for item in render.iterdir():
+            if checksum(item) != checksum(study / "tables" / item.name):
+                raise ValueError(
+                    "Published table differs from source evidence " + item.name
+                )
     table_count = 0
     for path in (study / "tables").glob("[0-9]*.csv"):
         if not all(path.with_suffix(ext).is_file() for ext in (".md", ".tex")):
@@ -177,6 +198,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
     if stage == "terrain-features":
         completeness(study=study, config=config, stages=DATA_STAGES)
         gates = comparisons.exact_check(study=study)
+        catalog.collect(study=study)
         rows = metrics.build(study=study, config=config)
         comparisons.pairwise(study=study, config=config)
         comparisons.historical(root=root, study=study)
