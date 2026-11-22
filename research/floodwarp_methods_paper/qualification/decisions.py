@@ -181,10 +181,50 @@ def compare_versions(*, study, results):
     return pairs
 
 
+def eligibility_breakdown(*, held, decisions):
+    """Separate reference support, measured tolerance and the terrain admissibility rule."""
+    groups = defaultdict(list)
+    for run in held:
+        groups[run["case"], run["features"]["resolution"]].append(run)
+    rows = []
+    for decision in decisions:
+        if decision["rule"] != "oracle":
+            continue
+        objective = decision["objective"]
+        group = groups[decision["case"], decision["dx"]]
+        qualified = [run for run in group if run["qualified"][objective]]
+        feasible = [
+            run
+            for run in qualified
+            if run["errors"][objective] <= decision["tolerance"]
+        ]
+        best = min(feasible, key=run_time) if feasible else None
+        rows.append(
+            dict(
+                case=decision["case"],
+                dx=decision["dx"],
+                cells=decision["cells"],
+                objective=objective,
+                tolerance=decision["tolerance"],
+                qualified_configurations=len(qualified),
+                within_hydraulic_tolerance=len(feasible),
+                terrain_admissible=decision["terrain_admissible"],
+                hydraulic_only_method=best["method"] if best else None,
+                hydraulic_only_run=best["run_id"] if best else None,
+                admissible_oracle_run=decision["optimal_run"],
+            )
+        )
+    return rows
+
+
 def validate(*, study, model, held, decisions):
     from research.floodwarp_methods_paper.advisor import summary
 
     groups = defaultdict(list)
+    csv_write(
+        file=study / "processed/advisor/eligibility_breakdown.csv",
+        rows=eligibility_breakdown(held=held, decisions=decisions),
+    )
     fv_wet = {
         (r["case"], r["features"]["resolution"]): r.get("wet_fraction")
         for r in held

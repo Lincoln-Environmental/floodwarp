@@ -1,6 +1,6 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 22 numerical records remain outstanding. Values below cover completed events.
+**Qualification in progress.** 13 numerical records remain outstanding. Values below cover completed events.
 
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
@@ -112,12 +112,15 @@ At the prescribed test stage, 11 of 15 independent case windows lost the metre-g
 
 | Rule, at least one million cells | Decisions | Qualified feasible opportunities | Covered (%) | Abstained (%) | False feasible | Cheapest / opportunities (%) | Conditional regret (%) |
 |---|---:|---:|---:|---:|---:|---:|---:|
+| advisor | 30 | 0 | unresolved | 100 | 0 | unresolved | unresolved |
+| fv1 | 30 | 0 | unresolved | 0 | 12 | unresolved | unresolved |
+| hancock_dense | 30 | 0 | unresolved | 0 | 12 | unresolved | unresolved |
+| slope | 30 | 0 | unresolved | 100 | 0 | unresolved | unresolved |
+| oracle | 30 | 0 | unresolved | 100 | 0 | unresolved | unresolved |
 
 The previously audited evaluation selected a method on 62 of 120 decisions. It recorded 41 successful selections, 58 abstentions, 156.0% median conditional regret and 81.4% empirical interval coverage. [Original immutable validation](raw_results/advisor-validate/b23f24375a6d611f22d5eca6/7a601da9a91c431f/summary.csv) · [Matched old and revised decisions](processed/advisor/previous_comparison.csv)
 
-Independent operational advisor validation is pending.
-
-The held-out physical cases determine whether a measured improvement in computational regret also improves feasible coverage. The runtime-only comparison and the objective-specific feasibility comparison answer separate questions. All rows from an independent terrain realisation belong to the same split. Pre-run inputs describe terrain and prescribed forcing. Realised wet fraction is used only to stratify results after validation. [Held-out individual decisions](processed/advisor/heldout.csv) · [By landform, grid, size and wet fraction](processed/advisor/validation_strata.csv) · [Runtime-only decisions](processed/advisor/runtime_only.csv)
+The advisor abstained on 30 of 30 million-cell decisions. No measured option satisfied both the hydraulic acceptance criterion and terrain admissibility. This test cannot establish an advantage over the simple rules or estimate operational regret on feasible choices. Of 30 decisions, 12 had a qualified reference, 10 had a measured method within hydraulic tolerance and 0 also had admissible terrain. [Selection eligibility by case](processed/advisor/eligibility_breakdown.csv) The runtime-only comparison and the objective-specific feasibility comparison answer separate questions. All rows from an independent terrain realisation belong to the same split. Pre-run inputs describe terrain and prescribed forcing. Realised wet fraction is used only to stratify results after validation. [Held-out individual decisions](processed/advisor/heldout.csv) · [By landform, grid, size and wet fraction](processed/advisor/validation_strata.csv) · [Runtime-only decisions](processed/advisor/runtime_only.csv)
 
 ## Engineering recommendation and remaining limits
 
@@ -137,8 +140,8 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | million-auto | 18 | 18 |
 | large-references | 77 | 77 |
 | large-refinements | 27 | 27 |
-| heldout-references | 0 | 5 |
-| million-profiles | 0 | 9 |
+| heldout-references | 5 | 5 |
+| million-profiles | 4 | 9 |
 | million-repeats | 12 | 12 |
 | recession-controls | 0 | 8 |
 
@@ -149,6 +152,14 @@ The full CUDA regression receipt records **1893 passed, 25 skipped, 743 warnings
 The catalogue retains 2 interrupted or failed numerical attempts outside all hydraulic and timing comparisons. [Attempt catalogue](processed/metrics/attempt_catalog.csv)
 - large-references, plain-701-spatial-10240x10240, hancock_dense — incomplete, attempt `affc4e9a96104629`.
 - million-storms, plain-709-spatial-1000x1000, adaptive — incomplete, attempt `dc1995df12c544a8`.
+
+## Complete graph replay timings
+
+| Case | Configuration | Largest kernel category | Device seconds | Share of measured kernel time |
+|---|---|---|---:|---:|
+| plain-701-spatial-10240x10240 | fv1 | flux and update | 4.010 | 46.1% |
+| plain-701-spatial-10240x10240 | hancock_adaptive | flux and update | 3.007 | 30.9% |
+| plain-701-spatial-10240x10240 | hancock_dense | flux and update | 14.880 | 54.5% |
 
 Across 6 complete timing controls with at least three runs, observed hydraulic runtime ranges spanned 0.08% to 0.68% of the within-control median. [Individual timing ranges](processed/million/repeat_times.csv)
 
@@ -164,13 +175,13 @@ Preflight selected the faster explicit schedule on 13 of 14 measured grids of at
 
 | Observable | Eligible | Empirical frontier | Frontier under reference sensitivity | Unresolved |
 |---|---:|---:|---:|---:|
-| depth | 34 | 17 | 17 | 46 |
-| discharge | 18 | 7 | 9 | 62 |
-| inundation | 34 | 14 | 17 | 46 |
-| maximum_depth | 38 | 19 | 19 | 42 |
+| depth | 43 | 21 | 21 | 37 |
+| discharge | 22 | 9 | 11 | 58 |
+| inundation | 43 | 18 | 20 | 37 |
+| maximum_depth | 47 | 23 | 23 | 33 |
 | memory | 80 | 15 | 15 | 0 |
-| peak_discharge | 12 | 6 | 6 | 68 |
-| peak_timing | 14 | 5 | 5 | 66 |
+| peak_discharge | 16 | 8 | 8 | 64 |
+| peak_timing | 18 | 7 | 7 | 62 |
 
 Final 1 cm inundation is the common prediction target in the enlarged advisor. The historical paper also retains time-integrated inundation results. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)
 
@@ -186,7 +197,7 @@ Each entry uses the measured error plus the reported refinement sensitivity. Tol
 | floodplain-702-moderate-10240x10240 | unresolved | unresolved | unresolved |
 | hill-706-back-10240x10240 | unresolved | unresolved | unresolved |
 | incised-707-spatial-10240x10240 | unresolved | unresolved | unresolved |
-| mixed-708-spatial-10240x10240 | unresolved | unresolved | unresolved |
+| mixed-708-spatial-10240x10240 | fv1, 10 m | hancock_auto, 10 m | no tested option |
 | mixed-714-spatial-20480x10240 | unresolved | unresolved | unresolved |
 | plain-701-spatial-10240x10240 | fv1, 10 m | hancock_adaptive, 10 m | unresolved |
 | plain-709-spatial-1000x1000 | fv1, 10 m | hancock_auto, 5 m | fv1, 10 m |

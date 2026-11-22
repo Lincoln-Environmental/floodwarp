@@ -389,6 +389,24 @@ def material(*, study):
             for k in ("fv1", "hancock_dense", "slope")
         )
         diagnosis = f"On the common million-cell feasible denominator, advisor coverage differed from the strongest simple baseline by {delta:+.1f} percentage points."
+    if by_rule and not int(by_rule["advisor"]["empirical_feasible_opportunities"]):
+        diagnosis = (
+            f"The advisor abstained on {by_rule['advisor']['abstentions']} of "
+            f"{by_rule['advisor']['decisions']} million-cell decisions. No measured option satisfied "
+            "both the hydraulic acceptance criterion and terrain admissibility. This test cannot establish "
+            "an advantage over the simple rules or estimate operational regret on feasible choices."
+        )
+    eligibility = p / "advisor/eligibility_breakdown.csv"
+    if held and eligibility.exists():
+        decisions = [r for r in csv_read(eligibility) if int(r["cells"]) >= 1000000]
+        supported = sum(int(r["qualified_configurations"]) > 0 for r in decisions)
+        within = sum(int(r["within_hydraulic_tolerance"]) > 0 for r in decisions)
+        admissible = sum(bool(r["admissible_oracle_run"]) for r in decisions)
+        diagnosis += (
+            f" Of {len(decisions)} decisions, {supported} had a qualified reference, {within} had "
+            f"a measured method within hydraulic tolerance and {admissible} also had admissible terrain. "
+            "[Selection eligibility by case](processed/advisor/eligibility_breakdown.csv)"
+        )
     audit.extend(
         [
             "",
