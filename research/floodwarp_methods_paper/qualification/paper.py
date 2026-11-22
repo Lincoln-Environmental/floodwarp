@@ -65,6 +65,43 @@ def timestep_attribution(*, events):
     )
 
 
+def recession_table(*, rows, study):
+    controls = [
+        r
+        for r in rows
+        if r["stage"] == "recession-controls"
+        and r["method"] in ("fv1", "hancock_dense")
+    ]
+    if not controls:
+        return []
+    terminal = {
+        r["experiment_id"]: r
+        for r in csv_read(study / "processed/million/hydrographs_900s.csv")
+    }
+    table = [
+        "",
+        "The supplementary recessions use the same plain DEM. Spatial rain probes delayed export from the "
+        "original footprint. Widespread rain also reaches the downstream cells. The last column gives the "
+        "mean discharge in the final 15-minute interval. [Hydrographs](processed/million/hydrographs_900s.csv)",
+        "",
+        "| Rain | Hours | Solver | Rain (m³) | Infiltration (m³) | Outlet volume (m³) | Final storage (m³) | Final wet area (%) | Peak / final discharge (m³/s) |",
+        "|---|---:|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for r in sorted(controls, key=case_order):
+        q = terminal[r["experiment_id"]]
+        if float(q["end_s"]) != 3600 * float(r["hours"]):
+            raise ValueError(
+                "Missing final recession interval for " + r["experiment_id"]
+            )
+        table.append(
+            f"| {r['storm']} | {float(r['hours']):g} | {r['method']} | {float(r['rain_m3']):,.1f} | "
+            f"{float(r['infiltration_m3']):,.1f} | {float(r['outflow_m3']):,.1f} | "
+            f"{float(r['final_storage_m3']):,.1f} | {100 * float(r['final_wet_fraction']):.2f} | "
+            f"{float(r['outlet_peak_m3s']):.3f} / {float(q['outlet_m3s']):.3f} |"
+        )
+    return table
+
+
 def material(*, study):
     p = study / "processed"
     pol = csv_read(p / "million/policies.csv")
@@ -148,6 +185,7 @@ def material(*, study):
         for r in raw
         if r["stage"] in ("million-storms", "million-auto", "recession-controls")
     ]
+    extra_recessions = sum(r["stage"] == "recession-controls" for r in event_rows)
     best = [float(r["fastest_ratio"]) for r in million]
     outcome = f"The {len(million)} matched 1,024 × 1,024 comparisons covered {len({r['landform'] for r in million})} landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in {sum(v <= 1.5 for v in best)} of {len(best)} complete events. Its median ratio was {number(median(best) if best else None)}×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations."
     audit = [
@@ -185,7 +223,9 @@ def material(*, study):
         "",
         *operational,
         "",
-        f"The archive contains {len(event_rows)} complete operational forecasts across the scale and fixed-area designs. The largest measured primary grid has {max((int(r['cells']) for r in event_rows), default=0):,} cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.",
+        f"The archive contains {len(event_rows) - extra_recessions} complete forecasts across the scale and fixed-area designs and {extra_recessions} supplementary recession controls. The largest measured primary grid has {max((int(r['cells']) for r in event_rows), default=0):,} cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.",
+        "",
+        *recession_table(rows=event_rows, study=study),
         "",
         "## Mechanisms, measured cost and Pareto evidence",
         "",
