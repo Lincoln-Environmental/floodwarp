@@ -215,13 +215,15 @@ def material(*, study):
         audit.append(
             f"| {obj} | {len(g)} | {sum(r['original_qualified'] == 'True' for r in g)} | {sum(r['qualified'] == 'True' for r in g)} |"
         )
-    audit.extend([
-        "",
-        "The finest spacing is 1 m, matching the available terrain data. The planned 0.5 m FV2 and Hancock "
-        "forecasts were withdrawn. The interrupted run contributed no measured result. Without a finer "
-        "reference, the 1 m configuration on the matched 1 km² plain remains unresolved for absolute accuracy. "
-        "[Scope amendment](qualification/resolution_scope.json)",
-    ])
+    audit.extend(
+        [
+            "",
+            "The finest spacing is 1 m, matching the available terrain data. The planned 0.5 m FV2 and Hancock "
+            "forecasts were withdrawn. The interrupted run contributed no measured result. Without a finer "
+            "reference, the 1 m configuration on the matched 1 km² plain remains unresolved for absolute accuracy. "
+            "[Scope amendment](qualification/resolution_scope.json)",
+        ]
+    )
     if original:
         missing = {
             obj: sum(r["qualified_" + obj] != "True" for r in original)

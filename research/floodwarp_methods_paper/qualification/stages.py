@@ -45,7 +45,9 @@ def terrain_identity(*, root, study, stage):
 
 def registered_refinements(*, stage, config, root):
     """Apply the current data-resolution scope to the archived candidate design."""
-    scope = root / "research/floodwarp_methods_paper/qualification/resolution_scope.json"
+    scope = (
+        root / "research/floodwarp_methods_paper/qualification/resolution_scope.json"
+    )
     minimum = json.loads(scope.read_text())["minimum_hydraulic_spacing_m"]
     for spec in refinements.expanded(stage=stage, config=config, root=root):
         if spec["dx"] >= minimum:

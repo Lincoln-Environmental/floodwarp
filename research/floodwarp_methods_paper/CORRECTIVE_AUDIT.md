@@ -1,6 +1,6 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 35 numerical records remain outstanding. Values below cover completed events.
+**Qualification in progress.** 27 numerical records remain outstanding. Values below cover completed events.
 
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
@@ -72,6 +72,8 @@ Depth, wet-depth and maximum-depth comparisons use area averages on the common p
 | peak_discharge | 6 | 4 | 5 |
 | peak_timing | 6 | 6 | 5 |
 
+The finest spacing is 1 m, matching the available terrain data. The planned 0.5 m FV2 and Hancock forecasts were withdrawn. The interrupted run contributed no measured result. Without a finer reference, the 1 m configuration on the matched 1 km² plain remains unresolved for absolute accuracy. [Scope amendment](qualification/resolution_scope.json)
+
 The original 48 sampled-terrain storm comparisons had unresolved references in 23 final-depth, 34 inundation and 12 hydrograph cases. The fine-cadence subset has a separate measured Pareto frontier. Its final 1 cm inundation and 60-second hydrographs retain their own reference and timing identities. [Original screening](processed/metrics/reference_uncertainty.csv) · [Short-interval frontier and eligibility](processed/million/short_interval_pareto.csv)
 
 These paired Hancock controls hold the physical domain and continuous forcing fixed. A change in hydraulic spacing can change the cell-sampled rain integral. At fixed hydraulic spacing the bed comparisons reuse the same rainfall raster. RMSE measures the difference between two forecasts. The signed ledger columns give the second forecast minus the first. [All methods, run IDs and formulation interactions](processed/million/resolution_components.csv)
@@ -131,7 +133,7 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | million-storms | 62 | 62 |
 | million-auto | 18 | 18 |
 | large-references | 77 | 77 |
-| large-refinements | 16 | 29 |
+| large-refinements | 22 | 27 |
 | heldout-references | 0 | 5 |
 | million-profiles | 0 | 9 |
 | million-repeats | 12 | 12 |

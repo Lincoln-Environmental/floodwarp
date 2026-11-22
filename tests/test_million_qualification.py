@@ -137,6 +137,28 @@ def test_reference_flags_survive_csv_and_policy_ties():
     assert front[0]["configuration"] != front[1]["configuration"]
 
 
+def test_corrective_storm_grid_floor_matches_native_data():
+    from research.floodwarp_methods_paper.qualification import stages
+
+    root, study = study_paths()
+    config = read_config(path=study / "configs/study.json")
+    forecast_stages = (
+        "million-storms",
+        "million-auto",
+        "large-references",
+        "large-refinements",
+        "heldout-references",
+        "million-profiles",
+        "million-repeats",
+        "recession-controls",
+    )
+    for stage in forecast_stages:
+        runs = list(stages.specifications(stage=stage, config=config, root=root))
+        assert runs and min(run["dx"] for run in runs) >= 1
+    primary = stages.specifications(stage="million-storms", config=config, root=root)
+    assert any(run["seed"] == 709 and run["dx"] == 1 for run in primary)
+
+
 def test_short_interval_fronts_use_only_matched_forecasts():
     from research.floodwarp_methods_paper.qualification.observations import (
         short_interval_forecast,
