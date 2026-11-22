@@ -1,8 +1,9 @@
 # Independent solver selection assessment
 
-| rule | decisions | empirical feasible opportunities | successful selections | feasible coverage % | selected | unqualified selections | qualified selections | false feasible | met tolerance % | agreement % | Median regret % | cheaper acceptable | abstentions | runtime Median absolute % error | empirical error interval coverage % |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| advisor | 120 | 66 | 41 | 62.12 | 62 | 19 | 43 | 2 | 95.35 | 41.86 | 156 | 23 | 58 | 47.95 | 81.4 |
-| fv1 | 120 | 66 | 59 | 89.39 | 120 | 51 | 69 | 10 | 85.51 | 4.545 | 280.8 | 56 | 0 | Unavailable | Unavailable |
-| hancock_adaptive | 120 | 66 | 61 | 92.42 | 120 | 51 | 69 | 8 | 88.41 | 0 | 716 | 61 | 0 | Unavailable | Unavailable |
-| slope | 120 | 66 | 34 | 51.52 | 60 | 23 | 37 | 3 | 91.89 | 30.56 | 160.5 | 23 | 60 | 55.59 | 86.49 |
+| rule | decisions | empirical feasible opportunities | successful selections | feasible coverage % | selected | unqualified selections | qualified selections | false feasible | met tolerance % | agreement % | agreement all feasible % | false feasible per decision % | abstention % | Median regret % | cheaper acceptable | abstentions | runtime Median absolute % error | empirical error interval coverage % |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| advisor | 150 | 57 | 10 | 17.54 | 16 | 6 | 10 | 0 | 100 | 10 | 1.754 | 0 | 89.33 | 258.6 | 9 | 134 | 44.63 | 80 |
+| fv1 | 150 | 57 | 51 | 89.47 | 150 | 69 | 81 | 30 | 62.96 | 5.263 | 5.263 | 20 | 0 | 277.1 | 48 | 0 | Unavailable | Unavailable |
+| hancock_dense | 150 | 57 | 52 | 91.23 | 150 | 69 | 81 | 29 | 64.2 | 0 | 0 | 19.33 | 0 | 342.5 | 52 | 0 | Unavailable | Unavailable |
+| oracle | 150 | 57 | 57 | 100 | 57 | 0 | 57 | 0 | 100 | 100 | 100 | 0 | 62 | 0 | 0 | 93 | Unavailable | Unavailable |
+| slope | 150 | 57 | 2 | 3.509 | 2 | 0 | 2 | 0 | 100 | 0 | 0 | 0 | 98.67 | 155.3 | 2 | 148 | 4.013 | 100 |

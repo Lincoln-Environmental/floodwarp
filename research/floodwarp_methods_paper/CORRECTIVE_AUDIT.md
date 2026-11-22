@@ -1,7 +1,5 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 13 numerical records remain outstanding. Values below cover completed events.
-
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
 ## Defects and changes
@@ -43,7 +41,9 @@ The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster
 | incised-707-spatial-10240x10240 | 1048576 | 10 | 8 | 28.372 | 118.26 | 56.092 | 55.975 | 1.98 | 1.62 | 1.22 |
 | mixed-708-spatial-10240x10240 | 1048576 | 10 | 8 | 30.451 | 124.16 | 51.032 | 50.9 | 1.68 | 1.47 | 1.14 |
 | mixed-714-spatial-20480x10240 | 2097152 | 10 | 8 | 59.353 | 231.01 | 87.453 | 87.417 | 1.47 | 1.33 | 1.11 |
+| plain-701-moderate-10240x10240-24h | 1048576 | 10 | 24 | 193.52 | 296.96 | 298.19 | 297 | 1.53 | 1.06 | 1.45 |
 | plain-701-spatial-10240x10240 | 1048576 | 10 | 8 | 8.633 | 27.231 | 9.6535 | 9.6754 | 1.12 | 1.1 | 1.02 |
+| plain-701-spatial-10240x10240-48h | 1048576 | 10 | 48 | 35.359 | 100.39 | 33.853 | 33.746 | 0.957 | 0.861 | 1.11 |
 | plain-709-spatial-1000x1000 | 1000000 | 1 | 8 | 112.72 | 251.72 | 150.23 | 149.92 | 1.33 | 1.03 | 1.29 |
 | plain-712-spatial-20480x10240 | 2097152 | 10 | 24 | 48.748 | 164.42 | 53.375 | 53.353 | 1.09 | 1.11 | 0.983 |
 | plain-715-spatial-10240x10240 | 4194304 | 5 | 8 | 65.287 | 219.66 | 71.023 | 71.239 | 1.09 | 1.09 | 1 |
@@ -51,7 +51,17 @@ The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster
 | rolling-704-soil-5120x5120 | 1048576 | 5 | 8 | 70.34 | 156.65 | 144.93 | 156.03 | 2.06 | 1.28 | 1.61 |
 | rolling-713-moderate-20480x10240 | 2097152 | 10 | 8 | 120.76 | 242.01 | 249.96 | 242.08 | 2 | 1.33 | 1.51 |
 
-The archive contains 80 complete operational forecasts across the scale and fixed-area designs. The largest measured primary grid has 4,194,304 cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.
+The archive contains 80 complete forecasts across the scale and fixed-area designs and 8 supplementary recession controls. The largest measured primary grid has 4,194,304 cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.
+
+
+The supplementary recessions use the same plain DEM. Spatial rain probes delayed export from the original footprint. Widespread rain also reaches the downstream cells. The last column gives the mean discharge in the final 15-minute interval. [Hydrographs](processed/million/hydrographs_900s.csv)
+
+| Rain | Hours | Solver | Rain (m³) | Infiltration (m³) | Outlet volume (m³) | Final storage (m³) | Final wet area (%) | Peak / final discharge (m³/s) |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| moderate | 24 | fv1 | 8,650,752.0 | 4,448,417.9 | 1,947,778.9 | 2,254,555.2 | 63.28 | 30.206 / 18.797 |
+| moderate | 24 | hancock_dense | 8,650,752.0 | 4,638,955.7 | 1,505,457.9 | 2,506,338.4 | 71.42 | 24.691 / 13.080 |
+| spatial | 48 | fv1 | 873,209.6 | 873,209.6 | 0.0 | 0.0 | 0.00 | 0.000 / 0.000 |
+| spatial | 48 | hancock_dense | 873,209.6 | 873,209.6 | 0.0 | 0.0 | 0.00 | 0.000 / 0.000 |
 
 ## Mechanisms, measured cost and Pareto evidence
 
@@ -141,13 +151,13 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | large-references | 77 | 77 |
 | large-refinements | 27 | 27 |
 | heldout-references | 5 | 5 |
-| million-profiles | 4 | 9 |
+| million-profiles | 9 | 9 |
 | million-repeats | 12 | 12 |
-| recession-controls | 0 | 8 |
+| recession-controls | 8 | 8 |
 
 The prevalidation model used 182 development rows from 14 terrain groups. Parameter selection used 11 validation terrain groups. The current model reproduces every frozen training value, parameter and uncertainty interval. The comparison excludes only the reporting revision string. [Freeze manifest and model checksum](manifests/prevalidation_advisor_freeze.json)
 
-The full CUDA regression receipt records **1893 passed, 25 skipped, 743 warnings in 124.25s (0:02:04)**. [Test log](logs/check/9627291943e14358.log) · [Committed numerical source proof](manifests/corrective_source_tree.json)
+The full CUDA regression receipt records **1895 passed, 25 skipped, 743 warnings in 139.21s (0:02:19)**. [Test log](logs/check/1adf1658967d475b.log) · [Committed numerical source proof](manifests/corrective_source_tree.json)
 
 The catalogue retains 2 interrupted or failed numerical attempts outside all hydraulic and timing comparisons. [Attempt catalogue](processed/metrics/attempt_catalog.csv)
 - large-references, plain-701-spatial-10240x10240, hancock_dense — incomplete, attempt `affc4e9a96104629`.
@@ -157,15 +167,21 @@ The catalogue retains 2 interrupted or failed numerical attempts outside all hyd
 
 | Case | Configuration | Largest kernel category | Device seconds | Share of measured kernel time |
 |---|---|---|---:|---:|
+| floodplain-702-moderate-10240x10240 | fv1 | flux and update | 80.278 | 79.8% |
+| floodplain-702-moderate-10240x10240 | hancock_adaptive | flux and update | 69.086 | 39.4% |
+| floodplain-702-moderate-10240x10240 | hancock_dense | flux and update | 69.043 | 40.3% |
+| mixed-708-spatial-10240x10240 | fv1 | flux and update | 14.330 | 47.0% |
+| mixed-708-spatial-10240x10240 | hancock_adaptive | flux and update | 16.156 | 31.4% |
+| mixed-708-spatial-10240x10240 | hancock_dense | flux and update | 67.748 | 54.4% |
 | plain-701-spatial-10240x10240 | fv1 | flux and update | 4.010 | 46.1% |
 | plain-701-spatial-10240x10240 | hancock_adaptive | flux and update | 3.007 | 30.9% |
 | plain-701-spatial-10240x10240 | hancock_dense | flux and update | 14.880 | 54.5% |
 
 Across 6 complete timing controls with at least three runs, observed hydraulic runtime ranges spanned 0.08% to 0.68% of the within-control median. [Individual timing ranges](processed/million/repeat_times.csv)
 
-The prospective preflight used tiled execution in 9 of 14 measured grids of at least one million cells. Its measured excess runtime over the fastest explicit observation had a median of -0.2% and a maximum of +7.7%. Separate executions include timing variability.
+The prospective preflight used tiled execution in 10 of 16 measured grids of at least one million cells. Its measured excess runtime over the fastest explicit observation had a median of -0.2% and a maximum of +7.7%. Separate executions include timing variability.
 
-Preflight selected the faster explicit schedule on 13 of 14 measured grids of at least one million cells. The work estimate uses the initial state and prescribed rain footprint. The matched tile run measures the work actually scheduled over the entire event. [Per-event estimates and observations](processed/million/policies.csv)
+Preflight selected the faster explicit schedule on 15 of 16 measured grids of at least one million cells. The work estimate uses the initial state and prescribed rain footprint. The matched tile run measures the work actually scheduled over the entire event. [Per-event estimates and observations](processed/million/policies.csv)
 
 | Event | Δx (m) | Chosen policy | Rain footprint | Estimated scheduled | Observed tiled work | Auto cost above fastest |
 |---|---:|---|---:|---:|---:|---:|
@@ -175,13 +191,13 @@ Preflight selected the faster explicit schedule on 13 of 14 measured grids of at
 
 | Observable | Eligible | Empirical frontier | Frontier under reference sensitivity | Unresolved |
 |---|---:|---:|---:|---:|
-| depth | 43 | 21 | 21 | 37 |
-| discharge | 22 | 9 | 11 | 58 |
-| inundation | 43 | 18 | 20 | 37 |
-| maximum_depth | 47 | 23 | 23 | 33 |
-| memory | 80 | 15 | 15 | 0 |
-| peak_discharge | 16 | 8 | 8 | 64 |
-| peak_timing | 18 | 7 | 7 | 62 |
+| depth | 43 | 21 | 21 | 45 |
+| discharge | 22 | 9 | 11 | 66 |
+| inundation | 43 | 18 | 20 | 45 |
+| maximum_depth | 47 | 23 | 23 | 41 |
+| memory | 88 | 18 | 18 | 0 |
+| peak_discharge | 16 | 8 | 8 | 72 |
+| peak_timing | 18 | 7 | 7 | 70 |
 
 Final 1 cm inundation is the common prediction target in the enlarged advisor. The historical paper also retains time-integrated inundation results. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)
 
@@ -199,7 +215,9 @@ Each entry uses the measured error plus the reported refinement sensitivity. Tol
 | incised-707-spatial-10240x10240 | unresolved | unresolved | unresolved |
 | mixed-708-spatial-10240x10240 | fv1, 10 m | hancock_auto, 10 m | no tested option |
 | mixed-714-spatial-20480x10240 | unresolved | unresolved | unresolved |
+| plain-701-moderate-10240x10240-24h | unresolved | unresolved | unresolved |
 | plain-701-spatial-10240x10240 | fv1, 10 m | hancock_adaptive, 10 m | unresolved |
+| plain-701-spatial-10240x10240-48h | unresolved | unresolved | unresolved |
 | plain-709-spatial-1000x1000 | fv1, 10 m | hancock_auto, 5 m | fv1, 10 m |
 | plain-710-spatial-5000x5000 | fv1, 10 m | hancock_auto, 10 m | unresolved |
 | plain-712-spatial-20480x10240 | unresolved | unresolved | unresolved |

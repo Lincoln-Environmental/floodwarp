@@ -15,7 +15,7 @@ The 48 prospective physical events included six hours of rain and a common reces
 
 ## Efficiency and terrain representation
 
-On the 48 prospective 120 × 80 m events at 10 m, dense Hancock was faster in 48 cases. Its median complete-event runtime was 1.352× FV1, and 30 cases met the 1.5× target. Tiled Hancock had a median of 2.220× FV1 and met the target in 0 cases. The runs produced identical Hancock fields. Each grid had 96 cells. The ongoing operational qualification reports the measured million-cell timings separately. [Both execution modes](processed/million/policies.csv) · [Corrective audit](CORRECTIVE_AUDIT.md)
+On the 96-cell controls, dense Hancock was faster than tiles in 48 of 48 complete storms. Relative to sparse FV1 its median runtime was 1.352×, with 30 events meeting 1.5×. Tiled Hancock took 2.220× and met the target in 0 events. Selecting the faster qualified execution retrospectively gave 1.352×. Both schedules reproduced the same Hancock fields. With only 96 cells, marking and compacting tiles adds GPU launches while eliminating little work. The large-domain suite measures how this balance changes with the scheduled footprint. [Measured GPU costs](tables/07_runtime.md) · [Full performance qualification](../../validation/hancock_long_storm_review/DECISION.md)
 
 Fixed-geometry and resampled-geometry experiments use the same physical extent. Their objective-specific rankings and measured cost ratios are available for the plain, fan and incised development realisations. An unresolved reference is an explicit missing comparison. [Resolution profiles](figures/06_resolution.pdf) · [Equal-cost results](tables/08_cost_accuracy.md) · [Least-cost feasible configurations](processed/pareto/least_cost.csv)
 
@@ -25,7 +25,7 @@ The 9 nested training fits selected multipliers between 0.8 and 0.95. Across 105
 
 ## Held-out solver decisions
 
-The advisor made 62 selections in 120 held-out objective decisions, including 19 with unresolved reference evidence. Among 43 assessable selections, 95.35% satisfied the requested accuracy and 2 exceeded it. Agreement with the measured least-cost method was 41.86%. The median conditional runtime regret was 156%. The empirical interval covered the observed error in 81.4% of assessable predictions. [Held-out rule comparison](tables/10_advisor.md) · [Individual decisions](processed/advisor/heldout.csv)
+The advisor made 16 selections in 150 held-out objective decisions, including 6 with unresolved reference evidence. Among 10 assessable selections, 100% satisfied the requested accuracy and 0 exceeded it. Agreement with the measured least-cost method was 10%. The median conditional runtime regret was 258.6%. The empirical interval covered the observed error in 80% of assessable predictions. [Held-out rule comparison](tables/10_advisor.md) · [Individual decisions](processed/advisor/heldout.csv)
 
 ## Formulation at matched resolution
 
@@ -59,3 +59,13 @@ A pairwise difference is labelled resolved here when its magnitude exceeds twice
 | inundation | li | 8 | 0 | 6 | 34 |
 
 The fine-grid cross-formulation file reports each available Hancock–FV2 difference on identical 1 m geometry. The per-family file gives the operational timing and timestep ratios for all eight landforms. [Fine-grid comparisons](processed/metrics/independent_fine_formulation.csv) · [Landform results](processed/comparisons/landform_results.csv)
+
+## Million-cell operational controls
+
+The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in 1 of 8 complete events. Its median ratio was 1.69×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
+
+The partial-domain rain and widespread inundation cases have different scheduling and timestep costs. [Complete operational records](tables/11_execution.md) · [Costs by scheduled footprint](figures/13_execution_cost.pdf) · [Finer reference checks](tables/12_reference_qualification.md) · [Operational hydrographs](figures/18_operational_storms.pdf).
+
+## Held-out evidence at operational scale
+
+The advisor abstained on 30 of 30 million-cell decisions. No measured option satisfied both the hydraulic acceptance criterion and terrain admissibility. This test cannot establish an advantage over the simple rules or estimate operational regret on feasible choices. Of 30 decisions, 12 had a qualified reference, 10 had a measured method within hydraulic tolerance and 0 also had admissible terrain. [Selection eligibility by case](processed/advisor/eligibility_breakdown.csv) [Scale-specific denominators](tables/13_advisor_scale.md).
