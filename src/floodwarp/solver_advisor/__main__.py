@@ -50,7 +50,13 @@ def run(*, arguments):
         options["compare_resolutions"] = tuple(
             map(float, opt["--compare-resolutions"].split(","))
         )
-    print(json.dumps(recommend_dem(**options)["selected"], indent=2))
+    assessment = recommend_dem(**options)
+    summary = dict(
+        assessment["selected"],
+        requested_resolution_m=assessment["requested_resolution_m"],
+        requested_status=assessment["requested_status"],
+    )
+    print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":

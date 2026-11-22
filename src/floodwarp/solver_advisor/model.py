@@ -470,12 +470,20 @@ def recommend_dem(
         results.append(rec)
     feasible = [r for r in results if r["status"] == "recommended"]
     best = min(feasible, key=forecast_time) if feasible else results[0]
-    out = dict(selected=best, comparisons=results, applied_pilot=False)
+    requested = results[0]
+    out = dict(
+        selected=best,
+        comparisons=results,
+        applied_pilot=False,
+        requested_resolution_m=resolution,
+        requested_status=requested["status"],
+    )
     (folder / "recommendation.json").write_text(
         json.dumps(out, indent=2, allow_nan=False) + "\n"
     )
     lines = [
         "# Solver recommendation",
+        f"Requested grid **{resolution:g} m**. Assessment **{requested['status']}** for {objective}.",
         f"Decision **{best['status']}** at {best['resolution_m']:g} m for {objective}.",
         best.get("reason", "Benchmark support is insufficient."),
         f"Hardware basis: {model['hardware']}",
@@ -484,6 +492,11 @@ def recommend_dem(
         lines.append(
             f"Selected **{best['method']}**, with predicted hydraulic runtime {best['runtime_s']:.3g} s. The empirical error interval is {best['error_range']}."
         )
+    if best["resolution_m"] != resolution:
+        lines.append(
+            f"The selected {best['resolution_m']:g} m grid is an alternative to the requested {resolution:g} m grid."
+        )
+        lines.extend(requested["warnings"])
     lines += best["warnings"]
     lines.append(
         "The accompanying GeoTIFFs show terrain aggregation, storage and potential connectivity changes. The comparison list reports every evaluated formulation and tested resolution."
