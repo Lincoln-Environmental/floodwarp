@@ -1,5 +1,6 @@
 """Entry points for scaled hydraulics and strictly offline report reconstruction."""
 
+import json
 from unittest.mock import patch
 from research.floodwarp_methods_paper import runner
 from research.floodwarp_methods_paper.evidence import (
@@ -42,6 +43,15 @@ def terrain_identity(*, root, study, stage):
     )
 
 
+def registered_refinements(*, stage, config, root):
+    """Apply the current data-resolution scope to the archived candidate design."""
+    scope = root / "research/floodwarp_methods_paper/qualification/resolution_scope.json"
+    minimum = json.loads(scope.read_text())["minimum_hydraulic_spacing_m"]
+    for spec in refinements.expanded(stage=stage, config=config, root=root):
+        if spec["dx"] >= minimum:
+            yield spec
+
+
 def numerical(*, root, study, config, stage, arguments):
     if stage in ("million-auto", "recession-controls"):
         module = automatic if stage == "million-auto" else recession
@@ -76,7 +86,7 @@ def numerical(*, root, study, config, stage, arguments):
             )
     elif stage == "large-refinements":
         with (
-            patch.object(launch, "cases", refinements.expanded),
+            patch.object(launch, "cases", registered_refinements),
             patch.object(launch, "identity_original", launch.identity, create=True),
             patch.object(launch, "identity", refinements.source),
         ):
@@ -131,7 +141,7 @@ def source(*, root, study, stage):
 
 def specifications(*, stage, config, root):
     planner = {
-        "large-refinements": refinements.expanded,
+        "large-refinements": registered_refinements,
         "heldout-references": heldout.cases,
         "million-repeats": repeats.cases,
         "recession-controls": recession.cases,

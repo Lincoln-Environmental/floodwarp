@@ -28,7 +28,7 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 | million-storms | Full six-hour rainfall and recession forecasts at fixed grid counts and fixed physical extent |
 | million-auto | Measure the frozen preflight policy on the same complete events |
 | large-references | Same-domain refinements and fast hydrograph controls |
-| large-refinements | Additional reference grids and matched wet initial-state mappings |
+| large-refinements | Additional reference grids at 1 m or coarser and matched wet initial-state mappings |
 | heldout-references | Fine-grid hydraulic sensitivity of the reserved plain and mixed catchments |
 | million-profiles | Separate complete graph-instrumented replays of sparse, wet and mixed events, with a fresh process for each GPU pool high-water mark |
 | million-repeats | Repeat sparse plain and wet floodplain controls twice on the same GPU, in addition to each original timing |
@@ -105,3 +105,5 @@ For an experimental automatic schedule, construct the Hancock model and set its 
 Use `processed/million/reference_checks.csv` to identify resolved observables. The strict empirical Pareto column describes dominance of the measured points. The sensitivity column requires the competitor's upper error to be below the candidate's lower error, or an exact endpoint tie with a lower runtime. Each interval uses the measured reference changes. These envelopes describe sensitivity to the tested references. [Measured configurations](processed/million/pareto.csv)
 
 The ten corrective numerical stages have a separate committed-tree proof. Verification extracts the recorded Git revision, recomputes each numerical source fingerprint and checks it against the selected simulation receipts. [Corrective numerical source proof](manifests/corrective_source_tree.json)
+
+The corrective storm study uses 1 m as its finest hydraulic resolution, matching the available terrain data. The two planned 0.5 m forecasts were withdrawn. The interrupted attempt has no hydraulic result. Matched 1 m Hancock and FV2 runs can inform comparisons at coarser resolutions. The 1 m configurations themselves have no finer independent reference in this study. [Recorded scope amendment](qualification/resolution_scope.json)
