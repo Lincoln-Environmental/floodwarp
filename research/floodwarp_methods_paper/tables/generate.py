@@ -133,6 +133,31 @@ def middle(*, rows, key):
     return median(values) if values else None
 
 
+def execution_table(*, policy):
+    return (
+        "Complete-event production cost at operational scales",
+        [
+            dict(
+                case=r["case"],
+                dx=r["dx"],
+                cells=r["cells"],
+                fv1_s=r["fv1_s"],
+                dense_s=r["dense_s"],
+                tiles_s=r["tiles_s"],
+                auto_s=r.get("auto_s"),
+                fastest_ratio=r["fastest_ratio"],
+                work_fraction=r["work_fraction"],
+                step_ratio=r["step_ratio"],
+                per_step_ratio=r["per_step_ratio"],
+                fastest_measured_policy=r["fastest_all_policy"],
+                fastest_measured_ratio=r["fastest_all_ratio"],
+            )
+            for r in policy
+            if int(r["cells"]) >= 250000
+        ],
+    )
+
+
 def generate(*, study, output=None):
     processed = study / "processed"
     out = study / "tables" if output is None else output
@@ -385,28 +410,7 @@ def generate(*, study, output=None):
     )
     large = processed / "million"
     policy = csv_read(large / "policies.csv")
-    output["11_execution"] = (
-        "Complete-event production cost at operational scales",
-        [
-            dict(
-                case=r["case"],
-                dx=r["dx"],
-                cells=r["cells"],
-                fv1_s=r["fv1_s"],
-                dense_s=r["dense_s"],
-                tiles_s=r["tiles_s"],
-                auto_s=r.get("auto_s"),
-                fastest_ratio=r["fastest_ratio"],
-                work_fraction=r["work_fraction"],
-                step_ratio=r["step_ratio"],
-                per_step_ratio=r["per_step_ratio"],
-                fastest_measured_policy=r["fastest_all_policy"],
-                fastest_measured_ratio=r["fastest_all_ratio"],
-            )
-            for r in policy
-            if int(r["cells"]) >= 250000
-        ],
-    )
+    output["11_execution"] = execution_table(policy=policy)
     refs = csv_read(large / "reference_checks.csv")
     output["12_reference_qualification"] = (
         "Per-observable independent refinement and cross-formulation screens",
