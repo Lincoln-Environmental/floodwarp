@@ -75,6 +75,7 @@ def derived_identity(*, root, study, stage):
         study / "supplementary/environment.json",
         study / "manifests/timing_exclusions.json",
         study / "manifests/corrective_source_tree.json",
+        study / "manifests/prevalidation_advisor_freeze.json",
     ]
     for name in (
         "METHODS.md",

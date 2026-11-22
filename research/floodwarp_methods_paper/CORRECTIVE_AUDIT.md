@@ -1,6 +1,6 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 27 numerical records remain outstanding. Values below cover completed events.
+**Qualification in progress.** 22 numerical records remain outstanding. Values below cover completed events.
 
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
@@ -85,6 +85,9 @@ These paired Hancock controls hold the physical domain and continuous forcing fi
 | floodplain-702-moderate-10240x10240 | grid on fixed 20 m bed and initial map | 20.951 | +0.000 | +0.000 | +35370.691 |
 | floodplain-702-moderate-10240x10240 | initial water mapping on fixed bed | 1.091 | -0.070 | +0.000 | +117.491 |
 | floodplain-702-moderate-10240x10240 | resampled bed with matched water | 21.808 | +0.000 | +0.000 | -33523.170 |
+| coastal-703-moderate-10240x10240 | grid on fixed 20 m bed and initial map | 0.865 | +0.000 | -0.000 | +2587.653 |
+| coastal-703-moderate-10240x10240 | initial water mapping on fixed bed | 0.019 | -0.070 | +0.000 | +0.006 |
+| coastal-703-moderate-10240x10240 | resampled bed with matched water | 1.395 | +0.000 | +0.000 | -1837.590 |
 
 The fast-event outlet records support a direct comparison of interval means from the same accepted face volumes. Times below are the ends of the intervals containing the maximum mean discharge. [Fine-interval peak observations](processed/million/observations.csv) · [15-minute hydrographs](processed/million/hydrographs_900s.csv)
 
@@ -133,11 +136,13 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | million-storms | 62 | 62 |
 | million-auto | 18 | 18 |
 | large-references | 77 | 77 |
-| large-refinements | 22 | 27 |
+| large-refinements | 27 | 27 |
 | heldout-references | 0 | 5 |
 | million-profiles | 0 | 9 |
 | million-repeats | 12 | 12 |
 | recession-controls | 0 | 8 |
+
+The prevalidation model used 182 rows from 14 development and 11 validation terrain groups. The current model reproduces every frozen training value, parameter and uncertainty interval. The comparison excludes only the reporting revision string. [Freeze manifest and model checksum](manifests/prevalidation_advisor_freeze.json)
 
 The full CUDA regression receipt records **1893 passed, 25 skipped, 743 warnings in 124.25s (0:02:04)**. [Test log](logs/check/9627291943e14358.log) · [Committed numerical source proof](manifests/corrective_source_tree.json)
 
@@ -159,13 +164,13 @@ Preflight selected the faster explicit schedule on 13 of 14 measured grids of at
 
 | Observable | Eligible | Empirical frontier | Frontier under reference sensitivity | Unresolved |
 |---|---:|---:|---:|---:|
-| depth | 26 | 13 | 13 | 54 |
-| discharge | 14 | 5 | 7 | 66 |
-| inundation | 26 | 10 | 13 | 54 |
-| maximum_depth | 30 | 15 | 15 | 50 |
+| depth | 34 | 17 | 17 | 46 |
+| discharge | 18 | 7 | 9 | 62 |
+| inundation | 34 | 14 | 17 | 46 |
+| maximum_depth | 38 | 19 | 19 | 42 |
 | memory | 80 | 15 | 15 | 0 |
-| peak_discharge | 8 | 4 | 4 | 72 |
-| peak_timing | 10 | 3 | 3 | 70 |
+| peak_discharge | 12 | 6 | 6 | 68 |
+| peak_timing | 14 | 5 | 5 | 66 |
 
 Final 1 cm inundation is the common prediction target in the enlarged advisor. The historical paper also retains time-integrated inundation results. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)
 
@@ -177,7 +182,7 @@ Each entry uses the measured error plus the reported refinement sensitivity. Tol
 |---|---|---|---|
 | coastal-703-moderate-10240x10240 | unresolved | fv1, 10 m | unresolved |
 | fan-705-spatial-5120x5120 | fv1, 5 m | unresolved | no tested option |
-| fan-711-spatial-10000x5000 | unresolved | unresolved | unresolved |
+| fan-711-spatial-10000x5000 | fv1, 10 m | no tested option | no tested option |
 | floodplain-702-moderate-10240x10240 | unresolved | unresolved | unresolved |
 | hill-706-back-10240x10240 | unresolved | unresolved | unresolved |
 | incised-707-spatial-10240x10240 | unresolved | unresolved | unresolved |
@@ -185,7 +190,7 @@ Each entry uses the measured error plus the reported refinement sensitivity. Tol
 | mixed-714-spatial-20480x10240 | unresolved | unresolved | unresolved |
 | plain-701-spatial-10240x10240 | fv1, 10 m | hancock_adaptive, 10 m | unresolved |
 | plain-709-spatial-1000x1000 | fv1, 10 m | hancock_auto, 5 m | fv1, 10 m |
-| plain-710-spatial-5000x5000 | unresolved | unresolved | unresolved |
+| plain-710-spatial-5000x5000 | fv1, 10 m | hancock_auto, 10 m | unresolved |
 | plain-712-spatial-20480x10240 | unresolved | unresolved | unresolved |
 | plain-715-spatial-10240x10240 | fv1, 10 m | fv1, 10 m | unresolved |
 | rolling-704-soil-5120x5120 | unresolved | unresolved | unresolved |

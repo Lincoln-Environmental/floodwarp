@@ -419,6 +419,37 @@ def material(*, study):
             *inventory,
         ]
     )
+    freeze_path = study / "manifests/prevalidation_advisor_freeze.json"
+    if freeze_path.exists():
+        from research.floodwarp_methods_paper import runner
+
+        frozen = json.loads(freeze_path.read_text())
+        if (
+            runner.checksum(study / frozen["model_file"])
+            != frozen["archived_model_sha256"]
+        ):
+            raise ValueError("Archived prevalidation advisor fingerprint changed")
+        current_model = json.loads((p / "advisor/model.json").read_text())
+        content = {
+            k: v
+            for k, v in current_model.items()
+            if k not in frozen["excluded_metadata"]
+        }
+        same = runner.digest(content) == frozen["predictive_content_sha256"]
+        status = (
+            "The current model reproduces every frozen training value, parameter and uncertainty interval."
+            if same
+            else "The current fit has different predictive content and requires its own independent validation."
+        )
+        audit.extend(
+            [
+                "",
+                f"The prevalidation model used {frozen['training_rows']} rows from "
+                f"{len(frozen['training_terrain_ids'])} development and {len(frozen['validation_terrain_ids'])} "
+                f"validation terrain groups. {status} The comparison excludes only the reporting revision string. "
+                "[Freeze manifest and model checksum](manifests/prevalidation_advisor_freeze.json)",
+            ]
+        )
     from research.floodwarp_methods_paper import evidence
 
     for rec in evidence.records(study=study, stages=("check",)):
