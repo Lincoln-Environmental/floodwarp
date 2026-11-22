@@ -1,6 +1,6 @@
 # Corrective numerical and GPU audit
 
-**Qualification in progress.** 50 numerical records remain outstanding. Values below cover completed events.
+**Qualification in progress.** 35 numerical records remain outstanding. Values below cover completed events.
 
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
@@ -80,6 +80,9 @@ These paired Hancock controls hold the physical domain and continuous forcing fi
 |---|---|---:|---:|---:|---:|
 | plain-709-spatial-1000x1000 | grid on fixed 10 m bed | 0.724 | +0.000 | -0.108 | -95.415 |
 | plain-709-spatial-1000x1000 | resampled bed at 1 m | 2.034 | +0.000 | -0.000 | +1.266 |
+| floodplain-702-moderate-10240x10240 | grid on fixed 20 m bed and initial map | 20.951 | +0.000 | +0.000 | +35370.691 |
+| floodplain-702-moderate-10240x10240 | initial water mapping on fixed bed | 1.091 | -0.070 | +0.000 | +117.491 |
+| floodplain-702-moderate-10240x10240 | resampled bed with matched water | 21.808 | +0.000 | +0.000 | -33523.170 |
 
 The fast-event outlet records support a direct comparison of interval means from the same accepted face volumes. Times below are the ends of the intervals containing the maximum mean discharge. [Fine-interval peak observations](processed/million/observations.csv) · [15-minute hydrographs](processed/million/hydrographs_900s.csv)
 
@@ -128,7 +131,7 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | million-storms | 62 | 62 |
 | million-auto | 18 | 18 |
 | large-references | 77 | 77 |
-| large-refinements | 1 | 29 |
+| large-refinements | 16 | 29 |
 | heldout-references | 0 | 5 |
 | million-profiles | 0 | 9 |
 | million-repeats | 12 | 12 |
@@ -156,10 +159,10 @@ Preflight selected the faster explicit schedule on 13 of 14 measured grids of at
 |---|---:|---:|---:|---:|
 | depth | 26 | 13 | 13 | 54 |
 | discharge | 14 | 5 | 7 | 66 |
-| inundation | 22 | 8 | 11 | 58 |
-| maximum_depth | 26 | 13 | 13 | 54 |
+| inundation | 26 | 10 | 13 | 54 |
+| maximum_depth | 30 | 15 | 15 | 50 |
 | memory | 80 | 15 | 15 | 0 |
-| peak_discharge | 4 | 2 | 2 | 76 |
+| peak_discharge | 8 | 4 | 4 | 72 |
 | peak_timing | 10 | 3 | 3 | 70 |
 
 Final 1 cm inundation is the common prediction target in the enlarged advisor. The historical paper also retains time-integrated inundation results. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)
@@ -170,7 +173,7 @@ Each entry uses the measured error plus the reported refinement sensitivity. Tol
 
 | Physical event | Final depth | Final inundation | Outlet hydrograph |
 |---|---|---|---|
-| coastal-703-moderate-10240x10240 | unresolved | unresolved | unresolved |
+| coastal-703-moderate-10240x10240 | unresolved | fv1, 10 m | unresolved |
 | fan-705-spatial-5120x5120 | fv1, 5 m | unresolved | no tested option |
 | fan-711-spatial-10000x5000 | unresolved | unresolved | unresolved |
 | floodplain-702-moderate-10240x10240 | unresolved | unresolved | unresolved |

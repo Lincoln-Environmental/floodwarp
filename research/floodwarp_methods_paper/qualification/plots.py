@@ -193,6 +193,8 @@ def family_frontiers(*, rows, out):
                 if edge:
                     ax.step(*zip(*edge), where="post", color="#666", lw=0.8)
                 if not measured:
+                    ax.set_xticks([])
+                    ax.set_yticks([])
                     ax.text(
                         0.5,
                         0.45,
@@ -204,6 +206,8 @@ def family_frontiers(*, rows, out):
                 ax.set(xlabel="Hydraulic time (s)", ylabel=UNITS[obj])
             row[0].set_title(case, fontsize=7)
         labels = dict(LABELS, hancock_auto="Hancock auto")
+        methods = {row["method"] for data in cases.values() for row in data}
+        spacings = {float(row["dx"]) for data in cases.values() for row in data}
         handles = [
             Line2D(
                 [],
@@ -215,10 +219,12 @@ def family_frontiers(*, rows, out):
                 markersize=4,
             )
             for k, v in labels.items()
+            if k in methods
         ]
         handles.extend(
             Line2D([], [], color=".35", marker=m, ls="", label=f"{d} m", markersize=4)
             for d, m in ((1, "^"), (5, "s"), (10, "o"))
+            if d in spacings
         )
         fig.legend(handles=handles, loc="outside lower center", ncol=6, frameon=False)
         save(fig=fig, folder=out, name=family)
@@ -342,6 +348,8 @@ def generate(*, study):
             by_case[r["case"]].append(r)
     value(study=study, out=out, by_case=by_case, fronts=large)
     family_frontiers(rows=large, out=study / "supplementary/pareto/million")
+    short = metrics.csv_read(study / "processed/million/short_interval_pareto.csv")
+    family_frontiers(rows=short, out=study / "supplementary/pareto/short_interval")
     terrain_validation(study=study, out=out)
     histories = metrics.csv_read(study / "processed/million/event_intervals.csv")
     complete = sorted(

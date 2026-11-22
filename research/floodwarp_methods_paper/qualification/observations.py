@@ -398,7 +398,7 @@ def build(*, study, config):
     ]
     short_fronts = metrics.pareto(
         rows=short_controls,
-        keys=("case", "representation", "interval_s"),
+        keys=("case", "representation", "landform", "interval_s"),
         objectives=metrics.OBJECTIVES,
         cost="runtime_s",
         include_unresolved=True,
