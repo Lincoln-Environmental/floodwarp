@@ -444,8 +444,8 @@ def material(*, study):
         audit.extend(
             [
                 "",
-                f"The prevalidation model used {frozen['training_rows']} rows from "
-                f"{len(frozen['training_terrain_ids'])} development and {len(frozen['validation_terrain_ids'])} "
+                f"The prevalidation model used {frozen['training_rows']} development rows from "
+                f"{len(frozen['training_terrain_ids'])} terrain groups. Parameter selection used {len(frozen['validation_terrain_ids'])} "
                 f"validation terrain groups. {status} The comparison excludes only the reporting revision string. "
                 "[Freeze manifest and model checksum](manifests/prevalidation_advisor_freeze.json)",
             ]

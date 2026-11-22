@@ -142,7 +142,7 @@ The primary event timings cover a single reference GPU and normal timestep polic
 | million-repeats | 12 | 12 |
 | recession-controls | 0 | 8 |
 
-The prevalidation model used 182 rows from 14 development and 11 validation terrain groups. The current model reproduces every frozen training value, parameter and uncertainty interval. The comparison excludes only the reporting revision string. [Freeze manifest and model checksum](manifests/prevalidation_advisor_freeze.json)
+The prevalidation model used 182 development rows from 14 terrain groups. Parameter selection used 11 validation terrain groups. The current model reproduces every frozen training value, parameter and uncertainty interval. The comparison excludes only the reporting revision string. [Freeze manifest and model checksum](manifests/prevalidation_advisor_freeze.json)
 
 The full CUDA regression receipt records **1893 passed, 25 skipped, 743 warnings in 124.25s (0:02:04)**. [Test log](logs/check/9627291943e14358.log) · [Committed numerical source proof](manifests/corrective_source_tree.json)
 
