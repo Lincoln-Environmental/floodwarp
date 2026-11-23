@@ -36,7 +36,13 @@ STYLES = {
 def save(*, fig, folder, name):
     folder.mkdir(parents=True, exist_ok=True)
     for fmt in ("pdf", "svg", "png"):
-        fig.savefig(folder / (name + "." + fmt), dpi=300, bbox_inches="tight")
+        file = folder / (name + "." + fmt)
+        fig.savefig(file, dpi=300, bbox_inches="tight")
+        if fmt == "svg":
+            file.write_text(
+                "\n".join(line.rstrip() for line in file.read_text().splitlines())
+                + "\n"
+            )
     plt.close(fig)
 
 
@@ -66,17 +72,16 @@ def overlay(*, folder, series, name, xlabel, time_unit, title):
     save(fig=fig, folder=folder, name=name)
 
 
-def plots(*, directory, groups):
+def channel(*, directory, dx):
     os.environ.setdefault("SOURCE_DATE_EPOCH", "0")
     plt.rcParams["svg.hashsalt"] = "floodwarp-hydrograph-fidelity"
     folder = directory / "figures"
-    target = directory / "results"
     cfg = json.loads((directory / "design.json").read_text())["pulse"]
     archive = directory / "long_pulses"
     source = archive / (archive / "current.txt").read_text().strip()
     q = []
     for method in cfg["methods"]:
-        with np.load(source / f"smooth_10_0.13_{method}.npz") as f:
+        with np.load(source / f"smooth_{dx}_0.13_{method}.npz") as f:
             if not q:
                 q.append(("Exact", f["edges"], f["truth"][:, -1], "#242424", "-"))
             q.append(
@@ -91,11 +96,21 @@ def plots(*, directory, groups):
     overlay(
         folder=folder,
         series=q,
-        name="channel_hydrographs",
+        name="channel_hydrographs" if dx == 10 else f"channel_hydrographs_{dx}m",
         xlabel="Time (s)",
         time_unit="s",
-        title="Smooth pulse, 10 m grid, 200 m downstream",
+        title=f"Smooth pulse, {dx} m grid, 200 m downstream",
     )
+
+
+def plots(*, directory, groups):
+    os.environ.setdefault("SOURCE_DATE_EPOCH", "0")
+    plt.rcParams["svg.hashsalt"] = "floodwarp-hydrograph-fidelity"
+    folder = directory / "figures"
+    target = directory / "results"
+    cfg = json.loads((directory / "design.json").read_text())["pulse"]
+    for spacing in (1, 5, 10):
+        channel(directory=directory, dx=spacing)
     for case, cohort, rep, dx in (
         ("floodplain-double-rain", "complete-double", "10m bed", 10),
         ("mixed-708-spatial-10240x10240", "complete-expanded", "sampled", 10),

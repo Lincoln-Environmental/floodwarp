@@ -12,6 +12,7 @@ run_stage() {
         verify) module=verify_products ;;
         pulses) module=pulse ;;
         pulse-recession) module=pulse_recession ;;
+        pulse-figures) module=pulse_products ;;
         orientation) module=oblique ;;
         bed-recession) module=bed_recession ;;
         policy-recession) module=policy_recession ;;
@@ -30,7 +31,7 @@ run_stage() {
 main() {
     local stage=${1:-help} dry=false module
     if [[ $stage == help || $stage == --help ]]; then
-        echo "Usage: $0 {all|status|verify-kernels|pulses|pulse-recession|operational-preview|orientation|storm-controls|rolling-reference|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
+        echo "Usage: $0 {all|status|verify-kernels|pulses|pulse-recession|pulse-figures|operational-preview|orientation|storm-controls|rolling-reference|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
         return
     fi
     shift
