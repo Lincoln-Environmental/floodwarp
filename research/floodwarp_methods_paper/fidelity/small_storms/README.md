@@ -18,22 +18,43 @@ Each entry below is an outlet observation with independent spatial, temporal and
 
 | 10 m method | Observable | Qualified / 48 | Median signed (%) | Median absolute (%) | Below envelope | Above envelope |
 |---|---|---:|---:|---:|---:|---:|
-| fv1 | peak_bias_pct | 24 | +0.08 | 2.06 | 10 | 11 |
-| fv1 | volume_bias_pct | 10 | -1.02 | 1.02 | 9 | 0 |
-| fv1 | centroid_delay_pct | 13 | +1.92 | 2.62 | 5 | 7 |
-| fv1 | width80_bias_pct | 13 | +1.26 | 6.79 | 6 | 7 |
-| fv1 | shape_tv_pct | 12 | +2.75 | 2.75 | 0 | 12 |
-| hancock_dense | peak_bias_pct | 24 | -0.35 | 2.63 | 11 | 7 |
-| hancock_dense | volume_bias_pct | 10 | -1.10 | 1.10 | 9 | 0 |
-| hancock_dense | centroid_delay_pct | 13 | +1.13 | 2.12 | 4 | 8 |
-| hancock_dense | width80_bias_pct | 13 | +1.06 | 5.32 | 6 | 7 |
-| hancock_dense | shape_tv_pct | 12 | +2.51 | 2.51 | 0 | 12 |
-| adaptive | peak_bias_pct | 24 | +0.00 | 2.00 | 10 | 5 |
-| adaptive | volume_bias_pct | 10 | -1.01 | 1.01 | 9 | 0 |
-| adaptive | centroid_delay_pct | 13 | +1.09 | 2.04 | 4 | 8 |
-| adaptive | width80_bias_pct | 13 | +0.82 | 5.29 | 6 | 7 |
-| adaptive | shape_tv_pct | 12 | +2.56 | 2.56 | 0 | 12 |
+| FV1 contact-HLL | Peak bias | 24 | +0.08 | 2.06 | 10 | 11 |
+| FV1 contact-HLL | Discharge volume | 10 | -1.02 | 1.02 | 9 | 0 |
+| FV1 contact-HLL | Centroid delay | 13 | +1.92 | 2.62 | 5 | 7 |
+| FV1 contact-HLL | Central 80% duration | 13 | +1.26 | 6.79 | 6 | 7 |
+| FV1 contact-HLL | Redistributed volume | 12 | +2.75 | 2.75 | 0 | 12 |
+| Hancock dense | Peak bias | 24 | -0.35 | 2.63 | 11 | 7 |
+| Hancock dense | Discharge volume | 10 | -1.10 | 1.10 | 9 | 0 |
+| Hancock dense | Centroid delay | 13 | +1.13 | 2.12 | 4 | 8 |
+| Hancock dense | Central 80% duration | 13 | +1.06 | 5.32 | 6 | 7 |
+| Hancock dense | Redistributed volume | 12 | +2.51 | 2.51 | 0 | 12 |
+| FV2 RK2 | Peak bias | 24 | +0.00 | 2.00 | 10 | 5 |
+| FV2 RK2 | Discharge volume | 10 | -1.01 | 1.01 | 9 | 0 |
+| FV2 RK2 | Centroid delay | 13 | +1.09 | 2.04 | 4 | 8 |
+| FV2 RK2 | Central 80% duration | 13 | +0.82 | 5.29 | 6 | 7 |
+| FV2 RK2 | Redistributed volume | 12 | +2.56 | 2.56 | 0 | 12 |
+
+## Paired hydraulic differences
+
+Positive gain means a reduction in absolute error. The last columns count gains or losses exceeding the sum of the two reference-sensitivity estimates.
+
+| Comparison | Metric | Matched events | Median gain (points) | Better beyond sensitivity | Worse beyond sensitivity |
+|---|---|---:|---:|---:|---:|
+| FV1 contact-HLL to Hancock dense | Peak bias | 24 | +0.17 | 9 | 2 |
+| FV1 contact-HLL to Hancock dense | Redistributed volume | 12 | +1.14 | 6 | 0 |
+| FV1 contact-HLL to Hancock dense | Central 80% duration | 13 | +0.20 | 4 | 0 |
+| Hancock dense to FV2 RK2 | Peak bias | 24 | +0.14 | 4 | 0 |
+| Hancock dense to FV2 RK2 | Redistributed volume | 12 | +0.04 | 0 | 0 |
+| Hancock dense to FV2 RK2 | Central 80% duration | 13 | +0.13 | 1 | 0 |
+
+## Measured runtime
+
+| Method | Median runtime / FV1 | At or below 1.5× |
+|---|---:|---:|
+| Hancock dense | 1.358 | 30/48 |
+| Hancock tiled | 2.208 | 0/48 |
+| FV2 RK2 | 1.888 | 0/48 |
 
 These grids contain 96 cells at the candidate resolution. The table supports event-scale numerical comparisons on this geometry. The million-cell operational cases have separate measurements.
 
-[Paired outlet results and reference IDs](outlet_metrics.csv) · [Matched horizons](recession_horizons.csv) · [Final two-hour transport and storage](recession_terminal.csv)
+[Paired outlet results and reference IDs](outlet_metrics.csv) · [Paired differences](paired_differences.csv) · [Matched horizons](recession_horizons.csv) · [Final two-hour transport and storage](recession_terminal.csv)

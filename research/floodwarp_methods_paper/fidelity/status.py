@@ -39,6 +39,17 @@ def status(*, directory):
         prints.append(
             f"Latest archived continuation: {run['spec']['case']} {run['spec']['method']} {run['spec']['dx']} m at {run['end_s'] / 3600:g} h. Individual tail check: {run['settled']}."
         )
+    snapshots = [
+        f for f in (directory / "transient").glob("*/*.npz") if f.stem.isdecimal()
+    ]
+    if snapshots:
+        file = max(snapshots, key=modified)
+        spec = json.loads((file.parent / "spec.json").read_text())
+        prints.append(
+            f"Latest spatial snapshot: {spec['case']}, {spec['method']} at {spec['dx']:g} m, CFL {spec['cfl']:g}, {int(file.stem) / 3600:g} simulated hours."
+        )
+    for file in sorted((directory / "verification").glob("*/passed.json")):
+        prints.append(json.loads(file.read_text())["summary"])
     print("\n".join(prints))
 
 

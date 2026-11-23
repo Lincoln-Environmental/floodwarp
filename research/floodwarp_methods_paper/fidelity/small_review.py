@@ -64,6 +64,19 @@ def run(*, directory, target):
             "|---|---|---:|---:|---:|---:|---:|",
         ]
     )
+    labels = {
+        "fv1": "FV1 contact-HLL",
+        "hancock_dense": "Hancock dense",
+        "hancock_adaptive": "Hancock tiled",
+        "adaptive": "FV2 RK2",
+    }
+    measures = {
+        "peak_bias_pct": "Peak bias",
+        "volume_bias_pct": "Discharge volume",
+        "centroid_delay_pct": "Centroid delay",
+        "width80_bias_pct": "Central 80% duration",
+        "shape_tv_pct": "Redistributed volume",
+    }
     for method in ("fv1", "hancock_dense", "adaptive"):
         for k in (
             "peak_bias_pct",
@@ -84,18 +97,66 @@ def run(*, directory, target):
                 v = np.asarray([r["value_pct"] for r in g])
                 u = np.asarray([r["reference_sensitivity_pct"] for r in g])
                 report.append(
-                    f"| {method} | {k} | {len(g)} | {np.median(v):+.2f} | {np.median(abs(v)):.2f} | {(v < -u).sum()} | {(v > u).sum()} |"
+                    f"| {labels[method]} | {measures[k]} | {len(g)} | {np.median(v):+.2f} | {np.median(abs(v)):.2f} | {(v < -u).sum()} | {(v > u).sum()} |"
                 )
             else:
                 report.append(
-                    f"| {method} | {k} | 0 | unresolved | unresolved | — | — |"
+                    f"| {labels[method]} | {measures[k]} | 0 | unresolved | unresolved | — | — |"
                 )
+    from research.floodwarp_methods_paper.fidelity.statistics import matched
+
+    complete_rows = [
+        r for r in rows if r["cohort"] == "complete-legacy" and r["station"] == "outlet"
+    ]
+    pairs = matched(rows=complete_rows, objectives=design["reference_limits"])
+    metrics.csv_write(file=target / "paired_differences.csv", rows=pairs)
+    report.extend(
+        [
+            "",
+            "## Paired hydraulic differences",
+            "",
+            "Positive gain means a reduction in absolute error. The last columns count gains or losses exceeding the sum of the two reference-sensitivity estimates.",
+            "",
+            "| Comparison | Metric | Matched events | Median gain (points) | Better beyond sensitivity | Worse beyond sensitivity |",
+            "|---|---|---:|---:|---:|---:|",
+        ]
+    )
+    for first, second in (("fv1", "hancock_dense"), ("hancock_dense", "adaptive")):
+        for metric in ("peak_bias_pct", "shape_tv_pct", "width80_bias_pct"):
+            g = [
+                r
+                for r in pairs
+                if (r["first"], r["second"], r["metric"]) == (first, second, metric)
+            ]
+            if not g:
+                continue
+            gains = np.array([r["absolute_error_reduction"] for r in g])
+            uncertainty = np.array([r["reference_envelope_sum"] for r in g])
+            report.append(
+                f"| {labels[first]} to {labels[second]} | {measures[metric]} | {len(g)} | {np.median(gains):+.2f} | {(gains > uncertainty).sum()} | {(gains < -uncertainty).sum()} |"
+            )
+    indexed = {(r["case"], r["method"]): r["runtime_s"] for r in complete_rows}
+    cases = sorted({case for case, _ in indexed})
+    report.extend(
+        [
+            "",
+            "## Measured runtime",
+            "",
+            "| Method | Median runtime / FV1 | At or below 1.5× |",
+            "|---|---:|---:|",
+        ]
+    )
+    for name in ("hancock_dense", "hancock_adaptive", "adaptive"):
+        ratio = np.array([indexed[case, name] / indexed[case, "fv1"] for case in cases])
+        report.append(
+            f"| {labels[name]} | {np.median(ratio):.3f} | {(ratio <= 1.5).sum()}/{len(cases)} |"
+        )
     report.extend(
         [
             "",
             "These grids contain 96 cells at the candidate resolution. The table supports event-scale numerical comparisons on this geometry. The million-cell operational cases have separate measurements.",
             "",
-            "[Paired outlet results and reference IDs](outlet_metrics.csv) · [Matched horizons](recession_horizons.csv) · [Final two-hour transport and storage](recession_terminal.csv)",
+            "[Paired outlet results and reference IDs](outlet_metrics.csv) · [Paired differences](paired_differences.csv) · [Matched horizons](recession_horizons.csv) · [Final two-hour transport and storage](recession_terminal.csv)",
         ]
     )
     (target / "README.md").write_text("\n".join(report) + "\n")
