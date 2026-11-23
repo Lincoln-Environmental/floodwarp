@@ -84,6 +84,7 @@ def manifest(*, directory, package):
         "policy_runs",
         "small_storms",
         "verification",
+        "extension_timings",
     )
     sources = chain(
         directory.glob("*.py"),

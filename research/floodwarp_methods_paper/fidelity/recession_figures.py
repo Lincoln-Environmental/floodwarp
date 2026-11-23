@@ -117,3 +117,56 @@ def spatial(*, directory):
                 image, ax=axes[0], label="1 cm arrival delay (min)", extend="both"
             )
             figures.save(fig=fig, folder=folder, name=case + "_arrival")
+
+
+def paired_examples(*, directory, groups):
+    from research.floodwarp_methods_paper.fidelity.assessment import curve, references
+
+    records = metrics.csv_read(directory / "results/storms.csv")
+    eligible = [
+        r
+        for r in records
+        if r["cohort"] == "complete-legacy"
+        and r["method"] == "fv1"
+        and r["station"] == "outlet"
+        and r["qualified_peak_bias_pct"] == "True"
+    ]
+    if len(eligible) < 2:
+        return
+    errors = np.array([abs(float(r["peak_bias_pct"])) for r in eligible])
+    order = np.argsort(errors, kind="stable")
+    for label, fraction in (("lower_quartile", 0.25), ("upper_quartile", 0.75)):
+        chosen = eligible[order[round((len(order) - 1) * fraction)]]
+        case = chosen["case"]
+        group = groups["complete-legacy", case, "sampled"]
+        ref, _ = references(items=group)
+        t, q = curve(it=ref, station="outlet")
+        series = [("FV2 reference", t / 3600, q, "#242424", "-")]
+        for i in group:
+            method = i["s"]["method"]
+            if (
+                method in ("fv1", "hancock_dense", "adaptive")
+                and i["s"]["dx"] == 10
+                and i["factor"] == 1
+            ):
+                t, q = curve(it=i, station="outlet")
+                series.append(
+                    (
+                        figures.LABELS[method],
+                        t / 3600,
+                        q,
+                        figures.COLOURS[method],
+                        figures.STYLES[method],
+                    )
+                )
+        figures.overlay(
+            folder=directory / "figures",
+            series=series,
+            name="peak_" + label,
+            xlabel="Hours since rainfall began",
+            time_unit="h",
+            title=case
+            + " • FV1 peak bias "
+            + format(float(chosen["peak_bias_pct"]), "+.1f")
+            + "%",
+        )

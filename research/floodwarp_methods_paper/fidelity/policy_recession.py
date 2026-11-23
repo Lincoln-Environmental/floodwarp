@@ -10,14 +10,25 @@ from research.floodwarp_methods_paper.qualification import automatic, launch, st
 
 def unmatched(*, items, selected):
     spacings = {i["s"]["dx"] for i in items if i["s"]["method"] == "hancock_auto"}
-    return [
-        i
+    seen = {
+        (i["s"]["dx"], i["s"]["method"], i["factor"])
         for i in items
-        if i["id"] not in selected
-        and i["factor"] == 1
-        and i["s"]["dx"] in spacings
-        and i["s"]["method"] in ("hancock_auto", "hancock_dense", "hancock_adaptive")
-    ]
+        if i["id"] in selected
+    }
+    missing = []
+    for i in items:
+        s = i["s"]
+        key = s["dx"], s["method"], i["factor"]
+        if (
+            s["dx"] not in spacings
+            or i["factor"] != 1
+            or s["method"] not in ("hancock_auto", "hancock_dense", "hancock_adaptive")
+        ):
+            continue
+        if key not in seen:
+            missing.append(i)
+            seen.add(key)
+    return missing
 
 
 def receipt_key(*, directory, config, base, end):

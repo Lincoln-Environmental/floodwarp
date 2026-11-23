@@ -3,6 +3,8 @@
 from pathlib import Path
 import json
 import sys
+from time import perf_counter, time_ns
+import warp as wp
 from unittest.mock import patch
 import numpy as np
 from research.floodwarp_methods_paper.fidelity.spatial_capture import Recorder
@@ -74,6 +76,11 @@ def capture(*, directory, settings, stage):
         ):
             result = original_run(**kw)
         (model,) = retained
+        result["recession_capture"] = dict(
+            adapter=runner.checksum(Path(__file__)),
+            extended_zero_rain_coverage_h=settings["forcing_hours"],
+            actual_forcing=model.identity["forcing"],
+        )
         folder = seed_path(directory=directory, model=model, end=end)
         folder.mkdir(parents=True, exist_ok=True)
         save_checkpoint(model=model, path=folder / "state.npz")
@@ -138,6 +145,7 @@ def extend(*, directory, settings, cohorts):
                 return json.loads((folder / "prefix.json").read_text())["frames"]
         stats_by_time = {}
         wet_by_time = {}
+        extraction = {}
 
         def accepted(**inputs):
             result = advance(**inputs)
@@ -145,6 +153,7 @@ def extend(*, directory, settings, cohorts):
             return result
 
         def sample(*, solver, li):
+            tick = perf_counter()
             result = transport(solver=solver, li=li)
             spatial.snapshot(solver=solver, li=li)
             t = round(solver.time)
@@ -155,7 +164,12 @@ def extend(*, directory, settings, cohorts):
                 wet_by_time[t] = dict(
                     wet_fraction=float((depth > 0).mean()),
                     cm_fraction=float((depth >= 0.01).mean()),
+                    live_pool_mib=wp.get_mempool_used_mem_current(
+                        device=settings["device"]
+                    )
+                    / 2**20,
                 )
+            extraction[t] = perf_counter() - tick
             return result
 
         with (
@@ -172,11 +186,55 @@ def extend(*, directory, settings, cohorts):
                 rejected=stats.get("rejected_cfl_trials"),
                 graph_capture_s=stats.get("graph_capture_seconds"),
                 compilation_s=stats.get("compilation_seconds"),
+                extraction_s=extraction[ts],
                 **wet_by_time.get(ts, {}),
             )
         return frames
 
+    prolong = recession.prolong
+
+    def measured(**kwargs):
+        writes = []
+
+        def timer(call, name):
+            def record(**args):
+                tick = perf_counter()
+                output = call(**args)
+                writes.append((name, perf_counter() - tick))
+                return output
+
+            return record
+
+        clock = perf_counter()
+        with (
+            patch.object(recession, "build", timer(build, "setup")),
+            patch.object(
+                recession, "save_checkpoint", timer(save_checkpoint, "checkpoint_write")
+            ),
+            patch.object(
+                recession, "load_checkpoint", timer(load_checkpoint, "checkpoint_read")
+            ),
+        ):
+            out = prolong(**kwargs)
+        if writes:
+            stamp = time_ns()
+            runner.write_json(
+                path=directory / "extension_timings" / out["id"] / f"{stamp}.json",
+                data=dict(
+                    case=out["spec"]["case"],
+                    method=out["spec"]["method"],
+                    id=out["id"],
+                    floor_s=kwargs["floor_s"],
+                    end_s=out["end_s"],
+                    elapsed_wall_s=perf_counter() - clock,
+                    operating_segments=writes,
+                    recorded_ns=stamp,
+                ),
+            )
+        return out
+
     with (
+        patch.object(recession, "prolong", measured),
         patch.object(recession, "advance_frames", resume),
         patch.object(recession, "build", build),
         patch.object(

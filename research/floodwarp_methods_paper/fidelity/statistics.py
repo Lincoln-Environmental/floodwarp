@@ -303,6 +303,16 @@ def run(*, directory, rows, groups, pulses, cfg):
     all_rows = rows + pulses
     pairs = matched(rows=all_rows, objectives=objectives)
     fronts = frontiers(rows=all_rows, objectives=objectives)
+    from research.floodwarp_methods_paper.fidelity.budgets import feasible_cost
+    import json
+
+    budgets = json.loads((directory / "application_settings.json").read_text())
+    feasible_cost(
+        rows=fronts,
+        target=target,
+        tolerances=budgets["tolerances_pct"],
+        spacings=budgets["fv1_budget_grids_m"],
+    )
     for suffix in ("processed/pareto/storms.csv", "processed/million/pareto.csv"):
         for r in metrics.csv_read(directory.parent / suffix):
             if r["objective"] in ("inundation", "memory"):

@@ -308,3 +308,61 @@ def test_absent_candidate_still_has_scalar_errors(config):
         row=row, key="volume_bias_pct"
     )
     assert "shape_tv_pct" not in row and row["active_nrmse_peak"] > 0
+
+
+def test_equal_cost_decisions_keep_ties_and_unresolved_cases(tmp_path):
+    from research.floodwarp_methods_paper.fidelity.budgets import feasible_cost
+    from research.floodwarp_methods_paper.metrics import csv_read
+
+    base = dict(
+        cohort="pulse",
+        case="front",
+        reference_id="exact",
+        station=10,
+        objective="peak_bias_pct",
+        representation="flat",
+        cap=0.1,
+        interval_s=1,
+        dx=5,
+        execution_mode="dense",
+        eligible=True,
+    )
+    rows = [
+        dict(
+            base,
+            method="fv1",
+            absolute_error=25.0,
+            runtime_s=1.0,
+            experiment_id="budget",
+        ),
+        dict(
+            base,
+            method="hancock_dense",
+            dx=10,
+            absolute_error=9.0,
+            runtime_s=0.8,
+            experiment_id="h",
+        ),
+        dict(
+            base,
+            method="adaptive",
+            dx=10,
+            absolute_error=9.0,
+            runtime_s=0.8,
+            experiment_id="r",
+        ),
+        dict(
+            base,
+            method="fv1",
+            dx=1,
+            eligible=False,
+            absolute_error=0.0,
+            runtime_s=0.2,
+            experiment_id="unresolved",
+        ),
+    ]
+    feasible_cost(rows=rows, target=tmp_path, tolerances=(5, 10), spacings=(5,))
+    tied = csv_read(tmp_path / "equal_cost_fidelity.csv")
+    assert {r["selected_id"] for r in tied} == {"r", "h"}
+    least = csv_read(tmp_path / "least_cost_fidelity.csv")
+    assert [r["id"] for r in least if r["tolerance_pct"] == "5"] == [""]

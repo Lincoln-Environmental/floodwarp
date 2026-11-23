@@ -320,3 +320,4 @@ def plots(*, directory, groups):
         ),
     )
     recession_figures.spatial(directory=directory)
+    recession_figures.paired_examples(directory=directory, groups=groups)
