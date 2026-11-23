@@ -123,7 +123,7 @@ def summary(*, directory, storms, pulses, decisions):
         "",
         f"On the 10 m grid FV1 redistributed {base['shape_tv_pct']:.1f}% of the volume in time, compared with {h['shape_tv_pct']:.1f}% for Hancock and {rk['shape_tv_pct']:.1f}% for FV2. After aligning centroids these values were {base['aligned_tv_pct']:.1f}%, {h['aligned_tv_pct']:.1f}% and {rk['aligned_tv_pct']:.1f}%. Broadening and peak loss account for much of this fixed-bed difference. The diagnostic alignment preserves the originally reported lag. The 20 m results show that under-resolving a pulse affects every tested formulation.",
         "",
-        "The two Courant caps vary the step on each fixed grid. Actual counts and durations are retained. Roe and HLLC are explicit FV1 flux variants. Each uses the production positivity fallback. The smooth longitudinal wave provides little opportunity for a contact-resolving flux to offset first-order spatial diffusion. The sharp and double waves and oblique section crossings have separate results. [Channel records](results/pulses.csv) · [Orientation controls](results/orientation.csv) · [Measured frontiers](results/pareto.csv)",
+        "The two Courant caps vary the step on each fixed grid. Actual counts and durations are retained. Roe and HLLC are explicit FV1 flux variants. Each uses the production positivity fallback. The smooth longitudinal wave provides little opportunity for a contact-resolving flux to offset first-order spatial diffusion. The sharp and double waves and oblique section crossings have separate results. [Channel records](results/pulses.csv) · [Change between successive downstream sections](results/pulse_distance.csv) · [Orientation controls](results/orientation.csv) · [Measured frontiers](results/pareto.csv)",
         "",
         "## Matched practical benefit",
         "",
@@ -342,6 +342,9 @@ def run(*, directory, default_percent, factors):
     )
     cfg = json.loads((directory / "design.json").read_text())
     pulses = assessment.pulse_rows(directory=directory, cfg=cfg)
+    from research.floodwarp_methods_paper.fidelity import pulse_products
+
+    pulse_products.distance_effects(rows=pulses, target=directory / "results")
     from research.floodwarp_methods_paper.fidelity.extended_analysis import (
         horizon_effects,
     )

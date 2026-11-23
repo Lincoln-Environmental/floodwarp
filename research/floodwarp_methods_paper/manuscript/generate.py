@@ -13,6 +13,31 @@ def fmt(value):
     return "unavailable" if value in (None, "") else f"{float(value):.4g}"
 
 
+def completed_storms(*, study):
+    folder = study / "fidelity/small_storms"
+    if not (folder / "paired_differences.csv").is_file():
+        return ""
+    horizons = csv_read(folder / "recession_horizons.csv")
+    pairs = csv_read(folder / "paired_differences.csv")
+    shape = [
+        r
+        for r in pairs
+        if r["metric"] == "shape_tv_pct"
+        and r["first"] == "hancock_dense"
+        and r["second"] == "adaptive"
+    ]
+    resolved = sum(r["exceeds_reference"] == "True" for r in shape)
+    extended = sum(r["extended"] == "True" for r in horizons)
+    maximum = max(float(r["common_end_h"]) for r in horizons)
+    return (
+        f"Of {len(horizons)} small events with six hours of rain, {extended} required a longer recession. "
+        f"The longest matched simulation reached {maximum:g} hours. "
+        f"For the {len(shape)} storms with independently qualified normalised outlet shape at 10 m, "
+        f"the Hancock–FV2 difference in absolute shape error exceeded the combined reference sensitivity in {resolved} cases. "
+        "That comparison concerns the timing distribution of discharged volume. Peak and arrival-time conclusions have separate reference screens."
+    )
+
+
 def generate(*, study):
     p = study / "processed"
     raw = csv_read(p / "metrics/storms.csv")
@@ -80,7 +105,7 @@ The {len(matched)} prospective physical events included six hours of rain and a 
 
 ## Efficiency and terrain representation
 
-On the 96-cell controls, dense Hancock was faster than tiles in {dense_wins} of {len(matched)} complete storms. Relative to sparse FV1 its median runtime was {median(dense):.3f}×, with {sum(r <= 1.5 for r in dense)} events meeting 1.5×. Tiled Hancock took {median(ratios):.3f}× and met the target in {sum(r <= 1.5 for r in ratios)} events. Selecting the faster qualified execution retrospectively gave {median(fastest):.3f}×. Both schedules reproduced the same Hancock fields. With only 96 cells, marking and compacting tiles adds GPU launches while eliminating little work. The large-domain suite measures how this balance changes with the scheduled footprint. [Measured GPU costs](../tables/07_runtime.md) · [Full performance qualification](../../../validation/hancock_long_storm_review/DECISION.md)
+On the 96-cell controls, dense Hancock was faster than tiles in {dense_wins} of {len(matched)} original fixed-duration forecasts. Relative to sparse FV1 its median runtime was {median(dense):.3f}×, with {sum(r <= 1.5 for r in dense)} events meeting 1.5×. Tiled Hancock took {median(ratios):.3f}× and met the target in {sum(r <= 1.5 for r in ratios)} events. Selecting the faster qualified execution retrospectively gave {median(fastest):.3f}×. Both schedules reproduced the same Hancock fields. With only 96 cells, marking and compacting tiles adds GPU launches while eliminating little work. The large-domain suite measures how this balance changes with the scheduled footprint. [Measured GPU costs](../tables/07_runtime.md) · [Full performance qualification](../../../validation/hancock_long_storm_review/DECISION.md)
 
 Fixed-geometry and resampled-geometry experiments use the same physical extent. Their objective-specific rankings and measured cost ratios are available for the plain, fan and incised development realisations. An unresolved reference is an explicit missing comparison. [Resolution profiles](../figures/06_resolution.pdf) · [Equal-cost results](../tables/08_cost_accuracy.md) · [Least-cost feasible configurations](../processed/pareto/least_cost.csv)
 
@@ -118,9 +143,12 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
     result += "\n" + synthesis.case_evidence(study=study) + "\n" + extension + "\n"
     (study / "LIMITATIONS.md").write_text(synthesis.limitations(study=study))
     fidelity = study / "fidelity/paper_summary.md"
+    paragraph = completed_storms(study=study)
+    link = "[Complete small-storm comparisons](../fidelity/small_storms/README.md)"
     if fidelity.is_file():
         paragraph = fidelity.read_text().strip()
         link = "[Hydrograph fidelity, uncertainty and measured cost](../fidelity/REPORT.md)"
+    if paragraph:
         result = result.replace(
             "## Storm hydrographs and depth",
             "## Flood-wave fidelity per unit cost\n\n"
@@ -143,7 +171,9 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         audit += (
             "\n## Hydrograph fidelity through completed recessions\n\n"
             + paragraph
-            + " [Signed errors and window sensitivity](fidelity/REPORT.md)\n"
+            + " "
+            + link.replace("](../", "](")
+            + "\n"
         )
     (study / "CORRECTIVE_AUDIT.md").write_text(audit)
     manuscript = study / "manuscript"
@@ -169,8 +199,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         "select FV1 when the measured error is acceptable for the intended observable. "
         "[Results](results.md) · [Discussion](discussion.md)",
     ]
-    if fidelity.is_file():
-        conclusions.insert(1, fidelity.read_text().strip() + " " + link)
+    if paragraph:
+        conclusions.insert(1, paragraph + " " + link)
     (manuscript / "conclusions.md").write_text(
         "\n\n".join(filter(None, conclusions)) + "\n"
     )

@@ -187,7 +187,7 @@ def material(*, study):
     ]
     extra_recessions = sum(r["stage"] == "recession-controls" for r in event_rows)
     best = [float(r["fastest_ratio"]) for r in million]
-    outcome = f"The {len(million)} matched 1,024 × 1,024 comparisons covered {len({r['landform'] for r in million})} landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in {sum(v <= 1.5 for v in best)} of {len(best)} complete events. Its median ratio was {number(median(best) if best else None)}×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations."
+    outcome = f"The {len(million)} matched 1,024 × 1,024 comparisons covered {len({r['landform'] for r in million})} landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in {sum(v <= 1.5 for v in best)} of {len(best)} original fixed-duration forecasts. Its median ratio was {number(median(best) if best else None)}×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations."
     audit = [
         "# Corrective numerical and GPU audit",
         "",
@@ -223,7 +223,7 @@ def material(*, study):
         "",
         *operational,
         "",
-        f"The archive contains {len(event_rows) - extra_recessions} complete forecasts across the scale and fixed-area designs and {extra_recessions} supplementary recession controls. The largest measured primary grid has {max((int(r['cells']) for r in event_rows), default=0):,} cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.",
+        f"The archive contains {len(event_rows) - extra_recessions} forecasts covering their prescribed observation windows across the scale and fixed-area designs and {extra_recessions} supplementary recession controls. The largest measured primary grid has {max((int(r['cells']) for r in event_rows), default=0):,} cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.",
         "",
         *recession_table(rows=event_rows, study=study),
         "",

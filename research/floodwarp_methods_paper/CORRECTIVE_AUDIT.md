@@ -30,7 +30,7 @@ For 96 cells, compacting the footprint costs extra launches and leaves little hy
 
 ## Operational storm matrix
 
-The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in 1 of 8 complete events. Its median ratio was 1.69×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
+The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in 1 of 8 original fixed-duration forecasts. Its median ratio was 1.69×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
 
 | Complete event | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps | Fastest / FV1 per step |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -51,7 +51,7 @@ The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster
 | rolling-704-soil-5120x5120 | 1048576 | 5 | 8 | 70.34 | 156.65 | 144.93 | 156.03 | 2.06 | 1.28 | 1.61 |
 | rolling-713-moderate-20480x10240 | 2097152 | 10 | 8 | 120.76 | 242.01 | 249.96 | 242.08 | 2 | 1.33 | 1.51 |
 
-The archive contains 80 complete forecasts across the scale and fixed-area designs and 8 supplementary recession controls. The largest measured primary grid has 4,194,304 cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.
+The archive contains 80 forecasts covering their prescribed observation windows across the scale and fixed-area designs and 8 supplementary recession controls. The largest measured primary grid has 4,194,304 cells. The memory observations are live device-pool allocations. Compilation, graph capture, hydraulic execution, extraction and receipt wall time are separate. For changing coastal stages the frame hydraulic timer surrounds the advance call. Prescribed boundary assignments between calls are included in end-to-end time.
 
 
 The supplementary recessions use the same plain DEM. Spatial rain probes delayed export from the original footprint. Widespread rain also reaches the downstream cells. The last column gives the mean discharge in the final 15-minute interval. [Hydrographs](processed/million/hydrographs_900s.csv)
@@ -224,3 +224,7 @@ Each entry uses the measured error plus the reported refinement sensitivity. Tol
 | plain-715-spatial-10240x10240 | fv1, 10 m | fv1, 10 m | unresolved |
 | rolling-704-soil-5120x5120 | unresolved | unresolved | unresolved |
 | rolling-713-moderate-20480x10240 | unresolved | unresolved | unresolved |
+
+## Hydrograph fidelity through completed recessions
+
+Of 48 small events with six hours of rain, 31 required a longer recession. The longest matched simulation reached 76 hours. For the 12 storms with independently qualified normalised outlet shape at 10 m, the Hancock–FV2 difference in absolute shape error exceeded the combined reference sensitivity in 0 cases. That comparison concerns the timing distribution of discharged volume. Peak and arrival-time conclusions have separate reference screens. [Complete small-storm comparisons](fidelity/small_storms/README.md)
