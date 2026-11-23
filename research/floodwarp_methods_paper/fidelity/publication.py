@@ -238,6 +238,52 @@ def summary(*, directory, storms, pulses, decisions):
             lines.append(
                 f"| {tol:g} | {obj} | {len(d)} | {sum(bool(r['method']) for r in d)} | {sum(r['feasible'] is not None for r in d)} | {sum(r['feasible'] is True for r in d)} | {sum(bool(r['cheapest']) for r in d)} |"
             )
+    baseline_rows = metrics.csv_read(result / "advisor_baselines.csv")
+    predictions = metrics.csv_read(result / "advisor_predictions.csv")
+    default = json.loads((directory / "application_settings.json").read_text())[
+        "benchmark_tolerance_pct"
+    ]
+    lines.extend(
+        [
+            "",
+            f"At the {default:g}% application tolerance every rule faces the same terrain, resolution and objective decisions. The table reports failures, unknown outcomes and abstentions separately. Regret compares cost only when the selected configuration met tolerance and a measured feasible benchmark exists.",
+            "",
+            "| Rule | Decisions | Abstained | Selected, unassessable | Failed tolerance | Met tolerance | Matched cheapest feasible | Median feasible regret |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for label in (
+        "advisor",
+        "slope_only",
+        "always_fv1",
+        "always_hancock_dense",
+        "oracle",
+    ):
+        rows = [
+            r
+            for r in baseline_rows
+            if float(r["tolerance"]) == default and r["rule"] == label
+        ]
+        abstentions = sum(r["selected"] == "False" for r in rows)
+        unknown = sum(
+            r["selected"] == "True" and r["assessable"] == "False" for r in rows
+        )
+        failed = sum(r["meets"] == "False" for r in rows)
+        passed = sum(r["meets"] == "True" for r in rows)
+        same = sum(r["meets"] == "True" and r["method"] == r["oracle"] for r in rows)
+        regret = [float(r["regret_pct"]) for r in rows if r["regret_pct"]]
+        display = f"{np.median(regret):.1f}%" if regret else "unresolved"
+        lines.append(
+            f"| {label} | {len(rows)} | {abstentions} | {unknown} | {failed} | {passed} | {same} | {display} |"
+        )
+    eligible = [r for r in predictions if r["interval_covers"] in ("True", "False")]
+    covered = sum(r["interval_covers"] == "True" for r in eligible)
+    lines.extend(
+        [
+            "",
+            f"On held-out candidate predictions the interval contained the measured error plus reference sensitivity in {covered}/{len(eligible)} assessable method–objective combinations. Repeated predictions from the same terrain remain dependent. [Baseline decisions](results/advisor_baselines.csv) · [Prediction intervals and runtimes](results/advisor_predictions.csv)",
+        ]
+    )
     lines += [
         "",
         "The held-out evidence limits transfer to a new catchment. The terrain associations are exploratory rank correlations of median formulation gains across distinct terrain realisations. Discharge and realised wet fraction are available only after a run. They stratify evaluation and do not select a solver in advance. No universal grid-spacing cutoff follows from these results. [Independent advisor decisions](results/advisor_decisions.csv) · [Conditioned terrain descriptors](results/terrain_descriptors.csv) · [Associations](results/terrain_associations.csv)",
@@ -246,7 +292,7 @@ def summary(*, directory, storms, pulses, decisions):
         "",
         "A volume-conserving forecast can substantially attenuate and spread a travelling wave. FV1, Hancock and FV2 are distinguishable on that control even when final-depth and event-volume summaries suggest small differences. The exact and rainfall results support selecting against the hydraulic quantity required by the application. Higher order alone does not establish that a peak, an internal wave or a recession is resolved. FV1 remains a candidate wherever its measured uncertainty-adjusted error meets the specified tolerance. The development solver default stays adaptive Hancock.",
         "",
-        "[Metric definitions, censoring and reproduction](README.md) · [Absolute and relative metrics by cohort](results/strata.csv) · [Paired differences](results/pairs.csv) · [Peak sensitivity to output interval](results/cadence.csv)",
+        "[Metric definitions, censoring and reproduction](README.md) · [Absolute and relative metrics by cohort](results/strata.csv) · [Paired differences](results/pairs.csv) · [Peak sensitivity to output interval](results/cadence.csv) · [Equal-cost decisions](results/equal_cost_fidelity.csv) · [Least-cost feasible methods](results/least_cost_fidelity.csv) · [Cost by recession and wet fraction](results/cost_by_phase.csv)",
     ]
     narrative = (
         f"In the exact smooth pulse after 200 m on a 10 m grid, FV1 peak bias was {base['peak_bias_pct']:.1f}% "
@@ -284,6 +330,16 @@ def run(*, directory, default_percent, factors):
     from research.floodwarp_methods_paper.fidelity import performance
 
     performance.costs(directory=directory, rows=rows)
+    from research.floodwarp_methods_paper.fidelity import phase_cost
+
+    settings = json.loads((directory / "application_settings.json").read_text())
+    phase_cost.collect(
+        groups=groups,
+        directory=directory,
+        cadence=settings["cost_interval_s"],
+        edges=settings["wet_fraction_edges"],
+        phase_edges=settings["phase_end_hours"],
+    )
     cfg = json.loads((directory / "design.json").read_text())
     pulses = assessment.pulse_rows(directory=directory, cfg=cfg)
     from research.floodwarp_methods_paper.fidelity.extended_analysis import (
@@ -327,6 +383,9 @@ def run(*, directory, default_percent, factors):
 
 if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
-    default_percent = 10.0
-    tolerance_factors = (0.5, 1.0, 2.0)
+    settings = json.loads((directory / "application_settings.json").read_text())
+    default_percent = settings["benchmark_tolerance_pct"]
+    tolerance_factors = tuple(
+        tol / default_percent for tol in settings["tolerances_pct"]
+    )
     run(directory=directory, default_percent=default_percent, factors=tolerance_factors)

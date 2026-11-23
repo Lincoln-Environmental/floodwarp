@@ -14,6 +14,10 @@ def validate(*, directory):
         if runner.checksum(path) != expected:
             raise ValueError(f"Fidelity product checksum mismatch: {relative}")
     results = directory / "results"
+    spatial = json.loads((results / "transient_manifest.json").read_text())
+    for relative, expected in spatial.items():
+        if runner.checksum(directory / relative) != expected:
+            raise ValueError(f"Spatial archive checksum mismatch: {relative}")
     with sqlite3.connect(
         "file:" + str(results / "fidelity.sqlite") + "?mode=ro", uri=True
     ) as db:

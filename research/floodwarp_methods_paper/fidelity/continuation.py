@@ -169,6 +169,14 @@ def extend(*, directory, settings, cohorts):
                     )
                     / 2**20,
                 )
+                if not li and t > 0:
+                    work = solver.execution_diagnostics()
+                    cells = work.get("evaluated_cells")
+                    if cells is None and work.get("execution") == "dense_uniform":
+                        cells = depth.size
+                    if cells is not None:
+                        wet_by_time[t]["active_fraction"] = cells / depth.size
+                    wet_by_time[t]["work_tiles"] = work.get("work_tiles")
             extraction[t] = perf_counter() - tick
             return result
 
@@ -244,6 +252,39 @@ def extend(*, directory, settings, cohorts):
         recession.run(directory=directory, settings=settings, cohorts=cohorts)
 
 
+def operational_pairs(*, directory, settings, cases):
+    """Measure native million-cell end times before the more expensive fine-grid extensions."""
+    from research.floodwarp_methods_paper.qualification import matrix
+
+    study = directory.parent
+    config = read_config(path=study / "configs/study.json")
+    scan = recession.assessment.archive
+    native = {
+        s["case"]: s["dx"]
+        for s in matrix.cases(
+            stage="million-storms", config=config, root=study.parents[1]
+        )
+        if s["method"] == "fv1" and s["case"] in cases
+    }
+
+    def selected(**kwargs):
+        result = {}
+        for key, items in scan(**kwargs).items():
+            co, case, rep = key
+            if co == "expanded" and rep == "sampled" and case in native:
+                result[key] = [
+                    i
+                    for i in items
+                    if i["factor"] == 1
+                    and i["s"]["dx"] == native[case]
+                    and i["s"]["method"] in ("fv1", "hancock_dense", "hancock_adaptive")
+                ]
+        return result
+
+    with patch.object(recession.assessment, "archive", selected):
+        extend(directory=directory, settings=settings, cohorts=("expanded",))
+
+
 if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     settings = json.loads((directory / "recession_settings.json").read_text())
@@ -265,8 +306,16 @@ if __name__ == "__main__":
 
         with patch.object(recession.assessment, "archive", preview):
             extend(directory=directory, settings=settings, cohorts=("expanded",))
-    elif stage == "recession":
+    elif stage in ("recession", "operational-pairs"):
+        primary_cases = json.loads(
+            (directory / "operational_settings.json").read_text()
+        )["primary_cases"]
         cohorts = tuple(sys.argv[2:]) or ("legacy", "expanded", "double")
-        extend(directory=directory, settings=settings, cohorts=cohorts)
+        if "expanded" in cohorts:
+            operational_pairs(
+                directory=directory, settings=settings, cases=primary_cases
+            )
+        if stage == "recession":
+            extend(directory=directory, settings=settings, cohorts=cohorts)
     else:
         capture(directory=directory, settings=settings, stage=stage)

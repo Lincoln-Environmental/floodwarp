@@ -38,9 +38,14 @@ def operational(*, groups, directory, cases):
             frames = d.get("frames", d.get("samples"))
             edges = np.r_[0.0, [f["t_s"] for f in frames]] / 3600
             colour = figures.COLOURS[method]
+            style = "--" if method == "hancock_dense" else "-"
             label = f"{figures.LABELS[method]} ({'sparse' if method == 'fv1' else 'tiles' if method == 'hancock_adaptive' else 'dense'})"
             axes[1].stairs(
-                [f["outlet_m3s"] for f in frames], edges, color=colour, label=label
+                [f["outlet_m3s"] for f in frames],
+                edges,
+                color=colour,
+                linestyle=style,
+                label=label,
             )
             spatial = d.get("samples", d.get("spatial", []))
             if spatial:
@@ -48,9 +53,15 @@ def operational(*, groups, directory, cases):
                     [f["t_s"] / 3600 for f in spatial],
                     [f["wet_fraction"] * 100 for f in spatial],
                     color=colour,
+                    linestyle=style,
                 )
-            elapsed = np.r_[0.0, np.cumsum([f["hydraulic_s"] for f in frames])]
-            axes[3].plot(edges, elapsed, color=colour)
+            elapsed = np.r_[
+                0.0,
+                np.cumsum(
+                    [f.get("hydraulic_s", f.get("hydraulic_wall_s")) for f in frames]
+                ),
+            ]
+            axes[3].plot(edges, elapsed, color=colour, linestyle=style)
         axes[1].set_ylabel("Outlet Q (m³/s)")
         axes[1].legend(fontsize=8)
         axes[2].set_ylabel("Wet cells (%)")

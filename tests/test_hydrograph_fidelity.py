@@ -366,3 +366,48 @@ def test_equal_cost_decisions_keep_ties_and_unresolved_cases(tmp_path):
     assert {r["selected_id"] for r in tied} == {"r", "h"}
     least = csv_read(tmp_path / "least_cost_fidelity.csv")
     assert [r["id"] for r in least if r["tolerance_pct"] == "5"] == [""]
+
+
+def test_recession_cost_compares_matching_intervals_and_handles_unmeasured_work(
+    tmp_path,
+):
+    from research.floodwarp_methods_paper.fidelity.phase_cost import collect
+    from research.floodwarp_methods_paper.metrics import csv_read
+
+    def forecast(*, method, runtime, depth_fraction):
+        frames = [
+            dict(t_s=t, steps=steps, hydraulic_s=wall)
+            for t, steps, wall in zip((900, 1800), (10, 20), runtime, strict=True)
+        ]
+        spatial = [
+            dict(t_s=t, wet_fraction=v)
+            for t, v in zip((900, 1800), depth_fraction, strict=True)
+        ]
+        return dict(
+            id=method,
+            s=dict(dx=10, method=method),
+            factor=1,
+            d=dict(frames=frames, spatial=spatial),
+        )
+
+    fv = forecast(method="fv1", runtime=(2, 1), depth_fraction=(0.005, 0.50))
+    tiled = forecast(
+        method="hancock_adaptive", runtime=(4, 1), depth_fraction=(0.02, 0.9)
+    )
+    collect(
+        groups={("complete-expanded", "mixed", "sampled"): [fv, tiled]},
+        directory=tmp_path,
+        target=tmp_path,
+        cadence=900,
+        edges=(0, 0.01, 0.05, 0.2, 0.5, 1),
+        phase_edges=(6, 8, 12),
+    )
+    output = {
+        (r["axis"], r["level"]): r
+        for r in csv_read(tmp_path / "cost_by_phase.csv")
+        if r["method"] == "hancock_adaptive"
+    }
+    assert float(output["phase", "rain"]["ratio"]) == pytest.approx(5 / 3)
+    assert float(output["fv1_wet", "0–1%"]["ratio"]) == 2
+    assert float(output["fv1_wet", "50–100%"]["ratio"]) == 1
+    assert output["scheduled_work", "unmeasured"]["windows"] == "2"
