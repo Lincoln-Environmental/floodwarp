@@ -62,3 +62,5 @@ The endpoint-field archive stores FP64 area-averaged final depth, accumulated ma
 [Small-storm depths and hydrographs](small_storms/README.md) · [Million-cell mixed-catchment recession and GPU timings](mixed_native/README.md) · [Downstream changes at fixed grid spacing and Courant cap](results/pulse_distance.csv)
 
 The mixed million-cell forecasts also have a residual-storage sensitivity stage, `storage-tail`. Although outward transport passed the two-hour screen at 20 hours, both methods retained standing water. This stage continues the same numerical states to at least 48 hours. It checks whether the preceding 12 hours contributed more than 1% of cumulative outward volume at either station and extends the shared window again if needed. The original 20-hour measurements and the separate longer-window measurements retain their own endpoints.
+
+The `native-horizons` stage compares the original stop time with each verified native-grid recession. It integrates outward and inward flow separately at the outlet and internal section. [Million-cell recession results by landform](NATIVE_RECESSIONS.md)

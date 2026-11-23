@@ -357,7 +357,9 @@ def summary(*, directory, storms, pulses, decisions):
 
 
 def run(*, directory, default_percent, factors):
-    from research.floodwarp_methods_paper.fidelity import tail_report
+    from research.floodwarp_methods_paper.fidelity import native_horizons, tail_report
+
+    native_horizons.generate(directory=directory)
 
     tail_report.generate(directory=directory)
     groups, rows = assessment.process(directory=directory)

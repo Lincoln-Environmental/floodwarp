@@ -582,3 +582,27 @@ def test_reference_requires_physical_rain_timing_through_the_common_end():
     }
     with pytest.raises(AssertionError, match="Different physical hyetographs"):
         matched_reference_inputs(base=a, control=b)
+
+
+def test_native_horizon_omission_uses_integrated_outward_transport():
+    from research.floodwarp_methods_paper.fidelity.native_horizons import station_rows
+
+    data = dict(
+        end_s=8,
+        checks={"outlet": {"passed": True, "recent_to_volume": 0.01}},
+        frames=[
+            {"t_s": 1, "outlet_m3s": -2.0},
+            {"t_s": 3, "outlet_m3s": 3.0},
+            {"t_s": 8, "outlet_m3s": 2.0},
+        ],
+    )
+    measured, = station_rows(data=data, minimum_volume=0.01, original_s=3)
+    assert measured["original_outward_m3"] == 6.0
+    assert measured["omitted_outward_m3"] == 10.0
+    assert measured["omitted_pct"] == 62.5
+    assert measured["inward_m3"] == 2.0
+    assert measured["original_peak_out_m3s"] == measured["final_peak_out_m3s"] == 3.0
+    negligible, = station_rows(data=data, minimum_volume=17.0, original_s=3)
+    assert negligible["omitted_pct"] is None
+    with pytest.raises(ValueError, match="Missing a measured endpoint"):
+        station_rows(data=data, minimum_volume=0.01, original_s=2)
