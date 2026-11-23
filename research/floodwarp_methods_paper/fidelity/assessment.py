@@ -14,7 +14,15 @@ from floodwarp.solver_advisor.model import configuration
 
 
 def limits(*, row, key):
-    if key not in row or row["reference_status"] != "usable":
+    candidate_missing = (
+        row["reference_status"] == "model_insufficient_outward_or_reversing"
+    )
+    scalar_with_reference = (
+        key in ("peak_bias_pct", "volume_bias_pct") and candidate_missing
+    )
+    if key not in row or (
+        row["reference_status"] != "usable" and not scalar_with_reference
+    ):
         return False
     # Full-event shape and volume require both limbs. Peak magnitude can be
     # assessed within a recorded window if a resolved interior crest is visible.
@@ -386,7 +394,11 @@ def process(*, directory):
     groups = archive(directory=directory, config=config)
     from research.floodwarp_methods_paper.fidelity.extended_analysis import attach
 
-    groups.update(attach(directory=directory, groups=groups))
+    from research.floodwarp_methods_paper.fidelity import policy_recession
+
+    completed = attach(directory=directory, groups=groups)
+    policy_recession.attach(directory=directory, groups=groups, completed=completed)
+    groups.update(completed)
     rows, checks = storm_rows(groups=groups, cfg=cfg)
     target = directory / "results"
     for name, data in (

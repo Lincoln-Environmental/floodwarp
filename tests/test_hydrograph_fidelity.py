@@ -279,3 +279,32 @@ def test_csv_archive_preserves_missing_and_numeric_types(tmp_path):
             "select * from observations order by experiment_id"
         ).fetchall() == [("00001234", -3.5, 1), ("00005678", None, 0)]
         assert db.execute("select rows from csv_sources").fetchone() == (2,)
+
+
+def test_irregular_accepted_volume_brackets_each_quantile(config):
+    t = np.array([0.0, 1.0, 4.0, 5.0, 9.0, 11.0, 12.0, 15.0, 18.0, 20.0, 25.0])
+    ref = np.array([0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    mod = np.roll(ref, 3)
+    row = compare(model=mod, reference=ref, edges=t, cfg=config)
+    for name in ("t10", "t25", "t50", "t75", "t90", "centroid"):
+        assert (
+            row[name + "_delay_lower_s"]
+            <= row[name + "_delay_s"]
+            <= row[name + "_delay_upper_s"]
+        )
+        assert row[name + "_direction"] == "delayed"
+    identical = compare(model=ref, reference=ref, edges=t, cfg=config)
+    assert identical["centroid_direction"] == "unresolved_within_interval"
+
+
+def test_absent_candidate_still_has_scalar_errors(config):
+    from research.floodwarp_methods_paper.fidelity.assessment import limits
+
+    ref = triangle(half_width=12, centre=40)
+    row = compare(model=np.zeros_like(ref), reference=ref, cfg=config)
+    assert row["volume_bias_pct"] == pytest.approx(-100)
+    assert row["peak_bias_pct"] == -100
+    assert limits(row=row, key="peak_bias_pct") and limits(
+        row=row, key="volume_bias_pct"
+    )
+    assert "shape_tv_pct" not in row and row["active_nrmse_peak"] > 0

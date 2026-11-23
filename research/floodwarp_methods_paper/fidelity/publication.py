@@ -248,7 +248,6 @@ def summary(*, directory, storms, pulses, decisions):
         "",
         "[Metric definitions, censoring and reproduction](README.md) · [Absolute and relative metrics by cohort](results/strata.csv) · [Paired differences](results/pairs.csv) · [Peak sensitivity to output interval](results/cadence.csv)",
     ]
-    (directory / "REPORT.md").write_text("\n".join(lines) + "\n")
     narrative = (
         f"In the exact smooth pulse after 200 m on a 10 m grid, FV1 peak bias was {base['peak_bias_pct']:.1f}% "
         f"with {base['volume_bias_pct']:+.2f}% volume bias. Central 80% duration increased by {base['width80_bias_pct']:.1f}%, "
@@ -257,11 +256,34 @@ def summary(*, directory, storms, pulses, decisions):
         f"Attenuation exceeded reference sensitivity in {len(early)} and amplification exceeded it in {len(high)}. "
         f"Only {len(centre)} supported a full-event centroid comparison. Reported frequency depends on the eligible hydraulic objective."
     )
+    for r in metrics.csv_read(result / "completed_cost_summary.csv"):
+        if r["policy"] == "fastest_over_fv1":
+            suite = (
+                "small 10 m controls"
+                if r["suite"] == "small-48"
+                else "million-cell landforms"
+            )
+            sentence = (
+                f"At their verified recession endpoints the faster measured explicit Hancock policy took a median "
+                f"{float(r['median']):.2f}× FV1 across the {suite}, meeting 1.5× in {r['n_within_target']}/{r['events']} events."
+            )
+            narrative += " " + sentence
+            lines.extend(
+                [
+                    "",
+                    sentence
+                    + " [Per-event timings and run identities](results/completed_costs.csv)",
+                ]
+            )
+    (directory / "REPORT.md").write_text("\n".join(lines) + "\n")
     (directory / "paper_summary.md").write_text(narrative + "\n")
 
 
 def run(*, directory, default_percent, factors):
     groups, rows = assessment.process(directory=directory)
+    from research.floodwarp_methods_paper.fidelity import performance
+
+    performance.costs(directory=directory, rows=rows)
     cfg = json.loads((directory / "design.json").read_text())
     pulses = assessment.pulse_rows(directory=directory, cfg=cfg)
     from research.floodwarp_methods_paper.fidelity.extended_analysis import (

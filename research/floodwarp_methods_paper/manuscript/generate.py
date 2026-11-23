@@ -115,15 +115,37 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
 
     audit, extension = paper.material(study=study)
     discussion += "\n" + paper.operational_discussion(study=study) + "\n"
-    (study / "CORRECTIVE_AUDIT.md").write_text(audit)
     result += "\n" + synthesis.case_evidence(study=study) + "\n" + extension + "\n"
     (study / "LIMITATIONS.md").write_text(synthesis.limitations(study=study))
     fidelity = study / "fidelity/paper_summary.md"
     if fidelity.is_file():
         paragraph = fidelity.read_text().strip()
         link = "[Hydrograph fidelity, uncertainty and measured cost](../fidelity/REPORT.md)"
-        result = result.replace("## Storm hydrographs and depth", "## Flood-wave fidelity per unit cost\n\n" + paragraph + " " + link + "\n\n## Storm hydrographs and depth")
-        discussion += "\n## Flood-wave interpretation\n\n" + paragraph + " " + link + "\n"
+        result = result.replace(
+            "## Storm hydrographs and depth",
+            "## Flood-wave fidelity per unit cost\n\n"
+            + paragraph
+            + " "
+            + link
+            + "\n\n## Storm hydrographs and depth",
+        )
+        discussion += (
+            "\n## Flood-wave interpretation\n\n" + paragraph + " " + link + "\n"
+        )
+        result = result.replace(
+            "## Storm hydrographs and depth",
+            "## Original fixed-window depth and discharge diagnostics",
+        )
+        result = result.replace(
+            "## Efficiency and terrain representation",
+            "## Original-window efficiency and terrain representation",
+        )
+        audit += (
+            "\n## Hydrograph fidelity through completed recessions\n\n"
+            + paragraph
+            + " [Signed errors and window sensitivity](fidelity/REPORT.md)\n"
+        )
+    (study / "CORRECTIVE_AUDIT.md").write_text(audit)
     manuscript = study / "manuscript"
     (manuscript / "results.md").write_text(result)
     (manuscript / "discussion.md").write_text(discussion)
@@ -135,7 +157,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
     (study / "DISCUSSION.md").write_text(discussion.replace("](../", "]("))
     conclusions = [
         "# Conclusions",
-        f"Across {len(matched)} small-domain storms, the faster qualified Hancock execution met the "
+        f"Across the original fixed windows of {len(matched)} small-domain storms, the faster qualified Hancock execution met the "
         f"1.5× FV1 target in {sum(r <= 1.5 for r in fastest)} cases with median {median(fastest):.3f}×. "
         f"Tiled execution alone had median {median(ratios):.3f}×.",
         paper.operational_discussion(study=study),

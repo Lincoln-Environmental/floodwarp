@@ -51,6 +51,35 @@ def profile(*, t, q, cfg):
     )
 
 
+def timing_support(*, edges, m, r, pa, pb):
+    """Temporal support implied by the accepted bin volumes, without sharper interpolation."""
+    bounds = {}
+    bins = np.diff(edges)
+    for p in (10, 25, 50, 75, 90):
+        im = int(np.searchsorted(m["cumulative"][1:], p / 100, side="left"))
+        ir = int(np.searchsorted(r["cumulative"][1:], p / 100, side="left"))
+        bounds[f"t{p}_delay_lower_s"] = float(edges[im] - edges[ir + 1])
+        bounds[f"t{p}_delay_upper_s"] = float(edges[im + 1] - edges[ir])
+    # Each within-bin centre of mass can lie anywhere in the occupied bin.
+    loss = (
+        np.average(bins, weights=pa * bins) + np.average(bins, weights=pb * bins)
+    ) / 2
+    centre = m["centre"] - r["centre"]
+    bounds["centroid_delay_lower_s"] = centre - loss
+    bounds["centroid_delay_upper_s"] = centre + loss
+    for key in ("t10", "t25", "t50", "t75", "t90", "centroid"):
+        low = bounds[key + "_delay_lower_s"]
+        high = bounds[key + "_delay_upper_s"]
+        bounds[key + "_direction"] = (
+            "delayed"
+            if low > 0
+            else "early"
+            if high < 0
+            else "unresolved_within_interval"
+        )
+    return bounds
+
+
 def transport_distance(*, difference, dt):
     """Exact integral of the absolute piecewise-linear CDF difference."""
     a, b = difference[:-1], difference[1:]
@@ -135,11 +164,20 @@ def evaluate(*, edges, model, reference, config, background=0.0):
         )
         if pos < config["minimum_volume_m3"] or neg > pos * config["reversal_fraction"]:
             out["reference_status"] = label + "_insufficient_outward_or_reversing"
-    if out["reference_status"] != "usable":
+    if out["reference_status"].startswith("reference_"):
         return out
     pa, pb = np.maximum(a, 0), np.maximum(b, 0)
-    m = profile(t=t, q=pa, cfg=config)
     r = profile(t=t, q=pb, cfg=config)
+    out["reference_width80_s"] = r["width80"]
+    out["width_resolved"] = bool(r["width80"] >= config["width_bins"] * dt.max())
+    lower = np.maximum(t[:-1], r["times"][1])
+    upper = np.minimum(t[1:], r["times"][99])
+    active = np.maximum(0.0, upper - lower)
+    out["active_nrmse_peak"] = np.sqrt(np.average(err**2, weights=active)) / peak
+    if out["reference_status"] != "usable":
+        return out
+    m = profile(t=t, q=pa, cfg=config)
+    out.update(timing_support(edges=t, m=m, r=r, pa=pa, pb=pb))
     span = r["width80"]
     out.update(
         reference_width80_s=span,
@@ -152,10 +190,6 @@ def evaluate(*, edges, model, reference, config, background=0.0):
         model_width50_s=m["width50"],
         width_resolved=bool(span >= config["width_bins"] * dt.max()),
     )
-    lower = np.maximum(t[:-1], r["times"][1])
-    upper = np.minimum(t[1:], r["times"][99])
-    active = np.maximum(0.0, upper - lower)
-    out["active_nrmse_peak"] = np.sqrt(np.average(err**2, weights=active)) / peak
     times = {f"t{p}_delay": m["times"][p] - r["times"][p] for p in (10, 25, 50, 75, 90)}
     times["centroid_delay"] = m["centre"] - r["centre"]
     times["wasserstein"] = transport_distance(

@@ -69,6 +69,10 @@ def stratify(*, rows, objectives):
     return out
 
 
+def hydraulic_time(row):
+    return row["runtime_s"]
+
+
 def matched(*, rows, objectives):
     groups = defaultdict(dict)
     for r in rows:
@@ -83,9 +87,18 @@ def matched(*, rows, objectives):
         groups[key][r["method"]] = r
     pairs = []
     for key, g in groups.items():
+        policies = [
+            r
+            for name, r in g.items()
+            if name in ("hancock_dense", "hancock_adaptive", "hancock_auto")
+        ]
+        if policies:
+            g["hancock_fastest"] = min(policies, key=hydraulic_time)
         for first, second in (
             ("fv1", "hancock_dense"),
             ("hancock_dense", "adaptive"),
+            ("fv1", "hancock_fastest"),
+            ("hancock_fastest", "adaptive"),
             ("fv1", "roe"),
             ("fv1", "hllc"),
         ):
@@ -112,6 +125,8 @@ def matched(*, rows, objectives):
                         first=first,
                         second=second,
                         metric=k,
+                        measured_first=a["method"],
+                        measured_second=b["method"],
                         first_id=a["experiment_id"],
                         second_id=b["experiment_id"],
                         terrain_id=f"{a.get('landform', key[1])}-{a.get('seed', '')}",

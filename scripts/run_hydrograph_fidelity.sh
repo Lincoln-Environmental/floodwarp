@@ -8,10 +8,12 @@ run_stage() {
     local -a extra=()
     case "$1" in
         status) module=status ;;
+        verify-kernels) module=verification ;;
         pulses) module=pulse ;;
         pulse-recession) module=pulse_recession ;;
         orientation) module=oblique ;;
         bed-recession) module=bed_recession ;;
+        policy-recession) module=policy_recession ;;
         small-review) module=small_review ;;
         rolling-reference|storm-controls|recession|operational-preview) module=continuation; extra=("$1") ;;
         analyse) module=publication ;;
@@ -27,7 +29,7 @@ run_stage() {
 main() {
     local stage=${1:-help} dry=false module
     if [[ $stage == help || $stage == --help ]]; then
-        echo "Usage: $0 {all|status|pulses|pulse-recession|operational-preview|orientation|storm-controls|rolling-reference|recession|bed-recession|small-review|analyse|figures} [--dry-run]"
+        echo "Usage: $0 {all|status|verify-kernels|pulses|pulse-recession|operational-preview|orientation|storm-controls|rolling-reference|recession|policy-recession|bed-recession|small-review|analyse|figures} [--dry-run]"
         return
     fi
     shift
@@ -35,7 +37,7 @@ main() {
         case "$option" in --dry-run) dry=true ;; --resume) ;; *) echo "Unsupported option: $option" >&2; return 2 ;; esac
     done
     if [[ $stage == all ]]; then
-        for item in pulses pulse-recession operational-preview orientation storm-controls rolling-reference recession small-review bed-recession analyse; do run_stage "$item"; done
+        for item in verify-kernels pulses pulse-recession operational-preview orientation storm-controls rolling-reference recession small-review policy-recession bed-recession analyse; do run_stage "$item"; done
     else
         run_stage "$stage"
     fi

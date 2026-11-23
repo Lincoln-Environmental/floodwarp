@@ -14,6 +14,8 @@ Use Python 3.14, a compatible NVIDIA CUDA driver and a machine with enough memor
 | Stage | Experiment or output |
 |---|---|
 | check | Environment, CUDA and full repository tests |
+| hydrograph-fidelity | Signed, reference-normalised magnitudes, discharge passage, hydrograph spreading and cost through the measured recession. [Experiments and definitions](fidelity/README.md) |
+| fidelity-figures | Rebuild hydrograph plots from completed records. |
 | analytical | Nineteen primary exact domains plus waves, controls, lakes, jumps and equilibria |
 | convergence | Matched geometric refinements, fixed-grid temporal and manufactured convergence |
 | fixed-dt-space | Smooth exact gravity and shear at two common fixed timesteps across four spacings, included by convergence |

@@ -11,5 +11,9 @@ if __name__ == "__main__":
     groups = assessment.archive(directory=directory, config=config)
     from research.floodwarp_methods_paper.fidelity.extended_analysis import attach
 
-    groups.update(attach(directory=directory, groups=groups))
+    from research.floodwarp_methods_paper.fidelity import policy_recession
+
+    completed = attach(directory=directory, groups=groups)
+    policy_recession.attach(directory=directory, groups=groups, completed=completed)
+    groups.update(completed)
     figures.plots(directory=directory, groups=groups)

@@ -207,7 +207,7 @@ def plots(*, directory, groups):
         for r in metrics.csv_read(target / "pairs.csv")
         if r["station"] == "outlet"
         and r["first"] == "fv1"
-        and r["second"] == "hancock_dense"
+        and r["second"] == "hancock_fastest"
         and r["cohort"] == "complete-legacy"
     ]
     fig, ax = plt.subplots(1, 2, figsize=(7.3, 3.2), layout="constrained")

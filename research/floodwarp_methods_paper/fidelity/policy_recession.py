@@ -1,0 +1,175 @@
+"""Time every operational Hancock policy to the same end used by the completed hydraulic group."""
+
+import json
+from pathlib import Path
+from research.floodwarp_methods_paper import runner
+from research.floodwarp_methods_paper.fidelity import assessment, receipts, recession
+from research.floodwarp_methods_paper.plan import read_config
+from research.floodwarp_methods_paper.qualification import automatic, launch, stages
+
+
+def unmatched(*, items, selected):
+    spacings = {i["s"]["dx"] for i in items if i["s"]["method"] == "hancock_auto"}
+    return [
+        i
+        for i in items
+        if i["id"] not in selected
+        and i["factor"] == 1
+        and i["s"]["dx"] in spacings
+        and i["s"]["method"] in ("hancock_auto", "hancock_dense", "hancock_adaptive")
+    ]
+
+
+def receipt_key(*, directory, config, base, end):
+    study = directory.parent
+    source = stages.source(root=study.parents[1], study=study, stage="million-auto")
+    return runner.digest(
+        dict(
+            parent=base["id"],
+            source=source,
+            end=end,
+            configuration=config,
+            driver=runner.checksum(Path(__file__)),
+        )
+    )[:24]
+
+
+def run(*, directory):
+    study = directory.parent
+    config = read_config(path=study / "configs/study.json")
+    settings = json.loads((directory / "recession_settings.json").read_text())
+    groups = assessment.archive(directory=directory, config=config)
+    entries = index(directory=directory)
+    machine = runner.machine(root=study.parents[1])
+    for (cohort, case, rep), items in sorted(groups.items()):
+        if cohort != "expanded" or rep != "sampled":
+            continue
+        selected = {
+            i["id"]: i for i in recession.candidates(items=items, cohort=cohort)
+        }
+        missing = unmatched(items=items, selected=selected)
+        if not missing:
+            continue
+        receipt = entries[case, tuple(sorted(selected))]
+        end = receipt["end_s"]
+        for it in missing:
+            dx = it["s"]["dx"]
+            method = it["s"]["method"]
+            ident = receipt_key(directory=directory, config=config, base=it, end=end)
+            folder = directory / "policy_runs" / ident
+            path = folder / "result.json"
+            if path.exists():
+                continue
+            folder.mkdir(parents=True, exist_ok=True)
+            base = it["d"]
+            matched = next(
+                i
+                for i in selected.values()
+                if i["s"]["dx"] == dx
+                and i["s"]["method"] in ("hancock_adaptive", "hancock_dense")
+                and i["factor"] == 1
+            )
+            frame_source = matched["d"]
+            if receipt["extended"]:
+                for run_id in receipt["series"]:
+                    data = receipts.read(
+                        root=directory / "extended_runs", ident=run_id, end=end
+                    )
+                    if data["parent_id"] == matched["id"]:
+                        frame_source = data
+                        break
+            spec = dict(it["s"], hours=end / 3600)
+            if int(base["hours_completed"] * 3600) == end:
+                data = base
+            else:
+                calculate = (
+                    automatic.calculate
+                    if method == "hancock_auto"
+                    else launch.calculate
+                )
+                data = calculate(
+                    stage="million-auto"
+                    if method == "hancock_auto"
+                    else "million-storms",
+                    spec=spec,
+                    study=study,
+                    root=study.parents[1],
+                    config=config,
+                    context={"device": settings["device"]},
+                    directory=folder,
+                )
+            recession.verify_prefix(old=base, new=data["frames"][: len(base["frames"])])
+            recession.verify_prefix(old=frame_source, new=data["frames"])
+            passed, checks = recession.settled(
+                frames=data["frames"],
+                storage=data["final_storage_m3"],
+                supply=data["initial_m3"] + data["rain_m3"],
+                config=settings,
+            )
+            if not passed:
+                raise ValueError("Hancock policies differ at the recession endpoint")
+            runner.write_json(
+                path=path,
+                data=dict(
+                    id=ident,
+                    parent_id=it["id"],
+                    peer=matched["id"],
+                    spec=spec,
+                    end_s=end,
+                    checks=checks,
+                    hardware=machine,
+                    data=data,
+                    reused=end == round(it["s"]["hours"] * 3600),
+                ),
+            )
+            print(
+                "execution parity",
+                case,
+                dx,
+                method,
+                end / 3600,
+                "h",
+                round(data["hydraulic_s"], 2),
+                "s",
+                flush=True,
+            )
+
+
+def index(*, directory):
+    out = {}
+    for file in (directory / "extended_runs").glob("group_*.json"):
+        data = json.loads(file.read_text())
+        if data["cohort"] == "expanded":
+            out[data["case"], tuple(sorted(data["sources"]))] = data
+    return out
+
+
+def attach(*, directory, groups, completed):
+    config = read_config(path=directory.parent / "configs/study.json")
+    for (cohort, case, rep), items in groups.items():
+        if cohort != "expanded" or rep != "sampled":
+            continue
+        primary = completed["complete-expanded", case, rep]
+        unique = {i.get("parent_id", i["id"]) for i in primary}
+        end = round(primary[0]["s"]["hours"] * 3600)
+        for i in unmatched(items=items, selected=unique):
+            ident = receipt_key(directory=directory, config=config, base=i, end=end)
+            file = directory / "policy_runs" / ident / "result.json"
+            data = json.loads(file.read_text())
+            if data["end_s"] != end:
+                raise ValueError("Policy end differs")
+            primary.append(
+                dict(
+                    i,
+                    s=data["spec"],
+                    d=data["data"],
+                    id=ident,
+                    parent_id=i["id"],
+                    cohort="complete-expanded",
+                )
+            )
+
+
+if __name__ == "__main__":
+    directory = Path(__file__).resolve().parent
+    run(directory=directory)
