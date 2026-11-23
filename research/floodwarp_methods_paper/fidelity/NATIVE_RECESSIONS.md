@@ -1,9 +1,13 @@
 # Million-cell discharge after the original end time
 
-Paired native-grid recession measurements are available for 1 of the 8 primary landforms. Each pair received six hours of rainfall. The original end time includes the modelled recession available in the earlier archive. The omitted share is the additional outward volume divided by total outward volume through the paired end time.
+Paired native-grid recession measurements are available for 3 of the 8 primary landforms. Each pair received six hours of rainfall. The original end time includes the modelled recession available in the earlier archive. The omitted share is the additional outward volume divided by total outward volume through the paired end time.
 
 | Landform | Method | Original end (h) | Paired end (h) | Outlet volume after original end (%) | Total hydraulic time (s) | Runtime / FV1 |
 |---|---|---:|---:|---:|---:|---:|
+| Coastal | Hancock dense | 8 | 32 | 65.44 | 360.71 | 1.88 |
+| Coastal | FV1 sparse | 8 | 32 | 65.88 | 192.33 | 1.00 |
+| Fan | Hancock tiled | 8 | 12 | 7.56 | 46.12 | 1.41 |
+| Fan | FV1 sparse | 8 | 12 | 5.66 | 32.74 | 1.00 |
 | Mixed | FV1 sparse | 8 | 20 | 51.70 | 57.35 | 1.00 |
 | Mixed | Hancock tiled | 8 | 20 | 47.30 | 74.48 | 1.30 |
 | Mixed | FV1 sparse | 8 | 48 | 51.81 | 106.19 | 1.00 |
