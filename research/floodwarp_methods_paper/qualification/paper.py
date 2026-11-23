@@ -157,7 +157,7 @@ def material(*, study):
             f"| {label} | {len(vals)} | {median(vals):.3f} | {sum(x <= 1.5 for x in vals)} |"
         )
     operational = [
-        "| Complete event | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps | Fastest / FV1 per step |",
+        "| Original forecast window | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps | Fastest / FV1 per step |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for r in sorted(large, key=case_order):

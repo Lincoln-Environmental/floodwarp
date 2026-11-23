@@ -77,6 +77,17 @@ def derived_identity(*, root, study, stage):
         study / "manifests/corrective_source_tree.json",
         study / "manifests/prevalidation_advisor_freeze.json",
     ]
+    if stage in ("manuscript", "verify"):
+        dependencies.extend(
+            study / "fidelity" / name
+            for name in (
+                "paper_summary.md",
+                "small_storms/recession_horizons.csv",
+                "small_storms/paired_differences.csv",
+                "small_storms/joint_depth_hydrograph.csv",
+                "NATIVE_RECESSIONS.md",
+            )
+        )
     for name in (
         "METHODS.md",
         "manuscript/introduction.md",

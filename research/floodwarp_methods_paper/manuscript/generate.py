@@ -161,6 +161,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
     if fidelity.is_file():
         paragraph = fidelity.read_text().strip()
         link = "[Hydrograph fidelity, uncertainty and measured cost](../fidelity/REPORT.md)"
+    if (study / "fidelity/NATIVE_RECESSIONS.md").is_file():
+        link += " · [Million-cell export after the original stop time](../fidelity/NATIVE_RECESSIONS.md)"
     if paragraph:
         result = result.replace(
             "## Storm hydrographs and depth",
