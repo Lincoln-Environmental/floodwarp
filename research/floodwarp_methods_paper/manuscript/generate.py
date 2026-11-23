@@ -118,6 +118,12 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
     (study / "CORRECTIVE_AUDIT.md").write_text(audit)
     result += "\n" + synthesis.case_evidence(study=study) + "\n" + extension + "\n"
     (study / "LIMITATIONS.md").write_text(synthesis.limitations(study=study))
+    fidelity = study / "fidelity/paper_summary.md"
+    if fidelity.is_file():
+        paragraph = fidelity.read_text().strip()
+        link = "[Hydrograph fidelity, uncertainty and measured cost](../fidelity/REPORT.md)"
+        result = result.replace("## Storm hydrographs and depth", "## Flood-wave fidelity per unit cost\n\n" + paragraph + " " + link + "\n\n## Storm hydrographs and depth")
+        discussion += "\n## Flood-wave interpretation\n\n" + paragraph + " " + link + "\n"
     manuscript = study / "manuscript"
     (manuscript / "results.md").write_text(result)
     (manuscript / "discussion.md").write_text(discussion)
@@ -141,6 +147,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         "select FV1 when the measured error is acceptable for the intended observable. "
         "[Results](results.md) · [Discussion](discussion.md)",
     ]
+    if fidelity.is_file():
+        conclusions.insert(1, fidelity.read_text().strip() + " " + link)
     (manuscript / "conclusions.md").write_text(
         "\n\n".join(filter(None, conclusions)) + "\n"
     )

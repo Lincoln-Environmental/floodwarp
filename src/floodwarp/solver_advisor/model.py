@@ -201,13 +201,19 @@ def recommend(
     slope_only=False,
 ):
     """Choose from empirically qualified solver candidates on one requested grid."""
+    from floodwarp.solver_advisor.fidelity import METRICS, with_evidence
+
     objective = {
-        "full_hydrograph": "discharge",
+        "full_hydrograph": "hydrograph_shape",
+        "flood_arrival_time": "spatial_arrival",
+        "transient_velocity": "transient_momentum",
         "maximum_flood_depth": "maximum_depth",
         "inundation_extent": "inundation",
         "outlet_discharge": "discharge",
         "computational_runtime": "runtime",
     }.get(objective, objective)
+    if objective in METRICS and "fidelity_validation" not in model:
+        model = with_evidence(model=model)
     if objective not in (*model["tolerances"], "runtime"):
         raise ValueError("Unknown hydraulic objective")
     if tolerance is None and objective != "runtime":
@@ -233,11 +239,19 @@ def recommend(
             > features["maximum_barrier_lowering_m"]
         )
         or features.get("lost_channel_fraction", 0) > 0
-        and objective in ("inundation", "discharge", "peak_timing", "peak_discharge")
+        and objective
+        in ("inundation", "discharge", "peak_timing", "peak_discharge", *METRICS)
     ):
         result.update(
             status="refine_terrain",
             reason="The represented DEM loses a required hydraulic connection or exceeds the specified barrier tolerance.",
+        )
+        return result
+    if objective in METRICS and features["resolution"] not in model[
+        "fidelity_validation"
+    ].get(objective, []):
+        result["reason"] = (
+            "This hydraulic objective lacks independent validation at the requested spacing."
         )
         return result
     if (

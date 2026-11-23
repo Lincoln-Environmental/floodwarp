@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--resume | --force] [--dry-run]
 Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
         million-terrain million-pilots million-storms million-auto large-references large-refinements heldout-references million-profiles million-repeats recession-controls execution-policy pareto
-        terrain-features advisor-train advisor-validate tables figures manuscript verify all
+        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
 Running check creates a Python 3.14 environment if needed and verifies the pinned packages.
 HELP
@@ -67,6 +67,19 @@ main() {
     elif [[ ! -x $python_bin ]]; then
         echo 'Run check to establish the environment' >&2
         return 1
+    fi
+    if [[ $stage == hydrograph-fidelity || $stage == fidelity-figures ]]; then
+        local substage=all
+        if [[ $stage == fidelity-figures ]]; then substage=figures; fi
+        exec ./scripts/run_hydrograph_fidelity.sh "$substage" "${selected_options[@]}"
+    fi
+    if [[ $stage == all && ${#selected_options[@]} -eq 0 ]]; then
+        "$python_bin" -m research.floodwarp_methods_paper.controller all
+        exec ./scripts/run_hydrograph_fidelity.sh all
+    fi
+    if [[ $stage == all && ${#selected_options[@]} -eq 1 && ${selected_options[0]} == --dry-run ]]; then
+        "$python_bin" -m research.floodwarp_methods_paper.controller all --dry-run
+        exec ./scripts/run_hydrograph_fidelity.sh all --dry-run
     fi
     exec "$python_bin" -m research.floodwarp_methods_paper.controller "$stage" "${selected_options[@]}"
 }
