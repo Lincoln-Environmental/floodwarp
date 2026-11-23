@@ -83,6 +83,8 @@ def manifest(*, directory, package):
         "bed_runs",
         "policy_runs",
         "small_storms",
+        "mixed_native",
+        "endpoint_fields",
         "verification",
         "extension_timings",
     )

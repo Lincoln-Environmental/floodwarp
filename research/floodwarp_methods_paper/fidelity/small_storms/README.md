@@ -58,3 +58,18 @@ Positive gain means a reduction in absolute error. The last columns count gains 
 These grids contain 96 cells at the candidate resolution. The table supports event-scale numerical comparisons on this geometry. The million-cell operational cases have separate measurements.
 
 [Paired outlet results and reference IDs](outlet_metrics.csv) · [Paired differences](paired_differences.csv) · [Matched horizons](recession_horizons.csv) · [Final two-hour transport and storage](recession_terminal.csv)
+
+Dense and tiled Hancock reproduced the same interval transports and accepted step counts in all 48 paired forecasts. Final conservative depth and both momentum components, cumulative face volumes, soil history and maximum depth had identical FP64 byte hashes in the 31 extended forecasts with retained solver checkpoints. [Exact fields compared in each forecast](recession_execution_parity.csv)
+
+## Depth and wave errors on the same forecast
+
+The table counts how often a reference-qualified FV1 final-depth RMSE of at most 1 mm accompanied an outlet error above the specified tolerance. A comparison needs independent reference support for both quantities. Each row uses a different hydraulic observable.
+
+| Observable | Jointly assessable | Depth within threshold | Outlet exceeds 5% | Outlet exceeds 10% | Outlet exceeds 20% |
+|---|---:|---:|---:|---:|---:|
+| Peak bias | 12 | 6 | 3 | 3 | 1 |
+| Redistributed volume | 6 | 2 | 1 | 0 | 0 |
+| Central 80% duration | 6 | 2 | 2 | 1 | 0 |
+| Centroid delay | 7 | 3 | 2 | 1 | 0 |
+
+[Final depth, maximum depth, connectivity and reference sensitivities](recession_depth.csv) · [Measured depth and extent frontiers](recession_depth_pareto.csv)

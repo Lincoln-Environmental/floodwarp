@@ -131,9 +131,8 @@ def extend(*, directory, settings, cohorts):
     original = recession.advance_frames
     advance = recession.advance
     transport = hydraulics.volumes
-    cadence = json.loads((directory / "spatial_settings.json").read_text())[
-        "interval_s"
-    ]
+    spatial_settings = json.loads((directory / "spatial_settings.json").read_text())
+    cadence = spatial_settings["interval_s"]
 
     def resume(**kwargs):
         if kwargs["start"] == 0:
@@ -199,6 +198,8 @@ def extend(*, directory, settings, cohorts):
             )
         return frames
 
+    from research.floodwarp_methods_paper.fidelity import endpoints
+
     prolong = recession.prolong
 
     def measured(**kwargs):
@@ -224,6 +225,9 @@ def extend(*, directory, settings, cohorts):
             ),
         ):
             out = prolong(**kwargs)
+        endpoints.capture(
+            directory=directory, data=out, supports=spatial_settings["support_m"]
+        )
         if writes:
             stamp = time_ns()
             runner.write_json(

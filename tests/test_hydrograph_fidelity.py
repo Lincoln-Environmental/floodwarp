@@ -411,3 +411,52 @@ def test_recession_cost_compares_matching_intervals_and_handles_unmeasured_work(
     assert float(output["fv1_wet", "0–1%"]["ratio"]) == 2
     assert float(output["fv1_wet", "50–100%"]["ratio"]) == 1
     assert output["scheduled_work", "unmeasured"]["windows"] == "2"
+
+
+def test_recession_pareto_keeps_reference_and_unresolved_extent_separate():
+    from research.floodwarp_methods_paper.fidelity.statistics import frontiers
+
+    common = dict(
+        cohort="complete-expanded",
+        case="hill",
+        representation="sampled",
+        station="domain",
+        dx=5,
+        method="fv1",
+        qualified_extent=True,
+    )
+    first = dict(
+        common, experiment_id="a", reference_id="coarse", runtime_s=1, extent=0.1
+    )
+    second = dict(
+        common, experiment_id="b", reference_id="fine", runtime_s=2, extent=0.2
+    )
+    unknown = dict(
+        common,
+        experiment_id="c",
+        reference_id="fine",
+        runtime_s=0.1,
+        extent=None,
+        qualified_extent=False,
+    )
+    result = {
+        r["experiment_id"]: r
+        for r in frontiers(rows=[first, second, unknown], objectives=["extent"])
+    }
+    assert result["a"]["nondominated"] and result["b"]["nondominated"]
+    assert result["c"]["nondominated"] is None and result["c"]["absolute_error"] is None
+
+
+def test_recession_depth_extent_and_outlet_connectivity():
+    from research.floodwarp_methods_paper.fidelity.final_depth import difference
+
+    ref = np.full((1, 5), 0.06)
+    h = ref.copy()
+    h[0, 3] = 0
+    row = difference(
+        candidate=(h, h), reference=(ref, ref), support=1, thresholds=(0.01, 0.05, 0.10)
+    )
+    assert row["iou_5cm"] == 0.8
+    assert row["component_difference_1cm"] == 1
+    assert row["outlet_connected_area_difference_1cm_m2"] == -4
+    assert row["iou_10cm"] is None

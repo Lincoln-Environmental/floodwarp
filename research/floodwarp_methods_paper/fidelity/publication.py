@@ -215,7 +215,7 @@ def summary(*, directory, storms, pulses, decisions):
         for r in beds
     )
     lines.append(
-        f"At fixed hydraulic spacing, changing the represented bed and its associated initial mapping changed normalised outlet shape more than switching from FV1 to Hancock in {major} of {len(beds)} available contrasts. These paired changes describe sensitivity. They cannot be added as independent error components. The depth maps report arrival only at cells with an observed crossing in both runs and count missed connections separately. [Completed bed controls](results/bed_contrasts_complete.csv) · [Arrival maps](figures/arrival_maps.pdf) · [Spatial and peak-depth differences](results/spatial.csv)"
+        f"At fixed hydraulic spacing, changing the represented bed and its associated initial mapping changed normalised outlet shape more than switching from FV1 to Hancock in {major} of {len(beds)} available contrasts. These paired changes describe sensitivity. They cannot be added as independent error components. The depth maps report arrival only at cells with an observed crossing in both runs and count missed connections separately. [Completed bed controls](results/bed_contrasts_complete.csv) · [Arrival maps](figures/arrival_maps.pdf) · [Original-window spatial differences](results/spatial.csv) · [Recession-end depth, extent and connectivity](results/recession_depth.csv)"
     )
     lines += [
         "",
@@ -333,6 +333,16 @@ def run(*, directory, default_percent, factors):
     from research.floodwarp_methods_paper.fidelity import phase_cost
 
     settings = json.loads((directory / "application_settings.json").read_text())
+    from research.floodwarp_methods_paper.fidelity import final_depth, parity
+
+    parity.compare(directory=directory, groups=groups, target=directory / "results")
+
+    final_depth.process(
+        groups=groups,
+        directory=directory,
+        target=directory / "results",
+        settings=settings["endpoint_depth"],
+    )
     phase_cost.collect(
         groups=groups,
         directory=directory,

@@ -27,6 +27,18 @@ def completed_storms(*, study):
         and r["second"] == "adaptive"
     ]
     resolved = sum(r["exceeds_reference"] == "True" for r in shape)
+    joint_file = folder / "joint_depth_hydrograph.csv"
+    joint_text = ""
+    if joint_file.is_file():
+        for r in csv_read(joint_file):
+            if (
+                r["metric"] == "peak_bias_pct"
+                and float(r["outlet_tolerance_pct"]) == 10
+            ):
+                joint_text = (
+                    f" Among {r['within_depth']} FV1 storms with independently assessable peaks and final depth RMSE within "
+                    f"{1000 * float(r['final_depth_limit_m']):g} mm, {r['exceeds_outlet']} had an absolute peak bias above {r['outlet_tolerance_pct']}%."
+                )
     extended = sum(r["extended"] == "True" for r in horizons)
     maximum = max(float(r["common_end_h"]) for r in horizons)
     return (
@@ -35,6 +47,7 @@ def completed_storms(*, study):
         f"For the {len(shape)} storms with independently qualified normalised outlet shape at 10 m, "
         f"the Hancock–FV2 difference in absolute shape error exceeded the combined reference sensitivity in {resolved} cases. "
         "That comparison concerns the timing distribution of discharged volume. Peak and arrival-time conclusions have separate reference screens."
+        + joint_text
     )
 
 

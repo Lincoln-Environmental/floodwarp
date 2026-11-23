@@ -49,6 +49,9 @@ def run(*, directory):
     study = directory.parent
     config = read_config(path=study / "configs/study.json")
     settings = json.loads((directory / "recession_settings.json").read_text())
+    from research.floodwarp_methods_paper.fidelity.endpoints import endpoint_path
+    import numpy as np
+
     groups = assessment.archive(directory=directory, config=config)
     entries = index(directory=directory)
     machine = runner.machine(root=study.parents[1])
@@ -81,6 +84,7 @@ def run(*, directory):
                 and i["factor"] == 1
             )
             frame_source = matched["d"]
+            expected_hashes = frame_source.get("hashes", {})
             if receipt["extended"]:
                 for run_id in receipt["series"]:
                     data = receipts.read(
@@ -88,6 +92,12 @@ def run(*, directory):
                     )
                     if data["parent_id"] == matched["id"]:
                         frame_source = data
+                        path_state = endpoint_path(
+                            directory=directory, ident=run_id, end_s=end
+                        )
+                        with np.load(path_state) as fields:
+                            hashes = json.loads(fields["receipt"].item())["hashes"]
+                        expected_hashes = dict(hashes, state=hashes["q"])
                         break
             spec = dict(it["s"], hours=end / 3600)
             if int(base["hours_completed"] * 3600) == end:
@@ -111,6 +121,15 @@ def run(*, directory):
                 )
             recession.verify_prefix(old=base, new=data["frames"][: len(base["frames"])])
             recession.verify_prefix(old=frame_source, new=data["frames"])
+            fields = ("state", "maximum", "volume_x", "volume_y", "soil", "rain_sum")
+            for field in fields:
+                if (
+                    field not in expected_hashes
+                    or data["hashes"].get(field) != expected_hashes[field]
+                ):
+                    raise ArithmeticError(
+                        f"Hancock final {field} differs across policies at {case} {dx} m"
+                    )
             passed, checks = recession.settled(
                 frames=data["frames"],
                 storage=data["final_storage_m3"],
@@ -127,6 +146,7 @@ def run(*, directory):
                     peer=matched["id"],
                     spec=spec,
                     end_s=end,
+                    exact_fields=list(fields),
                     checks=checks,
                     hardware=machine,
                     data=data,

@@ -76,8 +76,25 @@ def attach(*, directory, groups, partial=False, target=None):
             base = original[s["parent_id"]]
             if s["end_s"] != end or not s["settled"]:
                 raise ValueError("Inconsistent group end time for " + case)
-            d = dict(base["d"])
-            d.pop("samples", None)
+            d = {
+                key: base["d"][key]
+                for key in ("initial_m3", "dimensions_m", "numerical")
+                if key in base["d"]
+            }
+            from research.floodwarp_methods_paper.fidelity.endpoints import (
+                endpoint_path,
+            )
+            import numpy as np
+
+            endpoint = endpoint_path(directory=directory, ident=ident, end_s=end)
+            if endpoint.is_file():
+                with np.load(endpoint) as saved:
+                    final = json.loads(saved["receipt"].item())
+                d.update(
+                    inflow_m3=final["inflow_m3"],
+                    outflow_m3=final["outflow_m3"],
+                    components=final["components"],
+                )
             original_spatial = {
                 row["t_s"]: row
                 for row in base["d"].get("spatial", base["d"].get("samples", []))

@@ -88,9 +88,7 @@ def matched(*, rows, objectives):
     pairs = []
     for key, g in groups.items():
         policies = [
-            r
-            for name, r in g.items()
-            if name in ("hancock_dense", "hancock_adaptive", "hancock_auto")
+            r for name, r in g.items() if name in ("hancock_dense", "hancock_adaptive")
         ]
         if policies:
             g["hancock_fastest"] = min(policies, key=hydraulic_time)
@@ -189,15 +187,16 @@ def frontiers(*, rows, objectives):
                 r["station"],
                 r.get("cap_courant", 0),
                 r.get("interval_max_s"),
+                r.get("reference_id", "analytical"),
                 k,
             )
             groups[key].append(r)
     result = []
-    for (cohort, case, rep, station, cap, dt, k), g in groups.items():
+    for (cohort, case, rep, station, cap, dt, reference, k), g in groups.items():
         valid = [r for r in g if r.get("qualified_" + k)]
         for r in g:
             ok = r.get("qualified_" + k, False)
-            err = abs(r[k]) if k in r else None
+            err = abs(r[k]) if r.get(k) is not None else None
             dominated = (
                 any(
                     abs(i[k]) <= err
@@ -225,7 +224,7 @@ def frontiers(*, rows, objectives):
                     },
                     dx=r["dx"],
                     experiment_id=r["experiment_id"],
-                    reference_id=r.get("reference_id", "analytical"),
+                    reference_id=reference,
                     absolute_error=err,
                     runtime_s=r["runtime_s"],
                     eligible=ok,

@@ -159,6 +159,94 @@ def run(*, directory, target):
             "[Paired outlet results and reference IDs](outlet_metrics.csv) · [Paired differences](paired_differences.csv) · [Matched horizons](recession_horizons.csv) · [Final two-hour transport and storage](recession_terminal.csv)",
         ]
     )
+    from research.floodwarp_methods_paper.fidelity import final_depth
+
+    from research.floodwarp_methods_paper.fidelity import parity
+
+    checks = parity.compare(directory=directory, groups=complete, target=target)
+    exact_state = sum(bool(c.get("state")) for c in checks)
+    report.extend(
+        [
+            "",
+            f"Dense and tiled Hancock reproduced the same interval transports and accepted step counts in all {len(checks)} paired forecasts. Final conservative depth and both momentum components, cumulative face volumes, soil history and maximum depth had identical FP64 byte hashes in the {exact_state} extended forecasts with retained solver checkpoints. [Exact fields compared in each forecast](recession_execution_parity.csv)",
+        ]
+    )
+    settings = json.loads((directory / "application_settings.json").read_text())
+    depth = final_depth.process(
+        groups=complete,
+        directory=directory,
+        target=target,
+        settings=settings["endpoint_depth"],
+    )
+    qualified_depth = {
+        r["id"]: r
+        for r in depth
+        if r["dx"] == 10 and r["method"] == "fv1" and r.get("qualified_depth_rmse_m")
+    }
+    threshold_m = settings["endpoint_depth"]["depth_floor_m"]
+    report.extend(
+        [
+            "",
+            "## Depth and wave errors on the same forecast",
+            "",
+            f"The table counts how often a reference-qualified FV1 final-depth RMSE of at most {threshold_m * 1000:g} mm accompanied an outlet error above the specified tolerance. A comparison needs independent reference support for both quantities. Each row uses a different hydraulic observable.",
+            "",
+            "| Observable | Jointly assessable | Depth within threshold | "
+            + " | ".join(f"Outlet exceeds {t:g}%" for t in settings["tolerances_pct"])
+            + " |",
+            "|---|---:|---:|---:|---:|---:|",
+        ]
+    )
+    joint = []
+    for k in (
+        "peak_bias_pct",
+        "shape_tv_pct",
+        "width80_bias_pct",
+        "centroid_delay_pct",
+    ):
+        pairs = [
+            r
+            for r in evidence
+            if r["cohort"] == "complete-legacy"
+            and r["method"] == "fv1"
+            and r["metric"] == k
+            and r["qualified"]
+            and r["experiment_id"] in qualified_depth
+        ]
+        close = [
+            r
+            for r in pairs
+            if qualified_depth[r["experiment_id"]]["depth_rmse_m"] <= threshold_m
+        ]
+        exceed = [
+            sum(abs(r["value_pct"]) > t for r in close)
+            for t in settings["tolerances_pct"]
+        ]
+        for tol, count in zip(settings["tolerances_pct"], exceed, strict=True):
+            joint.append(
+                dict(
+                    method="fv1",
+                    dx=10,
+                    metric=k,
+                    jointly_assessable=len(pairs),
+                    final_depth_limit_m=threshold_m,
+                    within_depth=len(close),
+                    outlet_tolerance_pct=tol,
+                    exceeds_outlet=count,
+                )
+            )
+        report.append(
+            f"| {measures[k]} | {len(pairs)} | {len(close)} | "
+            + " | ".join(str(n) for n in exceed)
+            + " |"
+        )
+    report.extend(
+        [
+            "",
+            "[Final depth, maximum depth, connectivity and reference sensitivities](recession_depth.csv) · [Measured depth and extent frontiers](recession_depth_pareto.csv)",
+        ]
+    )
+    metrics.csv_write(file=target / "joint_depth_hydrograph.csv", rows=joint)
     (target / "README.md").write_text("\n".join(report) + "\n")
 
 

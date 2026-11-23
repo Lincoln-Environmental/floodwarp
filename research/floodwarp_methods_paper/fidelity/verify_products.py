@@ -27,6 +27,12 @@ def validate(*, directory):
             path = results / file
             if runner.checksum(path) != sha or len(metrics.csv_read(path)) != rows:
                 raise ValueError(f"CSV/database disagreement: {file}")
+            table = '"' + path.stem.replace('"', '""') + '"'
+            if (
+                rows
+                and db.execute("SELECT COUNT(*) FROM " + table).fetchone()[0] != rows
+            ):
+                raise ValueError(f"SQLite row count mismatch: {file}")
     ends = metrics.csv_read(results / "recession_horizons.csv")
     primary = [g for g in ends if g["cohort"] == "legacy"]
     if len(primary) != 48 or any(float(r["common_end_h"]) < 8 for r in ends):
@@ -36,6 +42,14 @@ def validate(*, directory):
         for r in metrics.csv_read(results / "recession_terminal.csv")
     ):
         raise ArithmeticError("Failed terminal station")
+    parity = metrics.csv_read(results / "recession_execution_parity.csv")
+    if sum(r["cohort"] == "complete-legacy" and r["dx"] == "10" for r in parity) != 48:
+        raise ArithmeticError("Missing small-storm execution comparisons")
+    if any(
+        r["steps"] != "True" or r["outlet_m3s"] != "True" or r["section_m3s"] != "True"
+        for r in parity
+    ):
+        raise ArithmeticError("Endpoint policy transport disagreement")
     costs = metrics.csv_read(results / "completed_costs.csv")
     operational = [r for r in costs if r["suite"] == "primary-million"]
     if len(operational) != 8 or len({r["landform"] for r in operational}) != 8:

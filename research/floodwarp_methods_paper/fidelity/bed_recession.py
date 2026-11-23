@@ -2,9 +2,15 @@
 
 from collections import defaultdict
 import json
+from unittest.mock import patch
 from pathlib import Path
 from research.floodwarp_methods_paper import evidence, metrics, runner
-from research.floodwarp_methods_paper.fidelity import assessment, recession
+from research.floodwarp_methods_paper.fidelity import (
+    assessment,
+    endpoints,
+    receipts,
+    recession,
+)
 from research.floodwarp_methods_paper.plan import read_config
 from research.floodwarp_methods_paper.qualification import observations
 
@@ -82,10 +88,72 @@ def source_id(*, directory, cfg, settings):
     )
 
 
+def native_runs(*, directory, originals):
+    """An identical native forecast can serve both spatial and geometry comparisons."""
+    available = {}
+    for file in (directory / "extended_runs").glob("*/series.json"):
+        data = json.loads(file.read_text())
+        base = originals.get(data["parent_id"])
+        if (
+            base is None
+            or data["cohort"] != "expanded"
+            or data["factor"] != base["factor"]
+        ):
+            continue
+        if data["spec"] != base["s"]:
+            continue
+        if base["id"] in available:
+            raise ValueError("Ambiguous completed native integration")
+        available[base["id"]] = data
+    return available
+
+
+def extend_one(*, item, end, cfg, directory, settings, source, available, supports):
+    run = available.get(item["id"])
+    if run:
+        root = directory / "extended_runs" / run["id"]
+        horizons = sorted(
+            int(p.name.split(".")[0]) for p in (root / "horizons").glob("*.json.gz")
+        )
+        for t in horizons:
+            if (
+                t >= end
+                and endpoints.endpoint_path(
+                    directory=directory, ident=run["id"], end_s=t
+                ).is_file()
+            ):
+                saved = receipts.read(root=root.parent, ident=run["id"], end=t)
+                if saved["settled"]:
+                    return saved
+        item = dict(item, cohort=run["cohort"])
+        source = run["source_sha256"]
+    with patch.object(
+        recession, "atomic_json", receipts.preserve(original=recession.atomic_json)
+    ):
+        result = recession.prolong(
+            it=item,
+            directory=directory,
+            config=cfg,
+            settings=settings,
+            floor_s=end,
+            run_sha=source,
+        )
+    endpoints.capture(directory=directory, data=result, supports=supports)
+    return result
+
+
 def run(*, directory, settings):
     cfg = read_config(path=directory.parent / "configs/study.json")
     source = source_id(directory=directory, cfg=cfg, settings=settings)
-    for case, raw in sorted(inputs(directory=directory, config=cfg).items()):
+    grouped = inputs(directory=directory, config=cfg)
+    supports = json.loads((directory / "spatial_settings.json").read_text())[
+        "support_m"
+    ]
+    available = native_runs(
+        directory=directory,
+        originals={i["id"]: i for group in grouped.values() for i in group},
+    )
+    for case, raw in sorted(grouped.items()):
         items = list({i["id"]: i for i in raw}.values())
         key = runner.digest(dict(source=source, inputs=sorted(i["id"] for i in items)))[
             :22
@@ -109,13 +177,15 @@ def run(*, directory, settings):
             end += 3600 * settings["first_extension_h"]
             while True:
                 series = [
-                    recession.prolong(
-                        it=i,
+                    extend_one(
+                        item=i,
+                        end=end,
+                        cfg=cfg,
                         directory=directory,
-                        config=cfg,
                         settings=settings,
-                        floor_s=end,
-                        run_sha=source,
+                        source=source,
+                        available=available,
+                        supports=supports,
                     )
                     for i in items
                 ]
@@ -155,8 +225,8 @@ def compare_beds(*, directory, config):
         if set(chosen) != set(receipt["originals"]):
             raise ValueError("Bed archive input mismatch")
         for ident in receipt["series"]:
-            s = json.loads(
-                (directory / "extended_runs" / ident / "series.json").read_text()
+            s = receipts.read(
+                root=directory / "extended_runs", ident=ident, end=receipt["end_s"]
             )
             if not s["settled"] or s["end_s"] != receipt["end_s"]:
                 raise ValueError("Incomplete terrain comparison")

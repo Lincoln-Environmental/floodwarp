@@ -16,6 +16,7 @@ run_stage() {
         orientation) module=oblique ;;
         bed-recession) module=bed_recession ;;
         policy-recession) module=policy_recession ;;
+        endpoint-fields) module=endpoints ;;
         native-review) module=operational_review ;;
         small-review) module=small_review ;;
         rolling-reference|storm-controls|recession|operational-preview|operational-pairs) module=continuation; extra=("$1") ;;
@@ -32,7 +33,7 @@ run_stage() {
 main() {
     local stage=${1:-help} dry=false module
     if [[ $stage == help || $stage == --help ]]; then
-        echo "Usage: $0 {all|status|verify-kernels|pulses|pulse-recession|pulse-figures|operational-preview|operational-pairs|native-review|orientation|storm-controls|rolling-reference|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
+        echo "Usage: $0 {all|status|verify-kernels|pulses|pulse-recession|pulse-figures|operational-preview|operational-pairs|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
         return
     fi
     shift
@@ -40,7 +41,7 @@ main() {
         case "$option" in --dry-run) dry=true ;; --resume) ;; *) echo "Unsupported option: $option" >&2; return 2 ;; esac
     done
     if [[ $stage == all ]]; then
-        for item in verify-kernels pulses pulse-recession operational-preview native-review orientation storm-controls rolling-reference recession small-review policy-recession bed-recession analyse verify; do run_stage "$item"; done
+        for item in verify-kernels pulses pulse-recession operational-preview native-review orientation storm-controls rolling-reference recession small-review policy-recession bed-recession endpoint-fields analyse verify; do run_stage "$item"; done
     else
         run_stage "$stage"
     fi

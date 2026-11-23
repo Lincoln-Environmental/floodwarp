@@ -34,6 +34,8 @@ STYLES = {
 
 
 def save(*, fig, folder, name):
+    os.environ.setdefault("SOURCE_DATE_EPOCH", "0")
+    plt.rcParams["svg.hashsalt"] = "floodwarp-hydrograph-fidelity"
     folder.mkdir(parents=True, exist_ok=True)
     for fmt in ("pdf", "svg", "png"):
         file = folder / (name + "." + fmt)
