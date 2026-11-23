@@ -47,7 +47,7 @@ def record_transport(*, spatial, original):
     return volumes
 
 
-def capture(*, directory, settings, stage):
+def capture(*, directory, settings, stage, experiment=None):
     spatial = recorder(directory=directory)
     adapter_at_start = runner.checksum(Path(__file__))
     original_run = hydraulics.run_event
@@ -96,6 +96,8 @@ def capture(*, directory, settings, stage):
         return result
 
     with patch.object(hydraulics, "run_event", record):
+        if experiment is not None:
+            return experiment()
         if stage == "storm-controls":
             cfg = read_config(path=directory.parent / "configs/study.json")
             storm_controls.run(
@@ -343,6 +345,10 @@ if __name__ == "__main__":
             )
         if stage == "recession":
             if "expanded" in cohorts:
+                from research.floodwarp_methods_paper.fidelity import incised_crest
+
+                design = json.loads((directory / "incised_settings.json").read_text())
+                incised_crest.run(directory=directory, settings=settings, design=design)
                 extend(
                     directory=directory, settings=settings, cohorts=(), tail_only=True
                 )

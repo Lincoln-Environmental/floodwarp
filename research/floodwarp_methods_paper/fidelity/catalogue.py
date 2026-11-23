@@ -86,6 +86,7 @@ def manifest(*, directory, package):
         "mixed_native",
         "endpoint_fields",
         "storage_tail",
+        "incised_crest",
         "verification",
         "extension_timings",
     )

@@ -1,6 +1,6 @@
 # Million-cell discharge after the original end time
 
-Paired native-grid recession measurements are available for 7 of the 8 primary landforms. Each pair received six hours of rainfall. The original end time includes the modelled recession available in the earlier archive. The omitted share is the additional outward volume divided by total outward volume through the paired end time.
+Paired native-grid recession measurements are available for 8 of the 8 primary landforms. Each pair received six hours of rainfall. The original end time includes the modelled recession available in the earlier archive. The omitted share is the additional outward volume divided by total outward volume through the paired end time.
 
 | Landform | Method | Original end (h) | Paired end (h) | Outlet volume after original end (%) | Total hydraulic time (s) | Runtime / FV1 |
 |---|---|---:|---:|---:|---:|---:|
@@ -20,6 +20,8 @@ Paired native-grid recession measurements are available for 7 of the 8 primary l
 | Mixed | Hancock tiled | 8 | 48 | 47.99 | 116.19 | 1.09 |
 | Plain | Hancock tiled | 8 | 48 | negligible export | 33.71 | 0.95 |
 | Plain | FV1 sparse | 8 | 48 | negligible export | 35.39 | 1.00 |
+| Rolling | FV1 sparse | 8 | 12 | 0.00 | 75.63 | 1.00 |
+| Rolling | Hancock tiled | 8 | 12 | 0.00 | 148.33 | 1.96 |
 
 The mixed catchment also has a 12-hour residual-storage check at a later endpoint. Repeated horizons follow the same trajectories. Each timing covers both rainfall and recession. The Hancock policy in this comparison was selected from the original-window measurements. Independent spatial and temporal refinements determine eligibility for accuracy comparisons and can require a later shared endpoint.
 
