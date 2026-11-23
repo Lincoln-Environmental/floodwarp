@@ -59,6 +59,23 @@ These grids contain 96 cells at the candidate resolution. The table supports eve
 
 [Paired outlet results and reference IDs](outlet_metrics.csv) · [Paired differences](paired_differences.csv) · [Matched horizons](recession_horizons.csv) · [Final two-hour transport and storage](recession_terminal.csv)
 
+## Peak discharge by landform
+
+Each value is median absolute peak bias over the storms that qualify for all three methods. The counts give the number of matched storms and distinct terrain seeds. Results for a single qualified storm describe that case only.
+
+| Landform | Matched / total storms | Terrain seeds in matched storms | FV1 | Hancock dense | FV2 RK2 |
+|---|---:|---:|---:|---:|---:|
+| Coastal | 0/6 | 0 | unresolved | unresolved | unresolved |
+| Fan | 4/6 | 3 | 1.64% | 2.18% | 1.57% |
+| Floodplain | 1/6 | 1 | 23.87% | 6.92% | 8.11% |
+| Hill | 5/6 | 3 | 0.49% | 0.40% | 0.07% |
+| Incised | 5/6 | 3 | 0.65% | 0.05% | 0.11% |
+| Mixed | 1/6 | 1 | 3.58% | 5.48% | 5.34% |
+| Plain | 4/6 | 2 | 17.50% | 9.06% | 8.49% |
+| Rolling | 4/6 | 3 | 10.24% | 10.57% | 9.93% |
+
+[Signed distributions and relative runtime for every landform and objective](landform_fidelity.csv)
+
 Dense and tiled Hancock reproduced the same interval transports and accepted step counts in all 48 paired forecasts. Final conservative depth and both momentum components, cumulative face volumes, soil history and maximum depth had identical FP64 byte hashes in the 31 extended forecasts with retained solver checkpoints. [Exact fields compared in each forecast](recession_execution_parity.csv)
 
 ## Depth and wave errors on the same forecast

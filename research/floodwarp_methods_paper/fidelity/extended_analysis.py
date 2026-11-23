@@ -100,9 +100,16 @@ def attach(*, directory, groups, partial=False, target=None):
                 for row in base["d"].get("spatial", base["d"].get("samples", []))
                 if "wet_fraction" in row
             }
-            original_spatial.update(
-                {f["t_s"]: f for f in s["frames"] if "wet_fraction" in f}
-            )
+            for f in s["frames"]:
+                if "wet_fraction" in f:
+                    previous = original_spatial.get(f["t_s"], {})
+                    combined = dict(previous)
+                    combined.update({k: v for k, v in f.items() if v is not None})
+                    if "active_fraction" in combined:
+                        combined["active_source"] = (
+                            ident if "active_fraction" in f else s["parent_id"]
+                        )
+                    original_spatial[f["t_s"]] = combined
             samples = list(original_spatial.values()) if end in original_spatial else []
             d.update(
                 frames=s["frames"],

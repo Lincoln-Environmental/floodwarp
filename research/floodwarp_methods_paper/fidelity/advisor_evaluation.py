@@ -88,7 +88,7 @@ def build(*, directory, default_percent, factors):
         supplement["validation_support"][obj] = supported
         values = [v for dx in supported for v in residuals[obj, dx].values()]
         supplement["padding"][obj] = max(values, default=0.0)
-    runner.write_json(path=pkg / "fidelity_evidence.json", data=supplement)
+    frozen_id = runner.digest(supplement)
     frozen = attach(model=base, supplement=supplement)
     decisions = []
     baselines = []
@@ -223,6 +223,12 @@ def build(*, directory, default_percent, factors):
     metrics.csv_write(
         file=directory / "results/advisor_predictions.csv", rows=predictions
     )
+    if runner.digest(supplement) != frozen_id:
+        raise ValueError("The held-out evaluation modified the frozen advisor")
+    evidence_file = pkg / "fidelity_evidence.json"
+    pending = evidence_file.with_suffix(".pending")
+    runner.write_json(path=pending, data=supplement)
+    pending.replace(evidence_file)
     return decisions
 
 

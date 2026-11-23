@@ -13,7 +13,11 @@ def intervals(*, item, cadence):
     bins = defaultdict(list)
     for f in frames:
         if "wet_fraction" in f:
-            footprint[f["t_s"]] = f
+            old = footprint.get(f["t_s"], {})
+            footprint[f["t_s"]] = {
+                **old,
+                **{k: v for k, v in f.items() if v is not None},
+            }
         bins[((int(f["t_s"]) - 1) // cadence + 1) * cadence].append(f)
     out = {}
     for end, values in bins.items():
@@ -27,6 +31,9 @@ def intervals(*, item, cadence):
             steps=sum(v["steps"] for v in values),
             wet=f.get("wet_fraction"),
             active=f.get("active_fraction"),
+            active_source=f.get("active_source", item["id"])
+            if f.get("active_fraction") is not None
+            else None,
             work_tiles=f.get("work_tiles", f.get("active_tiles")),
         )
     return out
@@ -39,15 +46,73 @@ def label(*, fraction, edges):
     return f"{100 * edges[index]:g}–{100 * edges[index + 1]:g}%"
 
 
+def event_diagnostics(*, item):
+    data = item["d"]
+    frames = data.get("frames", data.get("samples", []))
+    sections = data.get("spatial", data.get("samples", []))
+    steps = sum(r["steps"] for r in frames)
+    end = frames[-1]["t_s"]
+    result = dict(
+        id=item["id"],
+        parent_id=item.get("parent_id", item["id"]),
+        end_s=end,
+        accepted_steps=steps,
+        mean_dt_s=end / steps,
+        hydraulic_s=data["hydraulic_s"],
+    )
+    for field, old, reducer in (
+        ("dt_min_s", "dt_min_s", min),
+        ("dt_max_s", "dt_max_s", max),
+        ("rejected", "rejected", sum),
+        ("graph_capture_s", "capture_s", sum),
+        ("compilation_s", "preload_s", sum),
+        ("extraction_s", "extraction_s", sum),
+    ):
+        values = [r.get(field, r.get(old)) for r in frames]
+        values = [v for v in values if v is not None]
+        result[field + "_intervals"] = len(values)
+        result[field] = reducer(values) if len(values) == len(frames) else None
+    result["diagnostic_intervals"] = len(frames)
+    mem = [r["live_pool_mib"] for r in sections if r.get("live_pool_mib") is not None]
+    result["sampled_pool_peak_mib"] = max(mem) if mem else None
+    result["pool_snapshots"] = len(mem)
+    result["source_final_pool_mib"] = data.get(
+        "live_pool_mib", data.get("process_pool_mib")
+    )
+    for k in (
+        "inflow_m3",
+        "outflow_m3",
+        "rain_m3",
+        "infiltration_m3",
+        "initial_m3",
+        "residual_m3",
+    ):
+        result[k] = data.get(k)
+    result["storage_m3"] = data.get("final_storage_m3", data.get("final_m3"))
+    return result
+
+
 def collect(*, groups, directory, cadence, edges, phase_edges, target=None):
     if target is None:
         target = directory / "results"
     chunks = []
+    diagnostics = []
     totals = defaultdict(list)
     for (cohort, case, rep), items in groups.items():
         if not cohort.startswith("complete-") or rep != "sampled":
             continue
         grid = defaultdict(dict)
+        for item in items:
+            diagnostics.append(
+                dict(
+                    case=case,
+                    cohort=cohort,
+                    dx=item["s"]["dx"],
+                    method=item["s"]["method"],
+                    cfl_factor=item["factor"],
+                    **event_diagnostics(item=item),
+                )
+            )
         for i in items:
             if i["factor"] == 1:
                 grid[i["s"]["dx"]][i["s"]["method"]] = i
@@ -81,6 +146,7 @@ def collect(*, groups, directory, cadence, edges, phase_edges, target=None):
                         wet_fraction=v["wet"],
                         fv1_wet_fraction=b["wet"],
                         active_fraction=v["active"],
+                        scheduled_observation_id=v["active_source"],
                         work_tiles=v["work_tiles"],
                         ratio=v["seconds"] / b["seconds"],
                         phase=phase,
@@ -120,5 +186,6 @@ def collect(*, groups, directory, cadence, edges, phase_edges, target=None):
                 per_step_ratio=(wall / steps) / (baseline / fv_steps),
             )
         )
+    metrics.csv_write(file=target / "whole_storm_diagnostics.csv", rows=diagnostics)
     metrics.csv_write(file=target / "cost_intervals.csv", rows=chunks)
     metrics.csv_write(file=target / "cost_by_phase.csv", rows=summary)

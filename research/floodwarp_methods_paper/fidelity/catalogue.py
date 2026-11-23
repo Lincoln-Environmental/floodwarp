@@ -85,6 +85,7 @@ def manifest(*, directory, package):
         "small_storms",
         "mixed_native",
         "endpoint_fields",
+        "storage_tail",
         "verification",
         "extension_timings",
     )

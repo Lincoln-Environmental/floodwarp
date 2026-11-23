@@ -48,6 +48,7 @@ def record_transport(*, spatial, original):
 
 def capture(*, directory, settings, stage):
     spatial = recorder(directory=directory)
+    adapter_at_start = runner.checksum(Path(__file__))
     original_run = hydraulics.run_event
     original_model = events.create_model
 
@@ -77,7 +78,7 @@ def capture(*, directory, settings, stage):
             result = original_run(**kw)
         (model,) = retained
         result["recession_capture"] = dict(
-            adapter=runner.checksum(Path(__file__)),
+            adapter=adapter_at_start,
             extended_zero_rain_coverage_h=settings["forcing_hours"],
             actual_forcing=model.identity["forcing"],
         )
@@ -119,7 +120,7 @@ def capture(*, directory, settings, stage):
             raise ValueError(stage)
 
 
-def extend(*, directory, settings, cohorts):
+def extend(*, directory, settings, cohorts, tail_only=False):
     spatial = recorder(directory=directory)
     original_build = recession.build
 
@@ -253,7 +254,12 @@ def extend(*, directory, settings, cohorts):
             recession, "atomic_json", receipts.preserve(original=recession.atomic_json)
         ),
     ):
-        recession.run(directory=directory, settings=settings, cohorts=cohorts)
+        if tail_only:
+            from research.floodwarp_methods_paper.fidelity import long_tail
+
+            long_tail.run(directory=directory, settings=settings)
+        else:
+            recession.run(directory=directory, settings=settings, cohorts=cohorts)
 
 
 def operational_pairs(*, directory, settings, cases):
@@ -310,6 +316,8 @@ if __name__ == "__main__":
 
         with patch.object(recession.assessment, "archive", preview):
             extend(directory=directory, settings=settings, cohorts=("expanded",))
+    elif stage == "storage-tail":
+        extend(directory=directory, settings=settings, cohorts=(), tail_only=True)
     elif stage in ("recession", "operational-pairs"):
         primary_cases = json.loads(
             (directory / "operational_settings.json").read_text()
@@ -320,6 +328,10 @@ if __name__ == "__main__":
                 directory=directory, settings=settings, cases=primary_cases
             )
         if stage == "recession":
+            if "expanded" in cohorts:
+                extend(
+                    directory=directory, settings=settings, cohorts=(), tail_only=True
+                )
             extend(directory=directory, settings=settings, cohorts=cohorts)
     else:
         capture(directory=directory, settings=settings, stage=stage)

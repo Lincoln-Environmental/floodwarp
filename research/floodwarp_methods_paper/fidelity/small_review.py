@@ -159,7 +159,32 @@ def run(*, directory, target):
             "[Paired outlet results and reference IDs](outlet_metrics.csv) · [Paired differences](paired_differences.csv) · [Matched horizons](recession_horizons.csv) · [Final two-hour transport and storage](recession_terminal.csv)",
         ]
     )
-    from research.floodwarp_methods_paper.fidelity import final_depth
+    from research.floodwarp_methods_paper.fidelity import final_depth, landform_results
+
+    methods = ("fv1", "hancock_dense", "adaptive")
+    families = landform_results.collect(
+        evidence=evidence, target=target, methods=methods
+    )
+    report.extend(
+        [
+            "",
+            "## Peak discharge by landform",
+            "",
+            "Each value is median absolute peak bias over the storms that qualify for all three methods. The counts give the number of matched storms and distinct terrain seeds. Results for a single qualified storm describe that case only.",
+            "",
+        ]
+    )
+    report.extend(
+        landform_results.table(
+            summaries=families, metric="peak_bias_pct", methods=methods
+        )
+    )
+    report.extend(
+        [
+            "",
+            "[Signed distributions and relative runtime for every landform and objective](landform_fidelity.csv)",
+        ]
+    )
 
     from research.floodwarp_methods_paper.fidelity import parity
 

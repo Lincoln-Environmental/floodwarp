@@ -387,7 +387,7 @@ def test_recession_cost_compares_matching_intervals_and_handles_unmeasured_work(
             id=method,
             s=dict(dx=10, method=method),
             factor=1,
-            d=dict(frames=frames, spatial=spatial),
+            d=dict(frames=frames, spatial=spatial, hydraulic_s=sum(runtime)),
         )
 
     fv = forecast(method="fv1", runtime=(2, 1), depth_fraction=(0.005, 0.50))
@@ -460,3 +460,17 @@ def test_recession_depth_extent_and_outlet_connectivity():
     assert row["component_difference_1cm"] == 1
     assert row["outlet_connected_area_difference_1cm_m2"] == -4
     assert row["iou_10cm"] is None
+
+
+def test_long_storage_tail_integrates_partial_bins_and_reversing_transport():
+    from research.floodwarp_methods_paper.fidelity.long_tail import late_export
+
+    frames = [
+        dict(t_s=t, outlet_m3s=q, section_m3s=-q)
+        for t, q in ((5, 2.0), (8, 1.0), (12, -1.0))
+    ]
+    result = late_export(frames=frames, window=6, fraction=0.1)
+    assert result["outlet"]["final_outward_m3"] == 13
+    assert result["outlet"]["late_outward_m3"] == 2
+    assert not result["outlet"]["passed"]
+    assert result["section"]["late_outward_m3"] == 4
