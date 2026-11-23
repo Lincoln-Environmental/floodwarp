@@ -474,3 +474,90 @@ def test_long_storage_tail_integrates_partial_bins_and_reversing_transport():
     assert result["outlet"]["late_outward_m3"] == 2
     assert not result["outlet"]["passed"]
     assert result["section"]["late_outward_m3"] == 4
+
+
+def test_long_tail_runs_to_a_common_later_endpoint(tmp_path, monkeypatch):
+    from research.floodwarp_methods_paper.fidelity import long_tail
+
+    directory = tmp_path / "study" / "fidelity"
+    folder = directory / "extended_runs"
+    folder.mkdir(parents=True)
+    (directory / "long_tail.py").write_text("storage sensitivity test")
+    options = dict(
+        case="mixed",
+        dx=10,
+        methods=["fv1", "hancock_adaptive"],
+        minimum_hours=48,
+        tail_window_hours=12,
+        extension_hours=12,
+        late_volume_fraction=0.01,
+    )
+    (directory / "long_tail_settings.json").write_text(json.dumps(options))
+    native = []
+    ids = options["methods"]
+    for name in ids:
+        native.append(
+            dict(
+                id=name,
+                s=dict(method=name, dx=10, case="mixed"),
+                factor=1,
+                d=dict(initial_m3=10),
+            )
+        )
+    (folder / "group_native.json").write_text(
+        json.dumps(
+            dict(
+                sources=ids,
+                series=ids,
+                source="hydraulic",
+                end_s=20 * 3600,
+                cohort="expanded",
+                case="mixed",
+                representation="sampled",
+            )
+        )
+    )
+
+    def config(**kwargs):
+        return {}
+
+    def observations(**kwargs):
+        return {("expanded", "mixed", "sampled"): native}
+
+    def series(*, name, end):
+        hours = end // 3600
+        last_flow_hour = 48 if name == "fv1" else 36
+        frames = []
+        for hour in range(1, hours + 1):
+            flow = float(hour <= last_flow_hour)
+            frames.append(dict(t_s=hour * 3600, section_m3s=flow, outlet_m3s=flow))
+        return dict(
+            id=name,
+            parent_id=name,
+            end_s=end,
+            spec=dict(method=name, case="mixed"),
+            frames=frames,
+            storage_m3=5,
+            infiltration_m3=0,
+            rain_m3=2,
+            residual_m3=0,
+            checks={"section": {"passed": True}, "outlet": {"passed": True}},
+        )
+
+    def early(**kw):
+        return series(name=kw["ident"], end=kw["end"])
+
+    calls = []
+
+    def advance(**kw):
+        calls.append((kw["it"]["id"], kw["floor_s"]))
+        return series(name=kw["it"]["id"], end=kw["floor_s"])
+
+    monkeypatch.setattr(long_tail, "read_config", config)
+    monkeypatch.setattr(long_tail.assessment, "archive", observations)
+    monkeypatch.setattr(long_tail.receipts, "read", early)
+    monkeypatch.setattr(long_tail.recession, "prolong", advance)
+    long_tail.run(directory=directory, settings={"forcing_hours": 72})
+    assert calls == [(name, h * 3600) for h in (48, 60) for name in ids]
+    long_tail.run(directory=directory, settings={"forcing_hours": 72})
+    assert len(calls) == 4

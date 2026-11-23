@@ -19,6 +19,7 @@ from research.floodwarp_methods_paper.fidelity import (
 )
 from research.floodwarp_methods_paper.plan import read_config
 from research.floodwarp_methods_paper.qualification import hydraulics
+from validation.fv2_local_inertia import read_state
 
 
 def seed_path(*, directory, model, end):
@@ -158,11 +159,24 @@ def extend(*, directory, settings, cohorts, tail_only=False):
             spatial.snapshot(solver=solver, li=li)
             t = round(solver.time)
             if t % cadence == 0:
-                depth = solver.get_water_depth()
-                if not np.isfinite(depth).all() or depth.min() < 0:
-                    raise ArithmeticError("Invalid recession depth")
+                state = read_state(solver=solver, li=li)
+                depth = state[..., 0]
+                if not np.isfinite(state).all() or depth.min() < 0:
+                    raise ArithmeticError("Invalid recession state")
+                moving = depth > solver.dry_depth
+                depth_moving = depth[moving]
+                speed = (
+                    np.hypot(state[..., 1][moving], state[..., 2][moving])
+                    / depth_moving
+                )
+                froude = speed / np.sqrt(float(solver.gravity) * depth_moving)
                 wet_by_time[t] = dict(
                     wet_fraction=float((depth > 0).mean()),
+                    max_speed_ms=float(speed.max(initial=0.0)),
+                    wet_froude_max=float(froude.max()) if froude.size else None,
+                    supercritical_wet_fraction=float((froude > 1).mean())
+                    if froude.size
+                    else None,
                     cm_fraction=float((depth >= 0.01).mean()),
                     live_pool_mib=wp.get_mempool_used_mem_current(
                         device=settings["device"]
