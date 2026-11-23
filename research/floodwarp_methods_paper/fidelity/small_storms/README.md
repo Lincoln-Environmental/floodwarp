@@ -14,7 +14,7 @@ All 48 events completed at 10 m on the same 120 × 80 m physical domain, with 5 
 | 68 | 1 |
 | 76 | 1 |
 
-Each entry below is an outlet observation with independent spatial, temporal and cross-formulation checks. Positive centroid bias indicates later passage. Negative peak bias indicates attenuation. For the signed quantities, the final two columns count comparisons whose bias exceeds the reference-sensitivity envelope. Width is the central 80% discharge duration.
+Each 10 m forecast is compared with the 2.5 m adaptive FV2 outlet hydrograph for the same physical event. Its numerical sensitivity is the largest observed change against 5 m FV2, 2.5 m FV2 with a halved CFL setting and 2.5 m Hancock. The peak sensitivity limit is 5% and the width limit is 10%. Each observable must also pass the discharge and temporal sampling checks. Positive centroid bias indicates later passage. Negative peak bias indicates attenuation. For the signed quantities, the final two columns count comparisons whose bias exceeds the reference-sensitivity envelope. Width is the central 80% discharge duration.
 
 | 10 m method | Observable | Qualified / 48 | Median signed (%) | Median absolute (%) | Below envelope | Above envelope |
 |---|---|---:|---:|---:|---:|---:|

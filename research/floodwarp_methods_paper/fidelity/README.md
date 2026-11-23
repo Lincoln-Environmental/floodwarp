@@ -4,6 +4,12 @@ Run `./scripts/run_hydrograph_fidelity.sh all` in the pinned FloodWarp checkout.
 
 [Measured findings](REPORT.md) · [Tables and SQLite database](results) · [Figures](figures) · [Screening configuration](design.json)
 
+## Which hydrograph is the reference?
+
+The flat-channel pulse uses a right-running nonlinear simple wave before characteristic crossing. At the 200 m section the discharge is the channel width times analytical depth times analytical velocity, averaged over each one-second reporting interval. The `pulse-reference` stage independently integrates the transported volume using initial characteristic position as the integration variable and checks every archived section. [Analytical reference check](pulse_reference.py) · [Agreement in m³/s for all pulse records](results/pulse_reference_checks.csv)
+
+The 48 small rainfall events use a separate 2.5 m adaptive FV2 numerical reference for each terrain and storm. Each 10 m forecast receives the same reference, including the 10 m FV2 entry. The 5 m FV2 refinement, 2.5 m half-CFL FV2 and 2.5 m Hancock runs test its sensitivity. Reference and forecast share modelling assumptions and boundary closures. The million-cell operational runtime pairs have no independent truth from timing or mutual agreement alone. [Small-storm qualification](small_storms/README.md)
+
 ## How the comparison works
 
 Each value is the mean flux over the interval between consecutive accepted face-volume readings. The first time edge is zero. Within each observed interval the analysis uses constant discharge, which conserves measured transport on irregular intervals. Candidate and reference use identical physical start and end times and interval edges. A simulation timestep, a diagnostic interval and a rainfall interval serve different purposes.
