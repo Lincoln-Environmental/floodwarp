@@ -25,9 +25,36 @@ def status(*, directory):
                 done += 1
         prints.append(f"Additional {item} reference/control forecasts: {done}")
     by_group = Counter()
+    primary_cases = json.loads((directory / "operational_settings.json").read_text())[
+        "primary_cases"
+    ]
+    comparison_ends = {}
     for file in (directory / "extended_runs").glob("group_*.json"):
         group = json.loads(file.read_text())
         by_group[group["cohort"], group["end_s"] / 3600] += 1
+        if (
+            group["cohort"] == "expanded"
+            and group["representation"] == "sampled"
+            and group["case"] in primary_cases
+        ):
+            previous = comparison_ends.get(group["case"], (0, 0))
+            if len(group["sources"]) >= previous[0]:
+                comparison_ends[group["case"]] = (
+                    len(group["sources"]),
+                    group["end_s"] / 3600,
+                )
+    prints.append(
+        f"Native or larger matched groups with a verified recession: {len(comparison_ends)}/{len(primary_cases)} primary million-cell families."
+    )
+    for case in primary_cases:
+        if case in comparison_ends:
+            n, end = comparison_ends[case]
+            prints.append(f"  {case}: {end:g} h verified for {n} configurations.")
+    for file in sorted((directory / "storage_tail").glob("*.json")):
+        record = json.loads(file.read_text())
+        prints.append(
+            f"Residual-storage comparison: {record['common_end_s'] / 3600:g} h, both stations passed the longer export test."
+        )
     for (cohort, hours), count in sorted(by_group.items()):
         prints.append(
             f"{cohort} groups with all compared runs checked at {hours:g} h: {count}"
