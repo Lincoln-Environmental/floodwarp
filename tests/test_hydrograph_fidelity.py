@@ -606,3 +606,21 @@ def test_native_horizon_omission_uses_integrated_outward_transport():
     assert negligible["omitted_pct"] is None
     with pytest.raises(ValueError, match="Missing a measured endpoint"):
         station_rows(data=data, minimum_volume=0.01, original_s=2)
+
+
+def test_fixed_crest_grid_refines_initial_state_and_rainfall_coordinates():
+    from research.floodwarp_methods_paper.fidelity.incised_crest import fixed_fields
+
+    def parent(*, dx, dem):
+        assert dx == dem == 10
+        state = np.array([[0.0, 0.30], [0.7, 1.0]])
+        return (state, 1 - state), {"grid_m": dx}
+
+    child, info = fixed_fields(parent=parent, dx=5, dem=10)
+    assert info == {"grid_m": 10}
+    for y in range(2):
+        for x in range(2):
+            np.testing.assert_array_equal(child[0][y::2, x::2], [[0, 0.3], [0.7, 1]])
+            np.testing.assert_array_equal(child[1][y::2, x::2], 1 - child[0][y::2, x::2])
+    with pytest.raises(ValueError, match="integer subdivision"):
+        fixed_fields(parent=parent, dx=3, dem=10)

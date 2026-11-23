@@ -1,5 +1,6 @@
 """Post hoc check of the late incised-catchment crest on the fixed 10 m represented bed."""
 
+from functools import partial
 from pathlib import Path
 import json
 from unittest.mock import patch
@@ -13,6 +14,19 @@ from research.floodwarp_methods_paper.fidelity import (
 )
 from research.floodwarp_methods_paper.plan import read_config
 from research.floodwarp_methods_paper.qualification import hydraulics, matrix
+
+
+def fixed_fields(*, parent, dx, dem, **kwargs):
+    """Subdivide the represented bed, initial state and rainfall-mask coordinates together."""
+    values, parameters = parent(dx=dem, dem=dem, **kwargs)
+    if dx == dem:
+        return values, parameters
+    factor = round(dem / dx)
+    if factor < 1 or factor * dx != dem:
+        raise ValueError("Expected an integer subdivision of the fixed bed")
+    return tuple(
+        np.repeat(np.repeat(a, factor, axis=0), factor, axis=1) for a in values
+    ), parameters
 
 
 def verify_geometry(*, study_config, template, spec, options, spacings):
@@ -139,7 +153,7 @@ def prefixes(*, directory, settings, design):
     return items
 
 
-def run(*, directory, settings, design):
+def experiment(*, directory, settings, design):
     config = read_config(path=directory.parent / "configs/study.json")
     full = assessment.archive(directory=directory, config=config, partial=True)
     native = [
@@ -185,6 +199,12 @@ def run(*, directory, settings, design):
     from research.floodwarp_methods_paper.fidelity import crest_report
 
     crest_report.generate(directory=directory, design=design)
+
+
+def run(*, directory, settings, design):
+    geometry = partial(fixed_fields, parent=hydraulics.represented)
+    with patch.object(hydraulics, "represented", geometry):
+        experiment(directory=directory, settings=settings, design=design)
 
 
 if __name__ == "__main__":
