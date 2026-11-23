@@ -561,3 +561,24 @@ def test_long_tail_runs_to_a_common_later_endpoint(tmp_path, monkeypatch):
     assert calls == [(name, h * 3600) for h in (48, 60) for name in ids]
     long_tail.run(directory=directory, settings={"forcing_hours": 72})
     assert len(calls) == 4
+
+
+def test_reference_requires_physical_rain_timing_through_the_common_end():
+    from research.floodwarp_methods_paper.fidelity.assessment import (
+        matched_reference_inputs,
+    )
+
+    def item(*, times, rates):
+        return dict(
+            s={"hours": 8},
+            d={"forcing": {"rain_times_s": times, "rain_rates_ms": rates}},
+        )
+
+    a = item(times=[0, 10800, 21600, 28800], rates=[0, 1, 0, 0])
+    b = item(times=[0, 10800, 21600, 720 * 3600], rates=[0, 1, 0, 0])
+    matched_reference_inputs(base=a, control=b)
+    b["d"]["recession_capture"] = {
+        "actual_forcing": {"rainfall": [[0, 7200, 21600, 720 * 3600], [0, 1, 0, 0]]}
+    }
+    with pytest.raises(AssertionError, match="Different physical hyetographs"):
+        matched_reference_inputs(base=a, control=b)

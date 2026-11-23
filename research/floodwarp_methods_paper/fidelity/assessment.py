@@ -134,6 +134,47 @@ def spacing(it):
     return it["s"]["dx"]
 
 
+def matched_reference_inputs(*, base, control):
+    expected = base["d"]["forcing"]
+    observed = control["d"]["forcing"]
+    keys = (
+        "terrain_sha256",
+        "initial_depth_sha256",
+        "initial_hu_sha256",
+        "initial_hv_sha256",
+        "rain_mask_sha256",
+        "infiltration_sha256",
+        "boundary_x_sha256",
+        "boundary_y_sha256",
+        "roughness",
+        "stage_m",
+        "coastal_stage_hours",
+        "coastal_stage_m",
+        "stage_hold_s",
+    )
+    for field in keys:
+        if expected.get(field) != observed.get(field):
+            raise ValueError("Fine-grid reference changed physical input " + field)
+    end = 3600 * base["s"]["hours"]
+    if end != 3600 * control["s"]["hours"]:
+        raise ValueError("Reference comparisons require a common physical end")
+    rain = []
+    for item, f in ((base, expected), (control, observed)):
+        forcing = item["d"].get("recession_capture", {}).get("actual_forcing", {})
+        t, v = forcing.get("rainfall", (f["rain_times_s"], f["rain_rates_ms"]))
+        t, v = np.asarray(t), np.asarray(v)
+        if t[0] > 0 or t[-1] < end or np.any(np.diff(t) <= 0) or len(v) != len(t):
+            raise ValueError("Incomplete reference rainfall coverage")
+        rain.append((t, v))
+    knots = np.unique(np.r_[0, end, rain[0][0], rain[1][0]])
+    knots = knots[(knots >= 0) & (knots <= end)]
+    np.testing.assert_array_equal(
+        np.interp(knots, *rain[0]),
+        np.interp(knots, *rain[1]),
+        err_msg="Different physical hyetographs on the comparison window",
+    )
+
+
 def references(*, items):
     rk = sorted(
         (i for i in items if i["s"]["method"] == "adaptive" and i["factor"] == 1),
@@ -161,20 +202,10 @@ def references(*, items):
         ),
         None,
     )
+    if cross:
+        matched_reference_inputs(base=fine, control=cross)
     if time:
-        for k in (
-            "terrain_sha256",
-            "initial_depth_sha256",
-            "initial_hu_sha256",
-            "rain_mask_sha256",
-            "infiltration_sha256",
-            "boundary_x_sha256",
-            "boundary_y_sha256",
-            "roughness",
-            "rain_rates_ms",
-        ):
-            if time["d"]["forcing"][k] != fine["d"]["forcing"][k]:
-                raise ValueError("Temporal refinement changed physical input " + k)
+        matched_reference_inputs(base=fine, control=time)
         if time["d"]["steps"] <= fine["d"]["steps"]:
             time = None
     return fine, dict(

@@ -170,6 +170,37 @@ def summary(*, directory, storms, pulses, decisions):
         lines.append(
             f"| {r['landform']}, {r['dx']:g} m, {r['formulation']} {r['execution_mode']} | {r['hours']:g} | {r['runtime_s']:.1f} | {describe(rows=[r], field='peak_bias_pct')}% | {describe(rows=[r], field='volume_bias_pct')}% | {r.get('centroid_delay_s', float('nan')) / 60:+.1f} | {describe(rows=[r], field='width80_bias_pct')}% | {describe(rows=[r], field='shape_tv_pct')} / {describe(rows=[r], field='aligned_tv_pct')} |"
         )
+    double = selected(
+        rows=storms,
+        cohort="complete-double",
+        case="floodplain-double-rain",
+        station="outlet",
+        dx=10,
+    )
+    if double:
+        lines.extend(
+            [
+                "",
+                "## Two-pulse rainfall over a fixed floodplain bed",
+                "",
+                "The 10 m forecasts share the represented floodplain geometry with their finer hydraulic reference. Distinct crests can merge or separate during routing. The table gives signed peak error, volume redistribution and the number of resolved modes from the measured one-minute interval fluxes.",
+                "",
+                "| Method | End (h) | Model / reference modes | Peak bias | Peak qualified | Redistributed volume | Shape qualified |",
+                "|---|---:|---:|---:|---|---:|---|",
+            ]
+        )
+        for item in double:
+            peak = describe(rows=[item], field="peak_bias_pct")
+            shape = describe(rows=[item], field="shape_tv_pct")
+            lines.append(
+                f"| {item['method']} | {item['hours']:g} | {item.get('model_modes', '—')} / {item.get('reference_modes', '—')} | {peak}% | {item.get('qualified_peak_bias_pct', False)} | {shape}% | {item.get('qualified_shape_tv_pct', False)} |"
+            )
+        lines.extend(
+            [
+                "",
+                "[Complete two-pulse hydrograph and cumulative transport](figures/floodplain-double-rain.pdf)",
+            ]
+        )
     long_pairs = metrics.csv_read(result / "horizon_effects.csv")
     lines.append("")
     for component in ("volume_bias_pct", "width80_bias_pct", "shape_tv_pct"):
@@ -318,7 +349,7 @@ def summary(*, directory, storms, pulses, decisions):
                 [
                     "",
                     sentence
-                    + " [Per-event timings and run identities](results/completed_costs.csv)",
+                    + " [Per-event timings and run identities](results/completed_costs.csv) · [Mixed-catchment residual storage](storage_tail/README.md)",
                 ]
             )
     (directory / "REPORT.md").write_text("\n".join(lines) + "\n")
@@ -326,6 +357,9 @@ def summary(*, directory, storms, pulses, decisions):
 
 
 def run(*, directory, default_percent, factors):
+    from research.floodwarp_methods_paper.fidelity import tail_report
+
+    tail_report.generate(directory=directory)
     groups, rows = assessment.process(directory=directory)
     from research.floodwarp_methods_paper.fidelity import performance
 

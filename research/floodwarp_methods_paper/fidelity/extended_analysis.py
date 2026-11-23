@@ -111,6 +111,22 @@ def attach(*, directory, groups, partial=False, target=None):
                         )
                     original_spatial[f["t_s"]] = combined
             samples = list(original_spatial.values()) if end in original_spatial else []
+            forcing = dict(s["forcing"])
+            if s["spec"].get("coastal_stage"):
+                from research.floodwarp_methods_paper.qualification import matrix
+
+                options = matrix.design(study=directory.parent)
+                applied_stage = dict(
+                    coastal_stage_hours=options["coastal_stage_hours"],
+                    coastal_stage_m=options["coastal_stage_m"],
+                    stage_hold_s=900,
+                )
+                for k, value in applied_stage.items():
+                    if value != base["d"]["forcing"][k]:
+                        raise ValueError(
+                            "Prescribed coastal stage changed during continuation"
+                        )
+                forcing.update(applied_stage)
             d.update(
                 frames=s["frames"],
                 spatial=samples,
@@ -121,7 +137,7 @@ def attach(*, directory, groups, partial=False, target=None):
                 infiltration_m3=s["infiltration_m3"],
                 rain_m3=s["rain_m3"],
                 residual_m3=s["residual_m3"],
-                forcing=s["forcing"],
+                forcing=forcing,
                 steps=sum(f["steps"] for f in s["frames"]),
             )
             spec = dict(s["spec"], hours=end / 3600)
