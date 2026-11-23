@@ -247,6 +247,20 @@ def run(*, directory, target):
         ]
     )
     metrics.csv_write(file=target / "joint_depth_hydrograph.csv", rows=joint)
+    from research.floodwarp_methods_paper.fidelity import recession_figures
+
+    recession_figures.depth_and_wave(
+        source=target,
+        folder=directory / "figures",
+        tolerance_pct=settings["benchmark_tolerance_pct"],
+        depth_limit_m=threshold_m,
+    )
+    report.extend(
+        [
+            "",
+            "[Final depth against outlet peak and shape errors](../figures/final_depth_and_outlet_wave.pdf)",
+        ]
+    )
     (target / "README.md").write_text("\n".join(report) + "\n")
 
 

@@ -12,9 +12,52 @@ from research.floodwarp_methods_paper.fidelity import (
 from research.floodwarp_methods_paper.plan import read_config
 
 
+def original_windows(*, directory, archived, cases, settings):
+    from research.floodwarp_methods_paper.fidelity import recession
+
+    rows = []
+    for case in cases:
+        items = [
+            i
+            for i in archived["expanded", case, "sampled"]
+            if i["s"]["dimensions"][0] / i["s"]["dx"] == 1024
+            and i["s"]["dimensions"][1] / i["s"]["dx"] == 1024
+            and i["factor"] == 1
+            and i["s"]["method"]
+            in ("fv1", "hancock_dense", "hancock_adaptive", "hancock_auto")
+        ]
+        for item in items:
+            d = item["d"]
+            passed, checks = recession.settled(
+                frames=d["frames"],
+                storage=d["final_storage_m3"],
+                supply=d["rain_m3"] + d["initial_m3"],
+                config=settings,
+            )
+            for station, check in checks.items():
+                rows.append(
+                    dict(
+                        case=case,
+                        method=item["s"]["method"],
+                        run_id=item["id"],
+                        dx=item["s"]["dx"],
+                        station=station,
+                        end_h=item["s"]["hours"],
+                        both_stations_passed=passed,
+                        **check,
+                    )
+                )
+    metrics.csv_write(file=directory / "results/original_million_tails.csv", rows=rows)
+
+
 def review(*, directory, case, dx, methods, target, settings):
     config = read_config(path=directory.parent / "configs/study.json")
     original = assessment.archive(directory=directory, config=config, partial=True)
+    cases = json.loads((directory / "operational_settings.json").read_text())[
+        "primary_cases"
+    ]
+    tail = json.loads((directory / "recession_settings.json").read_text())
+    original_windows(directory=directory, archived=original, cases=cases, settings=tail)
     key = ("expanded", case, "sampled")
     pairs = {
         key: [

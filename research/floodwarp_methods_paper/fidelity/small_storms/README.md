@@ -73,3 +73,5 @@ The table counts how often a reference-qualified FV1 final-depth RMSE of at most
 | Centroid delay | 7 | 3 | 2 | 1 | 0 |
 
 [Final depth, maximum depth, connectivity and reference sensitivities](recession_depth.csv) · [Measured depth and extent frontiers](recession_depth_pareto.csv)
+
+[Final depth against outlet peak and shape errors](../figures/final_depth_and_outlet_wave.pdf)

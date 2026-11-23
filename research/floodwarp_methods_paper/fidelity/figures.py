@@ -336,5 +336,12 @@ def plots(*, directory, groups):
             ("rolling-704-soil-5120x5120", 5),
         ),
     )
+    app = json.loads((directory / "application_settings.json").read_text())
+    recession_figures.depth_and_wave(
+        source=directory / "small_storms",
+        folder=folder,
+        tolerance_pct=app["benchmark_tolerance_pct"],
+        depth_limit_m=app["endpoint_depth"]["depth_floor_m"],
+    )
     recession_figures.spatial(directory=directory)
     recession_figures.paired_examples(directory=directory, groups=groups)

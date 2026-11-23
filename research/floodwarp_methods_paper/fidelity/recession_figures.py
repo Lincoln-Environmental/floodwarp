@@ -181,3 +181,55 @@ def paired_examples(*, directory, groups):
             + format(float(chosen["peak_bias_pct"]), "+.1f")
             + "%",
         )
+
+
+def depth_and_wave(*, source, folder, tolerance_pct, depth_limit_m):
+    depths = {
+        r["id"]: r
+        for r in metrics.csv_read(source / "recession_depth.csv")
+        if r.get("qualified_depth_rmse_m") == "True"
+    }
+    evidence = metrics.csv_read(source / "outlet_metrics.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(7, 3.45), layout="constrained", sharex=True)
+    for axis, (metric, title) in zip(
+        axes,
+        (
+            ("peak_bias_pct", "Signed peak bias (%)"),
+            ("shape_tv_pct", "Redistributed volume (%)"),
+        ),
+        strict=True,
+    ):
+        axis.axvline(1000 * depth_limit_m, color="0.65", ls=":", zorder=0)
+        axis.axhline(tolerance_pct, color="0.65", ls=":", zorder=0)
+        if metric == "peak_bias_pct":
+            axis.axhline(0, color="0.75", lw=0.7, zorder=0)
+            axis.axhline(-tolerance_pct, color="0.65", ls=":", zorder=0)
+        for method, marker in (("fv1", "o"), ("hancock_dense", "^"), ("adaptive", "s")):
+            pts = [
+                (
+                    1000 * float(depths[r["experiment_id"]]["depth_rmse_m"]),
+                    float(r["value_pct"]),
+                )
+                for r in evidence
+                if r["experiment_id"] in depths
+                and r["metric"] == metric
+                and r["cohort"] == "complete-legacy"
+                and r["method"] == method
+                and r["qualified"] == "True"
+            ]
+            if pts:
+                x, y = zip(*pts)
+                axis.scatter(
+                    x,
+                    y,
+                    s=23,
+                    facecolors="none",
+                    edgecolors=figures.COLOURS[method],
+                    marker=marker,
+                    label=figures.LABELS[method],
+                    linewidths=0.9,
+                )
+        axis.set(xlabel="Final depth RMSE (mm)", ylabel=title)
+        axis.set_xscale("symlog", linthresh=0.1, linscale=0.6)
+    axes[1].legend(fontsize=8, frameon=False)
+    figures.save(fig=fig, folder=folder, name="final_depth_and_outlet_wave")

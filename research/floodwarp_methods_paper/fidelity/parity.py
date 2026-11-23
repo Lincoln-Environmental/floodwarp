@@ -29,7 +29,7 @@ def compare(*, directory, groups, target):
     for (cohort, case, rep), items in sorted(groups.items()):
         if not cohort.startswith("complete-"):
             continue
-        for dx in {i["s"]["dx"] for i in items}:
+        for dx in sorted({i["s"]["dx"] for i in items}):
             peers = {
                 i["s"]["method"]: i
                 for i in items
@@ -46,7 +46,7 @@ def compare(*, directory, groups, target):
                 other = peers[mode]
                 b = fingerprints(directory=directory, item=other)
                 more = other["d"].get("frames", other["d"].get("samples"))
-                shared = set(a) & set(b)
+                shared = sorted(set(a) & set(b))
                 fields = {k: a[k] == b[k] for k in shared if k != "q"}
                 fields.update(
                     {
