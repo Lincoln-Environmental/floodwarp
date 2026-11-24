@@ -1,6 +1,6 @@
 # Native-metre storm qualification
 
-12 original forecast windows have been measured. 2 of 27 physical domains have a matched recession receipt for every scheduled configuration.
+16 original forecast windows have been measured. 3 of 27 physical domains have a matched recession receipt for every scheduled configuration.
 
 The numerical source matches the current hydraulic implementation `7e935dd08d51d1410d9bc713040e0dd1b05ece8c574dc0919ede8c6f5a249bc8`.
 

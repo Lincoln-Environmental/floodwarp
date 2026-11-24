@@ -8,6 +8,10 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 
 | Case | Grid (m) | Method | Execution | CFL factor | End (h) | Cadence (s) | Internal peak (m³/s) | Outlet peak (m³/s) | Net export (m³) | Primary hydraulic time (s) | Steps |
 |---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| coastal-703-moderate-10240x10240 | 10 | FV1 | sparse | 1.0 | 32 | 300 | 86.612 | 131.717 | 4,655,733 | 183.92 | 85,542 |
+| coastal-703-moderate-10240x10240 | 10 | Hancock | dense | 1.0 | 32 | 300 | 73.261 | 112.551 | 3,785,687 | 355.17 | 93,585 |
+| coastal-703-moderate-10240x10240 | 10 | Hancock | tiles | 1.0 | 32 | 300 | 73.261 | 112.551 | 3,785,687 | 322.16 | 93,585 |
+| coastal-703-moderate-10240x10240 | 10 | Hancock | auto → dense | 1.0 | 32 | 300 | 73.261 | 112.551 | 3,785,687 | 352.17 | 93,585 |
 | floodplain-702-moderate-10240x10240 | 10 | FV1 | sparse | 1.0 | 28 | 300 | 139.438 | 141.054 | 5,818,422 | 138.20 | 74,331 |
 | floodplain-702-moderate-10240x10240 | 10 | Hancock | dense | 1.0 | 28 | 300 | 111.792 | 123.695 | 4,695,050 | 302.68 | 79,979 |
 | floodplain-702-moderate-10240x10240 | 10 | Hancock | tiles | 1.0 | 28 | 300 | 111.792 | 123.695 | 4,695,050 | 270.09 | 79,979 |
@@ -20,20 +24,20 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | plain-701-spatial-10240x10240 | 10 | MUSCL–Euler | dense | 1.0 | 52 | 300 | 10.300 | 0.000 | 0 | 90.75 | 41,095 |
 | plain-701-spatial-10240x10240 | 10 | FV2 RK2 | dense | 1.0 | 52 | 300 | 10.643 | 0.000 | 0 | 159.34 | 42,003 |
 
-0 of 99 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
+0 of 135 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
 ## Dense and tiled execution
 
-[complete-native-metre, 2 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
-[original-window, 2 matched grid/event comparisons](policy_cost_original_window.pdf)
+[complete-native-metre, 3 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
+[original-window, 3 matched grid/event comparisons](policy_cost_original_window.pdf)
 
 Each upper-panel point represents a measured forecast window. Each lower-panel point represents a recorded timing interval (minutes: 15). Footprints are sampled at interval end. A ratio below one favours tiles. The same trajectory can contribute to both the initial window and the matched recession products.
 
 [Policy run identities and timings](../native_results/policy_cost_events.csv) · [Individual timing intervals](../native_results/policy_cost_windows.csv)
 
-0 of 11 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
+0 of 15 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
 
 [Timing identities, quartiles and range](../native_results/timing_distribution.csv)
 
