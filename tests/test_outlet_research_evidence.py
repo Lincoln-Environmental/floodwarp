@@ -224,6 +224,23 @@ def test_repeat_selection_covers_cross_grid_decisions_on_the_same_snapshot():
     assert result == {"coarse", "fine-candidate"}
 
 
+def test_advisor_schedule_keeps_half_cfl_reference_receipts_separate_from_candidates():
+    from research.floodwarp_methods_paper.fidelity.advisor_design import measured_schedule
+
+    base = dict(case="same", dx_m="1", method="adaptive", factor="1", solver_source="current",
+                horizon="complete-native-metre", end_h="28", source_id="normal")
+    half = dict(base, factor=".5", source_id="half")
+    measured = measured_schedule(windows=[
+        base, half, dict(half, horizon="original_window", end_h=8, source_id="prefix"),
+        dict(half, solver_source="archived"), dict(base, timing_repeat="1", source_id="repeat"),
+    ], numerical_source="current")
+    assert measured == {
+        ("same", 1, "adaptive", 1, "complete-native-metre"): ("normal", 28.),
+        ("same", 1, "adaptive", .5, "complete-native-metre"): ("half", 28.),
+        ("same", 1, "adaptive", .5, "original_window"): ("prefix", 8.),
+    }
+
+
 def test_transfer_inventory_retains_contract_for_selected_run(tmp_path):
     from research.floodwarp_methods_paper.fidelity.orton_transfer import inventory
 
@@ -431,6 +448,23 @@ def test_reference_pair_needs_two_matched_events_on_independent_terrains():
     assert native_advisor.validated_pairs(rows=rows, minimum=2) == {}
     rows[-1]["case"] = "storm-b1"
     assert native_advisor.validated_pairs(rows=rows, minimum=2) == {"peak": [[5, 10]]}
+
+
+def test_small_reference_domain_cannot_authorise_a_large_domain_grid_change():
+    from floodwarp.solver_advisor.model import choose_resolution
+
+    rows = [dict(objective="peak", chosen="fv1", feasible=True, dx=dx,
+                 terrain_id=t, case=t, cells=1_000_000 // dx**2)
+            for t in ("a", "b") for dx in (5, 10)]
+    model = dict(native_cross_grid_validation=native_advisor.validated_pairs(rows=rows, minimum=2),
+                 native_cross_grid_areas_m2=native_advisor.validated_areas(rows=rows, minimum=2))
+    options = [dict(status="recommended", resolution_m=dx, runtime_s=cost, warnings=[],
+                    represented_area_m2=1_000_000, objective="peak") for dx, cost in ((5, 3), (10, 1))]
+    assert choose_resolution(model=model, results=options) is options[1]
+    for candidate in options:
+        candidate["represented_area_m2"] = 100_000_000
+    assert choose_resolution(model=model, results=options) is options[0]
+    assert "domain-area range" in options[0]["warnings"][-1]
 
 
 def test_lost_connection_cannot_supply_development_hydraulic_error():

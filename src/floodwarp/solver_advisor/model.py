@@ -264,6 +264,7 @@ def recommend(
         status="insufficient_evidence",
         method=None,
         resolution_m=features["resolution"],
+        represented_area_m2=features.get("area_m2"),
         objective=objective,
         tolerance=tolerance,
         hardware=model["hardware"],
@@ -477,9 +478,27 @@ def recommend(
 
 def choose_resolution(*, model, results):
     requested = results[0]
-    supported = model.get("native_cross_grid_validation", {}).get(requested["objective"], [])
-    permitted = [r for r in results if r["status"] == "recommended" and
-                 (r is requested or any(requested["resolution_m"] in pair and r["resolution_m"] in pair for pair in supported))]
+    supported = {tuple(sorted(grids)) for grids in
+                 model.get("native_cross_grid_validation", {}).get(requested["objective"], [])}
+    areas = model.get("native_cross_grid_areas_m2")
+    permitted = []
+    outside = False
+    for r in results:
+        if r["status"] != "recommended":
+            continue
+        if r is not requested:
+            pair = tuple(sorted((requested["resolution_m"], r["resolution_m"])))
+            if pair not in supported:
+                continue
+            if areas is not None:
+                observed = [v["area_m2"] for v in areas.get(requested["objective"], []) if tuple(v["grids"]) == pair]
+                footprints = (requested.get("represented_area_m2"), r.get("represented_area_m2"))
+                if not observed or not all(a is not None and min(observed) <= a <= max(observed) for a in footprints):
+                    outside = True
+                    continue
+        permitted.append(r)
+    if outside:
+        requested["warnings"].append("The proposed grid change lies outside the independently validated domain-area range.")
     if len(results) > 1 and not supported:
         requested["warnings"].append(
             "A practical resolution change requires independent native-metre cross-grid validation for this objective."

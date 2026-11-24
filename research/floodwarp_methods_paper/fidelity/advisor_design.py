@@ -75,6 +75,19 @@ def inventory(
     return records
 
 
+def measured_schedule(*, windows, numerical_source):
+    runs = {}
+    for r in windows:
+        if (r["horizon"] not in ("original_window", "complete-native-metre")
+                or r["solver_source"] != numerical_source or r.get("timing_repeat") not in ("", None, "0")):
+            continue
+        key = r["case"], float(r["dx_m"]), r["method"], float(r["factor"]), r["horizon"]
+        if key in runs and runs[key] != (r["source_id"], float(r["end_h"])):
+            raise ValueError("Conflicting native run identities for a scheduled forecast")
+        runs[key] = r["source_id"], float(r["end_h"])
+    return runs
+
+
 def run(*, directory, config, design, settings):
     features = {}
     for row in metrics.csv_read(file=directory / "native_features/observations.csv"):
@@ -120,17 +133,24 @@ def run(*, directory, config, design, settings):
     dest = directory / "advisor_design"
     dest.mkdir(exist_ok=True)
     schedule = []
+    numerical = runner.source_identity(root=directory.parents[2], study=directory.parent, stage="long-storms")
+    runs = measured_schedule(windows=metrics.csv_read(file=directory / "native_results/measured_windows.csv"),
+                             numerical_source=numerical)
+    grids = {}
     for spec in specs:
         length, width = spec["dimensions"]
         dx = spec["dx"]
         split = "test" if spec["landform"] == config["advisor"]["heldout_family"] else spec["split"]
-        measured_ids = [r["run_id"] for r in measured.get((spec["case"], dx), [])
-                        if r["method"] == spec["requested_method"] and spec["factor"] == 1]
+        key = spec["case"], dx, spec["requested_method"], spec["factor"]
+        initial_id, initial_h = runs.get((*key, "original_window"), (None, None))
+        final_id, end_h = runs.get((*key, "complete-native-metre"), (None, None))
+        grids[spec["case"], dx] = round(length / dx) * round(width / dx)
         schedule.append(dict(case=spec["case"], terrain_id=f"{spec['landform']}-{spec['seed']}", split=split,
                              experiment=spec["experiment_class"], length_m=length, width_m=width, dx_m=dx,
                              nx=round(length/dx), ny=round(width/dx), method=spec["requested_method"],
                              cfl_factor=spec["factor"], cadence_s=spec["interval"],
-                             native_floor=dx==min(spacing), matched_measured_ids=" ".join(measured_ids)))
+                             native_floor=dx==min(spacing), initial_window_id=initial_id, initial_end_h=initial_h,
+                             matched_measured_ids=final_id, matched_end_h=end_h))
     metrics.csv_write(file=dest/"scheduled.csv",rows=schedule)
     metrics.csv_write(file=dest / "opportunities.csv", rows=rows)
     pairs = []
@@ -173,6 +193,12 @@ def run(*, directory, config, design, settings):
                                 if {low, high} <= grids
                             }
                         )
+                        if field == "possible":
+                            paired["opportunity_domains"] = [
+                                dict(terrain_id=t, case=case, candidate_cells=[grids[case, low], grids[case, high]],
+                                     reference_dx_m=min(spacing), reference_cells=grids[case, min(spacing)])
+                                for (t, case), available in sorted(good.items()) if {low, high} <= available
+                            ]
                     pair = dict(split=split, objective=objective, dx=[low, high], **paired)
                     if split == "validation":
                         successes = defaultdict(set)

@@ -43,7 +43,7 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 ## Dense and tiled execution
 
 [complete-native-metre, 6 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
-[original-window, 6 matched grid/event comparisons](policy_cost_original_window.pdf)
+[original-window, 7 matched grid/event comparisons](policy_cost_original_window.pdf)
 
 Each upper-panel point represents a measured forecast window. Each lower-panel point represents a recorded timing interval (minutes: 15). Footprints are sampled at interval end. A ratio below one favours tiles. The same trajectory can contribute to both the initial window and the matched recession products.
 

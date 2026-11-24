@@ -30,6 +30,13 @@ def native_advisor_findings(*, study):
                      f"5 and 10 m pair and all scheduled depth reference controls ({', '.join(row['possible'])}). "
                      f"Completed runs currently qualify {len(row['observed_qualified'])} terrain pairs for depth. "
                      "[Design and measured eligibility by observable](../fidelity/advisor_design/paired.json)")
+    footprints = {(*r["candidate_cells"], r["reference_dx_m"], r["reference_cells"])
+                  for partition in ("validation", "test") for r in paired[partition].get("opportunity_domains", [])}
+    for low_cells, high_cells, fine, reference_cells in sorted(footprints):
+        lines.append(f"The paired depth design tests forecasts of {low_cells:,} cells at 5 m and {high_cells:,} "
+                     f"cells at 10 m against a {reference_cells:,}-cell {fine:g} m numerical reference on the same footprint. "
+                     "Independent validation of larger-domain grid choices requires admissible comparisons at those scales. "
+                     "[Candidate and reference grids, CFL controls and measured endpoints](../fidelity/advisor_design/scheduled.csv)")
     cli_path = folder / "advisor_design/installed_frozen_cli.csv"
     if not cli_path.exists():
         cli_path = folder / "advisor_design/installed_cli.csv"

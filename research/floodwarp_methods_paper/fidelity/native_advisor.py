@@ -280,6 +280,9 @@ def train(*, directory, settings, config, design):
     model["native_cross_grid_validation"] = validated_pairs(
         rows=valid, minimum=settings["validation_groups_per_spacing"]
     )
+    model["native_cross_grid_areas_m2"] = validated_areas(
+        rows=valid, minimum=settings["validation_groups_per_spacing"]
+    )
     model["training_terrain_ids"] = sorted({r["terrain_id"] for r in train_rows})
     model["validation_terrain_ids"] = sorted({r["terrain_id"] for r in val})
     identity = dict(
@@ -343,6 +346,17 @@ def validated_pairs(*, rows, minimum):
             ):
                 accepted[objective].append([dx, res])
     return dict(accepted)
+
+
+def validated_areas(*, rows, minimum):
+    by_area = defaultdict(list)
+    for row in rows:
+        by_area[row["cells"] * row["dx"]**2].append(row)
+    support = defaultdict(list)
+    for area, decisions_at_scale in sorted(by_area.items()):
+        for objective, pairs in validated_pairs(rows=decisions_at_scale, minimum=minimum).items():
+            support[objective].extend(dict(grids=grids, area_m2=area) for grids in pairs)
+    return dict(support)
 
 
 def predictions(*, model, rows):

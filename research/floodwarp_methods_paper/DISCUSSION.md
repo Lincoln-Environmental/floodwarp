@@ -97,6 +97,8 @@ The validation design includes 2 independent terrains with an admissible 5 and 1
 
 The test design includes 2 independent terrains with an admissible 5 and 10 m pair and all scheduled depth reference controls (fan-8400, rolling-8300). Completed runs currently qualify 0 terrain pairs for depth. [Design and measured eligibility by observable](fidelity/advisor_design/paired.json)
 
+The paired depth design tests forecasts of 40,000 cells at 5 m and 10,000 cells at 10 m against a 1,000,000-cell 1 m numerical reference on the same footprint. Independent validation of larger-domain grid choices requires admissible comparisons at those scales. [Candidate and reference grids, CFL controls and measured endpoints](fidelity/advisor_design/scheduled.csv)
+
 On floodplain-8103 at 5 m, the installed DEM reader measured maximum local barrier lowering of 0.183 m. Its solver decision was `refine_terrain`. [Installed CLI and archived features](fidelity/advisor_design/installed_cli.csv)
 
 On floodplain-8103 at 10 m, the installed DEM reader measured maximum local barrier lowering of 0.169 m. Its solver decision was `refine_terrain`. [Installed CLI and archived features](fidelity/advisor_design/installed_cli.csv)

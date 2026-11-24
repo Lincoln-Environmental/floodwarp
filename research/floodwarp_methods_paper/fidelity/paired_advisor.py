@@ -59,6 +59,7 @@ def evaluate_pairs(*, model, rows, trials, spacings):
                         objective=objective,
                         method=t["chosen"],
                         resolution_m=dx,
+                        represented_area_m2=t["cells"] * dx**2 if "cells" in t else None,
                         runtime_s=t["predicted_runtime_s"],
                         warnings=[],
                     )
