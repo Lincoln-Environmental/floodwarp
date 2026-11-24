@@ -38,6 +38,8 @@ Using the longest paired native horizon once per landform, Hancock's median runt
 | Plain | 41,536 | 48,220 | 0.861 | 1.106 |
 | Rolling | 54,823 | 43,936 | 1.248 | 1.572 |
 
+[Measured runtimes and contributions from timestep count and cost per step](figures/native_runtime_components.pdf)
+
 The mixed catchment also has a 12-hour residual-storage check at a later endpoint. Repeated horizons follow the same trajectories. Each timing covers both rainfall and recession. The Hancock policy in this comparison was selected from the original-window measurements. Independent spatial and temporal refinements determine eligibility for accuracy comparisons and can require a later shared endpoint.
 
 [Outlet and internal section volumes, peak discharges, storage, timing and run identities](results/native_horizons.csv) · [Effect of 15-minute reporting on peak magnitude and the interval containing the maximum](results/native_cadence.csv)

@@ -6,6 +6,59 @@ from research.floodwarp_methods_paper import metrics
 from research.floodwarp_methods_paper.fidelity import figures
 
 
+def native_cost(*, directory, rows):
+    """Compare complete native-event costs and their arithmetic decomposition."""
+    if not rows:
+        return
+    fig, axes = plt.subplots(
+        1, 2, sharey=True, figsize=(7.2, 4.1), layout="constrained"
+    )
+    times, ratios = axes
+    centres = np.arange(len(rows))
+    for offset, field, marker, colour, label in (
+        (-0.13, "fv1", "s", "#356b91", "FV1 sparse"),
+        (0.13, "hancock", "o", "#bc5b23", "Hancock"),
+    ):
+        times.scatter(
+            [row[field + "_s"] for row in rows],
+            centres + offset,
+            marker=marker,
+            color=colour,
+            s=24,
+            label=label,
+        )
+    for offset, field, marker, colour, label in (
+        (-0.21, "steps_over_fv1", "^", "#35736a", "Accepted steps"),
+        (0, "per_step_over_fv1", "s", "#74467e", "Time per step"),
+        (0.21, "ratio_over_fv1", "o", "#242424", "Total time"),
+    ):
+        ratios.scatter(
+            [row[field] for row in rows],
+            centres + offset,
+            marker=marker,
+            color=colour,
+            s=24,
+            label=label,
+        )
+    times.set_yticks(
+        centres,
+        [f"{r['landform'].capitalize()}, {r['end_h']:g} h" for r in rows],
+    )
+    times.invert_yaxis()
+    times.set(xlabel="Hydraulic runtime (s)", xlim=(0, None))
+    ratios.set(xlabel="Hancock / FV1", xlim=(0, None))
+    ratios.axvline(1, color="0.6", linewidth=0.7, zorder=0)
+    for axis in axes:
+        axis.grid(axis="x", color="0.9", linewidth=0.5)
+        axis.set_axisbelow(True)
+        axis.legend(
+            loc="lower center", bbox_to_anchor=(0.5, 1), fontsize=8, frameon=False
+        )
+    figures.save(
+        fig=fig, folder=directory / "figures", name="native_runtime_components"
+    )
+
+
 def operational(*, groups, directory, cases):
     folder = directory / "figures"
     for case, dx in cases:

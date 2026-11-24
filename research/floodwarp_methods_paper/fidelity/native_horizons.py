@@ -185,10 +185,28 @@ def generate(*, directory):
                 "|---|---:|---:|---:|---:|",
             ]
         )
+        from research.floodwarp_methods_paper.fidelity import recession_figures
+
+        costs = []
         for r in longest.values():
+            baseline = next(
+                f
+                for f in outlets
+                if f["receipt"] == r["receipt"] and f["method"] == "fv1"
+            )
+            costs.append(
+                dict(r, hancock_s=r["hydraulic_s"], fv1_s=baseline["hydraulic_s"])
+            )
             text.append(
                 f"| {r['landform'].capitalize()} | {r['steps']:,} | {r['fv1_steps']:,} | {r['steps_over_fv1']:.3f} | {r['per_step_over_fv1']:.3f} |"
             )
+        recession_figures.native_cost(directory=directory, rows=costs)
+        text.extend(
+            [
+                "",
+                "[Measured runtimes and contributions from timestep count and cost per step](figures/native_runtime_components.pdf)",
+            ]
+        )
     text += [
         "",
         "The mixed catchment also has a 12-hour residual-storage check at a later endpoint. Repeated horizons follow the same trajectories. Each timing covers both rainfall and recession. The Hancock policy in this comparison was selected from the original-window measurements. Independent spatial and temporal refinements determine eligibility for accuracy comparisons and can require a later shared endpoint.",
