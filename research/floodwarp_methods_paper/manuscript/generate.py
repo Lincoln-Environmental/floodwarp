@@ -69,7 +69,7 @@ def native_incised_crests(*, study):
         hour, remaining = divmod(int(record["first_peak_interval_end_s"]), 3600)
         parts.append(f"{float(record['peak_interval_mean_m3s']):.2f} m³/s at {hour} h {remaining // 60:02d} min on the {dx} m grid")
     return (
-        f"Through the matched {end / 3600:g}-hour window, the highest recorded FV2 RK2 outlet "
+        f"With the pre-repair FREE boundary, through the matched {end / 3600:g}-hour window, the highest recorded FV2 RK2 outlet "
         f"interval means were {parts[0]} and {parts[1]}. Each interval spans "
         f"{by_end[end][10]['interval_s']} seconds. Disagreement in these two measured maxima "
         "establishes grid sensitivity. The physical storm peak remains unresolved."
@@ -88,7 +88,7 @@ def incised_storage_and_infiltration(*, study):
         ]
         if details:
             paragraphs.append(
-                "The replay measured the source of discharge during the highest post-hour-eight minute at each spacing. "
+                "The pre-repair replay measured the source of discharge during the highest post-hour-eight minute at each spacing. "
                 "Net drawdown in the last 40 m supplied " + " and ".join(details)
                 + ". That water may have entered the reach earlier. [Crest-minute budgets](../fidelity/native_tail/CREST.md)"
             )
@@ -97,7 +97,7 @@ def incised_storage_and_infiltration(*, study):
         for row in csv_read(file=path):
             if row["method"] == "hancock_adaptive" and int(row["dx_m"]) == 5:
                 paragraphs.append(
-                    f"On the 5 m grid, FV1 exported {float(row['extra_fv1_export_m3']):,.0f} m³ more water than Hancock by hour {float(row['end_h']):g}. "
+                    f"With the pre-repair FREE boundary on the 5 m grid, FV1 exported {float(row['extra_fv1_export_m3']):,.0f} m³ more water than Hancock by hour {float(row['end_h']):g}. "
                     f"Lower cumulative infiltration accounted for {float(row['less_fv1_infiltration_m3']):,.0f} m³ of the difference and lower final storage for "
                     f"{float(row['less_fv1_final_storage_m3']):,.0f} m³. The net infiltration difference arose on cells outside the rainfall footprint. "
                     "These terms close the water balance under the same prescribed infiltration capacity. "
@@ -111,6 +111,13 @@ def grid_spacing(row):
 
 
 def generate(*, study):
+    from research.floodwarp_methods_paper.evidence import archived_publication
+
+    with archived_publication(study=study):
+        return generate_from_records(study=study)
+
+
+def generate_from_records(*, study):
     p = study / "processed"
     raw = csv_read(p / "metrics/storms.csv")
     primary = [
@@ -160,6 +167,8 @@ def generate(*, study):
     better = sum(float(r["improvement"]) > 0 for r in qual)
     result = (
         f"""# Results
+
+The original analytical, synthetic, calibration and advisor tables use their archived numerical revisions. The repaired FREE-outlet measurements are reported separately under [Repaired FREE outlet](#repaired-free-outlet).
 
 ## Exact and manufactured controls
 
@@ -277,6 +286,25 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         detail = incised_storage_and_infiltration(study=study)
         if detail:
             correction += "\n" + detail + "\n"
+        repaired = study / "fidelity/outlet_results/events.csv"
+        if repaired.exists():
+            direct = {r["method"]: r for r in csv_read(file=repaired)
+                      if int(r["dx_m"]) == 10 and int(r["extension_m"]) == 0 and float(r["cfl_factor"]) == 1}
+            if {"hancock_adaptive", "adaptive"} <= direct.keys():
+                correction += (
+                    "\n## Repaired FREE outlet\n\n"
+                    f"On the same 10 m incised terrain, the corrected 16-hour Hancock and RK2 peaks were "
+                    f"{float(direct['hancock_adaptive']['minute_peak_m3s']):.2f} and "
+                    f"{float(direct['adaptive']['minute_peak_m3s']):.2f} m³/s. Their earlier late crests "
+                    "disappeared. These are one-minute means at the original outlet. "
+                    "[Fixed-gauge boundary experiments and water budgets](../fidelity/outlet_results/README.md)\n"
+                )
+        from research.floodwarp_methods_paper.fidelity.progress import pulse_comparison
+
+        if (study / "fidelity/results/sharp_pulses.csv").exists():
+            sharp = next(line for line in pulse_comparison(directory=study / "fidelity")
+                         if line.startswith("With quarter-second"))
+            correction += "\n" + sharp.replace("](results/", "](../fidelity/results/") + "\n"
         result += correction
         discussion += correction
         audit += correction.replace("](../", "](")

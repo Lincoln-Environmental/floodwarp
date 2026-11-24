@@ -82,6 +82,8 @@ def prefixes(*, directory):
             factor=spec.get("factor", 1.0),
         )
         item["native_sha"] = runner.digest(terrain["native_sha256"])
+        item["solver_source"] = definition["solver"]
+        item["hardware"] = raw["hardware"]["gpu"]
         records[ident] = item
     return records
 
@@ -118,6 +120,12 @@ def describe(*, item, settings, status):
         both_stations_passed=matched,
         residual_m3=d["residual_m3"],
         hydraulic_s=d["hydraulic_s"],
+        hardware=item["hardware"],
+        solver_source=item["solver_source"],
+        timing_repeat=s.get("timing_repeat"),
+        execution_mode=assessment.numerical_identity(method=s["method"])["execution_mode"],
+        end_to_end_s=d.get("end_to_end_s"),
+        hydraulic_s_per_step=d["hydraulic_s"]/d["steps"],
         steps=d["steps"],
     )
 
@@ -211,7 +219,7 @@ def grouped(*, directory, records, target, expected):
     for path in (directory / "extended_runs").glob("group_*.json"):
         r = json.loads(path.read_text())
         if (
-            r["cohort"] not in ("area-mean", "native-metre")
+            (r["cohort"] not in ("area-mean", "native-metre") and not r["cohort"].startswith("native-repeat-"))
             or not set(r["sources"]) <= records.keys()
         ):
             continue
@@ -248,6 +256,8 @@ def grouped(*, directory, records, target, expected):
             s["method"] = s.get("requested_method", s["method"])
             item["s"] = s
             item["native_sha"] = parent["native_sha"]
+            item["hardware"] = parent["hardware"]
+            item["solver_source"] = parent["solver_source"]
         result[cohort, case, "native metre area means"] = items
     return result
 
@@ -341,6 +351,9 @@ def run(*, directory, require_complete):
         )
     records = prefixes(directory=directory)
     compare_incised_windows(directory=directory, records=records, target=target)
+    current = runner.source_identity(root=directory.parents[2], study=directory.parent, stage="long-storms")
+    if any(i["solver_source"] == current for i in records.values()):
+        records = {key:i for key,i in records.items() if i["solver_source"] == current}
     prefix_groups = {}
     for i in records.values():
         spec = i["s"]

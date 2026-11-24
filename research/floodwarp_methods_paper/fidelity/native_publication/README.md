@@ -25,7 +25,7 @@ Each upper-panel point represents a measured forecast window. Each lower-panel p
 
 ## Terrain control elevations and connectivity
 
-A 80 m window surrounds the prescribed opening on each of 21 distinct native beds. Repeated storms on a bed count once. A connection requires a continuous path along shared cell faces from west to east. A single water-surface elevation is prescribed across each window. Its height above the native spill controls which paths are available.
+A 80 m window surrounds the prescribed opening on each of 24 distinct native beds. Repeated storms on a bed count once. A connection requires a continuous path along shared cell faces from west to east. A single water-surface elevation is prescribed across each window. Its height above the native spill controls which paths are available.
 
 | Level above native spill (cm) | Disconnected at 1 m | At 5 m | At 10 m |
 |---:|---:|---:|---:|

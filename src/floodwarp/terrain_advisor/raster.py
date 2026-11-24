@@ -16,6 +16,7 @@ from rasterio.warp import (
 )
 
 from floodwarp.terrain_advisor.diagnostics import analyse_array
+from floodwarp.terrain_advisor.controls import extract_control, nested_grid
 
 
 UNITS = {
@@ -137,16 +138,23 @@ def plot_maps(*, maps, output):
     plt.close(fig)
 
 
-def analyse_dem(*, dem, resolution, output=None, window_m=30.0, channel_area_m2=None):
+def analyse_dem(*, dem, resolution, output=None, window_m=30.0, channel_area_m2=None, control=None):
     """Analyse one raster in metres and optionally write GeoTIFFs, a map and a report."""
     z, transform, crs = metric_raster(dem=Path(dem))
+    grid = nested_grid(north_up=z, native_dx=transform.a, dx=resolution) if control is not None else None
     stats, maps, coarse = analyse_array(
         elevation=z,
         native_resolution=transform.a,
         resolution=resolution,
         window_m=window_m,
         channel_area_m2=channel_area_m2,
+        represented_elevation=grid,
     )
+    if control is not None:
+        stats["domain_comparison"] = stats["comparison"]
+        stats["control_geometry"] = control
+        stats["comparison"] = extract_control(native=z, represented=coarse["elevation"], transform=transform,
+                                              dx=resolution, control=control, window_m=window_m)
     stats.update(
         crs=crs.to_string(),
         native_resolution_m=transform.a,

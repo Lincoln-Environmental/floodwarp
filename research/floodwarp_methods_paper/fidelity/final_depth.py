@@ -211,6 +211,7 @@ def process(*, groups, directory, target, settings):
                 interval_max_s=item["s"].get("interval", 900),
                 experiment_id=item["id"],
                 runtime_s=item["d"]["hydraulic_s"],
+                steps=item["d"].get("steps"),
                 **assessment.numerical_identity(method=item["s"]["method"]),
             )
         )
@@ -223,4 +224,14 @@ def process(*, groups, directory, target, settings):
     )
     frontier = frontiers(rows=measured, objectives=objectives)
     metrics.csv_write(file=target / "recession_depth_pareto.csv", rows=frontier)
+    from research.floodwarp_methods_paper.fidelity import budgets
+
+    application = json.loads((directory / "application_settings.json").read_text())
+    admission = json.loads((directory / "native_advisor_settings.json").read_text())
+    spatial_tolerances = {
+        key: [admission["depth_tolerance_m"]] if "depth" in key
+        else [pct / 100 for pct in application["tolerances_pct"]] for key in objectives
+    }
+    budgets.feasible_cost(rows=frontier, target=target, tolerances=spatial_tolerances,
+                          spacings=application["fv1_budget_grids_m"], name="depth_extent")
     return result

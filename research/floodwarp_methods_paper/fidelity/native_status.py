@@ -3,6 +3,7 @@
 from collections import defaultdict
 from pathlib import Path
 import json
+from research.floodwarp_methods_paper import runner
 
 from research.floodwarp_methods_paper.fidelity import native_matrix, native_products
 from research.floodwarp_methods_paper.plan import read_config
@@ -26,9 +27,10 @@ def status(*, directory, config, design):
         expected[key[0]].add(key)
     by_id = {}
     done = defaultdict(set)
+    current = runner.source_identity(root=directory.parents[2], study=directory.parent, stage="long-storms")
     for ident, record in native_products.prefixes(directory=directory).items():
         spec = record["s"]
-        if spec.get("timing_repeat"):
+        if spec.get("timing_repeat") or record["solver_source"] != current:
             continue
         key = policy_key(spec=spec, factor=record["factor"])
         if key in expected.get(key[0], ()):

@@ -12,7 +12,9 @@ from research.floodwarp_methods_paper.qualification import stages
 
 
 def current(*, study, stage, config):
-    source = stages.source(root=study.parents[1], study=study, stage=stage)
+    from research.floodwarp_methods_paper.evidence import archived_source
+
+    source = archived_source(stage=stage) or stages.source(root=study.parents[1], study=study, stage=stage)
     target = runner.digest(config)
     gpu = os.environ.get("FLOODWARP_PAPER_RESULT_GPU", "").casefold()
     selected = [

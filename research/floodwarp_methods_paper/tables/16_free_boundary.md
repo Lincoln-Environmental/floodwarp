@@ -1,0 +1,11 @@
+# Fixed original outlet, complete 16-hour storm comparisons
+
+| run id | method | dx m | extension m | cfl factor | end h | minute peak m³/s | fixed 15min peak m³/s | moving 15min peak m³/s | gauge m3 | footprint infiltration m3 | footprint storage m3 | steps | hydraulic s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1e8e08b18e82312d783954db | hancock_adaptive | 10 | 0 | 1 | 16 | 47.18 | 47.02 | 47.12 | 8.691e+05 | 4.035e+05 | 0 | 34118 | 39.47 |
+| 2c58ab9502fa9491c415fcf6 | fv1 | 10 | 0 | 1 | 16 | 48.37 | 48.29 | 48.29 | 9.102e+05 | 3.623e+05 | 104.1 | 48782 | 38.37 |
+| 47fef3f37f0bfa0d31483992 | fv1 | 10 | 400 | 1 | 16 | 48.32 | 48.24 | 48.24 | 9.104e+05 | 3.622e+05 | 0.01956 | 50521 | 40.93 |
+| 661e52a52cf63dc92b45284e | hancock_adaptive | 10 | 400 | 1 | 16 | 47.18 | 47.02 | 47.12 | 8.691e+05 | 4.035e+05 | 0 | 34314 | 41.35 |
+| 928ba76ccfa51117abba291b | adaptive | 10 | 400 | 1 | 16 | 47.66 | 47.49 | 47.59 | 8.572e+05 | 4.154e+05 | 0 | 41351 | 173.3 |
+| 9b135f48b298f8d4bb4c4edd | hancock_adaptive | 5 | 0 | 1 | 16 | 48.02 | 47.85 | 47.93 | 8.29e+05 | 4.436e+05 | 0 | 68115 | 310.6 |
+| cffb9fc85621665223d1ad55 | adaptive | 10 | 0 | 1 | 16 | 47.66 | 47.49 | 47.59 | 8.572e+05 | 4.154e+05 | 0 | 41040 | 165.3 |

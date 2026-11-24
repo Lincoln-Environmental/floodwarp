@@ -31,7 +31,7 @@ def measured_fronts(*, directory, output):
                 row["station"] in ("outlet", "domain")
                 and row["objective"] in OBJECTIVES
             ):
-                key = row["cohort"], row["case"], row["reference_id"], row["interval_s"]
+                key = row["cohort"], row["case"], row["reference_id"], float(row["interval_s"])
                 groups[key].append(row)
     for key, records in sorted(groups.items()):
         cohort, case, reference, interval = key

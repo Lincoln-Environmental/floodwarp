@@ -32,9 +32,11 @@ DEPTH = {
 
 
 def conservative_error(*, record, field, margin):
+    from research.floodwarp_methods_paper.fidelity import budgets
+
     if not field or record.get("qualified_" + field) != "True":
         return None
-    return abs(float(record[field])) + float(record[margin])
+    return budgets.conservative_error(value=record[field], sensitivity=record[margin])
 
 
 def tolerances(*, pct, depth_m):
@@ -67,10 +69,12 @@ def sample_rows(*, directory, partitions, require_full, config, design):
         for r in metrics.csv_read(file=target / "measured_windows.csv")
         if r["horizon"] == "complete-native-metre" and float(r["factor"]) == 1
     ]
+    current_solver = runner.source_identity(root=directory.parents[2], study=directory.parent, stage="long-storms")
     observed = {
         (r["case"], int(r["dx_m"]), r["method"]): r
         for r in primary
         if (r["case"], int(r["dx_m"]), r["method"]) in plans
+        and r.get("solver_source") == current_solver
     }
     if require_full and plans.keys() != observed.keys():
         raise ValueError(
@@ -176,10 +180,12 @@ def sample_rows(*, directory, partitions, require_full, config, design):
 
 
 def support(*, rows, objectives, minimum):
+    from floodwarp.solver_advisor.model import terrain_requires_refinement
+
     independent = defaultdict(set)
     for row in rows:
         for objective in objectives:
-            if row["qualified"][objective]:
+            if row["qualified"][objective] and not terrain_requires_refinement(features=row["features"], objective=objective):
                 independent[objective, row["features"]["resolution"]].add(
                     row["terrain_id"]
                 )
@@ -300,7 +306,7 @@ def validated_pairs(*, rows, minimum):
         key = r["objective"], r["dx"]
         if r["chosen"] is not None:
             if r["feasible"] is True:
-                good[key].add(r["terrain_id"])
+                good[key].add((r["terrain_id"], r["case"]))
             else:
                 failed.add(key)
     accepted = defaultdict(list)
@@ -310,7 +316,7 @@ def validated_pairs(*, rows, minimum):
                 objective == other
                 and res > dx
                 and not {(objective, dx), (objective, res)} & failed
-                and len(groups & held) >= minimum
+                and len({terrain for terrain, case in groups & held}) >= minimum
             ):
                 accepted[objective].append([dx, res])
     return dict(accepted)

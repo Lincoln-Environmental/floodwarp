@@ -629,6 +629,53 @@ def paper_style():
 
 
 def generate(*, study):
+    from research.floodwarp_methods_paper.evidence import archived_publication
+
+    with archived_publication(study=study):
+        return from_records(study=study)
+
+
+def outlet_repair(*, study, out):
+    folder = study / "fidelity"
+    measured = folder / "outlet_results/events.csv"
+    if not measured.exists():
+        return
+    before = {(r["method"], r["dx_m"]): r for r in csv_read(file=folder / "mean_storms/complete_events.csv")}
+    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(8, 4.9), layout="constrained")
+    for row in csv_read(file=measured):
+        name, dx = row["method"], row["dx_m"]
+        if name not in ("hancock_adaptive", "adaptive") or float(row["cfl_factor"]) != 1:
+            continue
+        ax = axes[int(dx == "5"), int(name == "adaptive")]
+        run = folder / "outlet_storms" / row["run_id"]
+        frames = []
+        for end in range(4*3600, int(float(row["end_h"])*3600)+1, 4*3600):
+            frames.extend(json.loads((run / f"{end}.json").read_text())["frames"])
+        original = row["extension_m"] == "0"
+        if original:
+            path = folder / "extended_runs" / before[name,dx]["series_id"] / "series.json"
+            old = json.loads(path.read_text())["frames"]
+            ax.plot([f["t_s"]/3600 for f in old], [f["outlet_m3s"] for f in old], color="0.5",
+                    lw=1.0, label="Pre-repair outlet")
+        ax.plot([f["t_s"]/3600 for f in frames], [f["outlet_m3s"] for f in frames],
+                lw=1.15, ls="-" if original else "--", color="#126482" if original else "#ab591d",
+                label="Repaired outlet" if original else "400 m extension")
+    for i, dx in enumerate((10,5)):
+        for j, method in enumerate(("Hancock", "RK2")):
+            ax = axes[i,j]
+            ax.set_title(f"{method}, {dx} m")
+            ax.axvline(6, color="0.6", lw=.8, ls=":")
+            if ax.lines and not ax.get_legend_handles_labels()[0]:
+                ax.text(.5,.5,"Trajectory pending",ha="center",transform=ax.transAxes)
+    for ax in axes[:,0]:
+        ax.set_ylabel("Discharge (m³/s)")
+    for ax in axes[-1,:]:
+        ax.set_xlabel("Time (hours)")
+    axes[0,0].legend(fontsize=7)
+    save(fig=fig,folder=out,name="19_free_outlet")
+
+
+def from_records(*, study):
     paper_style()
     out = study / "figures"
     workflow(out=out)
@@ -645,6 +692,7 @@ def generate(*, study):
         render(study=study, out=out)
     from research.floodwarp_methods_paper.qualification import plots
     plots.generate(study=study)
+    outlet_repair(study=study,out=out)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),
         supplementary_figures=len(

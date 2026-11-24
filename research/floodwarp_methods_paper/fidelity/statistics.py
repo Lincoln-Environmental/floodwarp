@@ -186,13 +186,14 @@ def frontiers(*, rows, objectives):
                 r["representation"],
                 r["station"],
                 r.get("cap_courant", 0),
-                r.get("interval_max_s"),
+                float(r["interval_max_s"]) if r.get("interval_max_s") is not None else None,
                 r.get("reference_id", "analytical"),
+                r.get("end_h", r.get("hours")),
                 k,
             )
             groups[key].append(r)
     result = []
-    for (cohort, case, rep, station, cap, dt, reference, k), g in groups.items():
+    for (cohort, case, rep, station, cap, dt, reference, end_h, k), g in groups.items():
         valid = [r for r in g if r.get("qualified_" + k)]
         for r in g:
             ok = r.get("qualified_" + k, False)
@@ -226,6 +227,9 @@ def frontiers(*, rows, objectives):
                     experiment_id=r["experiment_id"],
                     reference_id=reference,
                     absolute_error=err,
+                    reference_sensitivity=r.get("uncertainty_" + k, r.get(k + "_sensitivity")),
+                    end_h=end_h,
+                    steps=r.get("steps"),
                     runtime_s=r["runtime_s"],
                     eligible=ok,
                     nondominated=not dominated if ok else None,

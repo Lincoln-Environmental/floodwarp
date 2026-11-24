@@ -1,12 +1,37 @@
 """Select one reproducible numerical cohort for publication and advisor fitting."""
 
 from functools import lru_cache
+from contextlib import contextmanager
+from contextvars import ContextVar
 import json
 import os
 from pathlib import Path
 
 from research.floodwarp_methods_paper.plan import read_config
 from research.floodwarp_methods_paper.runner import archived, digest, source_identity
+
+
+_publication_sources = ContextVar("publication_sources", default=None)
+
+
+@contextmanager
+def archived_publication(*, study):
+    """Bind legacy paper sections to their published numerical revision during offline rendering."""
+    sources = {}
+    for name in ("numerical_source_tree", "corrective_source_tree"):
+        proof = json.loads((study / "manifests" / (name + ".json")).read_text())
+        sources.update(proof["source_sha256"])
+    controls = json.loads((study / "manifests/historical_control_sources.json").read_text())
+    sources.update({stage: r["source_sha256"] for stage, r in controls.items()})
+    token = _publication_sources.set(sources)
+    try:
+        yield
+    finally:
+        _publication_sources.reset(token)
+
+
+def archived_source(*, stage):
+    return (_publication_sources.get() or {}).get(stage)
 
 
 @lru_cache(maxsize=64)
@@ -39,7 +64,7 @@ def records(*, study, stages):
         if r["config_sha256"] == config_id
         and r["attempt"] not in excluded
         and gpu in r["context"]["gpu"].casefold()
-        and r["context"]["source_sha256"] == implementation(directory, r["stage"])
+        and r["context"]["source_sha256"] == (archived_source(stage=r["stage"]) or implementation(directory, r["stage"]))
     ]
     environments = {
         tuple(

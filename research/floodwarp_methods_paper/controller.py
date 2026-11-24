@@ -82,6 +82,13 @@ def derived_identity(*, root, study, stage):
             study / "fidelity" / name
             for name in (
                 "paper_summary.md",
+                "outlet_results/events.csv",
+                "outlet_results/last_40m.csv",
+                "outlet_results/extent.csv",
+                "outlet_results/depth_disagreement.csv",
+                "results/sharp_pulses.csv",
+                "advisor_design/paired.json",
+                "advisor_design/installed_cli.csv",
                 "small_storms/recession_horizons.csv",
                 "small_storms/paired_differences.csv",
                 "small_storms/joint_depth_hydrograph.csv",

@@ -159,6 +159,13 @@ def execution_table(*, policy):
 
 
 def generate(*, study, output=None):
+    from research.floodwarp_methods_paper.evidence import archived_publication
+
+    with archived_publication(study=study):
+        return from_records(study=study, output=output)
+
+
+def from_records(*, study, output):
     processed = study / "processed"
     out = study / "tables" if output is None else output
     output = {}
@@ -451,6 +458,13 @@ def generate(*, study, output=None):
             if r["axis"] == "scale"
         ],
     )
+    updated = study / "fidelity/outlet_results/events.csv"
+    if updated.exists():
+        keys = ("run_id", "method", "dx_m", "extension_m", "cfl_factor", "end_h", "minute_peak_m3s",
+                "fixed_15min_peak_m3s", "moving_15min_peak_m3s", "gauge_m3", "footprint_infiltration_m3",
+                "footprint_storage_m3", "steps", "hydraulic_s")
+        output["16_free_boundary"] = ("Fixed original outlet, complete 16-hour storm comparisons",
+                                      [{k:r[k] for k in keys} for r in csv_read(file=updated)])
     for name, (caption, data) in output.items():
         render(directory=out, name=name, rows=data, caption=caption)
     return {name: len(rows) for name, (_, rows) in output.items()}

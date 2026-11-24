@@ -196,8 +196,8 @@ def verify(*, study, config):
         table_count += 1
     figs = list((study / "figures").glob("[0-9]*.pdf"))
     if (
-        table_count != 13
-        or len(figs) != 18
+        table_count != 13 + int((study / "fidelity/outlet_results/events.csv").is_file())
+        or len(figs) != 18 + int((study / "fidelity/outlet_results/events.csv").is_file())
         or not all(p.with_suffix(e).is_file() for p in figs for e in (".svg", ".png"))
     ):
         raise ValueError("Publication output count mismatch")
@@ -293,8 +293,10 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
     elif stage == "verify":
         from research.floodwarp_methods_paper.qualification import reporting
 
-        result = verify(study=study, config=config)
-        result["expanded"] = reporting.verification(study=study, config=config)
+        with evidence.archived_publication(study=study):
+            result = verify(study=study, config=config)
+            result["expanded"] = reporting.verification(study=study, config=config)
+        result["cohort"] = "archived paper experiments under their recorded numerical revisions"
     else:
         raise ValueError(stage)
     result["output_sha256"] = hashes(study=study, paths=paths)

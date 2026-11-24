@@ -14,9 +14,15 @@ def fingerprints(*, directory, item):
     if archive.is_file():
         with np.load(archive) as f:
             hashes = json.loads(f["receipt"].item())["hashes"]
-        return dict(hashes, state=hashes["q"])
+        result = dict(hashes, state=hashes["q"])
+        if d.get("accepted_history_sha256"):
+            result["accepted_dt"] = d["accepted_history_sha256"]
+        return result
     if "hashes" in d:
-        return d["hashes"]
+        result = dict(d["hashes"])
+        if d.get("accepted_history_sha256"):
+            result["accepted_dt"] = d["accepted_history_sha256"]
+        return result
     with np.load(item["path"] / (d["name"] + ".npz")) as f:
         out = {k: array_sha(f[k]) for k in ("depth", "maximum")}
     if d.get("accepted_history_sha256"):
@@ -47,11 +53,17 @@ def compare(*, directory, groups, target, original_window=False):
                 b = fingerprints(directory=directory, item=other)
                 more = other["d"].get("frames", other["d"].get("samples"))
                 shared = sorted(set(a) & set(b))
-                if cohort in ("original-window", "complete-native-metre"):
+                if ("accepted_dt" in a) != ("accepted_dt" in b):
+                    raise ValueError("An ordered accepted-step fingerprint is missing from one peer")
+                if cohort in ("original-window", "complete-native-metre") or cohort.startswith("complete-native-repeat-"):
                     required = {"state", "maximum", "volume_x", "volume_y", "soil", "rain_sum"}
                     missing = required.difference(shared)
                     if missing:
                         raise ValueError(f"Missing native policy parity fields for {case}: {sorted(missing)}")
+                elif "maximum" not in shared or not {"state", "depth"}.intersection(shared):
+                    raise ValueError(f"Missing final state/depth or maximum fingerprint for {case}")
+                if set(a) != set(b):
+                    raise ValueError(f"Asymmetric parity evidence for {case}: {sorted(set(a) ^ set(b))}")
                 fields = {k: a[k] == b[k] for k in shared if k != "q"}
                 fields.update(
                     {
@@ -73,6 +85,10 @@ def compare(*, directory, groups, target, original_window=False):
                         dense_id=dense["id"],
                         other_id=other["id"],
                         other_method=mode,
+                        final_state_equal=fields.get("state"),
+                        interval_transport_equal=all(fields[k] for k in ("t_s", "outlet_m3s", "section_m3s")),
+                        accepted_timestep_history_equal=fields.get("accepted_dt"),
+                        ordered_history_status="verified" if "accepted_dt" in fields else "unrecorded",
                         **fields,
                     )
                 )

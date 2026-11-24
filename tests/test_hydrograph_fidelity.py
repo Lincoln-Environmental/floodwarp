@@ -1127,3 +1127,66 @@ def test_spill_sensitivity_uses_conservative_nested_beds():
     assert table[5, 20]["connected"]
     assert table[5, 10]["shift_cm"] == pytest.approx(12)
     assert table[10, 10]["connected"]
+
+
+def test_explicit_control_geometry_and_unassessed_connection():
+    from affine import Affine
+    from floodwarp.terrain_advisor.controls import extract_control, nested_grid
+    from floodwarp.solver_advisor.model import descriptors
+    from floodwarp.terrain_advisor.diagnostics import analyse_array
+
+    native = np.zeros((20, 20))
+    native[:, 10:15] = 1
+    native[9, 10:15] = 0
+    north = native[::-1]
+    represented = nested_grid(north_up=north, native_dx=1., dx=5.)
+    transform = Affine.translation(100, 220) * Affine.scale(1, -1)
+    control = dict(window_m=[100, 200, 20, 20], spill_head_m=.01, axis="west_east")
+    marked = extract_control(native=north, represented=represented, transform=transform, dx=5,
+                             control=control, window_m=10)
+    assert marked["native_connected"] and not marked["represented_connected"]
+    assert marked["represented_spill_m"] == pytest.approx(.8)
+    assert marked["max_local_barrier_lowering_m"] == pytest.approx(.2)
+    stats, _, _ = analyse_array(elevation=north, native_resolution=1, resolution=5)
+    assert descriptors(terrain=stats)["critical_connection_lost"] is None
+    assert descriptors(terrain=dict(stats, comparison=marked))["critical_connection_lost"] is True
+
+
+def test_native_outlet_restart_requires_matching_reconstruction():
+    from floodwarp.fv2_solver import FV2Solver
+    options = dict(nx=4,ny=3,dx=1.,dy=1.,bed_elevation=np.zeros((3,4)),
+                   active_mask=np.ones((3,4), bool), manning_n=np.full((3,4),.03),device="cpu")
+    legacy = FV2Solver(**options,free_boundary_reconstruction="constant")
+    current = FV2Solver(**options)
+    old = legacy.capture_state()
+    legacy.restore_state(state=old)
+    assert "free_boundary_reconstruction" not in old["configuration"]
+    assert current.numerical_configuration()["free_boundary_reconstruction"] == "one_sided"
+    with pytest.raises(ValueError,match="configuration"):
+        current.restore_state(state=old)
+
+
+def test_open_face_reconstruction_distinguishes_mask_edges_and_corner_walls():
+    from floodwarp import fv2_kernels
+    from floodwarp.fv2_solver import FV2Solver
+
+    ny, nx = 4, 7
+    active = np.ones((ny,nx), dtype=bool)
+    active[:, -1] = False
+    bed = np.tile(-.5*np.arange(nx), (ny,1)) - .1*np.arange(ny)[:, None]
+    s = FV2Solver(nx=nx,ny=ny,dx=1.,dy=1.,bed_elevation=bed,manning_n=np.full_like(bed,.035),
+                  active_mask=active,device="cpu",limiter="mc")
+    typ = np.zeros((ny,nx+1),np.int32)
+    typ[-1,-2] = 2
+    typ[1,-2] = 3
+    s.set_boundary_type_qx(boundary_type=typ)
+    s.set_water_depth(depth=np.full_like(bed,.03))
+    f = s._fields
+    s._launch_grid(fv2_kernels.inverse_depth,nx*ny,[s.q,s._inverse,s.dry_depth],layout=0)
+    s._launch_grid(fv2_kernels.slopes,nx*ny,[s.q,s._inverse,s._shock_flags,f["bed"],f["active"],
+                   *s._slopes,nx,ny,s.dry_depth,s._limiter_code,f["types_x"],f["types_y"],1],layout=0)
+    sx,sy = [a.numpy().reshape(ny,nx,4) for a in s._slopes]
+    np.testing.assert_allclose(sx[-1,-2],[-.5,-.5,0.,0.],atol=1e-14)
+    np.testing.assert_array_equal(sx[:-1,-2],0.)
+    np.testing.assert_array_equal(sx[:,-1],0.)
+    np.testing.assert_array_equal(sy[-1,-2],0.)

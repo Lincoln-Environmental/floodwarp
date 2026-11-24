@@ -64,8 +64,9 @@ def descriptors(*, terrain, hydraulic=None):
         cells=m["cells"],
         log_cells=float(np.log(m["cells"])),
         log_area=float(np.log(m["area_m2"])),
-        critical_connection_lost=bool(
-            c.get("native_connected") and not c.get("represented_connected", True)
+        critical_connection_lost=(
+            bool(c["native_connected"] and not c["represented_connected"])
+            if c.get("native_connected") is not None and c.get("represented_connected") is not None else None
         ),
         lost_channel_fraction=c.get("channel_loss_fraction") or 0.0,
         barrier_lowering_m=float(
@@ -482,6 +483,7 @@ def recommend_dem(
     hardware=None,
     memory_mib=None,
     compare_resolutions=None,
+    control=None,
 ):
     from floodwarp.terrain_advisor import analyse_dem
 
@@ -494,7 +496,7 @@ def recommend_dem(
     grids = list(dict.fromkeys((resolution, *(compare_resolutions or ()))))
     for dx in grids:
         stats = analyse_dem(
-            dem=dem, resolution=dx, output=folder / ("terrain_" + str(dx) + "m")
+            dem=dem, resolution=dx, output=folder / ("terrain_" + str(dx) + "m"), control=control
         )
         if dx == resolution and compare_resolutions is None:
             observed = {
@@ -519,6 +521,8 @@ def recommend_dem(
         )
         change = stats["comparison"]
         rec["terrain_diagnostics"] = change
+        if control is None:
+            rec["warnings"].append("The DEM has no specified control window. Connectivity at critical openings is unassessed.")
         if change["channel_loss_fraction"] and change["channel_loss_fraction"] > 0:
             rec["warnings"].append(
                 f"{100 * change['channel_loss_fraction']:.1f}% of native channel pixels lack a nearby model-grid drainage path. Compare a finer DEM."

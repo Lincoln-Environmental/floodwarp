@@ -440,6 +440,7 @@ def run(*, directory, arguments):
             "dx=",
             "dem=",
             "suite=",
+            "partition=",
         ],
     )
     if rest:
@@ -460,7 +461,13 @@ def run(*, directory, arguments):
     config = read_config(path=directory.parent / "configs/study.json")
     settings = json.loads((directory / "recession_settings.json").read_text())
     groups = {}
+    partition = opts.get("--partition")
+    if partition not in (None, "fit", "test"):
+        raise ValueError("Partition must be fit or test")
     for s in specifications(study=directory.parent, config=config, design=design):
+        heldout = s["split"] == "test" or s["landform"] == config["advisor"]["heldout_family"]
+        if partition and (partition == "test") != heldout:
+            continue
         if (
             not fnmatch.fnmatchcase(s["case"], opts.get("--case", "*"))
             or opts.get("--method", s["requested_method"]) != s["requested_method"]

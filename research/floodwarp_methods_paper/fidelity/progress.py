@@ -77,9 +77,18 @@ def pulse_comparison(*, directory):
                 + " | ".join(values)
                 + " |"
             )
+    sharp = {
+        (r["method"], int(r["dx"])): r for r in metrics.csv_read(file=directory / "results/sharp_pulses.csv")
+        if float(r["cap_courant"]) == .13 and float(r["distance_m"]) == 200 and r["qualified_peak_bias_pct"] == "True"
+    }
+    coarse, fine, fv1 = sharp["hancock_adaptive", 5], sharp["hancock_adaptive", 1], sharp["fv1", 1]
     text += [
         "",
-        "The sharp pulse spans about five one-second observations. The qualification threshold is six. [Analytical check at quarter-second intervals](results/sharp_analytical_cadence.csv)",
+        f"With quarter-second accepted transport at 200 m, 5 m Hancock took {float(coarse['runtime_s']):.3f} s "
+        f"and 1 m FV1 took {float(fv1['runtime_s']):.3f} s ({float(fv1['runtime_s'])/float(coarse['runtime_s']):.2f}×). "
+        f"Their respective sharp-pulse peak biases were {float(coarse['peak_bias_pct']):+.2f}% and "
+        f"{float(fv1['peak_bias_pct']):+.2f}%. Refining Hancock to 1 m reduced its peak bias to "
+        f"{float(fine['peak_bias_pct']):+.2f}%. [Quarter-second analytical comparisons](results/sharp_pulses.csv)",
         "",
         "[Measured physical and relative quantities](results/pulses.csv) · [Independent integrations of the reference](results/pulse_reference_checks.csv)",
     ]

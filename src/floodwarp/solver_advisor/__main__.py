@@ -20,6 +20,7 @@ def run(*, arguments):
             "model=",
             "tolerance=",
             "hydraulic-json=",
+            "control-json=",
             "hardware=",
             "memory-mib=",
             "compare-resolutions=",
@@ -28,7 +29,7 @@ def run(*, arguments):
     opt = dict(flags)
     if "--help" in opt or "-h" in opt or not opt:
         print(
-            "python -m floodwarp.solver_advisor --dem terrain.tif --resolution 5 --objective discharge --output outputs/advisor [--tolerance 0.01] [--hydraulic-json hydraulic.json] [--hardware GPU] [--memory-mib 8192] [--compare-resolutions 1,10] [--model model.json]"
+            "python -m floodwarp.solver_advisor --dem terrain.tif --resolution 5 --objective discharge --output outputs/advisor [--tolerance 0.01] [--hydraulic-json hydraulic.json] [--control-json control.json] [--hardware GPU] [--memory-mib 8192] [--compare-resolutions 1,10] [--model model.json]"
         )
         return
     options = dict(
@@ -42,6 +43,8 @@ def run(*, arguments):
         options["tolerance"] = float(opt["--tolerance"])
     if "--hydraulic-json" in opt:
         options["hydraulic"] = json.loads(Path(opt["--hydraulic-json"]).read_text())
+    if "--control-json" in opt:
+        options["control"] = json.loads(Path(opt["--control-json"]).read_text())
     if "--hardware" in opt:
         options["hardware"] = opt["--hardware"]
     if "--memory-mib" in opt:

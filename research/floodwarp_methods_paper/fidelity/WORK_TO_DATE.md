@@ -44,7 +44,7 @@ The following runs cover the same 1,600 × 40 m channel and 176 s of propagation
 | Smooth | FV1 sparse, 1 m | 1.150 | -19.34% | +24.11% |
 | Smooth | Hancock dense, 5 m | 0.082 | -10.08% | +4.07% |
 
-The sharp pulse spans about five one-second observations. The qualification threshold is six. [Analytical check at quarter-second intervals](results/sharp_analytical_cadence.csv)
+With quarter-second accepted transport at 200 m, 5 m Hancock took 0.149 s and 1 m FV1 took 1.348 s (9.03×). Their respective sharp-pulse peak biases were -54.09% and -58.60%. Refining Hancock to 1 m reduced its peak bias to -7.94%. [Quarter-second analytical comparisons](results/sharp_pulses.csv)
 
 [Measured physical and relative quantities](results/pulses.csv) · [Independent integrations of the reference](results/pulse_reference_checks.csv)
 

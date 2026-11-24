@@ -8,6 +8,9 @@ run_stage() {
     local -a extra=()
     case "$1" in
         status) module=status ;;
+        advisor-design) module=advisor_design ;;
+        advisor-cli-check) module=advisor_cli_check ;;
+        outlet-results) module=outlet_results ;;
         native-status) module=native_status ;;
         strong-storm-controls) module=strong_storms ;;
         summary) module=progress ;;
@@ -62,6 +65,10 @@ run_stage() {
 }
 main() {
     local stage=${1:-help} dry=false module
+    if [[ $stage == orton-transfer ]]; then
+        shift
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.orton_transfer "$@"
+    fi
     if [[ $stage == outlet-storms ]]; then
         shift
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.outlet_storms "$@"

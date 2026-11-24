@@ -183,3 +183,9 @@ benchmark profile explicit and preserve v0.1.2 artifacts. Focused controls are
 ## Numerical methods research
 
 Use the manual study stages to reproduce analytical comparisons, six-hour synthetic storms, terrain-resolution experiments and grouped solver selection. Benchmark results retain their implementation and hardware identities. Whole-domain recommendations include uncertainty and the option to abstain. [Paper protocol and reproduction](../research/floodwarp_methods_paper/README.md) · [Hancock optimisation and qualification](../validation/hancock_long_storm_review/DECISION.md)
+
+### Reconstructed FREE outlets
+
+Adaptive Hancock and FV2 use a one-sided normal bed and surface slope at an explicitly open face with a wet interior stencil. The momentum predictor and hydrostatic face states use the same increments. Each axis reads its own face type, including at an active-mask edge. Fresh runs record `free_boundary_reconstruction="one_sided"` in the numerical configuration. To replay a pre-repair Hancock or RK2 checkpoint, construct the historical solver with `free_boundary_reconstruction="constant"`. Its checkpoint identity retains the original reconstruction configuration. A post-repair experiment starts at the physical initial state.
+
+The fixed-gauge sheet, short reach and complete storm stages are available through `scripts/run_floodwarp_paper.sh` as `free-plane`, `free-reach`, `outlet-storms` and `outlet-results`. The storm stage resumes matching four-hour checkpoints. `outlet-qualification --dry-run` inventories the incised and independent validation work. See [the measured outlet qualification](../research/floodwarp_methods_paper/fidelity/outlet_results/README.md).

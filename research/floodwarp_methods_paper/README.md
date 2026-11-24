@@ -109,3 +109,11 @@ Use `processed/million/reference_checks.csv` to identify resolved observables. T
 The ten corrective numerical stages have a separate committed-tree proof. Verification extracts the recorded Git revision, recomputes each numerical source fingerprint and checks it against the selected simulation receipts. [Corrective numerical source proof](manifests/corrective_source_tree.json)
 
 The corrective storm study uses 1 m as its finest hydraulic resolution, matching the available terrain data. The two planned 0.5 m forecasts were withdrawn. The interrupted attempt has no hydraulic result. Matched 1 m Hancock and FV2 runs can inform comparisons at coarser resolutions. The 1 m configurations themselves have no finer independent reference in this study. [Recorded scope amendment](qualification/resolution_scope.json)
+
+### Boundary repair and paired-grid advisor qualification
+
+Run `./scripts/run_floodwarp_paper.sh outlet-qualification --dry-run` to inspect the ordered suite. `outlet-storms` starts 14 matched trajectories on the incised catchment, with gauges fixed at 5,120 and 10,240 m. The 400 m extension continues the native metre terrain, channel and soil beyond the eastern gauge. It receives zero rainfall. `outlet-results` extracts interval peaks, water balances and wet-union depth disagreements from completed trajectories.
+
+`advisor-design` checks the planned and measured support by physical terrain realisation. `advisor-cli-check` invokes the installed Python package on actual GeoTIFFs. Pass `--control-json` to the advisor with `window_m` set to west, south, width and height in the analysed metric CRS, `axis` set to `west_east` or `south_north`, and a nonnegative `spill_head_m` above the native spill. Bounds must align with the native and requested grids. A missing control window leaves opening connectivity unassessed.
+
+The qualification driver fits on development and validation terrains, freezes the model, then runs the independent test partition. The final `orton-transfer` stage compares the established full-domain 48-hour Orton Bradley HIRDS design event on 20, 10 and 5 m grids. Design-event transfer has no observed discharge reference. Historical experiment receipts retain their recorded implementation identities. Tables and figures read these archives independently of the hydraulic stages.

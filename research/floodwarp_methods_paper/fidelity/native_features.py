@@ -12,22 +12,10 @@ from floodwarp.terrain_advisor.raster import write_maps
 from research.floodwarp_methods_paper import metrics, runner
 from research.floodwarp_methods_paper.fidelity import native_matrix
 from research.floodwarp_methods_paper.plan import read_config
-from research.floodwarp_methods_paper.qualification.terrain import connection
+from floodwarp.terrain_advisor.controls import assess_window, spill_level
 from research.floodwarp_methods_paper.terrain.generators import native_inputs
 from research.floodwarp_methods_paper.terrain.generators.generate import array_sha
 from research.floodwarp_methods_paper.terrain.generators.mean_dem import mean_cells
-
-
-def spill_level(*, bed):
-    heights = np.unique(bed)
-    lo, hi = 0, heights.size - 1
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if connection(elevation=bed, level=heights[mid]):
-            hi = mid
-        else:
-            lo = mid + 1
-    return float(heights[lo])
 
 
 def window(*, receipt, options):
@@ -123,6 +111,7 @@ def measure(*, directory, spec, design, config, options):
         rain_hours=inputs["template"]["hours"],
         manning=config["storms"]["manning_n"],
         source=runner.checksum(Path(__file__)),
+        control_extractor=runner.checksum(Path(assess_window.__code__.co_filename)),
         analysis=runner.checksum(Path(analyse_array.__code__.co_filename)),
         model=runner.checksum(Path(descriptors.__code__.co_filename)),
         writer=runner.checksum(Path(write_maps.__code__.co_filename)),
@@ -158,27 +147,11 @@ def measure(*, directory, spec, design, config, options):
         ),
         window_m=options["relief_window_m"],
     )
-    stats, maps, represented = analyse_array(
-        elevation=native[::-1],
-        native_resolution=1,
-        resolution=dx,
-        represented_elevation=coarse[::-1],
-        window_m=options["relief_window_m"],
+    comparison, maps, represented = assess_window(
+        native=native[::-1], represented=coarse[::-1], native_dx=1, dx=dx,
+        head=options["spill_head_m"], axis="west_east", window_m=options["relief_window_m"],
     )
-    spill = spill_level(bed=native)
-    stage = spill + options["spill_head_m"]
-    comparison = dict(
-        stats["comparison"],
-        native_connected=connection(elevation=native, level=stage),
-        represented_connected=connection(elevation=coarse, level=stage),
-        probe_stage_m=stage,
-        native_spill_m=spill,
-        represented_spill_m=spill_level(bed=coarse),
-        opening_width_cells=2
-        * receipt["inputs"]["options"]["family_control_halfwidth_m"]
-        / dx,
-        max_local_barrier_lowering_m=float(maps["barrier_lowering"].max()),
-    )
+    comparison["opening_width_cells"] = 2 * receipt["inputs"]["options"]["family_control_halfwidth_m"] / dx
     crs = CRS.from_wkt(options["local_crs"])
     transform = Affine.translation(west, south + size) @ Affine.scale(1, -1)
     write_maps(
