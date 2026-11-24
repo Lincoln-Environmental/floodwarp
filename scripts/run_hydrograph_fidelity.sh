@@ -58,7 +58,9 @@ run_stage() {
         *) echo "Unknown fidelity stage: $1" >&2; return 2 ;;
     esac
     if [[ $dry == true ]]; then
-        printf '%s -m research.floodwarp_methods_paper.fidelity.%s %s\n' "$python_bin" "$module" "${extra[*]}"
+        printf '%s -m research.floodwarp_methods_paper.fidelity.%s' "$python_bin" "$module"
+        if ((${#extra[@]})); then printf ' %s' "${extra[@]}"; fi
+        printf '\n'
     else
         "$python_bin" -m "research.floodwarp_methods_paper.fidelity.$module" "${extra[@]}"
     fi
