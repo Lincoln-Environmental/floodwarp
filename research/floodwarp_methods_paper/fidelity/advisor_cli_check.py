@@ -11,6 +11,7 @@ import numpy as np
 import rasterio
 
 from floodwarp.solver_advisor import load_model, recommend
+from floodwarp.solver_advisor.model import descriptors
 from research.floodwarp_methods_paper import metrics, runner
 
 
@@ -114,6 +115,16 @@ def run(*, directory, terrains, grids, objective, model_path=None):
                     text=True,
                 )
                 rec = json.loads((dest / "recommendation.json").read_text())["selected"]
+                terrain_path, = dest.glob("terrain_*/terrain.json")
+                public_inputs = descriptors(terrain=json.loads(terrain_path.read_text()), hydraulic=obs["forcing"])
+                if public_inputs.keys() != obs["features"].keys():
+                    raise AssertionError("Installed and archived advisor inputs have different fields")
+                for key, value in public_inputs.items():
+                    expected = obs["features"][key]
+                    if isinstance(value, (float, int)) and not isinstance(value, bool):
+                        np.testing.assert_allclose(value, expected, rtol=1e-12, atol=1e-12, err_msg=key)
+                    elif value != expected:
+                        raise AssertionError(f"Different public and archived advisor input {key}")
                 offline = recommend(
                     model=model, features=obs["features"], objective=objective
                 )
@@ -154,6 +165,9 @@ def run(*, directory, terrains, grids, objective, model_path=None):
                         model=runner.digest(model),
                         pre_run_sha256=runner.checksum(path),
                         native_dem_sha256=runner.checksum(dem),
+                        checked_inputs=len(public_inputs),
+                        public_features_sha256=runner.digest(public_inputs),
+                        archive_features_sha256=runner.digest(obs["features"]),
                     )
                 )
                 print(name, dx, rec["status"], "connection lost", loss, flush=True)

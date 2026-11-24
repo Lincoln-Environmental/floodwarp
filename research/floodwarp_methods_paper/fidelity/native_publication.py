@@ -221,9 +221,10 @@ def run(*, directory):
     rows = [
         r
         for r in metrics.csv_read(file=source / "measured_windows.csv")
-        if r["horizon"].startswith("complete-")
+        if r["horizon"].startswith("complete-") and not r["horizon"].startswith("complete-native-repeat-")
     ]
     counts = measured_fronts(directory=directory, output=output)
+    current = runner.source_identity(root=directory.parents[2], study=study, stage="long-storms")
     text = [
         "# Native terrain, complete events and GPU cost",
         "",
@@ -231,12 +232,18 @@ def run(*, directory):
         "Each row reports the cost of its recorded method, execution policy and common event endpoint. "
         "The normalized-error Pareto tables use independently screened references for each hydraulic observable.",
         "",
-        "| Case | Grid (m) | Method | CFL factor | End (h) | Peak (m³/s) | Export (m³) | Hydraulic time (s) | Steps |",
-        "|---|---:|---|---:|---:|---:|---:|---:|---:|",
+        (f"The primary event rows use the current numerical source `{current[:12]}`."
+         if rows and all(r["solver_source"] == current for r in rows) else
+         "The post-repair wide-matrix qualification is pending. Historical window identities and numerical sources are retained in the linked data. "
+         "[Repaired incised comparison](../outlet_results/README.md)"),
+        "",
+        "| Case | Grid (m) | Method | Execution | CFL factor | End (h) | Peak (m³/s) | Export (m³) | Primary hydraulic time (s) | Steps |",
+        "|---|---:|---|---|---:|---:|---:|---:|---:|---:|",
     ]
     for r in rows:
         text.append(
-            f"| {r['case']} | {r['dx_m']} | {r['method']} | {r['factor']} | {float(r['end_h']):g} | "
+            f"| {r['case']} | {r['dx_m']} | {r['method']} | {r.get('resolved_execution_mode') or r['execution_mode']} | "
+            f"{r['factor']} | {float(r['end_h']):g} | "
             f"{float(r['outlet_peak_m3s']):.3f} | {float(r['net_outlet_m3']):,.0f} | {float(r['hydraulic_s']):.2f} | {int(r['steps']):,} |"
         )
     text.extend(
@@ -252,6 +259,17 @@ def run(*, directory):
     )
     policy_text, policy_sources = policy_report(source=source, output=output)
     text.extend(["", "## Dense and tiled execution", "", *policy_text])
+    histories = directory / "native_step_history/parity.csv"
+    if histories.is_file():
+        traces = metrics.csv_read(file=histories)
+        ids = {r["source_id"] for r in rows}
+        confirmed = [r for r in traces if {r["dense_id"], r["peer_id"]} <= ids]
+        if confirmed:
+            text.extend(["", f"{len(confirmed)} complete policy comparisons have independent replays "
+                         "with identical ordered FP64 timesteps, interval transport and final fields. "
+                         "Instrumented replays are excluded from GPU timing samples. "
+                         "[Trace hashes and raw replay identities](../native_step_history/parity.csv)"])
+            policy_sources = [*policy_sources, histories]
     distribution = source / "timing_distribution.csv"
     if distribution.exists():
         repeats = metrics.csv_read(file=distribution)

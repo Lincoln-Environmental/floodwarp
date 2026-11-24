@@ -1,5 +1,7 @@
 # FREE outlet qualification
 
+The archived pre-repair numerical source matches Git commit `0afdd684d2d1`. The corrected hydraulic source and storm driver match commit `46afa3f280a5`. Several trajectories started while the repair was in the working tree. The source hashes identify the committed implementation used by those runs. [Git-tree verification and per-run hardware](revision_evidence.json)
+
 The exact Manning reference is steady uniform flow on a 7.329% plane. Discharge below uses the accepted face volume between 30 and 60 s at the same section, 400 m from the upstream boundary.
 
 | Method | Grid (m) | Cap (s) | Original face bias (%) | Repaired face bias (%) | Buffered section bias (%) |
@@ -35,8 +37,9 @@ The gauge remains at the eastern edge of the original 104.8576 km² catchment. T
 | adaptive | 5 | 0 | 1.0 | 48.330 | 48.115 | 4.800 | 47.960 | 48.032 | 822,874.5 |
 | fv1 | 5 | 0 | 1.0 | 49.186 | 49.186 | 5.350 | 49.087 | 49.101 | 910,143.2 |
 | hancock_adaptive | 5 | 0 | 1.0 | 48.286 | 48.019 | 4.800 | 47.849 | 47.934 | 829,026.1 |
+| hancock_adaptive | 5 | 400 | 1.0 | — | 48.019 | 4.800 | 47.849 | 47.934 | 829,017.1 |
 
-10 of 14 trajectories have completed the historical 16-hour comparison. Each hydrograph is an interval average of accepted transport. On these irregular terrains a solver difference alone does not establish accuracy.
+11 of 14 trajectories have completed the historical 16-hour comparison. Each hydrograph is an interval average of accepted transport. On these irregular terrains a solver difference alone does not establish accuracy.
 
 [Water accounts, infiltration inside and outside the rainfall footprint](events.csv) · [Crest and whole-recession last 40 m budgets](last_40m.csv) · [Spatial extent](extent.csv) · [Wet-union depth differences on common spatial support](depth_disagreement.csv) · [Spatial reference qualification](spatial_reference_checks.csv) · [Hydrograph and infiltration reference qualification](reference_checks.csv)
 
@@ -64,3 +67,7 @@ The spatial comparison thresholds area-averaged depths on the coarser common sup
 [Water-balance decomposition](water_differences.csv) · [Least measured cost by tolerance](least_cost_fidelity.csv) · [Smallest qualified error within the FV1 budget](equal_cost_fidelity.csv)
 
 Depth and inundation costs run from the initial state to each snapshot. The 8 h comparison uses only the first eight hours of measured hydraulic execution. [Least cost by spatial tolerance](least_cost_depth_extent.csv) · [Smallest spatial error at each FV1 budget](equal_cost_depth_extent.csv) · [Independent timing windows](spatial_timing_windows.csv)
+
+The [regional water and inundation accounts](regional_contrasts.csv) divide the original footprint at the internal gauge and at the start of the final 40 m. Each area is also split by the prescribed rainfall footprint.
+
+On the 10 m moderate-rainfall plain the two CPU policies reproduced all 99,238 ordered timesteps through 40 hours. Their interval face transport and final fields matched the primary trajectory. [Ordered timestep evidence](../native_step_history/39b84d74d143dcf4a64e60f0/verified.json)

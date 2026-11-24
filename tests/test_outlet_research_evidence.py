@@ -37,6 +37,28 @@ def test_transfer_inventory_retains_contract_for_selected_run(tmp_path):
     assert not resumed["complete"]
 
 
+def test_transfer_figure_reads_the_observed_times_and_sections(tmp_path):
+    import json
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.figures.generate import orton_transfer
+
+    folder = tmp_path / "fidelity/orton_transfer"
+    sample = folder / "fixture"
+    sample.mkdir(parents=True)
+    (folder.parent / "orton_transfer_settings.json").write_text(json.dumps(dict(gauges_m=[20], checkpoint_h=1)))
+    (sample / "inputs.json").write_text(json.dumps(dict(gauges_above_southern_origin_m=[20])))
+    record = dict(id="fixture", method="fv1", dx_m=5, duration_h=1, interval_s=1800, peak_m3s=3)
+    metrics.csv_write(file=folder / "transfer.csv", rows=[record])
+    frames = [dict(t_s=t, net_outlet_m3s=q, gauge_m3s=[q / 2]) for t, q in ((1800, 3), (3600, 1))]
+    (sample / "hour_1.json").write_text(json.dumps(dict(frames=frames)))
+    out = tmp_path / "figures"
+    orton_transfer(study=tmp_path, out=out)
+    assert all((out / f"20_orton_transfer.{ext}").is_file() for ext in ("svg", "png", "pdf"))
+    metrics.csv_write(file=folder / "transfer.csv", rows=[dict(record, peak_m3s=4)])
+    with pytest.raises(ValueError, match="peak"):
+        orton_transfer(study=tmp_path, out=out)
+
+
 def test_reference_pair_needs_two_matched_events_on_independent_terrains():
     rows = [
         dict(
@@ -66,6 +88,19 @@ def test_lost_connection_cannot_supply_development_hydraulic_error():
     assert training["runtime_s"] == 5.0 and training["errors"]["peak_discharge"] is None
     assert training["qualified"] == {"peak_discharge": False}
     assert row["errors"] == {"peak_discharge": 0.1}
+
+
+def test_joint_oracle_excludes_unqualified_numeric_error():
+    from research.floodwarp_methods_paper.fidelity.paired_advisor import evaluate_pairs
+
+    records = [dict(case="event", terrain_id="terrain", native_sha="inputs", end_h=16,
+                    method="fv1", run_id=str(dx), features=dict(resolution=dx),
+                    interval_s=cadence, errors={"depth": 0.001}, qualified={"depth": dx == 5},
+                    runtime_s=cost) for dx, cadence, cost in ((10, "60", 10), (5, "60.0", 20))]
+    trials = [dict(case="event", objective="depth", rule="oracle", dx=dx, tolerance=.01,
+                   status="oracle", terrain_admissible=True) for dx in (5, 10)]
+    rows = evaluate_pairs(model={}, rows=records, trials=trials, spacings=[5, 10])
+    assert len(rows) == 2 and all(r["optimal_dx"] == r["chosen_dx"] == 5 for r in rows)
 
 
 def test_repeat_summary_keeps_independent_completed_measurements(tmp_path):
@@ -119,6 +154,34 @@ def test_marginal_policy_winners_are_repeated_together():
     assert not timing_repeats.close_options(
         points={"dense": 9.0, "tiles": 10.0}, relative_gap=0.05
     )
+
+
+def test_remeasure_an_accuracy_improvement_just_outside_an_fv1_budget():
+    points = [
+        dict(method=m, dx=dx, runtime_s=s, eligible=eligible, absolute_error=error)
+        for m, dx, s, eligible, error in (
+            ("fv1", 5, 100, "False", ""), ("hancock_dense", 10, 90, "True", 2),
+            ("adaptive", 10, 104, "True", 0.5), ("euler_mc", 10, 99, "True", 3),
+        )
+    ]
+    assert timing_repeats.marginal_budget_options(rows=points, relative_gap=0.05) == {
+        ("fv1", 5), ("adaptive", 10)
+    }
+
+
+def test_budget_keeps_close_errors_unresolved_at_reference_sensitivity(tmp_path):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity import budgets
+
+    rows = [dict(method=m, experiment_id=m, dx=10, runtime_s=t, eligible=True,
+                 absolute_error=e, reference_sensitivity=0.4, reference_id="fine",
+                 objective="peak_bias_pct", execution_mode="dense", end_h=16, interval_s=60)
+            for m, t, e in (("fv1", 10, 1.0), ("hancock_dense", 9, 1.5), ("adaptive", 8, 3.0))]
+    budgets.feasible_cost(rows=rows, target=tmp_path, tolerances=[5], spacings=[10])
+    selected, = metrics.csv_read(file=tmp_path / "equal_cost_fidelity.csv")
+    assert selected["selected_id"] == "fv1"
+    assert selected["possible_best_ids"].split() == ["fv1", "hancock_dense"]
+    assert selected["ranking_status"] == "overlapping error ranges"
 
 
 @pytest.mark.parametrize(
@@ -250,3 +313,49 @@ def test_sloping_lake_with_stage_and_opposite_free_face(method, mode, device):
     np.testing.assert_allclose(
         solver.get_cumulative_face_volumes()["qx"][:, -1], 0.0, atol=1.0e-12, rtol=0
     )
+
+
+@pytest.mark.parametrize("method,mode", (("hancock", "dense"), ("hancock", "tiles"), ("fv2", "dense")))
+@pytest.mark.parametrize("device", ("cpu", "cuda:0"))
+def test_moving_subcritical_reach_responds_to_tailwater(method, mode, device):
+    import warp as wp
+    from floodwarp.inputs import boundary_faces, terrain_from_array
+    from floodwarp.model import advance, create_model
+
+    if device.startswith("cuda") and not wp.is_cuda_available():
+        pytest.skip("CUDA unavailable")
+    shape = (4, 32)
+    depth, speed, dx, duration = 0.75, 0.2, 1.0, 2.0
+    terrain = terrain_from_array(elevation=np.zeros(shape), dx=dx, dy=dx,
+                                 row_order="south_to_north", vertical_datum="local")
+    bx, by = boundary_faces(terrain=terrain)
+    bx[:, [0, -1]] = 3
+    # Both lateral faces are FREE with zero normal flow in the exact uniform state.
+    by[[0, -1], :] = 2
+    roughness, gravity, step = 0.035, 9.81, 0.05
+    drag = gravity * roughness**2 / depth**(4/3)
+    section = depth * shape[0] * dx
+    # Uniform flat-bed flow obeys du/dt = -drag*u². With equal stages the
+    # accepted face transport is a midpoint quadrature of its velocity.
+    exact = section * np.log1p(drag * speed * duration) / drag
+    midpoint_bound = section * duration * step**2 * (2 * drag**2 * speed**3) / 24
+    for increase in (0.0, 0.05):
+        stages = np.full(bx.shape, depth)
+        stages[:, -1] += increase
+        model = create_model(
+            terrain=terrain, solver_method=method, execution_mode=mode, device=device,
+            manning_n=roughness, gravity=gravity, limiter="adaptive", explicit_maximum_dt=step,
+            initial_depth=depth, boundary_qx=bx, boundary_qy=by, stage_qx=stages,
+            stage_datum="local", stage_boundary_momentum="velocity_extrapolation",
+        )
+        model.solver.set_momentum(hu=np.full(shape, depth * speed), hv=np.zeros(shape))
+        advance(model=model, end_time=duration)
+        flux = model.solver.get_cumulative_face_volumes()["qx"].sum(axis=0)
+        water = model.solver.get_water_depth()
+        if increase == 0:
+            np.testing.assert_allclose(flux, exact, atol=midpoint_bound + 2e-13, rtol=0)
+            np.testing.assert_allclose(water, depth, atol=2e-14, rtol=0)
+        else:
+            assert flux[-1] < exact and flux[-2] < exact
+            assert water[:, -2].min() > depth
+        assert abs(model.solver.cumulative_accounting()["residual"]) < 1e-11

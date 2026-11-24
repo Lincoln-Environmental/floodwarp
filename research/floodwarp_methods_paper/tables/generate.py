@@ -465,6 +465,18 @@ def from_records(*, study, output):
                 "footprint_storage_m3", "steps", "hydraulic_s")
         output["16_free_boundary"] = ("Fixed original outlet, complete 16-hour storm comparisons",
                                       [{k:r[k] for k in keys} for r in csv_read(file=updated)])
+    transfer_file = study / "fidelity/orton_transfer/transfer.csv"
+    if transfer_file.exists():
+        measured = csv_read(file=transfer_file)
+        keys = ("id", "dx_m", "method", "peak_m3s", "peak_end_s", "rain", "infiltration",
+                "boundary_inflow", "boundary_outflow", "storage_m3", "residual",
+                "final_area_5cm_m2", "maximum_area_5cm_m2", "final_area_10cm_m2", "maximum_area_10cm_m2")
+        output["17_orton_storm"] = ("Orton Bradley 48-hour design-storm transfer on completed grids",
+                                   [{k: r[k] for k in keys} for r in measured])
+        keys = ("id", "dx_m", "method", "policy", "steps", "retries", "minimum_dt_s", "mean_dt_s",
+                "hydraulic_s", "end_to_end_solver_s", "sampled_peak_pool_mib")
+        output["18_orton_cost"] = ("Orton Bradley measured 48-hour transfer costs and timestep counts",
+                                  [{k: r[k] for k in keys} for r in measured])
     for name, (caption, data) in output.items():
         render(directory=out, name=name, rows=data, caption=caption)
     return {name: len(rows) for name, (_, rows) in output.items()}

@@ -1,6 +1,8 @@
 # Native-metre storm qualification
 
-22 original forecast windows have been measured. 0 of 26 physical domains have a matched recession receipt for every scheduled configuration.
+22 original forecast windows have been measured. 0 of 27 physical domains have a matched recession receipt for every scheduled configuration.
+
+The wide-matrix records in this product are historical. Corrected incised results are in [the repaired outlet study](../outlet_results/README.md). The current native matrix is pending.
 
 Outlet peaks are interval means of accepted face transport. The original-window table may end while substantial flow continues. Numerical error rankings require common recession endpoints and separate spatial, temporal and formulation checks for the observable.
 

@@ -77,4 +77,13 @@ if __name__ == "__main__":
         "OVERLANDER_TEST_FULL_SWE_CUDA": "1",
         "FLOODWARP_TEST_RENDER": "1",
     }
+    options = set(sys.argv[1:])
+    if options.difference({"--resume", "--cpu-only", "--dry-run"}):
+        raise ValueError(f"Unknown verification options {options}")
+    if "--cpu-only" in options:
+        environment["CUDA_VISIBLE_DEVICES"] = ""
+        environment.pop("OVERLANDER_TEST_FULL_SWE_CUDA")
+    if "--dry-run" in options:
+        print(sys.executable, "-m pytest -q", environment)
+        sys.exit(0)
     run(directory=directory, environment=environment)

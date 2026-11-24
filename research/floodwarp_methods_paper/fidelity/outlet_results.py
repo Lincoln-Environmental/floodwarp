@@ -105,6 +105,63 @@ def water_differences(*, summaries):
     return differences
 
 
+def regional_contrasts(*, directory, peers, hour, thresholds, strip_m):
+    import hashlib
+
+    rows = []
+    for first in peers:
+        if first["method"] != "fv1" or first["cfl_factor"] != 1:
+            continue
+        for second in peers:
+            dx, extension = first["dx_m"], first["extension_m"]
+            if (second["method"], second["cfl_factor"], second["dx_m"], second["extension_m"]) != (
+                    "hancock_adaptive", 1, dx, extension):
+                continue
+            width = first["footprint_width_m"] // dx
+            states = []
+            for member in (first, second):
+                path = directory.parents[2] / ".fidelity-restarts/outlet_storms" / member["run_id"] / f"{int(hour * 3600)}.npz"
+                with np.load(path) as saved:
+                    sealed = json.loads(saved["_direct_manifest"].item())["sha256"]
+                    metadata = json.loads(saved["metadata"].item())
+                    if metadata["time"] != hour * 3600:
+                        raise ValueError("Regional contrast references the wrong hour")
+                    state = {}
+                    for name in ("q", "soil", "rain_sum"):
+                        field = saved[name]
+                        if hashlib.sha256(memoryview(field).cast("B")).hexdigest() != sealed[name]:
+                            raise ValueError("Changed archived regional field " + name)
+                        values = field[:, 0] if name == "q" else field
+                        state[name] = values.reshape(metadata["configuration"]["ny"], -1)[:, :width]
+                    states.append(state)
+            a, b = states
+            footprint = a["rain_sum"] > 0
+            np.testing.assert_array_equal(footprint, b["rain_sum"] > 0)
+            soil_delta = a["soil"] - b["soil"]
+            disagreements = {}
+            for depth in thresholds:
+                wet_a, wet_b = a["q"] > depth, b["q"] > depth
+                disagreements[round(depth * 100)] = wet_a & ~wet_b, wet_b & ~wet_a
+            column = np.arange(width)[None, :]
+            regions = (
+                ("upstream of internal gauge", column < width // 2),
+                ("internal gauge to final strip", (column >= width // 2) & (column < width - strip_m // dx)),
+                ("final strip", column >= width - strip_m // dx),
+            )
+            for label, reach in regions:
+                for side, rain in (("inside", footprint), ("outside", ~footprint)):
+                    cells = reach & rain
+                    record = dict(fv1_id=first["run_id"], hancock_id=second["run_id"], hour=hour,
+                                  dx_m=dx, extension_m=extension, reach=label, rainfall_footprint=side,
+                                  region_m2=int(cells.sum()) * dx**2,
+                                  fv1_minus_hancock_infiltration_m3=float(np.sum(soil_delta, where=cells) * dx**2))
+                    for cm, (fv1_only, hancock_only) in disagreements.items():
+                        record[f"fv1_only_above_{cm}cm_m2"] = int(np.count_nonzero(cells & fv1_only)) * dx**2
+                        record[f"hancock_only_above_{cm}cm_m2"] = int(np.count_nonzero(cells & hancock_only)) * dx**2
+                    rows.append(record)
+    return rows
+
+
 def spatial_differences(*, directory, peers, hour, thresholds):
     differences = []
     states = {}
@@ -382,7 +439,7 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
         ("extent", snapshots),
     ):
         metrics.csv_write(file=dest / f"{name}.csv", rows=rows)
-    differences, spatial_checks = [], []
+    differences, spatial_checks, contrasts = [], [], []
     settings = json.loads((directory / "application_settings.json").read_text())[
         "endpoint_depth"
     ]
@@ -401,6 +458,10 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
             )
         )
         del states
+        if experiments:
+            contrasts.extend(regional_contrasts(directory=directory, peers=peers, hour=hour, thresholds=thresholds,
+                                                strip_m=experiments[0][0]["identity"]["settings"]["strip_m"]))
+    metrics.csv_write(file=dest / "regional_contrasts.csv", rows=contrasts)
     metrics.csv_write(file=dest / "spatial_reference_checks.csv", rows=spatial_checks)
     outlet_observables.spatial_decisions(
         directory=directory, destination=dest, experiments=experiments, checks=spatial_checks

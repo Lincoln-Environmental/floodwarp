@@ -675,6 +675,51 @@ def outlet_repair(*, study, out):
     save(fig=fig,folder=out,name="19_free_outlet")
 
 
+def orton_transfer(*, study, out):
+    folder = study / "fidelity/orton_transfer"
+    table = folder / "transfer.csv"
+    if not table.is_file():
+        return
+    rows = csv_read(file=table)
+    grids = sorted({int(r["dx_m"]) for r in rows}, reverse=True)
+    settings = json.loads((folder.parent / "orton_transfer_settings.json").read_text())
+    gauges = settings["gauges_m"]
+    fig, axes = plt.subplots(1 + len(gauges), len(grids), sharex=True, sharey="row", squeeze=False,
+                             figsize=(2.8 * len(grids), 2.0 * (len(gauges) + 1)), layout="constrained")
+    colours = {"fv1": "#666666", "hancock": "#126482", "rk2": "#ab591d"}
+    for row in rows:
+        run = folder / row["id"]
+        metadata = json.loads((run / "inputs.json").read_text())
+        if gauges != metadata["gauges_above_southern_origin_m"]:
+            raise ValueError("Different physical Orton gauge locations")
+        t_end = int(row["duration_h"]) * 3600
+        cadence = int(row["interval_s"])
+        frames = [r for h in range(settings["checkpoint_h"], int(row["duration_h"]) + 1, settings["checkpoint_h"])
+                  for r in json.loads((run / f"hour_{h}.json").read_text())["frames"]]
+        edges = np.arange(0, t_end + 1, cadence)
+        np.testing.assert_array_equal([r["t_s"] for r in frames], edges[1:])
+        series = [[r["net_outlet_m3s"] for r in frames]]
+        series.extend([r["gauge_m3s"][i] for r in frames] for i in range(len(gauges)))
+        if not np.isclose(max(series[0]), float(row["peak_m3s"]), rtol=1e-13, atol=1e-13):
+            raise ValueError("Archived Orton peak and accepted interval transport disagree")
+        column = grids.index(int(row["dx_m"]))
+        for ax, q in zip(axes[:, column], series, strict=True):
+            ax.stairs(q, edges / 3600, baseline=None, color=colours[row["method"]],
+                      label=row["method"].upper(), linewidth=0.95)
+    for i, grid in enumerate(grids):
+        axes[0, i].set_title(f"{grid} m")
+        axes[-1, i].set_xlabel("Time (h)")
+    axes[0, 0].set_ylabel("Net outlet (m³/s)")
+    for ax, location in zip(axes[1:, 0], gauges, strict=True):
+        ax.set_ylabel(f"y = {location:,} m\nDischarge (m³/s)")
+    handles = {}
+    for ax in axes[0]:
+        artists, labels = ax.get_legend_handles_labels()
+        handles.update(zip(labels, artists, strict=True))
+    fig.legend(handles.values(), handles.keys(), loc="outside upper center", ncol=len(colours))
+    save(fig=fig, folder=out, name="20_orton_transfer")
+
+
 def from_records(*, study):
     paper_style()
     out = study / "figures"
@@ -693,6 +738,7 @@ def from_records(*, study):
     from research.floodwarp_methods_paper.qualification import plots
     plots.generate(study=study)
     outlet_repair(study=study,out=out)
+    orton_transfer(study=study, out=out)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),
         supplementary_figures=len(

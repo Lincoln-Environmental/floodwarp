@@ -98,10 +98,13 @@ def describe(*, item, settings, status):
         supply=d["initial_m3"] + d["rain_m3"],
         config=settings,
     )
+    method = s.get("requested_method", s["method"])
+    policy = assessment.numerical_identity(method=method)["execution_mode"]
+    selection = d.get("forcing", {}).get("execution_selection", {})
     return dict(
         case=s["case"],
         landform=s["landform"],
-        method=s.get("requested_method", s["method"]),
+        method=method,
         dx_m=s["dx"],
         factor=item["factor"],
         source_id=item["id"],
@@ -124,7 +127,8 @@ def describe(*, item, settings, status):
         hardware=item["hardware"],
         solver_source=item["solver_source"],
         timing_repeat=s.get("timing_repeat"),
-        execution_mode=assessment.numerical_identity(method=s.get("requested_method", s["method"]))["execution_mode"],
+        execution_mode=policy,
+        resolved_execution_mode=selection.get("selected") if method == "hancock_auto" else policy,
         end_to_end_s=d.get("end_to_end_s"),
         hydraulic_s_per_step=d["hydraulic_s"]/d["steps"],
         steps=d["steps"],
@@ -361,8 +365,11 @@ def run(*, directory, require_complete):
     records = prefixes(directory=directory)
     compare_incised_windows(directory=directory, records=records, target=target)
     current = runner.source_identity(root=directory.parents[2], study=directory.parent, stage="long-storms")
-    if any(i["solver_source"] == current for i in records.values()):
+    sources = {i["solver_source"] for i in records.values()}
+    if current in sources:
         records = {key:i for key,i in records.items() if i["solver_source"] == current}
+    elif require_complete or len(sources) > 1:
+        raise ValueError("No current matched numerical implementation for native qualification")
     prefix_groups = {}
     for i in records.values():
         spec = i["s"]
@@ -426,7 +433,7 @@ def run(*, directory, require_complete):
         directory=directory,
         records=list(records.values())
         if not groups
-        else [i for items in groups.values() for i in items],
+        else [i for items in primary.values() for i in items],
     )
     catalogue.database(target=target)
     counted = {r["case"] for r in complete if r["horizon"] == "complete-native-metre"}
@@ -434,6 +441,11 @@ def run(*, directory, require_complete):
         "# Native-metre storm qualification",
         "",
         f"{len(records)} original forecast windows have been measured. {len(counted)} of {len(expected)} physical domains have a matched recession receipt for every scheduled configuration.",
+        "",
+        (f"The numerical source matches the current hydraulic implementation `{current}`."
+         if current in sources else
+         "The wide-matrix records in this product are historical. Corrected incised results are in "
+         "[the repaired outlet study](../outlet_results/README.md). The current native matrix is pending."),
         "",
         "Outlet peaks are interval means of accepted face transport. The original-window table may end while substantial flow continues. Numerical error rankings require common recession endpoints and separate spatial, temporal and formulation checks for the observable.",
         "",

@@ -20,6 +20,26 @@ def close_options(*, points, relative_gap):
     return members if len(members) > 1 else set()
 
 
+def marginal_budget_options(*, rows, relative_gap):
+    """Find configurations whose timing could change the best qualified error at an FV1 budget."""
+    selected = set()
+    for anchor in rows:
+        if anchor["method"] != "fv1":
+            continue
+        budget = float(anchor["runtime_s"])
+        lower, upper = budget / (1 + relative_gap), budget * (1 + relative_gap)
+        qualified = [r for r in rows if r["eligible"] == "True"]
+        fixed_errors = [float(r["absolute_error"]) for r in qualified
+                        if r is anchor or float(r["runtime_s"]) < lower]
+        best_fixed = min(fixed_errors, default=float("inf"))
+        for candidate in qualified:
+            if (candidate is not anchor and lower <= float(candidate["runtime_s"]) <= upper
+                    and float(candidate["absolute_error"]) < best_fixed):
+                selected.add((anchor["method"], int(anchor["dx"])))
+                selected.add((candidate["method"], int(candidate["dx"])))
+    return selected
+
+
 def candidates(*, target, tolerances, relative_gap):
     selected = defaultdict(set)
     for row in metrics.csv_read(file=target / "policy_cost_events.csv"):
@@ -39,10 +59,16 @@ def candidates(*, target, tolerances, relative_gap):
         )
     for filename in ("hydrograph_pareto", "recession_depth_pareto"):
         groups = defaultdict(dict)
+        budget_groups = defaultdict(list)
         for row in metrics.csv_read(file=target / (filename + ".csv")):
-            if row["cohort"] != "complete-native-metre" or row["eligible"] != "True":
+            if row["cohort"] != "complete-native-metre":
                 continue
             objective = row["objective"]
+            key = (row["case"], float(row["end_h"]), row["representation"], row["station"],
+                   float(row["interval_s"]), row["reference_id"], row["cap"], objective)
+            budget_groups[key].append(row)
+            if row["eligible"] != "True":
+                continue
             if "depth" in objective:
                 thresholds = [tolerances["depth_tolerance_m"]]
             elif "extent_error" in objective:
@@ -52,15 +78,7 @@ def candidates(*, target, tolerances, relative_gap):
             upper = float(row["absolute_error"]) + float(row["reference_sensitivity"])
             for tolerance in thresholds:
                 if upper <= tolerance:
-                    group = (
-                        row["case"],
-                        float(row["end_h"]),
-                        row["station"],
-                        row["interval_s"],
-                        row["reference_id"],
-                        objective,
-                        tolerance,
-                    )
+                    group = (*key, tolerance)
                     groups[group][row["method"], int(row["dx"])] = float(
                         row["runtime_s"]
                     )
@@ -68,6 +86,8 @@ def candidates(*, target, tolerances, relative_gap):
             selected[key[:2]].update(
                 close_options(points=points, relative_gap=relative_gap)
             )
+        for key, rows in budget_groups.items():
+            selected[key[:2]].update(marginal_budget_options(rows=rows, relative_gap=relative_gap))
     return {key: values for key, values in selected.items() if values}
 
 

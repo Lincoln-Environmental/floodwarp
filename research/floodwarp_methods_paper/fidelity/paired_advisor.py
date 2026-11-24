@@ -28,7 +28,7 @@ def evaluate_pairs(*, model, rows, trials, spacings):
             continue
         measured = observations[case]
         signatures = {
-            (r["terrain_id"], r["native_sha"], r["end_h"], r["interval_s"])
+            (r["terrain_id"], r["native_sha"], float(r["end_h"]), float(r["interval_s"]))
             for r in measured.values()
         }
         if len(signatures) != 1:
@@ -39,7 +39,7 @@ def evaluate_pairs(*, model, rows, trials, spacings):
         available = [
             r
             for r in measured.values()
-            if r["errors"][objective] is not None
+            if r["qualified"][objective] and r["errors"][objective] is not None
             and r["errors"][objective] <= tol
             and not terrain_requires_refinement(
                 features=r["features"], objective=objective
@@ -72,7 +72,7 @@ def evaluate_pairs(*, model, rows, trials, spacings):
                 grid, method = requested, original["chosen"]
                 prediction = {}
             actual = measured.get((grid, method))
-            measured_error = actual["errors"][objective] if actual else None
+            measured_error = actual["errors"][objective] if actual and actual["qualified"][objective] else None
             feasible = actual in available if measured_error is not None else None
             regret = (
                 actual["runtime_s"] / optimal["runtime_s"] - 1
@@ -99,6 +99,8 @@ def evaluate_pairs(*, model, rows, trials, spacings):
                     else None,
                     cheaper_option=regret > 1.0e-12 if regret is not None else None,
                     selected_run=actual["run_id"] if actual else None,
+                    terrain_admissible=not terrain_requires_refinement(features=actual["features"], objective=objective)
+                    if actual else original["terrain_admissible"],
                     observed_error=measured_error,
                     observed_runtime_s=actual["runtime_s"] if actual else None,
                     **{

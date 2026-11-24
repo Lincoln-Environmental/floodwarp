@@ -65,6 +65,10 @@ run_stage() {
 }
 main() {
     local stage=${1:-help} dry=false module
+    if [[ $stage == verify-kernels ]]; then
+        shift
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.verification "$@"
+    fi
     if [[ $stage == outlet-timing-repeats ]]; then
         shift
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.outlet_timing "$@"

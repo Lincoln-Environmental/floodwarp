@@ -14,11 +14,21 @@ def fmt(value):
 
 
 def repaired_budgets(*, directory):
+    import json
+
     balances = directory / "water_differences.csv"
     if not balances.exists():
         return ""
     extent = {r["run_id"]: r for r in csv_read(file=directory / "extent.csv") if float(r["hour"]) == 8}
     lines = []
+    provenance = directory / "revision_evidence.json"
+    if provenance.exists():
+        proof = json.loads(provenance.read_text())
+        gpu = sorted({r["gpu"] for r in proof["launch_environment"].values()})
+        before, after = (proof["revisions"][tag]["commit"][:12] for tag in ("audit", "repair"))
+        lines.append(f"The pre-repair and corrected hydraulic sources match commits `{before}` and `{after}`. "
+                     f"The corrected FP64 storm measurements used {' and '.join(gpu)}. "
+                     "[Source and workstation receipts](../fidelity/outlet_results/revision_evidence.json)")
     for row in csv_read(file=balances):
         if (row["first_method"],row["second_method"],row["extension_m"]) != ("fv1","hancock_adaptive","0"):
             continue
@@ -29,6 +39,21 @@ def repaired_budgets(*, directory):
                      f"The final storage difference was {float(row['footprint_storage_m3']):+,.0f} m³. "
                      f"At hour eight their areas above 5 cm were {float(first['area_above_5cm_m2'])/1e6:.4f} "
                      f"and {float(second['area_above_5cm_m2'])/1e6:.4f} km².")
+    regions = directory / "regional_contrasts.csv"
+    if regions.exists():
+        eight = [r for r in csv_read(file=regions) if float(r["hour"]) == 8 and int(r["dx_m"]) == 5
+                 and int(r["extension_m"]) == 0]
+        field = "fv1_only_above_5cm_m2"
+        total = sum(float(r[field]) for r in eight)
+        if total:
+            downstream = sum(float(r[field]) for r in eight if r["reach"] != "upstream of internal gauge")
+            dry = sum(float(r[field]) for r in eight if r["rainfall_footprint"] == "outside")
+            strip = sum(float(r[field]) for r in eight if r["reach"] == "final strip")
+            lines.append(f"Of the hour-eight area above 5 cm in FV1 alone on the direct 5 m grid, "
+                         f"{100*downstream/total:.2f}% lay downstream of the independent internal gauge "
+                         f"and {100*dry/total:.2f}% lay outside the rainfall footprint. The final 40 m contained "
+                         f"{100*strip/total:.2f}% of this disagreement. "
+                         "[Reach and rainfall-footprint decomposition](../fidelity/outlet_results/regional_contrasts.csv)")
     events = csv_read(file=directory / "events.csv")
     temporal = {float(r["cfl_factor"]): r for r in events if r["method"] == "adaptive"
                 and int(r["dx_m"]) == 5 and int(r["extension_m"]) == 0}
@@ -374,7 +399,10 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
             correction += (f"\n{len(transfers)} of nine Orton Bradley configurations completed the archived 48-hour HIRDS "
                            "design storm. These measured differences quantify numerical transfer to real terrain under design "
                            "forcing. Errors against an observed event remain unknown. "
-                           "[Transfer hydrographs, water balance and GPU costs](../fidelity/orton_transfer/transfer.csv)\n")
+                           "[Water balance and inundation](../tables/17_orton_storm.md) · "
+                           "[Timesteps, memory and runtime](../tables/18_orton_cost.md) · "
+                           "[Fixed-gauge hydrographs](../figures/20_orton_transfer.pdf) · "
+                           "[Machine-readable transfer observations](../fidelity/orton_transfer/transfer.csv)\n")
         from research.floodwarp_methods_paper.fidelity.progress import pulse_comparison
 
         if (study / "fidelity/results/sharp_pulses.csv").exists():

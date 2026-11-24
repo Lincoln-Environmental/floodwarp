@@ -3,8 +3,38 @@
 import json
 import math
 from pathlib import Path
+import hashlib
+import subprocess
 
 from research.floodwarp_methods_paper import metrics, runner
+from research.floodwarp_methods_paper.source_trees import verify_tree
+
+
+def source_proof(*, directory, settings, destination):
+    root = directory.parents[2]
+    stages = ("long-storms", "analytical", "convergence")
+    revisions = {
+        tag: verify_tree(root=root, revision=sha, stages=stages)
+        for tag, sha in settings.items()
+    }
+    driver = directory / "outlet_storms.py"
+    blob = subprocess.check_output(
+        ["git", "show", f"{revisions['repair']['commit']}:{driver.relative_to(root)}"], cwd=root
+    )
+    driver_sha = hashlib.sha256(blob).hexdigest()
+    sources = json.loads((destination / "sources.json").read_text())
+    if (sources["solver"] != revisions["repair"]["source_sha256"]["long-storms"]
+            or sources["driver"] != driver_sha):
+        raise ValueError("Storm driver or solver differs from the named repair commit")
+    old = {json.loads(p.read_text())["inputs"]["solver"]
+           for p in (directory / "mean_storms").glob("*/result.json")}
+    if old != {revisions["audit"]["source_sha256"]["long-storms"]}:
+        raise ValueError("Historical incised comparison differs from its named audit commit")
+    runs = {ident: json.loads((directory / "outlet_storms" / ident / "inputs.json").read_text())["hardware"]
+            for ident in sources["storms"]}
+    runner.write_json(path=destination / "revision_evidence.json",
+                      data=dict(revisions=revisions, storm_driver_sha256=driver_sha, launch_environment=runs))
+    return revisions
 
 
 def split_sheet_bias(*, settings, dt):
@@ -17,6 +47,8 @@ def split_sheet_bias(*, settings, dt):
 def run(*, directory):
     source = directory / "outlet_results"
     rows = metrics.csv_read(file=source / "events.csv")
+    settings = json.loads((directory / "outlet_review_revisions.json").read_text())
+    revisions = source_proof(directory=directory, settings=settings, destination=source)
     history = metrics.csv_read(file=directory / "mean_storms/complete_events.csv")
     before = {(r["method"], r["dx_m"]): r for r in history}
     plane = directory / "free_plane"
@@ -42,6 +74,11 @@ def run(*, directory):
     mismatch=max(abs(r["unexplained_percentage_points"]) for r in split_checks)
     text = [
         "# FREE outlet qualification",
+        "",
+        f"The archived pre-repair numerical source matches Git commit `{revisions['audit']['commit'][:12]}`. "
+        f"The corrected hydraulic source and storm driver match commit `{revisions['repair']['commit'][:12]}`. "
+        "Several trajectories started while the repair was in the working tree. The source hashes identify the committed implementation used by those runs. "
+        "[Git-tree verification and per-run hardware](revision_evidence.json)",
         "",
         "The exact Manning reference is steady uniform flow on a 7.329% plane. "
         "Discharge below uses the accepted face volume between 30 and 60 s at the same section, 400 m from the upstream boundary.",
@@ -180,8 +217,29 @@ def run(*, directory):
             "[Least cost by spatial tolerance](least_cost_depth_extent.csv) · "
             "[Smallest spatial error at each FV1 budget](equal_cost_depth_extent.csv) · "
             "[Independent timing windows](spatial_timing_windows.csv)",
+            "",
+            "The [regional water and inundation accounts](regional_contrasts.csv) divide the original footprint "
+            "at the internal gauge and at the start of the final 40 m. Each area is also split by the prescribed rainfall footprint.",
         ]
     )
+    controls = directory / "strong_storms/completed.csv"
+    if controls.exists():
+        active_ids = {r["id"] for r in metrics.csv_read(file=controls)}
+        for path in sorted((directory / "native_step_history").glob("*/verified.json")):
+            receipt = json.loads(path.read_text())
+            policies = receipt.get("methods", [])
+            if (not policies or {r["primary"] for r in policies} - active_ids
+                    or {r["method"] for r in policies} != {"hancock_dense", "hancock_adaptive"}):
+                continue
+            if len({(r["steps"], r["accepted_dt_sha256"], r["end_s"]) for r in policies}) != 1:
+                raise ValueError("Different ordered CPU timesteps in published parity receipt")
+            for r in policies:
+                if runner.checksum(path.parent / (r["method"] + ".npz")) != r["sha256"]:
+                    raise ValueError("Changed CPU timestep history")
+            text += ["", f"On the 10 m moderate-rainfall plain the two CPU policies reproduced "
+                     f"all {policies[0]['steps']:,} ordered timesteps through {policies[0]['end_s']/3600:g} hours. "
+                     f"Their interval face transport and final fields matched the primary trajectory. "
+                     f"[Ordered timestep evidence](../{path.relative_to(directory).as_posix()})"]
     (source / "README.md").write_text("\n".join(text) + "\n")
 
 

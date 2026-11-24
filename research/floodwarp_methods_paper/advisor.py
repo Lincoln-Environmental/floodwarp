@@ -280,7 +280,8 @@ def assess(*, model, rows, rules):
                         qualified_options=len(actual),
                         optimal=best["method"] if best else None,
                         feasible=feasible,
-                        agrees=method == best["method"] if best and choice else None,
+                        agrees=bool(feasible and choice["runtime_s"] == best["runtime_s"])
+                        if best and choice else None,
                         regret=regret,
                         cheaper_option=regret > 1e-12 if regret is not None else None,
                         observed_error=choice["errors"][objective] if choice else None,
@@ -331,6 +332,9 @@ def summary(*, rows):
                 selected=sum(r["chosen"] is not None for r in allrows),
                 unqualified_selections=sum(
                     r["chosen"] is not None and r["feasible"] is None for r in allrows
+                ),
+                terrain_inadmissible_selections=sum(
+                    r["chosen"] is not None and r.get("terrain_admissible") is False for r in allrows
                 ),
                 qualified_selections=len(qualified),
                 false_feasible=sum(r["feasible"] is False for r in qualified),
