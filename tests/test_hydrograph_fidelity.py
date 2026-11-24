@@ -845,3 +845,21 @@ def test_practical_matrix_uses_native_sources_and_matches_fixed_area_across_grid
     matched = [s for s in specs if s["experiment_class"] == "fixed_physical_domain"]
     assert {tuple(s["dimensions"]) for s in matched} == {(1000, 1000)}
     assert {s["dx"] for s in matched} == {1, 5, 10}
+
+
+def test_coincident_interior_supercritical_discharge_and_rotated_faces():
+    from research.floodwarp_methods_paper.fidelity.free_plane import measure
+
+    folder = Path(__file__).resolve().parents[1] / "research/floodwarp_methods_paper/fidelity"
+    settings = json.loads((folder/"free_plane_settings.json").read_text())
+    compared={}
+    for distance in (0, 400):
+        values=[]
+        for face in settings["cardinal_faces"]:
+            row=measure(settings=settings,dx=10,extension=distance,method="fv2",face=face,dt=settings["fine_dt_s"])[-1]
+            assert row["reference_froude"] > 1
+            assert abs(row["residual_m3"]) < 1e-8
+            values.append(row["discharge_bias_pct"])
+        np.testing.assert_allclose(values,values[0],atol=1e-10,rtol=0)
+        compared[distance]=values[0]
+    assert abs(compared[400]) < .05

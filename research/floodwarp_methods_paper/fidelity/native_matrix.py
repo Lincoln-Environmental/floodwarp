@@ -5,6 +5,8 @@ import getopt
 import json
 from pathlib import Path
 import sys
+from time import time_ns, perf_counter
+import traceback
 from unittest.mock import patch
 
 from floodwarp.solver_advisor.execution import configure_hancock_execution
@@ -86,7 +88,11 @@ def all_items(*, items, cohort):
 
 
 def prior_prefix(*, directory, spec, receipt, solver, inputs, machine, settings):
-    if spec["factor"] != 1 or spec["requested_method"] != spec["method"]:
+    if (
+        spec.get("timing_repeat")
+        or spec["factor"] != 1
+        or spec["requested_method"] != spec["method"]
+    ):
         return None
     for path in (directory / "mean_storms").glob("*/result.json"):
         saved = json.loads(path.read_text())
@@ -153,7 +159,11 @@ def run_group(*, directory, specs, config, design, settings, machine):
     baseline = runner.source_identity(
         root=root, study=directory.parent, stage="long-storms"
     )
-    cohort = "native-metre"
+    cohort = (
+        "native-metre"
+        if not base.get("timing_repeat")
+        else "native-repeat-" + str(base["timing_repeat"])
+    )
     key = cohort, base["case"], "sampled"
 
     def run_prefixes():
@@ -194,18 +204,44 @@ def run_group(*, directory, specs, config, design, settings, machine):
                     spec["factor"],
                     flush=True,
                 )
-                data = hydraulics.run_event(
-                    spec=spec,
-                    config=config,
-                    template=inputs["template"],
-                    options=inputs["options"],
-                    directory=folder,
-                    device=settings["device"],
+                attempt = folder / f"attempt_{time_ns()}"
+                attempt.mkdir()
+                runner.write_json(
+                    path=attempt / "started.json",
+                    data=dict(inputs=definition, hardware=machine),
                 )
-                recession.atomic_json(
-                    path=path,
-                    payload=dict(inputs=definition, hardware=machine, data=data),
-                )
+                clock = perf_counter()
+                try:
+                    with runner.log_output(path=attempt / "solver.log"):
+                        data = hydraulics.run_event(
+                            spec=spec,
+                            config=config,
+                            template=inputs["template"],
+                            options=inputs["options"],
+                            directory=folder,
+                            device=settings["device"],
+                        )
+                    recession.atomic_json(
+                        path=path,
+                        payload=dict(inputs=definition, hardware=machine, data=data),
+                    )
+                    runner.write_json(
+                        path=attempt / "complete.json",
+                        data=dict(
+                            seconds=perf_counter() - clock,
+                            result_sha256=runner.checksum(path),
+                            spatial_sha256=runner.checksum(folder / "spatial.npz"),
+                        ),
+                    )
+                except Exception:
+                    runner.write_json(
+                        path=attempt / "failed.json",
+                        data=dict(
+                            seconds=perf_counter() - clock,
+                            traceback=traceback.format_exc(),
+                        ),
+                    )
+                    raise
             else:
                 saved = json.loads(path.read_text())
                 if saved["inputs"] != definition:
@@ -293,11 +329,24 @@ def run_group(*, directory, specs, config, design, settings, machine):
 
 def run(*, directory, arguments):
     flags, rest = getopt.getopt(
-        arguments, "", ["dry-run", "resume", "case=", "method=", "dx="]
+        arguments,
+        "",
+        ["dry-run", "resume", "force", "case=", "method=", "dx=", "dem=", "suite="],
     )
     if rest:
         raise ValueError("Unknown arguments " + str(rest))
     opts = dict(flags)
+    if "--resume" in opts and "--force" in opts:
+        raise ValueError("Choose resume or an independent timing repeat")
+    if (
+        "--dx" in opts
+        and "--dem" in opts
+        and float(opts["--dx"]) != float(opts["--dem"])
+    ):
+        raise ValueError(
+            "Practical runs require the same bed and hydraulic grid spacing"
+        )
+    repeat = time_ns() if "--force" in opts else None
     design = json.loads((directory / "native_matrix_settings.json").read_text())
     config = read_config(path=directory.parent / "configs/study.json")
     settings = json.loads((directory / "recession_settings.json").read_text())
@@ -307,9 +356,13 @@ def run(*, directory, arguments):
             not fnmatch.fnmatchcase(s["case"], opts.get("--case", "*"))
             or opts.get("--method", s["requested_method"]) != s["requested_method"]
             or ("--dx" in opts and s["dx"] != float(opts["--dx"]))
+            or ("--dem" in opts and s["dem"] != float(opts["--dem"]))
+            or ("--suite" in opts and s["experiment_class"] != opts["--suite"])
         ):
             continue
-        groups.setdefault(s["case"], []).append(s)
+        groups.setdefault(s["case"], []).append(
+            dict(s, timing_repeat=repeat) if repeat else s
+        )
     if not groups:
         raise ValueError("No native storm matches the requested selection")
     if "--dry-run" in opts:

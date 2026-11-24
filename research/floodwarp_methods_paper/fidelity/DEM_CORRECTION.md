@@ -62,4 +62,6 @@ Whole-catchment comparisons start at time zero from 104,857,600 native metre cel
 
 Read-back of the solver input rasters found different elevations among the four 5 m children in 1,048,576 of 1,048,576 parent footprints. Every 10 m elevation equalled the four-child mean exactly. [Input raster read-back](mean_storms/grid_audit.csv)
 
+The free boundary produced measurable terminal-cell storage on the native-averaged grids. Independent analytical and reach controls move the boundary while holding the measurement location fixed. [Local depth differences and independent outlet checks](native_outlet/README.md)
+
 The corrected whole-event comparison is pending. The original eight-hour staircase result cannot supply it.

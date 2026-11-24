@@ -68,6 +68,15 @@ main() {
         echo 'Run check to establish the environment' >&2
         return 1
     fi
+    if [[ $stage == resolution ]]; then
+        exec ./scripts/run_hydrograph_fidelity.sh native-storms --suite fixed_physical_domain "${selected_options[@]}"
+    fi
+    if [[ $stage == million-storms ]]; then
+        exec ./scripts/run_hydrograph_fidelity.sh native-storms --suite operational "${selected_options[@]}"
+    fi
+    if [[ $stage == historical-resolution || $stage == historical-million-storms ]]; then
+        exec "$python_bin" -m research.floodwarp_methods_paper.controller "${stage#historical-}" "${selected_options[@]}"
+    fi
     if [[ $stage == native-products || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
         exec ./scripts/run_hydrograph_fidelity.sh "$stage" "${selected_options[@]}"
     fi

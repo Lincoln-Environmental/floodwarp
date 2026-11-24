@@ -88,6 +88,8 @@ def run(*, directory):
                 "",
             ]
         )
+    if (directory / "native_outlet/README.md").is_file():
+        text.extend(["The free boundary produced measurable terminal-cell storage on the native-averaged grids. Independent analytical and reach controls move the boundary while holding the measurement location fixed. [Local depth differences and independent outlet checks](native_outlet/README.md)", ""])
     full = directory / "mean_storms/complete_events.csv"
     if full.is_file():
         text.extend(

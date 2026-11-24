@@ -1,6 +1,7 @@
 """Read-only hydraulic qualification on native metre DEMs and matched physical-event windows."""
 
 import json
+from itertools import combinations
 from pathlib import Path
 import sys
 
@@ -18,6 +19,7 @@ from research.floodwarp_methods_paper.fidelity import (
     statistics,
 )
 from research.floodwarp_methods_paper.plan import read_config
+from research.floodwarp_methods_paper.terrain.generators.generate import parameters
 
 
 def prefixes(*, directory):
@@ -43,6 +45,21 @@ def prefixes(*, directory):
             )
             if runner.digest(terrain) != definition["physical_sha"]:
                 raise ValueError("Physical input receipt changed")
+        inputs = definition.get("physical", definition.get("inputs"))
+        registered = parameters(
+            design=inputs["cfg"]["synthetic"],
+            template=inputs["template"],
+            family=spec["landform"],
+            seed=spec["seed"],
+            initial=spec["initial"],
+        )
+        if (
+            terrain["inputs"]["parameters"] != registered
+            or terrain["inputs"]["dimensions_m"] != spec["dimensions"]
+        ):
+            raise ValueError(
+                "Native terrain seed or footprint differs from the registered event"
+            )
         forcing = data["forcing"]
         if (
             terrain["inputs"]["native_m"] != 1
@@ -99,6 +116,90 @@ def describe(*, item, settings, status):
         hydraulic_s=d["hydraulic_s"],
         steps=d["steps"],
     )
+
+
+def compare_incised_windows(*, directory, records, target):
+    """Report matched cross-grid disagreement without treating a forecast as truth."""
+    design = json.loads((directory / "mean_settings.json").read_text())
+    entries = [
+        r
+        for r in records.values()
+        if r["s"]["case"] == design["case"]
+        and r["path"].parent == directory / "mean_storms"
+    ]
+    differences = []
+    areas = []
+    for item in entries:
+        s = item["s"]
+        with np.load(item["path"] / "spatial.npz") as state:
+            for cm in (5, 10):
+                fraction = state[f"wet_fraction_{cm}cm"]
+                areas.append(
+                    dict(
+                        id=item["id"],
+                        method=s["method"],
+                        dx_m=s["dx"],
+                        depth_cm=cm,
+                        hours=s["hours"],
+                        inundated_km2=float(fraction.sum()) * s["support"] ** 2 / 1e6,
+                    )
+                )
+    for a, b in combinations(entries, 2):
+        sa, sb = a["s"], b["s"]
+        if (
+            a["native_sha"] != b["native_sha"]
+            or sa["support"] != sb["support"]
+            or sa["hours"] != sb["hours"]
+        ):
+            raise ValueError(
+                "Incised grid comparisons need matched physical source, support and time"
+            )
+        if sa["method"] != sb["method"] and sa["dx"] != sb["dx"]:
+            continue
+        if (sa["dx"], sa["method"]) < (sb["dx"], sb["method"]):
+            a, b = b, a
+            sa, sb = sb, sa
+        with (
+            np.load(a["path"] / "spatial.npz") as first,
+            np.load(b["path"] / "spatial.npz") as second,
+        ):
+            h1, h2 = first["depth"], second["depth"]
+            for cm in (0, 5, 10):
+                mask = np.maximum(h1, h2) >= cm / 100
+                field = h1 - h2
+                delta = field[mask]
+                squared = float(np.sum(field**2))
+                differences.append(
+                    dict(
+                        left_id=a["id"],
+                        right_id=b["id"],
+                        left_method=sa["method"],
+                        right_method=sb["method"],
+                        left_dx_m=sa["dx"],
+                        right_dx_m=sb["dx"],
+                        common_support_m=sa["support"],
+                        hours=sa["hours"],
+                        wet_union_cm=cm,
+                        blocks=int(mask.sum()),
+                        eastern_edge_blocks=int(mask[:, -1].sum()),
+                        eastern_strip_fraction_squared_difference=float(
+                            np.sum(field[:, -1] ** 2) / squared
+                        )
+                        if squared
+                        else None,
+                        eastern_strip_signed_storage_difference_m3=float(
+                            field[:, -1].sum() * sa["support"] ** 2
+                        ),
+                        rmse_cm=float(100 * np.sqrt(np.mean(delta**2)))
+                        if delta.size
+                        else None,
+                        signed_mean_cm=float(100 * delta.mean())
+                        if delta.size
+                        else None,
+                    )
+                )
+    metrics.csv_write(file=target / "incised_state_disagreement.csv", rows=differences)
+    metrics.csv_write(file=target / "incised_practical_extent.csv", rows=areas)
 
 
 def grouped(*, directory, records, target, expected):
@@ -181,7 +282,12 @@ def plot_curves(*, directory, records):
                 path = target / f"{case}.{suffix}"
                 fig.savefig(path, dpi=300, metadata=tags)
                 if suffix == "svg":
-                    path.write_text("\n".join(line.rstrip() for line in path.read_text().splitlines()) + "\n")
+                    path.write_text(
+                        "\n".join(
+                            line.rstrip() for line in path.read_text().splitlines()
+                        )
+                        + "\n"
+                    )
         plt.close(fig)
 
 
@@ -199,6 +305,7 @@ def run(*, directory, require_complete):
             (s["dx"], s["requested_method"], s["factor"])
         )
     records = prefixes(directory=directory)
+    compare_incised_windows(directory=directory, records=records, target=target)
     original = [
         describe(item=i, settings=settings, status="original_window")
         for i in records.values()
@@ -246,7 +353,7 @@ def run(*, directory, require_complete):
         "",
         "Outlet peaks are interval means of accepted face transport. The original-window table may end while substantial flow continues. Numerical error rankings require common recession endpoints and separate spatial, temporal and formulation checks for the observable.",
         "",
-        "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures)",
+        "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures) · [5 cm and 10 cm native extent](incised_practical_extent.csv) · [Matched-grid depth differences](incised_state_disagreement.csv)",
     ]
     (target / "README.md").write_text("\n".join(text) + "\n")
     print(text[2], flush=True)

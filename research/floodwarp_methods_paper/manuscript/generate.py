@@ -202,6 +202,10 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
             "Report practical extent separately at 5 and 10 cm. Historical 1 cm extent is a shallow-water diagnostic. "
             "[DEM construction, numerical controls and corrected outcomes](../fidelity/DEM_CORRECTION.md)\n"
         )
+        if (study / "fidelity/native_outlet/README.md").is_file():
+            correction += ("\nThe native-grid incised results also show sensitivity to the downstream FREE boundary. "
+                           "The steady-sheet experiment checks this effect independently against exact discharge. "
+                           "[Outlet placement and terminal storage](../fidelity/native_outlet/README.md)\n")
         result += correction
         discussion += correction
         audit += correction.replace("](../", "](")

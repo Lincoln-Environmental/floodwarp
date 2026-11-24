@@ -90,6 +90,12 @@ def manifest(*, directory, package):
         "incised_crest",
         "mean_storms",
         "mean_windows",
+        "native_matrix",
+        "native_results",
+        "native_cpu_control",
+        "native_outlet",
+        "free_plane",
+        "free_reach",
         "verification",
         "extension_timings",
     )
