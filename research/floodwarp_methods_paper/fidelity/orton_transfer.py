@@ -3,17 +3,19 @@
 import fnmatch
 import getopt
 import json
+from contextlib import contextmanager
 from math import ceil
 from pathlib import Path
 import sys
-from time import perf_counter
+from time import perf_counter, time_ns
+import traceback
 
 import numpy as np
 import warp as wp
 
 from floodwarp.fv2_solver import FV2Solver, HancockSolver
 from research.floodwarp_methods_paper import metrics, runner
-from research.floodwarp_methods_paper.fidelity import recession
+from research.floodwarp_methods_paper.fidelity import orton_controls, recession
 from validation import fv2_orton_matrix as archive
 
 
@@ -209,6 +211,25 @@ def peak_flow(frame):
     return frame["net_outlet_m3s"]
 
 
+@contextmanager
+def measured_attempt(*, folder, machine, ident):
+    attempt = folder / f"attempt_{time_ns()}"
+    attempt.mkdir(parents=True)
+    resume = any(folder.glob("hour_*.json"))
+    start = perf_counter()
+    runner.write_json(path=attempt / "started.json", data=dict(id=ident, hardware=machine, resumed=resume))
+    try:
+        yield
+    except BaseException:
+        runner.write_json(path=attempt / "failed.json",
+                          data=dict(seconds=perf_counter() - start, traceback=traceback.format_exc()))
+        raise
+    runner.write_json(path=attempt / "completed.json", data=dict(
+        seconds=perf_counter() - start, uninterrupted_from_start=not resume,
+        summary_sha256=runner.checksum(folder / "complete.json"),
+    ))
+
+
 def inventory(*, directory, identity, settings, native_shape, method, spacing, case):
     rows = []
     for dx in settings["grids_m"]:
@@ -246,6 +267,13 @@ def run(*, directory, settings, arguments):
         ),
     )
     with rasterio.open(release / "outputs/orton_bradley_dem_5m.tif") as dem:
+        if (not dem.crs or not dem.crs.is_projected or dem.crs.linear_units != "metre"
+                or (dem.transform.a, dem.transform.b, dem.transform.d, dem.transform.e) != (5, 0, 0, -5)):
+            raise ValueError("Orton gauges require the projected north-up native 5 m DEM")
+        identity["spatial_reference"] = dict(crs=dem.crs.to_string(), west_m=dem.bounds.left,
+                                             south_m=dem.bounds.bottom, gauge_northings_m=[
+                                                 dem.bounds.bottom + g for g in settings["gauges_m"]
+                                             ])
         plans = inventory(
             directory=directory, identity=identity, settings=settings, native_shape=dem.shape,
             method=options.get("--method"), spacing=float(options["--dx"]) if "--dx" in options else None,
@@ -259,23 +287,24 @@ def run(*, directory, settings, arguments):
               "cells,", plan["archived_windows"], "checkpoint windows, complete", plan["complete"], flush=True)
     if "--dry-run" in options:
         return
+    machine = runner.machine(root=directory.parents[2])
     state = archive.release_initial(directory=release)
     for dx in dict.fromkeys(p["grid_m"] for p in plans):
         data, geometry = archive.geometry(state=state, factor=dx // 5)
         forcing = archive.forcing_check(state=state, data=data, dx=dx)
         for plan in plans:
-            if plan["grid_m"] == dx:
-                simulate(
-                    directory=directory,
-                    settings=settings,
-                    state=state,
-                    data=data,
-                    geometry=geometry,
-                    forcing=forcing,
-                    dx=dx,
-                    method=plan["method"],
-                    identity=plan["identity"],
-                )
+            if plan["grid_m"] != dx or plan["complete"]:
+                continue
+            folder = directory / "orton_transfer" / plan["id"]
+            if (folder / "inputs.json").is_file():
+                saved = json.loads((folder / "inputs.json").read_text())
+                if saved["identity"] != plan["identity"] or any(
+                    machine[key] != saved["hardware"][key] for key in ("gpu", "warp", "python", "precision", "cpu_model")
+                ):
+                    raise ValueError("Transfer restart provenance differs from its original launch")
+            with measured_attempt(folder=folder, machine=machine, ident=plan["id"]):
+                simulate(directory=directory, settings=settings, state=state, data=data, geometry=geometry,
+                         forcing=forcing, dx=dx, method=plan["method"], identity=plan["identity"])
         # Recreate the index from every completed matching contract, including
         # peers outside the current manual selection.
         root = directory / "orton_transfer"
@@ -290,6 +319,7 @@ def run(*, directory, settings, arguments):
                         raise ValueError("Transfer summary differs from source and physical contract")
                     rows.append(entry)
         metrics.csv_write(file=root / "transfer.csv", rows=rows)
+        orton_controls.compare(release=release, destination=root, settings=settings, rows=rows)
 
 
 if __name__ == "__main__":

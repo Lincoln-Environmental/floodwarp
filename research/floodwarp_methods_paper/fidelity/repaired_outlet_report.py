@@ -5,6 +5,8 @@ import math
 from pathlib import Path
 import hashlib
 import subprocess
+from collections import defaultdict
+from statistics import median
 
 from research.floodwarp_methods_paper import metrics, runner
 from research.floodwarp_methods_paper.source_trees import verify_tree
@@ -42,6 +44,34 @@ def split_sheet_bias(*, settings, dt):
     acceleration = settings["gravity"] * settings["grade"]
     normal_speed = settings["depth_m"]**(2/3) * math.sqrt(settings["grade"]) / settings["manning"]
     return 100 * (math.hypot(1, acceleration * dt / (2 * normal_speed)) - 1)
+
+
+def timing_table(*, records):
+    groups = defaultdict(list)
+    for row in records:
+        groups[row["primary"], int(row["end_s"])].append(row)
+    lines = ["", "## Independent full-storm timings", "",
+             "| Grid (m) | Extension (m) | Method | Policy | End (h) | Timings | Hydraulic median (s) | Hydraulic range (s) | Steps | ms/step | End-to-end range (s) |",
+             "|---:|---:|---|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for (primary, end), members in sorted(groups.items()):
+        row = members[0]
+        matched = ("gpu", "cpu_model", "warp", "python", "precision", "solver_sha", "dx_m", "method",
+                   "extension_m", "policy", "steps")
+        if (len({r["id"] for r in members}) != len(members) or len(members) < 3
+                or primary not in {r["id"] for r in members}
+                or len({tuple(r[k] for k in matched) for r in members}) != 1
+                or len({float(r["interval_s"]) for r in members}) != 1):
+            raise ValueError("Independent hydraulic timings require three matched, distinct runs")
+        hydraulic = [float(r["hydraulic_s"]) for r in members]
+        elapsed = [float(r["end_to_end_s"]) for r in members if r["end_to_end_s"]]
+        wall = f"{min(elapsed):.2f}–{max(elapsed):.2f} ({len(elapsed)})" if elapsed else "unavailable"
+        med = median(hydraulic)
+        lines.append(f"| {row['dx_m']} | {row['extension_m']} | {row['method']} | {row['policy']} | "
+                     f"{end/3600:g} | {len(members)} | {med:.3f} | {min(hydraulic):.3f}–{max(hydraulic):.3f} | "
+                     f"{int(row['steps']):,} | {1000*med/int(row['steps']):.3f} | {wall} |")
+    return [*lines, "", "Hydraulic timings exclude graph capture and compilation. End-to-end values include input "
+            "verification, setup, interval diagnostics and checkpoint output. Parentheses give the number of "
+            "uninterrupted end-to-end measurements. [Timing IDs, hardware and cadence](independent_timings.csv)"]
 
 
 def reach_comparison(*, directory, destination, revisions):
@@ -273,6 +303,9 @@ def run(*, directory):
         ]
     )
     controls = directory / "strong_storms/completed.csv"
+    timings = source / "independent_timings.csv"
+    if timings.is_file():
+        text.extend(timing_table(records=metrics.csv_read(file=timings)))
     if controls.exists():
         active_ids = {r["id"] for r in metrics.csv_read(file=controls)}
         for path in sorted((directory / "native_step_history").glob("*/verified.json")):

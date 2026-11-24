@@ -492,11 +492,19 @@ def from_records(*, study, output):
     transfer_file = study / "fidelity/orton_transfer/transfer.csv"
     if transfer_file.exists():
         measured = csv_read(file=transfer_file)
+        contrasts = csv_read(file=transfer_file.with_name("historical_transfer.csv"))
+        release_fv1 = {r["run_id"]: r for r in contrasts if r["historical_method"] == "floodwarp_fv1"}
+        if set(release_fv1) != {r["id"] for r in measured}:
+            raise ValueError("Missing matched historical 5 m FV1 outlet comparison")
         keys = ("id", "dx_m", "method", "peak_m3s", "peak_end_s", "rain", "infiltration",
                 "boundary_inflow", "boundary_outflow", "storage_m3", "residual",
                 "final_area_5cm_m2", "maximum_area_5cm_m2", "final_area_10cm_m2", "maximum_area_10cm_m2")
-        output["17_orton_storm"] = ("Orton Bradley 48-hour design-storm transfer on completed grids",
-                                   [{k: r[k] for k in keys} for r in measured])
+        output["17_orton_storm"] = ("Orton Bradley 48-hour design-storm transfer and differences from release FV1 at 5 m",
+                                   [dict({k: r[k] for k in keys},
+                                         release_fv1_peak_difference_pct=release_fv1[r["id"]]["signed_peak_difference_pct"],
+                                         release_fv1_peak_time_difference_s=release_fv1[r["id"]]["peak_end_difference_s"],
+                                         release_fv1_export_difference_m3=release_fv1[r["id"]]["net_export_difference_m3"])
+                                    for r in measured])
         keys = ("id", "dx_m", "method", "policy", "steps", "retries", "minimum_dt_s", "mean_dt_s",
                 "hydraulic_s", "end_to_end_solver_s", "sampled_peak_pool_mib")
         output["18_orton_cost"] = ("Orton Bradley measured 48-hour transfer costs and timestep counts",

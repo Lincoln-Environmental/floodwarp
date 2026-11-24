@@ -87,6 +87,13 @@ main() {
     fi
     if [[ $stage == native-storms ]]; then
         shift
+        for option in "$@"; do
+            if [[ $option == --dry-run ]]; then
+                "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_matrix "$@"
+                "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_status --inventory
+                return
+            fi
+        done
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_matrix "$@"
     fi
     if [[ $stage == help || $stage == --help ]]; then

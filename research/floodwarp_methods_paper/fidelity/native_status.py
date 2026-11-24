@@ -3,6 +3,7 @@
 from collections import defaultdict
 from pathlib import Path
 import json
+import sys
 from research.floodwarp_methods_paper import runner
 
 from research.floodwarp_methods_paper.fidelity import native_matrix, native_products
@@ -18,7 +19,7 @@ def policy_key(*, spec, factor):
     )
 
 
-def status(*, directory, config, design):
+def status(*, directory, config, design, inventory=False):
     expected = defaultdict(set)
     for spec in native_matrix.specifications(
         study=directory.parent, config=config, design=design
@@ -28,9 +29,13 @@ def status(*, directory, config, design):
     by_id = {}
     done = defaultdict(set)
     current = runner.source_identity(root=directory.parents[2], study=directory.parent, stage="long-storms")
+    historical = 0
     for ident, record in native_products.prefixes(directory=directory).items():
         spec = record["s"]
-        if spec.get("timing_repeat") or record["solver_source"] != current:
+        if spec.get("timing_repeat"):
+            continue
+        if record["solver_source"] != current:
+            historical += 1
             continue
         key = policy_key(spec=spec, factor=record["factor"])
         if key in expected.get(key[0], ()):
@@ -45,6 +50,14 @@ def status(*, directory, config, design):
                 matched[r["case"]] = r["end_s"] / 3600
     planned = sum(map(len, expected.values()))
     measured = sum(map(len, done.values()))
+    if inventory:
+        print(f"Archive inventory across all {len(expected)} domains, solver {current}:")
+        print(f"{historical} older-build primary windows retained and excluded from reuse.")
+        for ident, key in sorted(by_id.items()):
+            print("  Same-build candidate", ident, *key, "common end (h)", matched.get(key[0], "pending"))
+        print(f"{measured}/{planned} configurations have a same-build initial window. "
+              "Resume additionally checks the physical fields, driver, controls and launch environment.")
+        return
     print(
         f"{measured}/{planned} initial windows available; {len(matched)}/{len(expected)} domains at their common recession endpoint."
     )
@@ -94,4 +107,4 @@ if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     config = read_config(path=directory.parent / "configs/study.json")
     design = json.loads((directory / "native_matrix_settings.json").read_text())
-    status(directory=directory, config=config, design=design)
+    status(directory=directory, config=config, design=design, inventory="--inventory" in sys.argv[1:])

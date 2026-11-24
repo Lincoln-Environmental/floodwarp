@@ -79,6 +79,21 @@ def test_spatial_cost_ends_at_the_snapshot():
     with pytest.raises(ValueError, match="endpoint"):
         outlet_observables.window_cost(frames=frames, end_s=150)
 
+
+def test_storm_timing_table_requires_distinct_matches_on_the_same_numerical_build():
+    from research.floodwarp_methods_paper.fidelity.repaired_outlet_report import timing_table
+
+    row = dict(primary="a", end_s="57600", gpu="board", cpu_model="cpu", warp="warp", python="python",
+               precision="FP64", solver_sha="source", dx_m="10", method="hancock", extension_m="0",
+               policy="tiles", steps="100", interval_s="60", hydraulic_s="2", end_to_end_s="")
+    peers = [dict(row, id="a"), dict(row, id="b", interval_s="60.0", hydraulic_s="2.5", end_to_end_s="5"),
+             dict(row, id="c", hydraulic_s="2.2", end_to_end_s="4")]
+    rendered = "\n".join(timing_table(records=peers))
+    assert "2.200" in rendered and "4.00–5.00 (2)" in rendered
+    for replacement in (dict(peers[2], id="b"), dict(peers[2], solver_sha="other")):
+        with pytest.raises(ValueError, match="three matched"):
+            timing_table(records=[*peers[:2], replacement])
+
 def test_extent_display_aggregates_fine_cell_areas_before_drawing(tmp_path):
     a = np.array([[.08, .0], [.0, .0]])
     b = np.zeros_like(a)
@@ -147,6 +162,60 @@ def test_transfer_figure_reads_the_observed_times_and_sections(tmp_path):
     metrics.csv_write(file=folder / "transfer.csv", rows=[dict(record, peak_m3s=4)])
     with pytest.raises(ValueError, match="peak"):
         orton_transfer(study=tmp_path, out=out)
+
+
+def test_historical_transfer_uses_identical_windows_and_checks_accepted_volume(tmp_path):
+    import json
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity import orton_controls
+
+    release = tmp_path / "release"
+    folder = tmp_path / "transfer"
+    sample = folder / "run"
+    sample.mkdir(parents=True)
+    archive = release / "outputs/orton_bradley_hydrographs_72h.csv"
+    archive.parent.mkdir(parents=True)
+    measurements = []
+    for start, end, flow, volume in ((0, 1800, 1, 1800), (1800, 3600, 2, 5400), (3600, 5400, 4, 12600)):
+        row = dict(interval_start_s=start, interval_end_s=end)
+        for method in ("floodwarp_fv1", "lisflood_fv1", "floodwarp_li"):
+            row[method + "_mean_net_outlet_m3_s"] = flow
+            row[method + "_cumulative_net_export_m3"] = volume
+        measurements.append(row)
+    metrics.csv_write(file=archive, rows=measurements)
+    entry = dict(id="run", method="hancock", dx_m=5, duration_h=1, interval_s=1800,
+                 boundary_inflow=100, boundary_outflow=5500)
+    frames = [dict(t_s=1800, net_outlet_m3s=2), dict(t_s=3600, net_outlet_m3s=1)]
+    (sample / "hour_1.json").write_text(json.dumps(dict(frames=frames)))
+    options = dict(release=release, destination=folder, settings=dict(cadence_s=1800, checkpoint_h=1))
+    orton_controls.compare(**options, rows=[entry])
+    contrasts = metrics.csv_read(file=folder / "historical_transfer.csv")
+    assert len(contrasts) == 3
+    assert all(float(row["net_export_difference_m3"]) == 0 and float(row["peak_end_difference_s"]) == -1800
+               and float(row["hydrograph_rms_difference_m3s"]) == 1 for row in contrasts)
+    with pytest.raises(AssertionError):
+        orton_controls.compare(**options, rows=[dict(entry, boundary_inflow=0)])
+    metrics.csv_write(file=archive, rows=[measurements[0], measurements[2]])
+    with pytest.raises(AssertionError):
+        orton_controls.compare(**options, rows=[entry])
+
+
+def test_transfer_preserves_failed_and_resumed_wall_timings(tmp_path):
+    import json
+    from research.floodwarp_methods_paper.fidelity.orton_transfer import measured_attempt
+
+    options = dict(folder=tmp_path, ident="fixture", machine={"gpu": "fixture"})
+    with pytest.raises(ValueError, match="stop"):
+        with measured_attempt(**options):
+            (tmp_path / "hour_4.json").touch()
+            raise ValueError("stop")
+    with measured_attempt(**options):
+        (tmp_path / "complete.json").write_text("{}")
+    failed, = tmp_path.glob("attempt_*/failed.json")
+    completed, = tmp_path.glob("attempt_*/completed.json")
+    assert failed.parent != completed.parent
+    assert "ValueError: stop" in json.loads(failed.read_text())["traceback"]
+    assert json.loads(completed.read_text())["uninterrupted_from_start"] is False
 
 
 def test_publication_inventory_requires_incised_decisions_and_measured_orton_products(tmp_path):
