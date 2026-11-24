@@ -40,6 +40,16 @@ def status(*, directory):
             f"  {spec['method']} at {spec['dx']:g} m, CFL {0.4 * inputs['factor']:g}: "
             f"{observed['hours_completed']:g} h simulated, {observed['steps']:,} accepted steps."
         )
+    design = json.loads((directory / "mean_settings.json").read_text())
+    completed = []
+    for file in sorted((directory / "mean_storms").glob("*/result.json")):
+        entry = json.loads(file.read_text())
+        if entry["inputs"]["design"] == design:
+            completed.append(entry)
+    prints.append(f"Native-metre incised controls at the original horizon: {len(completed)}/{len(design['controls'])}.")
+    for entry in completed:
+        spec, data = entry["inputs"]["spec"], entry["data"]
+        prints.append(f"  {spec['method']} at {spec['dx']} m: {data['hours_completed']:g} h, {data['steps']:,} steps, {data['hydraulic_s']:.1f} hydraulic seconds.")
     by_group = Counter()
     primary_cases = json.loads((directory / "operational_settings.json").read_text())[
         "primary_cases"

@@ -192,14 +192,11 @@ def grid_spacing(row):
 
 def terrain_and_calibration(*, study):
     processed = study / "processed"
-    terrain = metrics.csv_read(file=processed / "million/terrain.csv")
+    terrain = metrics.csv_read(file=study / "fidelity/mean_windows/controls.csv")
     connectivity = []
-    for spacing in sorted({float(r["diagnostic_dx"]) for r in terrain}):
-        cases = {r["case"]: r for r in terrain if float(r["diagnostic_dx"]) == spacing}
-        lost = sum(
-            r["native_connected"] == "True" and r["represented_connected"] == "False"
-            for r in cases.values()
-        )
+    for spacing in sorted({float(r["dx_m"]) for r in terrain}):
+        cases = [r for r in terrain if float(r["dx_m"]) == spacing]
+        lost = sum(r["connected"] == "False" for r in cases)
         connectivity.append(f"{lost}/{len(cases)} at {spacing:g} m")
     transfers = metrics.csv_read(file=processed / "comparisons/transfer.csv")
     scores = [
@@ -217,9 +214,9 @@ def terrain_and_calibration(*, study):
     return [
         "## Terrain, calibration and solver selection",
         "",
-        "Across the independent terrain windows, the prescribed 8 m opening lost its native hydraulic connection in "
+        "With bottom-up area averaging, the prescribed 8 m opening lost its native four-neighbour connection in "
         + ", ".join(connectivity)
-        + ". The probe stage was 1 cm above the native spill elevation. [Terrain diagnostics](../processed/million/terrain.csv)",
+        + ". The probe stage was 1 cm above the native spill elevation. [Aligned native and aggregated terrain controls](mean_windows/controls.csv)",
         "",
         f"Bounded FV1 Manning fits improved {sum(x > 0 for x in scores)}/{len(scores)} reference-qualified transfer scores and worsened {sum(x < 0 for x in scores)}. Several scores come from different objectives and calibration bounds on the same terrain. [Calibration and transfer](../tables/09_calibration.md)",
         "",

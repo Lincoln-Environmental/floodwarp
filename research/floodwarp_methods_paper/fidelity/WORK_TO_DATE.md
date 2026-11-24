@@ -47,7 +47,7 @@ All 48 events have a common checked recession. 31 needed longer than eight hours
 
 ## Terrain, calibration and solver selection
 
-Across the independent terrain windows, the prescribed 8 m opening lost its native hydraulic connection in 0/15 at 1 m, 9/15 at 5 m, 11/15 at 10 m. The probe stage was 1 cm above the native spill elevation. [Terrain diagnostics](../processed/million/terrain.csv)
+With bottom-up area averaging, the prescribed 8 m opening lost its native four-neighbour connection in 0/15 at 1 m, 11/15 at 5 m, 11/15 at 10 m. The probe stage was 1 cm above the native spill elevation. [Aligned native and aggregated terrain controls](mean_windows/controls.csv)
 
 Bounded FV1 Manning fits improved 64/105 reference-qualified transfer scores and worsened 41. Several scores come from different objectives and calibration bounds on the same terrain. [Calibration and transfer](../tables/09_calibration.md)
 
@@ -60,7 +60,7 @@ The following counts describe the original forecast windows. A separate matched-
 | Investigation | Original windows completed | Verified matched end |
 |---|---:|---|
 | Rolling terrain, independently refined SWE | 4/4 | pending |
-| Incised late crest, fixed 10 m bed | 4/5 | pending |
+| Incised late crest, fixed 10 m bed | 5/5 | pending |
 
 ### Incised channel through hour 8
 
@@ -72,6 +72,7 @@ These historical runs repeat each 10 m parent elevation on its children. They di
 | FV2 RK2 | 10 m | 0.4 | 47.500 | 768,761 | 18.11% | 97,935 | 182.7 |
 | FV2 RK2 | 5 m | 0.4 | 33.536 | 386,724 | 53.15% | 502,761 | 1708.1 |
 | Hancock tiled | 5 m | 0.4 | 34.293 | 401,852 | 51.84% | 491,800 | 516.0 |
+| FV2 RK2 | 5 m | 0.2 | 33.608 | 386,872 | 53.19% | 502,683 | 3414.2 |
 
 At hour 8, outward boundary transport on the finer FV2 grid was 382,037 m³ lower. It held 404,827 m³ more water and had infiltrated 22,790 m³ less. At depths ≥5 cm the inundated area was 3.426 versus 0.039 km² (5 m versus 10 m grid). At depths ≥10 cm the corresponding areas were 0.520 versus 0.037 km². [Storage and inundation maps](incised_crest/initial_window_storage.pdf) · [Water balance and run identities](incised_crest/initial_window_storage.csv)
 

@@ -6,7 +6,7 @@ Run `./scripts/run_hydrograph_fidelity.sh all` in the pinned FloodWarp checkout.
 
 ## Corrected terrain resolution comparisons
 
-Generate the 5 m DEM by averaging 25 native 1 m elevations, then generate the 10 m DEM by averaging its four 5 m cells. `area-mean-storms` uses these actual DEMs. Earlier centre-sampled DEMs and repeated-parent beds retain their original experimental identities. The repeated-parent results describe staircase sensitivity and are excluded from practical grid recommendations. [Incised DEM correction and measured controls](DEM_CORRECTION.md)
+Generate the 5 m DEM by averaging 25 native 1 m elevations, then generate the 10 m DEM by averaging its four 5 m cells. `area-mean-storms` starts each forecast at time zero with these DEMs. It also averages the native initial depth, momentum, rain footprint and infiltration independently. Initial moving channel water is 0.12 m/s where the native depth exceeds 1 cm. Shallow channel margins start at rest. Only same-input, same-grid checkpoints can resume these runs. The `area-mean-terrain` stage checks control-window connectivity and writes georeferenced maps at all three spacings. Earlier centre-sampled DEMs and repeated-parent beds retain their original experimental identities. The repeated-parent results describe staircase sensitivity and are excluded from practical grid recommendations. [Incised DEM correction and measured controls](DEM_CORRECTION.md)
 
 ## Which hydrograph is the reference?
 

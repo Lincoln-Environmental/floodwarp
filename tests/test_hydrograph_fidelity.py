@@ -690,3 +690,45 @@ def test_mean_dem_averages_an_offcentre_feature_and_rejects_partial_footprints()
     np.testing.assert_array_equal(mean_cells(values=five,factor=2), [[1.]])
     with pytest.raises(ValueError):
         mean_cells(values=z[:9],factor=5)
+
+
+@pytest.mark.parametrize(("initial", "storm"), (("channel", "spatial"), ("pond", "soil"), ("dry", "moderate")))
+def test_operational_inputs_start_at_native_metre_cells(tmp_path, initial, storm):
+    from research.floodwarp_methods_paper.qualification import hydraulics, matrix
+    from research.floodwarp_methods_paper.fidelity import native_event
+    from research.floodwarp_methods_paper.plan import read_config
+    from research.floodwarp_methods_paper.terrain.generators import native_inputs
+
+    root = Path(__file__).resolve().parents[1]
+    study = root / "research/floodwarp_methods_paper"
+    cfg = read_config(path=study / "configs/study.json")
+    tpl = json.loads((root / "validation/hancock_long_storm_review/cases.json").read_text())
+    options = matrix.design(study=study)
+    spec = dict(landform="incised", seed=707, initial=initial, storm=storm, dimensions=[80,60],
+                controls=True, initial_grid="native_1m_block_mean", terrain_aggregation="native_1m_block_mean",
+                multiplier=1., hours=8, method="hancock_adaptive", dx=5, dem=5)
+    bundle, receipt = native_inputs.generate(spec=spec, inputs=dict(cfg=cfg,template=tpl,options=options),
+                                            cache_root=tmp_path,strip_rows=20, include_native=True, channel_core_m=.01)
+    (z,h,hu,u,v), _ = hydraulics.represented(options=options, settings=spec, design=cfg["synthetic"],
+                                             template=tpl, family=spec["landform"], seed=spec["seed"],
+                                             initial=initial,dx=1,dem=1)
+    mask = np.maximum(0,1-((u-.30)/.23)**2-((v-.70)/.20)**2) if storm=="spatial" else np.ones_like(z)
+    soil = ((6+22*u+6*v) if storm=="soil" else np.full_like(z,2.)) / 3.6e6
+    if initial == "channel":
+        hu = np.where(h > .01, .12*h, 0.)
+    for key, expected in dict(bed=z,depth=h,hu=hu,rain=mask,infiltration=soil).items():
+        native = np.load(bundle / f"{key}_1m.npy")
+        five = np.load(bundle / f"{key}_5m.npy")
+        ten = np.load(bundle / f"{key}_10m.npy")
+        np.testing.assert_allclose(native,expected,rtol=1e-14,atol=1e-14)
+        np.testing.assert_array_equal(five,native.reshape(12,5,16,5).mean(axis=(1,3)))
+        np.testing.assert_array_equal(ten,five.reshape(6,2,8,2).mean(axis=(1,3)))
+    kwargs=dict(config=cfg,template=tpl,device="cpu",bundle=bundle,receipt=receipt)
+    for invalid in (dict(initial_grid="parent"), dict(dem=10)):
+        with pytest.raises(ValueError,match="native metre"):
+            native_event.create(spec=dict(spec,**invalid),**kwargs)
+    model, rain_volume, forcing = native_event.create(spec=spec, **kwargs)
+    assert model.solver.time == 0 and forcing["native_inputs"]["native_sha256"] == receipt["native_sha256"]
+    np.testing.assert_array_equal(model.solver._fields["bed"].numpy().reshape(12,16),np.load(bundle/"bed_5m.npy"))
+    np.testing.assert_array_equal(model.solver._fields["multiplier"].numpy().reshape(12,16),np.load(bundle/"rain_5m.npy"))
+    np.testing.assert_allclose(rain_volume,mask.sum()*np.trapezoid(forcing["rain_rates_ms"],forcing["rain_times_s"]),rtol=1e-14)

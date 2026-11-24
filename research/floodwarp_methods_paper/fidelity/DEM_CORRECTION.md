@@ -2,7 +2,7 @@
 
 The earlier refinement copied a 10 m centre elevation into its four 5 m children. The limiter can reconstruct a nonzero slope between adjacent parent centres on the 10 m grid. On the child grid each pair contains a flat tread and a jump. The experiment changes the bed gradient seen by the flux and source operators. Its depths, storage and discharge describe a staircase sensitivity experiment. We withdraw its use for choosing practical grid resolution or ranking solver accuracy.
 
-The corrected 10,240 × 10,240 m terrain uses 104,857,600 native metre elevations. Each 5 m elevation is the mean of 25 native cells. Each 10 m elevation is the mean of the four 5 m cells covering that footprint. Every 10 m elevation was independently checked against its 100 native cells. Maximum absolute difference was 4.55e-13 m. Initial depth and momentum, rain footprint, infiltration, roughness and physical boundary locations are held on the original forcing support to isolate elevation representation. [DEM identities](incised_crest/mean_dem_inputs.json)
+The corrected 10,240 × 10,240 m terrain uses 104,857,600 native metre elevations. Each 5 m elevation is the mean of 25 native cells. Each 10 m elevation is the mean of the four 5 m cells covering that footprint. Every 10 m elevation was independently checked against its 100 native cells. Maximum absolute difference was 4.55e-13 m. Only the short reach replay holds the original forcing support fixed to isolate the effect of bed construction. [DEM identities](incised_crest/mean_dem_inputs.json)
 
 ## Numerical mechanism
 
@@ -57,5 +57,7 @@ Direct native depth threshold counts reproduce every 1, 5 and 10 cm area. The 1 
 Masks use the union across the three compared states at hour eight. A threshold of zero includes the full grid. Differences between forecasts quantify their disagreement. [Native checksums and areas](incised_crest/checkpoint_audit.csv) · [Common-support differences](incised_crest/checkpoint_spatial_differences.csv) · [Station hydrographs](incised_crest/checkpoint_station_histories.csv)
 
 ## Corrected complete storms
+
+Whole-catchment comparisons start at time zero from 104,857,600 native metre cells. Bed elevation, initial water depth, initial x momentum, rainfall multiplier and infiltration capacity each have an independent native checksum. Each coarser input is its aligned block mean. At the prescribed initial condition, channel water deeper than 1 cm flows at 0.12 m/s. Shallower margins retain their water and start at rest. All methods use this same physical state. A continuation must match the new inputs and its hydraulic checkpoint identity. [Native input identities and block checks](mean_storms/terrain.json)
 
 The corrected whole-event comparison is pending. The original eight-hour staircase result cannot supply it.

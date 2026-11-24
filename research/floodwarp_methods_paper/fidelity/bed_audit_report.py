@@ -17,7 +17,7 @@ def run(*, directory):
         "",
         "The earlier refinement copied a 10 m centre elevation into its four 5 m children. The limiter can reconstruct a nonzero slope between adjacent parent centres on the 10 m grid. On the child grid each pair contains a flat tread and a jump. The experiment changes the bed gradient seen by the flux and source operators. Its depths, storage and discharge describe a staircase sensitivity experiment. We withdraw its use for choosing practical grid resolution or ranking solver accuracy.",
         "",
-        f"The corrected {dem['inputs']['dimensions_m'][0]:,} × {dem['inputs']['dimensions_m'][1]:,} m terrain uses {dem['native_1m_cells']:,} native metre elevations. Each 5 m elevation is the mean of 25 native cells. Each 10 m elevation is the mean of the four 5 m cells covering that footprint. Every 10 m elevation was independently checked against its 100 native cells. Maximum absolute difference was {dem['max_difference_direct_1_to_10_m']:.3g} m. Initial depth and momentum, rain footprint, infiltration, roughness and physical boundary locations are held on the original forcing support to isolate elevation representation. [DEM identities](incised_crest/mean_dem_inputs.json)",
+        f"The corrected {dem['inputs']['dimensions_m'][0]:,} × {dem['inputs']['dimensions_m'][1]:,} m terrain uses {dem['native_1m_cells']:,} native metre elevations. Each 5 m elevation is the mean of 25 native cells. Each 10 m elevation is the mean of the four 5 m cells covering that footprint. Every 10 m elevation was independently checked against its 100 native cells. Maximum absolute difference was {dem['max_difference_direct_1_to_10_m']:.3g} m. Only the short reach replay holds the original forcing support fixed to isolate the effect of bed construction. [DEM identities](incised_crest/mean_dem_inputs.json)",
         "",
         "## Numerical mechanism",
         "",
@@ -70,6 +70,13 @@ def run(*, directory):
             "",
         ]
     )
+    native = directory / "mean_storms/terrain.json"
+    if native.is_file():
+        bundle = json.loads(native.read_text())
+        text.extend([
+            f"Whole-catchment comparisons start at time zero from {bundle['native_cells']:,} native metre cells. Bed elevation, initial water depth, initial x momentum, rainfall multiplier and infiltration capacity each have an independent native checksum. Each coarser input is its aligned block mean. At the prescribed initial condition, channel water deeper than {100*bundle['inputs']['moving_channel_min_depth_m']:g} cm flows at 0.12 m/s. Shallower margins retain their water and start at rest. All methods use this same physical state. A continuation must match the new inputs and its hydraulic checkpoint identity. [Native input identities and block checks](mean_storms/terrain.json)",
+            "",
+        ])
     full = directory / "mean_storms/complete_events.csv"
     if full.is_file():
         text.extend(

@@ -89,6 +89,7 @@ def manifest(*, directory, package):
         "storage_tail",
         "incised_crest",
         "mean_storms",
+        "mean_windows",
         "verification",
         "extension_timings",
     )
@@ -99,6 +100,8 @@ def manifest(*, directory, package):
         (
             directory / "design.json",
             package,
+            directory.parent / "terrain/generators/native_inputs.py",
+            directory.parent / "terrain/generators/mean_dem.py",
             root / "scripts/run_hydrograph_fidelity.sh",
         ),
         (
