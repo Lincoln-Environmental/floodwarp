@@ -76,7 +76,7 @@ The two decision tables retain the event endpoint, output cadence and reference 
 
 Under intense rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 4.331 and 6.806 m³/s. They exported 28,772 and 109,391 m³ through the common 32-hour endpoint. Under moderate rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 0.894 and 0.915 m³/s. They exported 24,912 and 38,983 m³ through the common 40-hour endpoint. Both gauges passed the recession criterion. These CPU controls measure formulation disagreement. [Six-hour rainfall and complete recession accounts](../fidelity/strong_storms/completed.csv)
 
-Across 65 completed native storm configurations, 13 restart records inherited initial-window timings from a different execution of the same hydraulics. The revised costs use each configuration's own measured initial and recession intervals. Both gauges and accepted step counts agreed at all 10,848 initial intervals checked. All operational costs, budget decisions and advisor inputs use this attribution. [Individual timing corrections and run identities](../fidelity/native_results/timing_provenance.csv)
+Across 75 completed native storm configurations, 13 restart records inherited initial-window timings from a different execution of the same hydraulics. The revised costs use each configuration's own measured initial and recession intervals. Both gauges and accepted step counts agreed at all 15,648 initial intervals checked. All operational costs, budget decisions and advisor inputs use this attribution. [Individual timing corrections and run identities](../fidelity/native_results/timing_provenance.csv)
 
 ## Fixed-area storms and the hydraulic objective
 
@@ -85,6 +85,7 @@ The table gives the cheapest terrain-admissible measured configuration at a 5% t
 | Storm | End (h) | Interval (s) | Outlet peak | Outlet shape | Net export | Infiltration | Outlet width | Internal peak | Internal shape |
 |---|---:|---:|---|---|---|---|---|---|---|
 | hill-8500-back-1000x1000 | 12 | 60 | FV1 10 m (2.15 s) | Unresolved | FV1 10 m (2.15 s) | Outside tolerance | Unresolved | FV1 10 m (2.15 s) | Unresolved |
+| plain-709-moderate-1000x1000 | 40 | 60 | Unresolved | Unresolved | Unresolved | Unresolved | Unresolved | Refine terrain | Refine terrain |
 | plain-709-spatial-1000x1000 | 20 | 300 | Unresolved | Unresolved | Unresolved | Refine terrain | Refine terrain | Refine terrain | Refine terrain |
 
 Depth decisions use an RMSE tolerance of 1 cm. Maximum extent uses the cellwise maximum-depth map and a 5% tolerance on one minus inundation IoU.
@@ -92,6 +93,7 @@ Depth decisions use an RMSE tolerance of 1 cm. Maximum extent uses the cellwise 
 | Storm | End (h) | Interval (s) | Final depth | Maximum-depth map | Depth on 5 cm wet union | Depth on 10 cm wet union | Maximum 5 cm extent | Maximum 10 cm extent |
 |---|---:|---:|---|---|---|---|---|---|
 | hill-8500-back-1000x1000 | 12 | 60 | FV1 10 m (2.15 s) | Hancock dense 10 m (2.28 s) | Unresolved | Unresolved | Unresolved | Unresolved |
+| plain-709-moderate-1000x1000 | 40 | 60 | Refine terrain | Refine terrain | Unresolved | Unresolved | Refine terrain | Refine terrain |
 | plain-709-spatial-1000x1000 | 20 | 300 | Refine terrain | Refine terrain | Unresolved | Unresolved | Unresolved | Refine terrain |
 
 Unresolved marks observations without an eligible hydraulic reference. Outside tolerance marks a qualified comparison in which every terrain-admissible candidate exceeds the error bound. Refine terrain marks a hydraulically assessable comparison where each candidate grid failed the pre-run terrain check. The accompanying tables retain the hydraulic-only and terrain-admissible decisions.
@@ -99,18 +101,23 @@ Unresolved marks observations without an eligible hydraulic reference. Outside t
 | Storm | RK2 spatial peak difference (%) | Fine formulation difference (%) | Half-CFL difference (%) | Peak reference |
 |---|---:|---:|---:|---|
 | hill-8500-back-1000x1000 | 0.1293 | 0.0006244 | 0.003383 | Qualified |
+| plain-709-moderate-1000x1000 | 5.04 | 0.0341 | 0.0005529 | Unresolved |
 | plain-709-spatial-1000x1000 | 14.78 | 0.1426 | 0.01738 | Unresolved |
 
 The static connection test uses an 80 m square around the prescribed opening and a water level 1 cm above the native spill elevation. These grids lose the connection even where a hydraulic observable meets tolerance.
 
 | Storm | Grid (m) | Maximum local barrier lowering (cm) |
 |---|---:|---:|
+| plain-709-moderate-1000x1000 | 5 | 18.04 |
+| plain-709-moderate-1000x1000 | 10 | 21.07 |
 | plain-709-spatial-1000x1000 | 5 | 18.04 |
 | plain-709-spatial-1000x1000 | 10 | 21.07 |
 
 [Control maps and spill-height sensitivity](../fidelity/native_publication/control_stage_sensitivity.csv)
 
 On the 10 m assessment grid for hill-8500-back-1000x1000, the fine reference retained 0 cells (0 m²) at or above 5 cm at the endpoint. The area-averaged cell maxima reached 10 cm on 0 cells (0 m²).
+
+On the 10 m assessment grid for plain-709-moderate-1000x1000, the fine reference retained 7 cells (700 m²) at or above 5 cm at the endpoint. The area-averaged cell maxima reached 10 cm on 2100 cells (210000 m²).
 
 On the 10 m assessment grid for plain-709-spatial-1000x1000, the fine reference retained 7 cells (700 m²) at or above 5 cm at the endpoint. The area-averaged cell maxima reached 10 cm on 2 cells (200 m²).
 
@@ -129,6 +136,7 @@ Each row compares solvers on the same event and physical footprint. Domain area 
 | hill-706-back-10240x10240 | 1,048,576 | 104.858 | 10 | 16 | 300 | 1174.7 | 1251.6 | +128,872 | -130,907 | tiles | 1.477 |
 | hill-8500-back-1000x1000 | 1,000,000 | 1.000 | 1 | 12 | 60 | 16.126 | 16.159 | +726 | -726 | dense only measured | 1.768 |
 | plain-701-spatial-10240x10240 | 1,048,576 | 104.858 | 10 | 52 | 300 | 0 | 0 | +0 | +0 | tiles | 0.943 |
+| plain-709-moderate-1000x1000 | 1,000,000 | 1.000 | 1 | 40 | 60 | 0.52503 | 0.91794 | -16,994 | +11,334 | dense only measured | 1.699 |
 | plain-709-spatial-1000x1000 | 1,000,000 | 1.000 | 1 | 20 | 300 | 0.015501 | 0.035363 | -256 | +230 | tiles | 1.223 |
 | plain-710-spatial-5000x5000 | 250,000 | 25.000 | 10 | 60 | 300 | 0 | 0 | +0 | -0 | tiles | 0.878 |
 | plain-712-spatial-20480x10240 | 2,097,152 | 209.715 | 10 | 40 | 300 | 0 | 0 | +0 | +0 | tiles | 1.094 |
@@ -148,6 +156,7 @@ Each section spans the domain width at the stated distance from its upstream gri
 | hill-706-back-10240x10240 | 10 | 16 | 5120 | 698.38 | 729.51 | -4.27 | 1174.7 | 1251.6 | -6.14 |
 | hill-8500-back-1000x1000 | 1 | 12 | 500 | 8.2382 | 8.2497 | -0.14 | 16.126 | 16.159 | -0.20 |
 | plain-701-spatial-10240x10240 | 10 | 52 | 5120 | 11.935 | 10.643 | +12.14 | 0 | 0 | unresolved |
+| plain-709-moderate-1000x1000 | 1 | 40 | 500 | 1.6288 | 1.657 | -1.70 | 0.52503 | 0.91794 | -42.80 |
 | plain-709-spatial-1000x1000 | 1 | 20 | 500 | 0.3576 | 0.35591 | +0.47 | 0.015501 | 0.035363 | -56.17 |
 | plain-710-spatial-5000x5000 | 10 | 60 | 2500 | 4.6395 | 4.1863 | +10.83 | 0 | 0 | unresolved |
 | plain-712-spatial-20480x10240 | 10 | 40 | 10240 | 7.4985 | 6.4621 | +16.04 | 0 | 0 | unresolved |
@@ -167,6 +176,7 @@ Catchment-mean rainfall divides the integrated six-hour rainfall volume by the w
 | hill-706-back-10240x10240 | 10 | 16 | 14,889,779 | 142.00 | 2,035 | 0 | 5,800 | 0 | 4,400 | 0 |
 | hill-8500-back-1000x1000 | 1 | 12 | 142,000 | 142.00 | 0 | 0 | 0 | 0 | 0 | 0 |
 | plain-701-spatial-10240x10240 | 10 | 52 | 873,210 | 8.33 | 0 | 0 | 0 | 0 | 0 | 0 |
+| plain-709-moderate-1000x1000 | 1 | 40 | 82,500 | 82.50 | 5,736 | 77 | 2,605 | 632 | 720 | 255 |
 | plain-709-spatial-1000x1000 | 1 | 20 | 8,328 | 8.33 | 111 | 84 | 771 | 677 | 336 | 286 |
 | plain-710-spatial-5000x5000 | 10 | 60 | 208,189 | 8.33 | 0 | 0 | 0 | 0 | 0 | 0 |
 | plain-712-spatial-20480x10240 | 10 | 40 | 1,746,419 | 8.33 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -193,9 +203,12 @@ Each row compares fields at the stated physical time on identical hydraulic cell
 | hill-8500-back-1000x1000 | 12.0 | 1 | Hancock | 1.0 | 0 | 0.018788 | empty union | empty union |
 | plain-709-moderate-1000x1000 | 8.0 | 1 | RK2 | 0.5 | 3.3885e-05 | 0.001106 | 1.00000 | 1.00000 |
 | plain-709-moderate-1000x1000 | 32.0 | 1 | RK2 | 0.5 | 3.7162e-05 | 0.001106 | 1.00000 | 1.00000 |
+| plain-709-moderate-1000x1000 | 40.0 | 1 | RK2 | 0.5 | 5.6854e-06 | 0.001106 | 1.00000 | 1.00000 |
 | plain-709-moderate-1000x1000 | 8.0 | 1 | FV1 | 1.0 | 19.012 | 15.655 | 0.77918 | 0.79998 |
+| plain-709-moderate-1000x1000 | 40.0 | 1 | FV1 | 1.0 | 12.184 | 15.73 | 0.24261 | 0.35417 |
 | plain-709-moderate-1000x1000 | 8.0 | 1 | Hancock | 1.0 | 0.0053159 | 0.0035165 | 0.99991 | 0.99974 |
 | plain-709-moderate-1000x1000 | 32.0 | 1 | Hancock | 1.0 | 0.0037484 | 0.0035165 | 1.00000 | 1.00000 |
+| plain-709-moderate-1000x1000 | 40.0 | 1 | Hancock | 1.0 | 0.00052723 | 0.0035165 | 1.00000 | 1.00000 |
 | plain-709-spatial-1000x1000 | 8.0 | 1 | RK2 | 0.5 | 0.00094817 | 0.0012903 | 1.00000 | 1.00000 |
 | plain-709-spatial-1000x1000 | 20.0 | 1 | RK2 | 0.5 | 3.8052e-05 | 0.0012476 | 1.00000 | 1.00000 |
 | plain-709-spatial-1000x1000 | 8.0 | 1 | FV1 | 1.0 | 0.5193 | 0.54444 | 0.98380 | 0.99025 |

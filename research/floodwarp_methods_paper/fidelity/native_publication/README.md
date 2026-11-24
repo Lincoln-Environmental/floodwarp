@@ -11,6 +11,16 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | fan-711-spatial-10000x5000 | 10 | FV1 | sparse | 1.0 | 16 | 300 | 25.075 | 15.220 | 168,125 | 12.45 | 29,494 |
 | fan-711-spatial-10000x5000 | 10 | Hancock | dense | 1.0 | 16 | 300 | 24.519 | 15.825 | 196,205 | 28.75 | 23,975 |
 | fan-711-spatial-10000x5000 | 10 | Hancock | tiles | 1.0 | 16 | 300 | 24.519 | 15.825 | 196,205 | 13.28 | 23,975 |
+| plain-709-moderate-1000x1000 | 10 | FV1 | sparse | 1.0 | 40 | 60 | 1.476 | 0.894 | 24,912 | 7.68 | 96,300 |
+| plain-709-moderate-1000x1000 | 10 | Hancock | dense | 1.0 | 40 | 60 | 1.628 | 0.915 | 38,983 | 9.96 | 99,238 |
+| plain-709-moderate-1000x1000 | 10 | FV2 RK2 | dense | 1.0 | 40 | 60 | 1.628 | 0.920 | 39,070 | 13.04 | 95,521 |
+| plain-709-moderate-1000x1000 | 5 | FV1 | sparse | 1.0 | 40 | 60 | 1.546 | 0.789 | 26,061 | 31.81 | 219,079 |
+| plain-709-moderate-1000x1000 | 5 | Hancock | dense | 1.0 | 40 | 60 | 1.642 | 0.963 | 40,372 | 47.04 | 233,904 |
+| plain-709-moderate-1000x1000 | 5 | FV2 RK2 | dense | 1.0 | 40 | 60 | 1.642 | 0.965 | 40,392 | 63.09 | 229,826 |
+| plain-709-moderate-1000x1000 | 1 | FV1 | sparse | 1.0 | 40 | 60 | 1.629 | 0.525 | 26,394 | 2397.05 | 1,198,878 |
+| plain-709-moderate-1000x1000 | 1 | Hancock | dense | 1.0 | 40 | 60 | 1.657 | 0.918 | 43,388 | 4071.40 | 1,278,098 |
+| plain-709-moderate-1000x1000 | 1 | FV2 RK2 | dense | 1.0 | 40 | 60 | 1.657 | 0.918 | 43,394 | 5959.90 | 1,273,618 |
+| plain-709-moderate-1000x1000 | 1 | FV2 RK2 | dense | 0.5 | 40 | 60 | 1.657 | 0.918 | 43,394 | 11893.31 | 2,545,276 |
 | plain-712-spatial-20480x10240 | 10 | FV1 | sparse | 1.0 | 40 | 300 | 7.498 | 0.000 | 0 | 57.69 | 37,240 |
 | plain-712-spatial-20480x10240 | 10 | Hancock | dense | 1.0 | 40 | 300 | 6.462 | 0.000 | 0 | 210.33 | 42,996 |
 | plain-712-spatial-20480x10240 | 10 | Hancock | tiles | 1.0 | 40 | 300 | 6.462 | 0.000 | 0 | 63.10 | 42,996 |
@@ -74,7 +84,7 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | fan-705-spatial-5120x5120 | 5 | Hancock | tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.62 | 35,833 |
 | fan-705-spatial-5120x5120 | 5 | Hancock | auto → tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.60 | 35,833 |
 
-64 of 567 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
+82 of 648 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
@@ -88,7 +98,7 @@ For decisions requiring preservation of assessed terrain controls, the same cost
 
 [Admissible cost at tolerance for hydrographs and water accounts](../native_results/least_cost_terrain_fidelity.csv) · [Admissible cost for spatial fields](../native_results/least_cost_terrain_depth_extent.csv) · [Hydraulic error within budget](../native_results/equal_cost_terrain_fidelity.csv) · [Spatial error within budget](../native_results/equal_cost_terrain_depth_extent.csv)
 
-For 2 matched CPU/CUDA initial storm windows ending at 8 h, the largest absolute discharge difference was 9.1e-14 m³/s at the outlet and 1.82e-13 m³/s at the internal section. Accepted step counts differed in 0 of 960 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)
+For 4 matched CPU/CUDA initial storm windows ending at 8 h, the largest absolute discharge difference was 9.7e-13 m³/s at the outlet and 4.85e-13 m³/s at the internal section. Accepted step counts differed in 0 of 1,920 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)
 
 In 1 matched recession record(s), summing the saved depth field and summing active cells for the hydraulic diagnostic differed by up to 1.42e-14 m³. Both FP64 totals were reproduced exactly from the authenticated checkpoint arrays.
 
@@ -107,7 +117,7 @@ The same 1 km² plain, 10 m represented bed, initial state and six-hour rainfall
 
 The observed sensitivity applies to these 10 m runs. FV1 temporal sensitivity at 1 m requires a separate refinement at that spacing. [Water accounts, width, shape, timing and paired run identities](../native_results/fv1_temporal_sensitivity.csv)
 
-Of 65 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
+Of 75 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
 
 ## Dense and tiled execution
 
@@ -134,7 +144,7 @@ Each upper-panel point represents a measured forecast window. Each lower-panel p
 
 The first ratio measures the cost of selecting a schedule using the two explicit runs. The second compares the measured automatic run with its selected explicit counterpart and includes timing variability. Each cost uses its available hydraulic timing median. [Run identities, sample sizes and timing ranges](execution_choice_cost.csv)
 
-0 of 65 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
+0 of 75 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
 
 [Timing identities, quartiles and range](../native_results/timing_distribution.csv)
 
