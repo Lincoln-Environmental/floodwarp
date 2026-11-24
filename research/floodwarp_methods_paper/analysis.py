@@ -304,6 +304,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
             *(study / "supplementary/pareto").rglob("*"),
             *(study / "supplementary/operational_storms").rglob("*"),
             *(study / "supplementary/incised").glob("hour_eight_water.*"),
+            *(study / "supplementary/incised").glob("simultaneous_extent.*"),
         ]
     elif stage == "manuscript":
         from research.floodwarp_methods_paper.manuscript.generate import generate

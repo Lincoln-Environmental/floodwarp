@@ -374,6 +374,44 @@ def native_operational_balances(*, study, minimum_cells):
     ])
 
 
+def plain_grid_fidelity(*, study, cases):
+    file = study / "fidelity/native_results/measured_windows.csv"
+    if not file.is_file():
+        return ""
+    groups = defaultdict(dict)
+    required = {("fv1", 1), ("hancock_dense", 1), ("hancock_dense", 5), ("hancock_dense", 10)}
+    for r in csv_read(file=file):
+        key = r["method"], int(r["dx_m"])
+        if (r["case"] not in cases or key not in required or float(r["factor"]) != 1 or int(r["timing_repeat"] or 0)
+                or r["horizon"] not in ("original_window", "complete-native-metre")):
+            continue
+        group = (r["case"], float(r["end_h"]), r["horizon"], float(r["interval_s"]), r["native_sha"], r["solver_source"])
+        if key in groups[group]:
+            raise ValueError("Duplicate primary run in a matched plain grid comparison")
+        groups[group][key] = r
+    rows = []
+    for (case, end, horizon, cadence, _, _), peers in sorted(groups.items()):
+        if peers.keys() != required:
+            continue
+        stage = "Initial window" if horizon == "original_window" else "Common recession"
+        inputs = [peers[("fv1", 1)], *[peers["hancock_dense", dx] for dx in (1, 5, 10)]]
+        for metric, unit in (("outlet_peak_m3s", "Peak (m³/s)"), ("net_outlet_m3", "Export (m³)")):
+            values = [float(r[metric]) for r in inputs]
+            digits = ".4g" if metric == "outlet_peak_m3s" else ",.0f"
+            rows.append(f"| {cases[case]} | {stage} | {end:g} | {cadence:g} | {unit} | "
+                        + " | ".join(format(v, digits) for v in values) + " |")
+    if not rows:
+        return ""
+    return "\n".join(["", "### Hydraulic grid and formulation on the same plain", "",
+                      "All grids cover the same 1 km². The comparison across grid spacings includes changes to "
+                      "both the represented bed and the hydraulic discretisation. The FV1 and Hancock columns at "
+                      "1 m use identical terrain and forcing. Initial-window peaks are the largest recorded through "
+                      "hour eight. Rain stops at hour six, and a later crest can exceed the initial-window peak.", "",
+                      "| Storm | Window | End (h) | Interval (s) | Observable | FV1, 1 m | Hancock, 1 m | Hancock, 5 m | Hancock, 10 m |",
+                      "|---|---|---:|---:|---|---:|---:|---:|---:|", *rows, "",
+                      "[Per-configuration observations and physical input identities](../fidelity/native_results/measured_windows.csv)", ""])
+
+
 def native_reach_contrasts(*, study):
     file = study / "fidelity/native_results/regional_water.csv"
     if not file.exists():
@@ -430,6 +468,14 @@ def native_grid_field_comparison(*, study):
                     f"{1000 * float(r['depth_rmse_m']):.5g} | {1000 * float(r['maximum_depth_rmse_m']):.5g} | "
                     f"{ious[0]} | {ious[1]} |")
     text.extend(["", "[Wet-union errors, connectivity and map identities](../fidelity/native_results/native_grid_field_differences.csv)"])
+    maps = study / "supplementary/operational_storms"
+    links = [f"[{dx} m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_{dx}m.pdf)"
+             for dx in (1, 5, 10) if (maps / f"plain_709_extent_10cm_{dx}m.pdf").is_file()]
+    if links:
+        text.extend(["", "The maps show the same plain two hours after rainfall ended for the moderate and intense "
+                     "storms. Shading preserves the fraction of hydraulic cells reaching 10 cm in each 10 m reporting "
+                     "cell. The dashed line marks the internal gauge. " + " · ".join(links)])
+
     return "\n" + "\n".join(text) + "\n"
 
 
@@ -898,6 +944,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                             "[Time refinement, both gauge records and water accounts]"
                             "(../fidelity/native_results/fv1_temporal_sensitivity.csv)\n"
                         )
+                correction += plain_grid_fidelity(study=study, cases={"plain-709-moderate-1000x1000": "Moderate",
+                                                                     "plain-709-intense-1000x1000": "Intense"})
                 correction += native_reach_contrasts(study=study)
                 correction += native_grid_field_comparison(study=study)
                 correction += native_advisor_findings(study=study)

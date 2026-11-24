@@ -127,13 +127,23 @@ main() {
     fi
     if [[ $stage == native-grid-maps ]]; then
         local map_driver=research.floodwarp_methods_paper.fidelity.native_map_comparison
+        local case_name spacing explicit_grid=false
         for flag in "${selected_options[@]}"; do
             if [[ $flag == --case || $flag == --case=* ]]; then
                 exec "$python_bin" -m "$map_driver" "${selected_options[@]}"
             fi
+            if [[ $flag == --dx || $flag == --dx=* ]]; then explicit_grid=true; fi
         done
         "$python_bin" -m "$map_driver" "${selected_options[@]}"
-        exec "$python_bin" -m "$map_driver" --case plain-709-intense-1000x1000 "${selected_options[@]}"
+        "$python_bin" -m "$map_driver" --case plain-709-intense-1000x1000 "${selected_options[@]}"
+        if [[ $explicit_grid == false ]]; then
+            for case_name in plain-709-moderate-1000x1000 plain-709-intense-1000x1000; do
+                for spacing in 5 10; do
+                    "$python_bin" -m "$map_driver" --case "$case_name" --dx "$spacing" "${selected_options[@]}"
+                done
+            done
+        fi
+        return
     fi
     if [[ $stage == fv1-temporal-control ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.fv1_clock "${selected_options[@]}"

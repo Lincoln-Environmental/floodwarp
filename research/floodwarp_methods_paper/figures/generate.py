@@ -794,6 +794,86 @@ def incised_extent_history(*, study):
     save(fig=fig, folder=study / "supplementary/incised", name="simultaneous_extent")
 
 
+def plain_extent_field(*, directory, row, source, threshold_cm):
+    from research.floodwarp_methods_paper import runner
+
+    base = directory / "native_matrix" / row["case"] / row["source_id"]
+    if (source["case"] != row["case"] or float(source["end_s"]) != float(row["end_h"]) * 3600
+            or runner.checksum(path=base / "spatial.npz") != source["spatial_sha256"]
+            or runner.checksum(path=base / "result.json") != source["result_sha256"]):
+        raise ValueError("Plain map differs from its completed forecast")
+    raw = json.loads((base / "result.json").read_text())
+    spec = raw["inputs"]["spec"]
+    width, height = spec["dimensions"]
+    support = spec["support"]
+    gauge = float(row["section_x_m"])
+    grid = (width, height, support, gauge, raw["data"]["forcing"]["terrain_sha256"], float(row["interval_s"]))
+    if spec["dx"] != float(row["dx_m"]) or spec["interval"] != float(row["interval_s"]):
+        raise ValueError("Plain map uses a different hydraulic spacing or reporting interval")
+    with np.load(base / "spatial.npz", allow_pickle=False) as fields:
+        wet = fields[f"wet_fraction_{threshold_cm}cm"]
+    area = float(row[f"model_grid_wet_area_{threshold_cm}cm_m2"])
+    if (wet.shape != (height // support, width // support) or np.any((wet < 0) | (wet > 1))
+            or not np.isclose(wet.sum() * support**2, area, rtol=0, atol=1e-6)):
+        raise ValueError("Mapped fractions disagree with the native hydraulic wet area")
+    return wet, area, grid, raw["inputs"]["physical_sha"]
+
+
+def plain_extent_panels(*, study, cases, methods, spacings, hours, threshold_cm):
+    directory = study / "fidelity"
+    product = directory / "native_results"
+    if not (product / "measured_windows.csv").exists():
+        return []
+    receipts = {r["id"]: r for r in csv_read(file=product / "verified_archives.csv")
+                if r["evidence"] == "completed initial window"}
+    windows = {}
+    for r in csv_read(file=product / "measured_windows.csv"):
+        if (r["case"] in cases and r["method"] in methods and r["horizon"] == "original_window"
+                and float(r["end_h"]) == hours and float(r["factor"]) == 1 and int(r["timing_repeat"] or 0) == 0):
+            key = (r["case"], r["method"], float(r["dx_m"]))
+            if key in windows:
+                raise ValueError("Multiple primary runs for one plain map")
+            windows[key] = r
+    files = []
+    for dx in spacings:
+        if any((case, method, dx) not in windows for case in cases for method in methods):
+            continue
+        fig, axes = plt.subplots(len(cases), len(methods), sharex=True, sharey=True, squeeze=False,
+                                 figsize=(7.1, 5.4), layout="constrained")
+        matched = set()
+        for row_index, (case, storm) in enumerate(cases.items()):
+            forcings = set()
+            for col, (method, label) in enumerate(methods.items()):
+                r = windows[case, method, dx]
+                wet, area, grid, physical = plain_extent_field(
+                    directory=directory, row=r, source=receipts[r["source_id"]], threshold_cm=threshold_cm,
+                )
+                width, height, support, gauge = grid[:4]
+                matched.add(grid)
+                forcings.add(physical)
+                ax = axes[row_index, col]
+                im = ax.imshow(wet * 100, origin="lower", extent=(0, width, 0, height), interpolation="nearest",
+                               cmap="Blues", vmin=0, vmax=100)
+                ax.axvline(gauge, ls="--", color="#6e4a39", linewidth=.7)
+                ax.set_title(f"{label}   {area / 1e6:.3f} km²")
+                if col == 0:
+                    rain_mm = float(r["rain_m3"]) / (width * height) * 1000
+                    ax.set_ylabel(f"{storm} ({rain_mm:g} mm)\nNorthing (m)")
+                if row_index == len(cases) - 1:
+                    ax.set_xlabel("Easting (m)")
+            if len(forcings) != 1:
+                raise ValueError("Physical inputs differ between solvers in a plain map")
+        if len(matched) != 1:
+            raise ValueError("Plain map panels have different terrain, support, gauge or cadence")
+        fig.suptitle(f"Extent ≥{threshold_cm} cm at hour {hours:g} on the {dx:g} m hydraulic grid")
+        fig.colorbar(im, ax=axes, location="bottom", shrink=.66, pad=.04,
+                     label=f"Area of each {support:g} m reporting cell at or above the depth threshold (%)")
+        name = f"plain_709_extent_{threshold_cm}cm_{dx:g}m"
+        save(fig=fig, folder=study / "supplementary/operational_storms", name=name)
+        files.append(name)
+    return files
+
+
 def from_records(*, study):
     paper_style()
     out = study / "figures"
@@ -814,6 +894,10 @@ def from_records(*, study):
     outlet_repair(study=study,out=out)
     incised_spatial_contrasts(study=study)
     incised_extent_history(study=study)
+    plain_extent_panels(study=study, cases={"plain-709-moderate-1000x1000": "Moderate",
+                                           "plain-709-intense-1000x1000": "Intense"},
+                        methods={"fv1": "FV1", "hancock_dense": "Hancock", "adaptive": "RK2"},
+                        spacings=(1, 5, 10), hours=8, threshold_cm=10)
     orton_transfer(study=study, out=out)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),

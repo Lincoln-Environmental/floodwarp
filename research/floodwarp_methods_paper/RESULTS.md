@@ -247,6 +247,21 @@ On plain-709-moderate-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 change
 
 On plain-709-intense-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.175% and net export by -14.9 m³ through 32 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](fidelity/native_results/fv1_temporal_sensitivity.csv)
 
+### Hydraulic grid and formulation on the same plain
+
+All grids cover the same 1 km². The comparison across grid spacings includes changes to both the represented bed and the hydraulic discretisation. The FV1 and Hancock columns at 1 m use identical terrain and forcing. Initial-window peaks are the largest recorded through hour eight. Rain stops at hour six, and a later crest can exceed the initial-window peak.
+
+| Storm | Window | End (h) | Interval (s) | Observable | FV1, 1 m | Hancock, 1 m | Hancock, 5 m | Hancock, 10 m |
+|---|---|---:|---:|---|---:|---:|---:|---:|
+| Intense | Initial window | 8 | 60 | Peak (m³/s) | 2.481 | 3.044 | 6.949 | 6.806 |
+| Intense | Initial window | 8 | 60 | Export (m³) | 27,557 | 39,616 | 76,714 | 74,310 |
+| Moderate | Initial window | 8 | 60 | Peak (m³/s) | 0.525 | 0.9179 | 0.9629 | 0.9154 |
+| Moderate | Initial window | 8 | 60 | Export (m³) | 8,446 | 17,236 | 16,401 | 15,411 |
+| Moderate | Common recession | 40 | 60 | Peak (m³/s) | 0.525 | 0.9179 | 0.9629 | 0.9154 |
+| Moderate | Common recession | 40 | 60 | Export (m³) | 26,394 | 43,388 | 40,372 | 38,983 |
+
+[Per-configuration observations and physical input identities](fidelity/native_results/measured_windows.csv)
+
 ### Where export differences develop
 
 The table gives FV1 minus dense Hancock on either side of the internal gauge. The upstream east face is the gauge and the downstream east face is the outlet. Infiltration and retained storage come from separate cell fields. Each reach closes against its initial water, rain and signed transport on all four sides.
@@ -274,11 +289,23 @@ Each row compares fields at the stated physical time on identical hydraulic cell
 | hill-8500-back-1000x1000 | 12.0 | 1 | FV1 | 1.0 | 0.0092575 | 6.2974 | empty union | empty union |
 | hill-8500-back-1000x1000 | 8.0 | 1 | Hancock | 1.0 | 0.010741 | 0.018788 | empty union | empty union |
 | hill-8500-back-1000x1000 | 12.0 | 1 | Hancock | 1.0 | 0 | 0.018788 | empty union | empty union |
+| plain-709-intense-1000x1000 | 8.0 | 10 | FV1 | 1.0 | 51.745 | 28.641 | 0.72401 | 0.44878 |
+| plain-709-intense-1000x1000 | 8.0 | 5 | FV1 | 1.0 | 53.231 | 29.119 | 0.71496 | 0.43857 |
+| plain-709-intense-1000x1000 | 8.0 | 5 | Hancock | 1.0 | 0.076497 | 0.078499 | 0.99961 | 0.99843 |
+| plain-709-intense-1000x1000 | 8.0 | 10 | Hancock | 1.0 | 0.39292 | 0.27157 | 0.99638 | 0.98982 |
 | plain-709-moderate-1000x1000 | 8.0 | 1 | RK2 | 0.5 | 3.3885e-05 | 0.001106 | 1.00000 | 1.00000 |
 | plain-709-moderate-1000x1000 | 32.0 | 1 | RK2 | 0.5 | 3.7162e-05 | 0.001106 | 1.00000 | 1.00000 |
 | plain-709-moderate-1000x1000 | 40.0 | 1 | RK2 | 0.5 | 5.6854e-06 | 0.001106 | 1.00000 | 1.00000 |
+| plain-709-moderate-1000x1000 | 8.0 | 5 | FV1 | 1.0 | 19.793 | 16.335 | 0.79376 | 0.88864 |
+| plain-709-moderate-1000x1000 | 40.0 | 5 | FV1 | 1.0 | 11.079 | 16.335 | 0.36364 | 0.25926 |
+| plain-709-moderate-1000x1000 | 8.0 | 10 | FV1 | 1.0 | 20.303 | 17.261 | 0.79584 | 0.84037 |
+| plain-709-moderate-1000x1000 | 40.0 | 10 | FV1 | 1.0 | 12.611 | 17.261 | 0.19355 | 0.00000 |
 | plain-709-moderate-1000x1000 | 8.0 | 1 | FV1 | 1.0 | 19.012 | 15.655 | 0.77918 | 0.79998 |
 | plain-709-moderate-1000x1000 | 40.0 | 1 | FV1 | 1.0 | 12.184 | 15.73 | 0.24261 | 0.35417 |
+| plain-709-moderate-1000x1000 | 8.0 | 5 | Hancock | 1.0 | 0.041501 | 0.027549 | 0.99926 | 0.99880 |
+| plain-709-moderate-1000x1000 | 40.0 | 5 | Hancock | 1.0 | 0.0032404 | 0.027549 | 1.00000 | 1.00000 |
+| plain-709-moderate-1000x1000 | 8.0 | 10 | Hancock | 1.0 | 0.09841 | 0.059938 | 0.99866 | 0.99595 |
+| plain-709-moderate-1000x1000 | 40.0 | 10 | Hancock | 1.0 | 0.025406 | 0.059938 | 1.00000 | empty union |
 | plain-709-moderate-1000x1000 | 8.0 | 1 | Hancock | 1.0 | 0.0053159 | 0.0035165 | 0.99991 | 0.99974 |
 | plain-709-moderate-1000x1000 | 32.0 | 1 | Hancock | 1.0 | 0.0037484 | 0.0035165 | 1.00000 | 1.00000 |
 | plain-709-moderate-1000x1000 | 40.0 | 1 | Hancock | 1.0 | 0.00052723 | 0.0035165 | 1.00000 | 1.00000 |
@@ -290,6 +317,8 @@ Each row compares fields at the stated physical time on identical hydraulic cell
 | plain-709-spatial-1000x1000 | 20.0 | 1 | Hancock | 1.0 | 0.00011577 | 0.0071151 | 1.00000 | 1.00000 |
 
 [Wet-union errors, connectivity and map identities](fidelity/native_results/native_grid_field_differences.csv)
+
+The maps show the same plain two hours after rainfall ended for the moderate and intense storms. Shading preserves the fraction of hydraulic cells reaching 10 cm in each 10 m reporting cell. The dashed line marks the internal gauge. [5 m hydraulic grid](supplementary/operational_storms/plain_709_extent_10cm_5m.pdf) · [10 m hydraulic grid](supplementary/operational_storms/plain_709_extent_10cm_10m.pdf)
 
 ## Practical grid selection on native terrain
 
