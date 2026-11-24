@@ -62,6 +62,10 @@ run_stage() {
 }
 main() {
     local stage=${1:-help} dry=false module
+    if [[ $stage == outlet-storms ]]; then
+        shift
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.outlet_storms "$@"
+    fi
     if [[ $stage == native-storms ]]; then
         shift
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_matrix "$@"

@@ -15,7 +15,7 @@ def along_flow(*, field, face):
     return array[:, ::-1] if face in ("west", "south") else array
 
 
-def measure(*, settings, dx, extension, method, face, dt):
+def measure(*, settings, dx, extension, method, face, dt, device="cpu", execution_mode="dense"):
     section, width = settings["section_m"], settings["width_m"]
     depth, grade, n = settings["depth_m"], settings["grade"], settings["manning"]
     length = section + extension
@@ -43,8 +43,8 @@ def measure(*, settings, dx, extension, method, face, dt):
     model = create_model(
         terrain=terrain,
         solver_method=method,
-        device="cpu",
-        execution_mode="dense",
+        device=device,
+        execution_mode=execution_mode,
         manning_n=n,
         gravity=settings["gravity"],
         explicit_maximum_dt=dt,
@@ -78,6 +78,8 @@ def measure(*, settings, dx, extension, method, face, dt):
         rows.append(
             dict(
                 method=method,
+                device=device,
+                execution_mode=execution_mode,
                 face=face,
                 maximum_dt_s=dt,
                 dx_m=dx,
@@ -101,8 +103,21 @@ def measure(*, settings, dx, extension, method, face, dt):
 
 
 def run(*, directory, settings):
-    folder = directory / "free_plane"
-    folder.mkdir(exist_ok=True)
+    identity = dict(
+        settings=settings, source_sha256=runner.checksum(Path(__file__)),
+        solver_sha256=runner.source_identity(
+            root=directory.parents[2], study=directory.parent, stage="long-storms"
+        ),
+        reference="Uniform supercritical Manning sheet beyond upstream influence",
+        downstream="FREE", upstream_and_lateral_faces="closed", device="cpu",
+    )
+    folder = directory / "free_plane" / runner.digest(identity)[:24]
+    folder.mkdir(parents=True, exist_ok=True)
+    if (folder / "identity.json").is_file() and (folder / "discharge.csv").is_file():
+        archived = json.loads((folder / "identity.json").read_text())
+        if archived != identity:
+            raise ValueError("Analytical control identity mismatch")
+        return
     rows = []
     for method in settings["methods"]:
         for dx in settings["grids_m"]:
@@ -129,21 +144,10 @@ def run(*, directory, settings):
                                 dt=dt,
                             )
                         )
-    metrics.csv_write(file=folder / "discharge.csv", rows=rows)
-    runner.write_json(
-        path=folder / "identity.json",
-        data=dict(
-            settings=settings,
-            source_sha256=runner.checksum(Path(__file__)),
-            solver_sha256=runner.source_identity(
-                root=directory.parents[2], study=directory.parent, stage="long-storms"
-            ),
-            reference="Uniform Manning sheet with positive outgoing characteristic speeds, before the upstream boundary can reach the section.",
-            downstream="FREE",
-            upstream_and_lateral_faces="closed",
-            device="cpu",
-        ),
-    )
+    temporary = folder / "discharge.tmp"
+    metrics.csv_write(file=temporary, rows=rows)
+    temporary.replace(folder / "discharge.csv")
+    runner.write_json(path=folder / "identity.json", data=identity)
 
 
 if __name__ == "__main__":

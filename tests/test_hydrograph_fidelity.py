@@ -847,22 +847,29 @@ def test_practical_matrix_uses_native_sources_and_matches_fixed_area_across_grid
     assert {s["dx"] for s in matched} == {1, 5, 10}
 
 
-def test_coincident_interior_supercritical_discharge_and_rotated_faces():
+@pytest.mark.parametrize("device", ("cpu", "cuda:0"))
+@pytest.mark.parametrize(("method", "mode"), (("fv2", "dense"), ("hancock", "dense"), ("hancock", "tiles")))
+def test_coincident_interior_supercritical_discharge_and_rotated_faces(device, method, mode):
+    import warp as wp
     from research.floodwarp_methods_paper.fidelity.free_plane import measure
 
+    if device.startswith("cuda") and not wp.is_cuda_available():
+        pytest.skip("CUDA is unavailable")
     folder = Path(__file__).resolve().parents[1] / "research/floodwarp_methods_paper/fidelity"
     settings = json.loads((folder/"free_plane_settings.json").read_text())
     compared={}
     for distance in (0, 400):
         values=[]
         for face in settings["cardinal_faces"]:
-            row=measure(settings=settings,dx=10,extension=distance,method="fv2",face=face,dt=settings["fine_dt_s"])[-1]
+            row = measure(settings=settings, dx=10, extension=distance, method=method, face=face,
+                          dt=settings["fine_dt_s"], device=device, execution_mode=mode)[-1]
             assert row["reference_froude"] > 1
             assert abs(row["residual_m3"]) < 1e-8
             values.append(row["discharge_bias_pct"])
         np.testing.assert_allclose(values,values[0],atol=1e-10,rtol=0)
         compared[distance]=values[0]
     assert abs(compared[400]) < .05
+    assert abs(compared[0]) < 1.0
 
 
 def test_native_outlet_budget_partitions_routed_water_and_local_drawdown():

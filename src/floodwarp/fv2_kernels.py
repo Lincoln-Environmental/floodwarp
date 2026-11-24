@@ -348,17 +348,50 @@ def slope(
     flags: wp.array(dtype=wp.int32),
     bed: wp.array(dtype=wp.float64),
     active: wp.array(dtype=wp.int32),
+    types: wp.array(dtype=wp.int32),
     nx: int,
     ny: int,
     dry: wp.float64,
     mc: int,
+    free_slope: int,
 ):
     a = neighbor(k, axis, -1, nx, ny)
     b = neighbor(k, axis, 1, nx, ny)
     zero = wp.float64(0.0)
-    if active[k] == 0 or a < 0 or b < 0:
+    if active[k] == 0 or q[k][0] <= dry:
         return wp.vec4d(zero)
-    if active[a] == 0 or active[b] == 0 or wp.min(q[k][0], wp.min(q[a][0], q[b][0])) <= dry:
+    left = a >= 0 and active[wp.max(0, a)] != 0
+    right = b >= 0 and active[wp.max(0, b)] != 0
+    if not left or not right:
+        if free_slope == 0 or left == right:
+            return wp.vec4d(zero)
+        # Only the explicitly open normal face receives an extrapolated slope.
+        # The other axis independently follows its own boundary condition.
+        face = k
+        if axis == 0:
+            face += k / nx + int(left)
+        elif left:
+            face += nx
+        near = wp.where(left, a, b)
+        if types[face] != 2 or q[near][0] <= dry:
+            return wp.vec4d(zero)
+        side = wp.where(left, 1, -1)
+        dz = wp.float64(side) * (bed[k] - bed[near])
+        dh = wp.float64(side) * (q[k][0] - q[near][0])
+        geometry = wp.vec2d(dh + dz, dz)
+        far = neighbor(near, axis, -side, nx, ny)
+        if far >= 0 and active[wp.max(0, far)] != 0 and q[wp.max(0, far)][0] > dry:
+            rule = mc
+            if mc == 2:
+                rule = wp.where((flags[k] & (1 << axis)) != 0, 0, 1)
+            geometry = surface_bed_slopes(
+                dz, wp.float64(side) * (bed[near] - bed[far]),
+                dh, wp.float64(side) * (q[near][0] - q[far][0]), rule,
+            )
+        if wp.abs(geometry[0] - geometry[1]) >= wp.float64(2.0) * q[k][0]:
+            return wp.vec4d(zero)
+        return wp.vec4d(geometry[0], geometry[1], zero, zero)
+    if wp.min(q[a][0], q[b][0]) <= dry:
         return wp.vec4d(zero)
     h = q[k][0]
     if q[a] == q[k] and q[b] == q[k] and bed[a] == bed[k] and bed[b] == bed[k]:
@@ -399,13 +432,16 @@ def slopes(
     ny: int,
     dry: wp.float64,
     mc: int,
+    types_x: wp.array(dtype=wp.int32),
+    types_y: wp.array(dtype=wp.int32),
+    free_slope: int,
     work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
     if k < 0:
         return
-    sx[k] = slope(k, 0, q, inverse, flags, bed, active, nx, ny, dry, mc)
-    sy[k] = slope(k, 1, q, inverse, flags, bed, active, nx, ny, dry, mc)
+    sx[k] = slope(k, 0, q, inverse, flags, bed, active, types_x, nx, ny, dry, mc, free_slope)
+    sy[k] = slope(k, 1, q, inverse, flags, bed, active, types_y, nx, ny, dry, mc, free_slope)
 
 
 @wp.func

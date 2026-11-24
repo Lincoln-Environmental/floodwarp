@@ -100,7 +100,7 @@ main() {
     if [[ $stage == historical-terrain-features || $stage == historical-advisor-train || $stage == historical-advisor-validate || $stage == historical-million-terrain || $stage == historical-resolution || $stage == historical-million-storms || $stage == historical-large-references || $stage == historical-large-refinements || $stage == historical-heldout-references ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.controller "${stage#historical-}" "${selected_options[@]}"
     fi
-    if [[ $stage == native-products || $stage == native-publication || $stage == native-status || $stage == strong-storm-controls || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
+    if [[ $stage == free-plane || $stage == free-reach || $stage == outlet-storms || $stage == native-products || $stage == native-publication || $stage == native-status || $stage == strong-storm-controls || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
         exec ./scripts/run_hydrograph_fidelity.sh "$stage" "${selected_options[@]}"
     fi
     if [[ $stage == all ]]; then

@@ -116,11 +116,14 @@ def slopes_predict(
     nx: int,
     ny: int,
     mc: int,
+    types_x: wp.array(dtype=wp.int32),
+    types_y: wp.array(dtype=wp.int32),
+    free_slope: int,
     work: Any,
 ):
     k = scheduled_index(wp.tid(), work)
     if k < 0:
         return
-    x = slope(k, 0, q, inverse, flags, bed, active, nx, ny, dry, mc)
-    y = slope(k, 1, q, inverse, flags, bed, active, nx, ny, dry, mc)
+    x = slope(k, 0, q, inverse, flags, bed, active, types_x, nx, ny, dry, mc, free_slope)
+    y = slope(k, 1, q, inverse, flags, bed, active, types_y, nx, ny, dry, mc, free_slope)
     predict_cell(k, x, y, q, out, inverse, inverse_mid, sx, sy, active, fallback, ctrl, dx, dy, g, dry, cfl)

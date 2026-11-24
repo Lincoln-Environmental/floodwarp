@@ -15,7 +15,8 @@ class FV2Solver(FullSWESolver):
     integration = "ssprk2_strang_drag"
 
     def __init__(
-        self, *, limiter="mc", execution_mode="dense", structures=(), flux_scheme=DEFAULT_FULL_SWE_FLUX, **options
+        self, *, limiter="mc", execution_mode="dense", structures=(), flux_scheme=DEFAULT_FULL_SWE_FLUX,
+        free_boundary_reconstruction=None, **options
     ):
         if structures:
             raise ValueError(
@@ -30,6 +31,11 @@ class FV2Solver(FullSWESolver):
             raise ValueError(f"{self.method_name} does not support {flux_scheme!r}. "
                              "Use contact_hll or explicitly select FV1 for its alternative fluxes.")
         self.limiter = limiter
+        if free_boundary_reconstruction is None:
+            free_boundary_reconstruction = "constant" if self.method_name == "fv1_muscl_euler" else "one_sided"
+        if free_boundary_reconstruction not in ("constant", "one_sided"):
+            raise ValueError("FREE boundary reconstruction requires constant or one_sided")
+        self.free_boundary_reconstruction = free_boundary_reconstruction
         self._limiter_code = {"minmod": 0, "mc": 1, "adaptive": 2}[limiter]
         super().__init__(execution_mode=execution_mode, flux_scheme=flux_scheme, **options)
         directional = getattr(self, "cfl_policy", "legacy") == "directional"
@@ -163,6 +169,8 @@ class FV2Solver(FullSWESolver):
         )
         if self.limiter == "adaptive":
             configuration["shock_sensor"] = "compressive_froude_band_one_cell_halo_v1"
+        if self.free_boundary_reconstruction == "one_sided":
+            configuration["free_boundary_reconstruction"] = "one_sided"
         return configuration
 
     def restore_state(self, *, state):
@@ -262,6 +270,7 @@ class FV2Solver(FullSWESolver):
                         self.ny,
                         self.dry_depth,
                         self._limiter_code,
+                        f["types_x"], f["types_y"], int(self.free_boundary_reconstruction == "one_sided"),
                     ],
                     layout=0,
                 )
@@ -292,6 +301,7 @@ class FV2Solver(FullSWESolver):
                 ]
                 if self._fuse_prediction:
                     arguments.extend([self._shock_flags, f["bed"], self.nx, self.ny, self._limiter_code])
+                    arguments.extend([f["types_x"], f["types_y"], int(self.free_boundary_reconstruction == "one_sided")])
                     self._launch_grid(slopes_predict, n, arguments, layout=0)
                 else:
                     self._launch_grid(predict, n, arguments, layout=0)
