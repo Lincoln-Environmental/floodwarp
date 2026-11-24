@@ -350,6 +350,9 @@ def summary(*, rows):
                 * sum(r["chosen"] is None for r in allrows)
                 / len(allrows),
                 median_regret_pct=100 * np.median(reg) if reg else None,
+                regret_assessable=len(reg),
+                interval_predictions_assessable=len(predicted),
+                agreement_assessable=len(ties),
                 cheaper_acceptable=sum(r["cheaper_option"] is True for r in qualified),
                 abstentions=sum(r["chosen"] is None for r in allrows),
                 runtime_median_absolute_pct_error=100

@@ -20,6 +20,7 @@ from research.floodwarp_methods_paper.fidelity import (
     parity,
     recession,
     recession_figures,
+    repeat_costs,
     statistics,
 )
 from research.floodwarp_methods_paper.plan import read_config
@@ -123,7 +124,7 @@ def describe(*, item, settings, status):
         hardware=item["hardware"],
         solver_source=item["solver_source"],
         timing_repeat=s.get("timing_repeat"),
-        execution_mode=assessment.numerical_identity(method=s["method"])["execution_mode"],
+        execution_mode=assessment.numerical_identity(method=s.get("requested_method", s["method"]))["execution_mode"],
         end_to_end_s=d.get("end_to_end_s"),
         hydraulic_s_per_step=d["hydraulic_s"]/d["steps"],
         steps=d["steps"],
@@ -258,6 +259,14 @@ def grouped(*, directory, records, target, expected):
             item["native_sha"] = parent["native_sha"]
             item["hardware"] = parent["hardware"]
             item["solver_source"] = parent["solver_source"]
+            if item["id"] != parent["id"]:
+                elapsed = sorted((directory / "extension_timings" / item["id"]).glob("*.json"))
+                timings = [json.loads(path.read_text()) for path in elapsed]
+                ends = [r["end_s"] for r in timings if r["end_s"] <= s["hours"] * 3600]
+                if (ends and ends == sorted(set(ends)) and ends[-1] == s["hours"] * 3600
+                        and parent["d"].get("end_to_end_s") is not None):
+                    item["d"]["end_to_end_s"] = parent["d"]["end_to_end_s"] + sum(
+                        r["elapsed_wall_s"] for r in timings if r["end_s"] <= ends[-1])
         result[cohort, case, "native metre area means"] = items
     return result
 
@@ -375,6 +384,12 @@ def run(*, directory, require_complete):
         for i in items
     ]
     metrics.csv_write(file=target / "measured_windows.csv", rows=original + complete)
+    timings = repeat_costs.collect(rows=original + complete, target=target)
+    for members in groups.values():
+        for item in members:
+            repeated = timings.get(item["id"])
+            if repeated:
+                item["cost_for_comparison_s"] = repeated["hydraulic_median_s"]
     hydro = json.loads((directory / "design.json").read_text())
     application = json.loads((directory / "application_settings.json").read_text())
     native_policies.collect(
@@ -388,7 +403,8 @@ def run(*, directory, require_complete):
     )
     additional = json.loads((directory/"native_advisor_settings.json").read_text())["reference_limits"]
     hydro = dict(hydro, reference_limits={**hydro["reference_limits"], **additional})
-    rows, checks = assessment.storm_rows(groups=groups, cfg=hydro)
+    primary = {key: members for key, members in groups.items() if not key[0].startswith("complete-native-repeat-")}
+    rows, checks = assessment.storm_rows(groups=primary, cfg=hydro)
     metrics.csv_write(file=target / "hydraulic_fidelity.csv", rows=rows)
     metrics.csv_write(file=target / "reference_checks.csv", rows=checks)
     front = statistics.frontiers(rows=rows, objectives=tuple(hydro["reference_limits"]))
@@ -400,7 +416,7 @@ def run(*, directory, require_complete):
         spacings=application["fv1_budget_grids_m"],
     )
     final_depth.process(
-        groups=groups,
+        groups=primary,
         directory=directory,
         target=target,
         settings=application["endpoint_depth"],
@@ -423,7 +439,7 @@ def run(*, directory, require_complete):
         "",
         "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures) · [5 cm and 10 cm native extent](incised_practical_extent.csv) · [Matched-grid depth differences](incised_state_disagreement.csv) · [Accepted steps, retries, memory and accounting](whole_storm_diagnostics.csv) · [Costs by phase and footprint](cost_by_phase.csv) · [Original policy parity](original_execution_parity.csv) · [Recession policy parity](recession_execution_parity.csv)",
         "",
-        "[Rainfall, outlet discharge, wet area and cumulative GPU runtime by event](event_figures.csv) · [Verified dense, tiled and automatic policy costs](policy_cost_events.csv) · [Matched 15-minute timing windows](policy_cost_windows.csv)",
+        "[Rainfall, outlet discharge, wet area and cumulative GPU runtime by event](event_figures.csv) · [Verified dense, tiled and automatic policy costs](policy_cost_events.csv) · [Matched 15-minute timing windows](policy_cost_windows.csv) · [Independent timings, run IDs and spread](timing_distribution.csv)",
     ]
     (target / "README.md").write_text("\n".join(text) + "\n")
     print(text[2], flush=True)

@@ -71,8 +71,9 @@ def feasible_cost(*, rows, target, tolerances, spacings, name="fidelity"):
             if fv["method"] != "fv1" or fv["dx"] not in spacings:
                 continue
             allowed = [r for r in valid if r["runtime_s"] <= fv["runtime_s"]]
-            best = min((r["certified_error"] for r in allowed), default=None)
-            for r in [q for q in allowed if q["certified_error"] == best] or [None]:
+            best = min((r["absolute_error"] for r in allowed), default=None)
+            best_upper = min((r["certified_error"] for r in allowed), default=None)
+            for r in [q for q in allowed if q["absolute_error"] == best] or [None]:
                 budgets.append(
                     dict(
                         meta,
@@ -89,8 +90,11 @@ def feasible_cost(*, rows, target, tolerances, spacings, name="fidelity"):
                         runtime_s=r["runtime_s"] if r else None,
                         error_pct=r["absolute_error"] if r and name == "fidelity" else None,
                         measured_error=r["absolute_error"] if r else None,
-                        conservative_error=best,
+                        conservative_error=r["certified_error"] if r else None,
+                        smallest_conservative_error_in_budget=best_upper,
                         reference_sensitivity=r.get("reference_sensitivity") if r else None,
+                        steps=r.get("steps") if r else None,
+                        hydraulic_s_per_step=r["runtime_s"]/r["steps"] if r and r.get("steps") else None,
                     )
                 )
     metrics.csv_write(file=target / f"least_cost_{name}.csv", rows=decisions)

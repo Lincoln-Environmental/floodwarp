@@ -13,6 +13,60 @@ def fmt(value):
     return "unavailable" if value in (None, "") else f"{float(value):.4g}"
 
 
+def repaired_budgets(*, directory):
+    balances = directory / "water_differences.csv"
+    if not balances.exists():
+        return ""
+    extent = {r["run_id"]: r for r in csv_read(file=directory / "extent.csv") if float(r["hour"]) == 8}
+    lines = []
+    for row in csv_read(file=balances):
+        if (row["first_method"],row["second_method"],row["extension_m"]) != ("fv1","hancock_adaptive","0"):
+            continue
+        first, second = extent[row["first"]], extent[row["second"]]
+        lines.append(f"At {row['dx_m']} m, FV1 minus Hancock net export was {float(row['gauge_m3']):+,.0f} m³. "
+                     f"The corresponding cumulative infiltration differences were {float(row['infiltration_inside_rain_m3']):+,.0f} m³ "
+                     f"inside the rainfall footprint and {float(row['infiltration_outside_rain_m3']):+,.0f} m³ outside. "
+                     f"The final storage difference was {float(row['footprint_storage_m3']):+,.0f} m³. "
+                     f"At hour eight their areas above 5 cm were {float(first['area_above_5cm_m2'])/1e6:.4f} "
+                     f"and {float(second['area_above_5cm_m2'])/1e6:.4f} km².")
+    qualified = [r["metric"] for r in csv_read(file=directory/"reference_checks.csv")
+                 if r["representation"] == "0 m downstream extension" and r["station"] == "outlet" and r["qualified"] == "True"]
+    status = ", ".join(qualified) if qualified else "none"
+    lines.append(f"Outlet observables passing all three reference checks at the direct boundary: {status}. "
+                 "These checks support comparisons on the coarser grid. Practical 5 m absolute accuracy remains unresolved. "
+                 "[Reference qualification by observable](../fidelity/outlet_results/reference_checks.csv)")
+    return "\n" + "\n\n".join(lines) + "\n"
+
+
+def widespread_plain(*, study):
+    import json
+
+    directory = study/"fidelity/strong_storms"
+    path = directory/"completed.csv"
+    if not path.exists():
+        return ""
+    groups = defaultdict(dict)
+    receipt = study/"fidelity/outlet_results/sources.json"
+    if not receipt.is_file():
+        return ""
+    current = json.loads(receipt.read_text())["solver"]
+    for row in csv_read(file=path):
+        source=json.loads((directory/row["id"]/"inputs.json").read_text())
+        if source["identity"]["numerical"] == current:
+            groups[row["storm"],row["end_h"]][row["method"]] = row
+    lines=[]
+    for (storm,end), methods in sorted(groups.items()):
+        if {"fv1","hancock_dense"} <= methods.keys():
+            f, h = methods["fv1"], methods["hancock_dense"]
+            lines.append(f"Under {storm} rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at "
+                         f"{float(f['peak_m3s']):.3f} and {float(h['peak_m3s']):.3f} m³/s. "
+                         f"They exported {float(f['outlet_m3']):,.0f} and {float(h['outlet_m3']):,.0f} m³ "
+                         f"through the common {end}-hour endpoint.")
+    if not lines:
+        return ""
+    return "\n" + " ".join(lines) + " Both gauges passed the recession criterion. These CPU controls measure formulation disagreement. " +           "[Six-hour rainfall and complete recession accounts](../fidelity/strong_storms/completed.csv)\n"
+
+
 def completed_storms(*, study):
     folder = study / "fidelity/small_storms"
     if not (folder / "paired_differences.csv").is_file():
@@ -299,6 +353,15 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                     "disappeared. These are one-minute means at the original outlet. "
                     "[Fixed-gauge boundary experiments and water budgets](../fidelity/outlet_results/README.md)\n"
                 )
+                correction += repaired_budgets(directory=repaired.parent)
+                correction += widespread_plain(study=study)
+        transfer = study / "fidelity/orton_transfer/transfer.csv"
+        if transfer.exists():
+            transfers = csv_read(file=transfer)
+            correction += (f"\n{len(transfers)} of nine Orton Bradley configurations completed the archived 48-hour HIRDS "
+                           "design storm. These measured differences quantify numerical transfer to real terrain under design "
+                           "forcing. Errors against an observed event remain unknown. "
+                           "[Transfer hydrographs, water balance and GPU costs](../fidelity/orton_transfer/transfer.csv)\n")
         from research.floodwarp_methods_paper.fidelity.progress import pulse_comparison
 
         if (study / "fidelity/results/sharp_pulses.csv").exists():

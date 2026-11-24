@@ -65,6 +65,14 @@ run_stage() {
 }
 main() {
     local stage=${1:-help} dry=false module
+    if [[ $stage == outlet-timing-repeats ]]; then
+        shift
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.outlet_timing "$@"
+    fi
+    if [[ $stage == native-timing-repeats ]]; then
+        shift
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.timing_repeats "$@"
+    fi
     if [[ $stage == orton-transfer ]]; then
         shift
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.orton_transfer "$@"

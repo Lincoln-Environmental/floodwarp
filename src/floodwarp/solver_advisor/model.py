@@ -242,6 +242,10 @@ def recommend(
         "outlet_discharge": model.get("outlet_discharge_objective", "discharge"),
         "computational_runtime": "runtime",
     }.get(objective, objective)
+    if "native_objective_spacings" in model and objective not in model["tolerances"]:
+        objective = {"peak_discharge": "relative_peak_discharge",
+                     "peak_timing": "relative_peak_timing",
+                     "discharge": "relative_hydrograph_rmse"}.get(objective, objective)
     if objective in METRICS and "fidelity_validation" not in model:
         model = with_evidence(model=model)
     practical_extent = objective in (
@@ -250,7 +254,7 @@ def recommend(
         "maximum_inundation_5cm",
         "maximum_inundation_10cm",
     )
-    if objective not in (*model["tolerances"], "runtime") and not practical_extent:
+    if objective not in (*model["tolerances"], *METRICS, "runtime") and not practical_extent:
         raise ValueError("Unknown hydraulic objective")
     if tolerance is None and objective != "runtime":
         tolerance = model["tolerances"].get(objective)
@@ -471,6 +475,18 @@ def recommend(
     return result
 
 
+def choose_resolution(*, model, results):
+    requested = results[0]
+    supported = model.get("native_cross_grid_validation", {}).get(requested["objective"], [])
+    permitted = [r for r in results if r["status"] == "recommended" and
+                 (r is requested or any(requested["resolution_m"] in pair and r["resolution_m"] in pair for pair in supported))]
+    if len(results) > 1 and not supported:
+        requested["warnings"].append(
+            "A practical resolution change requires independent native-metre cross-grid validation for this objective."
+        )
+    return min(permitted, key=forecast_time) if permitted else requested
+
+
 def recommend_dem(
     *,
     dem,
@@ -529,25 +545,7 @@ def recommend_dem(
             )
         results.append(rec)
     requested = results[0]
-    supported = model.get("native_cross_grid_validation", {}).get(
-        requested["objective"], []
-    )
-    feasible = [
-        r
-        for r in results
-        if r["status"] == "recommended"
-        and (
-            r is requested
-            or any(
-                resolution in pair and r["resolution_m"] in pair for pair in supported
-            )
-        )
-    ]
-    best = min(feasible, key=forecast_time) if feasible else requested
-    if len(results) > 1 and not supported:
-        requested["warnings"].append(
-            "A practical resolution change requires independent native-metre cross-grid validation for this objective."
-        )
+    best = choose_resolution(model=model, results=results)
     out = dict(
         selected=best,
         comparisons=results,

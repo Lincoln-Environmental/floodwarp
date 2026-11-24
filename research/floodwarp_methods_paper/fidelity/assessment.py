@@ -14,6 +14,8 @@ from floodwarp.solver_advisor.model import configuration
 
 
 def limits(*, row, key):
+    if key in ("infiltration_bias_pct", "net_export_bias_pct"):
+        return row.get(key) is not None and np.isfinite(row[key])
     candidate_missing = (
         row["reference_status"] == "model_insufficient_outward_or_reversing"
     )
@@ -123,6 +125,14 @@ def compare(*, it, ref, station, cfg):
     tr, b = curve(it=ref, station=station)
     np.testing.assert_array_equal(t, tr)
     result = evaluate(edges=t, model=a, reference=b, config=cfg)
+    net_reference = float(b @ np.diff(tr))
+    minimum_export = max(cfg["minimum_volume_m3"], cfg["reversal_fraction"] * float(np.abs(b) @ np.diff(tr)))
+    if net_reference >= minimum_export and np.max(b) >= cfg["minimum_peak_m3s"]:
+        result["net_export_bias_pct"] = 100 * (float(a @ np.diff(t)) / net_reference - 1)
+    soil_ref = ref["d"].get("infiltration_m3")
+    soil_model = it["d"].get("infiltration_m3")
+    if soil_ref is not None and soil_model is not None and soil_ref >= cfg["minimum_volume_m3"]:
+        result["infiltration_bias_pct"] = 100 * (soil_model / soil_ref - 1)
     if result.get("active_nrmse_peak") is not None:
         result["active_nrmse_peak_pct"] = 100 * result["active_nrmse_peak"]
     for prefix, run in (("model", it), ("reference", ref)):
@@ -294,7 +304,8 @@ def storm_rows(*, groups, cfg):
                     cells=round(np.prod(dims) / s["dx"] ** 2),
                     area_m2=np.prod(dims),
                     hours=s["hours"],
-                    runtime_s=d["hydraulic_s"],
+                    runtime_s=it.get("cost_for_comparison_s", d["hydraulic_s"]),
+                    steps=d.get("steps"),
                     gradient=d["forcing"]["parameters"]["grade"],
                     wet_fraction=np.mean([f["wet_fraction"] for f in frames])
                     if frames

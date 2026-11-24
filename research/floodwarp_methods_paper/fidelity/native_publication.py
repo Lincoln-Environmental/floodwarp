@@ -157,7 +157,8 @@ def advisor_report(*, directory, output):
     return [*table, "", "Depth tolerances are fixed across the percentage scenarios. "
             "Runtime regret requires an assessable selection and a measured feasible alternative.",
             "", f"[Validation figure](heldout_advisor.pdf) · [All decisions]({relative}/decisions.csv) · "
-            f"[Independent final terrain and subgroup results]({relative}/strata.csv)"], sources
+            f"[Independent final terrain and subgroup results]({relative}/strata.csv) · "
+            f"[Joint method and resolution decisions, by requested spacing]({relative}/joint_summary.csv)"], sources
 
 
 def policy_report(*, source, output):
@@ -246,6 +247,16 @@ def run(*, directory):
     )
     policy_text, policy_sources = policy_report(source=source, output=output)
     text.extend(["", "## Dense and tiled execution", "", *policy_text])
+    distribution = source / "timing_distribution.csv"
+    if distribution.exists():
+        repeats = metrics.csv_read(file=distribution)
+        measured = [r for r in repeats if r["horizon"] == "completed recession"]
+        complete = [r for r in measured if r["has_three_timings"] == "True"]
+        text.extend(["",f"{len(complete)} of {len(measured)} matched full-recession configurations have at least three "
+                     "independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs "
+                     "where available. End-to-end timing includes setup and recorded continuation work.",
+                     "", "[Timing identities, quartiles and range](../native_results/timing_distribution.csv)"])
+        policy_sources = [*policy_sources,distribution]
     settings_file = directory / "application_settings.json"
     settings = json.loads(settings_file.read_text())
     terrain_text, terrain_sources = native_control_report.run(

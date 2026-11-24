@@ -163,9 +163,11 @@ def sample_rows(*, directory, partitions, require_full, config, design):
                 run_id=ident,
                 descriptor_id=feature["identity"],
                 native_sha=row["native_sha"],
+                end_h=float(row["end_h"]),
+                interval_s=float(row["interval_s"]),
                 features=f["features"],
                 hardware=hardware,
-                runtime_s=float(row["hydraulic_s"]),
+                runtime_s=float(obs["runtime_s"]),
                 memory_mib=max(memory),
                 errors=errors,
                 qualified={o: value is not None for o, value in errors.items()},
@@ -409,8 +411,13 @@ def validate(*, directory, settings, config, design):
     metrics.csv_write(file=output / "decisions.csv", rows=combined)
     metrics.csv_write(file=output / "summary.csv", rows=summary)
     by_subset = []
+    paired = []
     for pct in settings["assessment_percentages"]:
         trials = [r for r in combined if r["percentage_scenario"] == pct]
+        from research.floodwarp_methods_paper.fidelity.paired_advisor import evaluate_pairs
+
+        paired.extend(dict(r, percentage_scenario=pct) for r in evaluate_pairs(
+            model=model, rows=held, trials=trials, spacings=settings["practical_pair_m"]))
         for axis in ("family", "dx", "cells", "terrain_id", "wet_band"):
             for value in sorted({r[axis] for r in trials}):
                 for r in advisor.summary(
@@ -434,6 +441,13 @@ def validate(*, directory, settings, config, design):
             for r in advisor.summary(rows=final)
         )
     metrics.csv_write(file=output / "strata.csv", rows=by_subset)
+    metrics.csv_write(file=output / "joint_decisions.csv", rows=paired)
+    paired_summary = []
+    for pct in settings["assessment_percentages"]:
+        for dx in settings["practical_pair_m"]:
+            cohort = [r for r in paired if r["percentage_scenario"] == pct and r["requested_dx"] == dx]
+            paired_summary.extend(dict(s,percentage_scenario=pct,requested_dx=dx) for s in advisor.summary(rows=cohort))
+    metrics.csv_write(file=output / "joint_summary.csv",rows=paired_summary)
     runner.write_json(
         path=output / "sources.json",
         data=dict(
@@ -442,7 +456,8 @@ def validate(*, directory, settings, config, design):
             final_independent_terrain_ids=settings["new_final_terrain_ids"],
             files={
                 name: runner.checksum(output / name)
-                for name in ("summary.csv", "strata.csv", "decisions.csv", "candidate_predictions.csv")
+                for name in ("summary.csv", "strata.csv", "decisions.csv", "candidate_predictions.csv",
+                             "joint_decisions.csv", "joint_summary.csv")
             },
         ),
     )

@@ -359,8 +359,12 @@ def run(*, directory, settings, cohorts):
             continue
         end = max(int(i["s"]["hours"] * 3600) for i in selected)
         records = []
+        repeat_end = settings.get("timing_repeat_end_s", end)
+        if repeat_end < end:
+            raise ValueError("Timing repeat ends before the primary window")
+        need |= repeat_end > end
         if need:
-            floor = end + settings["first_extension_h"] * 3600
+            floor = max(end + settings["first_extension_h"] * 3600, repeat_end)
             while True:
                 records = [
                     prolong(

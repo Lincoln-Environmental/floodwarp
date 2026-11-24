@@ -234,6 +234,8 @@ def run(*, directory, settings, config, design, stopping):
                 "Strong storm still has unresolved discharge at maximum horizon"
             )
         metrics.csv_write(file=directory / "strong_storms/completed.csv", rows=output)
+    cohort = runner.digest(sorted(row["id"] for row in output))[:24]
+    metrics.csv_write(file=directory / "strong_storms" / cohort / "completed.csv", rows=output)
 
 
 if __name__ == "__main__":

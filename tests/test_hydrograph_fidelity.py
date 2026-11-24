@@ -1032,7 +1032,7 @@ def test_native_advisor_freezes_before_scoring_held_out_groups(tmp_path, monkeyp
     directory.mkdir(parents=True)
     setting = dict(fit_percent=10, assessment_percentages=[5, 10], depth_tolerance_m=.01,
                    validation_groups_per_spacing=2, hardware="test GPU", rules=["advisor", "slope", "fv1", "hancock_dense", "oracle"],
-                   new_final_terrain_ids=["test0"], evaluation_wet_edges=[0, .01, .05, .2, .5, 1])
+                   new_final_terrain_ids=["test0"], practical_pair_m=[5,10], evaluation_wet_edges=[0, .01, .05, .2, .5, 1])
     config = dict(advisor=dict(heldout_family="mixed", neighbours=[2],coverage_quantile=.95,quantile=.9))
     accessed = []
 
@@ -1050,6 +1050,7 @@ def test_native_advisor_freezes_before_scoring_held_out_groups(tmp_path, monkeyp
                         errors={o:.001*work for o in goals}
                         data.append(dict(terrain_id=group,case=group,landform="plain",storm="moderate",split=part,
                                          run_id=f"{group}-{dx}-{m}",method=m,features=f,hardware="test GPU",
+                                         native_sha=group,end_h=8,interval_s=60,
                                          runtime_s=float(work),memory_mib=4.,wet_fraction=.1,sampled_regime=None,
                                          errors=errors,qualified=dict.fromkeys(goals,True)))
         return data
@@ -1068,6 +1069,10 @@ def test_native_advisor_freezes_before_scoring_held_out_groups(tmp_path, monkeyp
     test=native_advisor.validate(**args)
     assert accessed[-1]==("test",)
     assert all((test/name).is_file() for name in ("decisions.csv","strata.csv","candidate_predictions.csv"))
+    from research.floodwarp_methods_paper.metrics import csv_read
+    joint = csv_read(file=test/"joint_summary.csv")
+    assert {r["requested_dx"] for r in joint} == {"5","10"}
+    assert all(int(r["regret_assessable"]) <= int(r["empirical_feasible_opportunities"]) for r in joint)
     from research.floodwarp_methods_paper.fidelity.native_publication import advisor_report
 
     publication = directory / "native_publication"

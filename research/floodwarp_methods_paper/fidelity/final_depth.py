@@ -210,7 +210,7 @@ def process(*, groups, directory, target, settings):
                 station="domain",
                 interval_max_s=item["s"].get("interval", 900),
                 experiment_id=item["id"],
-                runtime_s=item["d"]["hydraulic_s"],
+                runtime_s=item.get("cost_for_comparison_s", item["d"]["hydraulic_s"]),
                 steps=item["d"].get("steps"),
                 **assessment.numerical_identity(method=item["s"]["method"]),
             )

@@ -77,7 +77,7 @@ def derived_identity(*, root, study, stage):
         study / "manifests/corrective_source_tree.json",
         study / "manifests/prevalidation_advisor_freeze.json",
     ]
-    if stage in ("manuscript", "verify"):
+    if stage in ("tables", "figures", "manuscript", "verify"):
         dependencies.extend(
             study / "fidelity" / name
             for name in (
@@ -86,6 +86,16 @@ def derived_identity(*, root, study, stage):
                 "outlet_results/last_40m.csv",
                 "outlet_results/extent.csv",
                 "outlet_results/depth_disagreement.csv",
+                "outlet_results/water_differences.csv",
+                "outlet_results/reference_checks.csv",
+                "outlet_results/spatial_reference_checks.csv",
+                "outlet_results/least_cost_fidelity.csv",
+                "outlet_results/equal_cost_fidelity.csv",
+                "native_results/timing_distribution.csv",
+                "native_advisor/heldout_evaluation.json",
+                "advisor_design/installed_frozen_cli.csv",
+                "orton_transfer/transfer.csv",
+                "strong_storms/completed.csv",
                 "results/sharp_pulses.csv",
                 "advisor_design/paired.json",
                 "advisor_design/installed_cli.csv",

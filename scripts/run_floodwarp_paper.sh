@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--resume | --force] [--dry-run]
 Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
         million-terrain million-pilots million-storms million-auto large-references large-refinements heldout-references million-profiles million-repeats recession-controls execution-policy pareto
-        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-publication strong-storm-controls free-plane free-reach outlet-storms outlet-results advisor-design advisor-cli-check orton-transfer outlet-qualification verify-native all historical-all
+        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-timing-repeats native-publication strong-storm-controls free-plane free-reach outlet-storms outlet-results advisor-design advisor-cli-check orton-transfer outlet-qualification verify-kernels verify-native all historical-all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
 Running check creates a Python 3.14 environment if needed and verifies the pinned packages.
 HELP
@@ -100,38 +100,33 @@ main() {
     if [[ $stage == historical-terrain-features || $stage == historical-advisor-train || $stage == historical-advisor-validate || $stage == historical-million-terrain || $stage == historical-resolution || $stage == historical-million-storms || $stage == historical-large-references || $stage == historical-large-refinements || $stage == historical-heldout-references ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.controller "${stage#historical-}" "${selected_options[@]}"
     fi
-    if [[ $stage == outlet-qualification ]]; then
-        for stage in free-plane free-reach outlet-storms outlet-results advisor-design advisor-cli-check; do
+    if [[ $stage == outlet-qualification || $stage == all ]]; then
+        if [[ $stage == all ]]; then
+            "$python_bin" -m research.floodwarp_methods_paper.controller analytical "${selected_options[@]}"
+            "$python_bin" -m research.floodwarp_methods_paper.controller convergence "${selected_options[@]}"
+        fi
+        for stage in free-plane free-reach outlet-storms outlet-results outlet-timing-repeats outlet-results verify-kernels million-terrain terrain-features advisor-design advisor-cli-check; do
             "$0" "$stage" "${selected_options[@]}"
         done
         for part in fit test; do
             "$0" native-storms --partition "$part" "${selected_options[@]}"
             "$0" native-products "${selected_options[@]}"
+            "$0" native-timing-repeats "${selected_options[@]}"
+            "$0" native-products "${selected_options[@]}"
             if [[ $part == fit ]]; then
                 ./scripts/run_hydrograph_fidelity.sh native-advisor-train "${selected_options[@]}"
+                "$0" advisor-cli-check "${selected_options[@]}"
             else
                 ./scripts/run_hydrograph_fidelity.sh native-advisor-validate "${selected_options[@]}"
             fi
         done
-        for stage in verify-native orton-transfer native-publication tables figures manuscript verify; do
+        for stage in verify-native advisor-design orton-transfer native-publication tables figures manuscript verify; do
             "$0" "$stage" "${selected_options[@]}"
         done
         return
     fi
-    if [[ $stage == orton-transfer || $stage == outlet-results || $stage == advisor-cli-check || $stage == advisor-design || $stage == free-plane || $stage == free-reach || $stage == outlet-storms || $stage == native-products || $stage == native-publication || $stage == native-status || $stage == strong-storm-controls || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
+    if [[ $stage == outlet-timing-repeats || $stage == verify-kernels || $stage == native-timing-repeats || $stage == orton-transfer || $stage == outlet-results || $stage == advisor-cli-check || $stage == advisor-design || $stage == free-plane || $stage == free-reach || $stage == outlet-storms || $stage == native-products || $stage == native-publication || $stage == native-status || $stage == strong-storm-controls || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
         exec ./scripts/run_hydrograph_fidelity.sh "$stage" "${selected_options[@]}"
-    fi
-    if [[ $stage == all ]]; then
-        if [[ ${#selected_options[@]} -gt 0 ]] && [[ ${#selected_options[@]} -ne 1 || ${selected_options[0]} != --dry-run ]]; then
-            exec ./scripts/run_hydrograph_fidelity.sh native-storms "${selected_options[@]}"
-        fi
-        "$python_bin" -m research.floodwarp_methods_paper.controller analytical "${selected_options[@]}"
-        "$python_bin" -m research.floodwarp_methods_paper.controller convergence "${selected_options[@]}"
-        ./scripts/run_hydrograph_fidelity.sh all "${selected_options[@]}"
-        for stage in tables figures manuscript verify; do
-            "$python_bin" -m research.floodwarp_methods_paper.controller "$stage" "${selected_options[@]}"
-        done
-        return
     fi
     if [[ $stage == hydrograph-fidelity || $stage == fidelity-figures ]]; then
         local substage=all

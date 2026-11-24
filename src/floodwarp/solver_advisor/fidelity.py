@@ -7,6 +7,8 @@ from pathlib import Path
 METRICS = {
     "relative_peak_discharge": "peak_bias_pct",
     "integrated_runoff": "volume_bias_pct",
+    "net_exported_volume": "net_export_bias_pct",
+    "cumulative_infiltration": "infiltration_bias_pct",
     "outlet_arrival": "arrival10_delay_pct",
     "median_passage": "t50_delay_pct",
     "relative_peak_timing": "peak_delay_pct",

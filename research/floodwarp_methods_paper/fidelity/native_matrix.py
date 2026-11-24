@@ -148,6 +148,8 @@ def prepare(*, spec, bundle, receipt, **kwargs):
         )
         forcing["numerical"] = model.solver.numerical_configuration()
         model.identity["requested_method"] = spec["requested_method"]
+    if spec.get("timing_repeat"):
+        model.identity["timing_repeat"] = spec["timing_repeat"]
     return model, expected, forcing
 
 
@@ -482,6 +484,7 @@ def run(*, directory, arguments):
     if not groups:
         raise ValueError("No native storm matches the requested selection")
     if "--dry-run" in opts:
+        print(sum(len(items) for items in groups.values()), "configurations in", len(groups), "physical events")
         for items in groups.values():
             if "--terrain-only" in opts:
                 print("Verify native 1 m terrain and area means", items[0]["case"])
@@ -490,6 +493,7 @@ def run(*, directory, arguments):
                 print(
                     s["case"],
                     s["dx"],
+                    "m grid", int(s["dimensions"][0] / s["dx"]), "x", int(s["dimensions"][1] / s["dx"]),
                     s["requested_method"],
                     "CFL factor",
                     s["factor"],
