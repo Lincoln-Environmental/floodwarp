@@ -75,6 +75,7 @@ def difference(*, candidate, reference, support, thresholds):
             a, b = maximum >= t, mr >= t
             union_max = np.count_nonzero(a | b)
             intersection_max = np.count_nonzero(a & b)
+            out[f"maximum_wet_union_area_{cm}cm_m2"] = int(union_max) * support**2
             out[f"maximum_extent_error_{cm}cm"] = (
                 1 - intersection_max / union_max if union_max else None
             )

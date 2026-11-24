@@ -100,3 +100,14 @@ def test_native_phase_totals_combine_recorded_prefix_aggregate_and_tail_interval
     del frames[-1]["compilation_s"]
     row = event_diagnostics(item=dict(base, d=data))
     assert row["compilation_s"] is None and row["compilation_s_intervals"] == 1
+
+
+def test_paper_reports_distinct_final_and_ever_wet_support():
+    from research.floodwarp_methods_paper.tables.generate import spatial_table_support
+
+    field = dict(support_m="10", reference_wet_area_5cm_m2="700", wet_union_area_5cm_m2="800",
+                 maximum_reference_wet_area_10cm_m2="200", maximum_wet_union_area_10cm_m2="300")
+    final = spatial_table_support(field=field, objective="extent_error_5cm")
+    maximum = spatial_table_support(field=field, objective="maximum_extent_error_10cm")
+    assert final["reference_wet_cells"] == 7 and final["wet_union_cells"] == 8
+    assert maximum["reference_wet_cells"] == 2 and maximum["wet_union_cells"] == 3

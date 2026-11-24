@@ -359,6 +359,17 @@ def native_budget_evidence(*, study, case, tolerance):
                      f"{float(r['space']):.2f}%, compared with {float(r['cross']):.2f}% across fine-grid formulations "
                      f"and {float(r['time']):.3f}% after halving CFL. The reference {outcome} the "
                      f"{float(r['criterion']):g}% sensitivity criterion."])
+    for r in csv_read(file=folder / "recession_depth.csv"):
+        if r["case"] != case or r["cohort"] != "complete-native-metre" or r["id"] != r["reference_id"]:
+            continue
+        support = float(r["support_m"])
+        area_final = float(r["reference_wet_area_5cm_m2"])
+        area_max = float(r["maximum_reference_wet_area_10cm_m2"])
+        text.extend(["", f"On the common {support:g} m assessment grid, the numerical reference retained "
+                     f"{area_final / support**2:g} cells ({area_final:g} m²) at or above 5 cm at the endpoint. "
+                     f"The area-averaged cell maxima reached 10 cm on {area_max / support**2:g} cells "
+                     f"({area_max:g} m²). Extent scores describe these small footprints. "
+                     "[Depth, assessment support and wet areas](../fidelity/native_results/recession_depth.csv)"])
     text.extend(["", "Timing repeat counts and spread are reported for each policy. "
                  "[Cost at a stated tolerance](../tables/21_native_cost_at_tolerance.md) · "
                  "[Error within an FV1 runtime budget](../tables/22_native_error_at_budget.md) · "

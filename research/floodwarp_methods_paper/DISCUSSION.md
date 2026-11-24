@@ -91,6 +91,8 @@ The following configurations had the lowest measured hydraulic cost at a 5% tole
 
 For outlet peak magnitude, RK2 spatial refinement changed the estimate by 14.78%, compared with 0.14% across fine-grid formulations and 0.017% after halving CFL. The reference exceeded the 5% sensitivity criterion.
 
+On the common 10 m assessment grid, the numerical reference retained 7 cells (700 m²) at or above 5 cm at the endpoint. The area-averaged cell maxima reached 10 cm on 2 cells (200 m²). Extent scores describe these small footprints. [Depth, assessment support and wet areas](fidelity/native_results/recession_depth.csv)
+
 Timing repeat counts and spread are reported for each policy. [Cost at a stated tolerance](tables/21_native_cost_at_tolerance.md) · [Error within an FV1 runtime budget](tables/22_native_error_at_budget.md) · [Independent timing observations](fidelity/native_results/timing_distribution.csv)
 
 ## Complete storms on native-metre terrain at 250,000 cells and above

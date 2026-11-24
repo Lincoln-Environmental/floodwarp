@@ -108,7 +108,30 @@ def comparison_key(*, row):
                                    "interval_s", "reference_id", "objective"))
 
 
+def spatial_table_support(*, field, objective):
+    window = field.get("support_m")
+    if not window:
+        return {}
+    support = dict(common_support_m=window)
+    if "extent_error_" in objective:
+        period, _, threshold = objective.partition("extent_error_")
+    elif objective.startswith("wet_union_depth_rmse_"):
+        period, threshold = "", objective.removeprefix("wet_union_depth_rmse_").removesuffix("_m")
+    else:
+        return support
+    for role, key in (("reference_wet", "reference_wet_area"), ("wet_union", "wet_union_area")):
+        area = field.get(f"{period}{key}_{threshold}_m2")
+        if area not in (None, ""):
+            cells = float(area) / float(window)**2
+            if not cells.is_integer():
+                raise ValueError("Wet area does not cover whole cells on the comparison grid")
+            support[role + "_cells"] = int(cells)
+    return support
+
+
 def add_decision_tables(*, output, directory, incised):
+    fields_path = directory / "recession_depth.csv"
+    fields = {r["id"]: r for r in csv_read(file=fields_path)} if not incised and fields_path.exists() else {}
     for decision_type, title in (("least_cost", "Lowest measured hydraulic cost meeting the stated tolerance"),
                                 ("equal_cost", "Lowest qualified measured error within an FV1 runtime budget")):
         decisions = []
@@ -134,6 +157,12 @@ def add_decision_tables(*, output, directory, incised):
                                    qualified_in_budget=row["assessable_in_budget"], ranking=row["ranking_status"],
                                    method=row["selected_method"], dx_m=row["selected_dx"], id=row["selected_id"])
                 scope = {} if incised else dict(case=row["case"], representation=row["representation"])
+                if not incised:
+                    field = fields.get(context["id"], {}) if kind == "depth_extent" else {}
+                    support = spatial_table_support(field=field, objective=metric)
+                    scope.update(common_support_m=support.get("common_support_m"),
+                                 reference_wet_cells=support.get("reference_wet_cells"),
+                                 wet_union_cells=support.get("wet_union_cells"))
                 decisions.append(dict(**scope, objective=metric, unit="m" if kind == "depth_extent" and "depth" in metric
                                       else "fraction" if kind == "depth_extent" else "%",
                                       station=row["station"], end_h=row["end_h"], interval_s=row["interval_s"],
