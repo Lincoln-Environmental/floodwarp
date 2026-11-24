@@ -133,3 +133,17 @@ def test_native_cell_comparison_requires_fingerprinted_maximum(tmp_path):
     fields["maximum"] = "wrong"
     with pytest.raises(ValueError, match="disagree"):
         load_maps(item=item, index=index)
+
+
+def test_native_map_shared_recession_requires_both_parents_at_same_time(tmp_path):
+    from research.floodwarp_methods_paper.fidelity.native_map_endpoints import common_end
+
+    groups = tmp_path / "extended_runs"
+    groups.mkdir()
+    group = dict(case="plain", cohort="native-metre", sources=["h", "r"], end_s=43200)
+    (groups / "group_auc.json").write_text(json.dumps(group))
+    assert common_end(directory=tmp_path, case="plain", parents={"h", "r"}) == 43200
+    assert common_end(directory=tmp_path, case="plain", parents={"h", "f", "r"}) is None
+    (groups / "group_new.json").write_text(json.dumps(dict(group, end_s=86400)))
+    with pytest.raises(ValueError, match="Ambiguous"):
+        common_end(directory=tmp_path, case="plain", parents={"h", "r"})

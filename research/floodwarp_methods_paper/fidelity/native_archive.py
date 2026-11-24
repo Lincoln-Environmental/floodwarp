@@ -59,13 +59,14 @@ def observations(*, directory, records, groups):
 
 def native_grid_differences(*, directory, records):
     from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity import native_map_endpoints
 
     measurements = {}
     receipts = sorted((directory / "native_grid_maps").glob("*/receipt.json"))
     if not receipts:
         return []
     implementation = {name: runner.checksum(path=directory / name)
-                      for name in ("native_map_comparison.py", "final_depth.py")}
+                      for name in ("native_map_comparison.py", "final_depth.py", "native_map_endpoints.py")}
     for receipt in receipts:
         archive = json.loads(receipt.read_text())
         contract = archive["identity"]
@@ -78,6 +79,12 @@ def native_grid_differences(*, directory, records):
         file = receipt.parent / "differences.csv"
         if runner.digest(contract)[:24] != ident or runner.checksum(path=file) != archive["table_sha256"]:
             raise ValueError("Changed native grid field comparison")
+        endpoints = {parent: raw["endpoint"] for parent, raw in observations.items() if "endpoint" in raw}
+        if endpoints:
+            live = native_map_endpoints.observations(directory=directory, parents={p: records[p] for p in observations},
+                                                     end_s=round(contract["end_h"] * 3600))
+            if live != endpoints:
+                raise ValueError("Archived map measurement disagrees with the original endpoint fingerprints")
         for key, raw in observations.items():
             item = records[key]
             if (raw["result_sha256"] != runner.checksum(path=item["path"] / "result.json")
@@ -91,6 +98,9 @@ def native_grid_differences(*, directory, records):
             key = (row["id"], row["comparator_id"])
             if key[0] not in observations or key[1] != contract["normal_rk2"]:
                 raise ValueError("Field comparison has different participants from its receipt")
+            if float(row["end_h"]) != contract["end_h"]:
+                raise ValueError("Native maps measured at a different time from their receipt")
+            key = (*key, contract["end_h"])
             if key in measurements and measurements[key] != row:
                 raise ValueError("Contradictory map comparisons for the same forecast pair")
             measurements[key] = row

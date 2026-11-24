@@ -380,7 +380,7 @@ def native_grid_field_comparison(*, study):
     if not rows:
         return ""
     text = ["## Native hydraulic cell comparisons", "",
-            "Each row compares fields on identical hydraulic cells against ordinary-CFL RK2 for the same "
+            "Each row compares fields at the stated physical time on identical hydraulic cells against ordinary-CFL RK2 for the same "
             "storm. Depth RMSE covers all cells. Extent uses thresholds on individual cells. "
             "The half-CFL RK2 rows measure temporal sensitivity. Absolute practical accuracy at the native "
             "terrain floor remains unresolved.", "",
