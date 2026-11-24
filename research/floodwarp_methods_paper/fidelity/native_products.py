@@ -241,8 +241,32 @@ def compare_incised_windows(*, directory, records, target):
     metrics.csv_write(file=target / "incised_practical_extent.csv", rows=areas)
 
 
+def merged_repeat_receipt(*, receipts):
+    """Join subsets of one independent timing repeat at the same physical endpoint."""
+    first = receipts[0]
+    series = {}
+    for receipt in receipts:
+        if any(receipt[k] != first[k] for k in
+               ("case", "representation", "cohort", "end_s", "extended", "settings", "source")):
+            raise ValueError("Timing repeat subsets do not share the same physical endpoint and settings")
+        if any(receipt["hardware"][k] != first["hardware"][k] for k in
+               ("gpu", "cpu_model", "warp", "python", "numpy", "precision")):
+            raise ValueError("Timing repeat subsets use different hardware or numerical environments")
+        parents = receipt["sources"]
+        children = receipt["series"] if receipt["extended"] else [None] * len(parents)
+        if not receipt["extended"] and receipt["series"]:
+            raise ValueError("Unexpected continuation in unextended repeat")
+        for parent, child in zip(parents, children, strict=True):
+            if parent in series and series[parent] != child:
+                raise ValueError("Different recession histories for the same timing repeat")
+            series[parent] = child
+    parents = sorted(series)
+    return dict(first, sources=parents, series=[series[p] for p in parents] if first["extended"] else [])
+
+
 def grouped(*, directory, records, target, expected):
     groups = {}
+    repeat_receipts = {}
     for path in (directory / "extended_runs").glob("group_*.json"):
         r = json.loads(path.read_text())
         if (
@@ -268,14 +292,25 @@ def grouped(*, directory, records, target, expected):
         ):
             continue
         key = r["cohort"], r["case"], r["representation"]
-        if key in groups:
+        if r["cohort"].startswith("native-repeat-"):
+            repeat_receipts.setdefault(key, []).append(r)
+        elif key in groups:
             raise ValueError("Multiple matched source sets " + str(key))
+        else:
+            groups[key] = items
+    merged = []
+    for key, receipts in repeat_receipts.items():
+        receipt = merged_repeat_receipt(receipts=receipts)
+        items = [records[parent] for parent in receipt["sources"]]
+        if len({i["native_sha"] for i in items}) != 1:
+            raise ValueError("Different native physical inputs across timing repeat subsets")
         groups[key] = items
+        merged.append(receipt)
     from unittest.mock import patch
 
     with patch.object(recession, "candidates", native_matrix.all_items):
         joined = extended_analysis.attach(
-            directory=directory, groups=groups, target=target, canonical_native_cost=True
+            directory=directory, groups=groups, target=target, canonical_native_cost=True, merged_receipts=merged
         )
     result = {}
     for (cohort, case, _), items in joined.items():

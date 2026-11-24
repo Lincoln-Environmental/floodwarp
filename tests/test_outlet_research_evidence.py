@@ -589,6 +589,60 @@ def test_repeat_summary_keeps_independent_completed_measurements(tmp_path):
         repeat_costs.collect(rows=rows, target=tmp_path)
 
 
+def test_repeat_driver_selects_only_requested_complete_case_policy_and_grid():
+    choices = {("plain-a", 20): {("fv1", 5), ("hancock_dense", 10), ("hancock_dense", 5)},
+               ("rolling-b", 40): {("hancock_dense", 5)}}
+    assert timing_repeats.requested_options(selected=choices, case="plain-*", method="hancock_dense", dx=5) == {
+        ("plain-a", 20): {("hancock_dense", 5)}}
+    assert not timing_repeats.requested_options(selected=choices, case="*", method="li", dx=None)
+
+
+def test_overlapping_repeat_subsets_count_each_independent_execution_once():
+    from research.floodwarp_methods_paper.fidelity.native_products import merged_repeat_receipt
+
+    hardware = dict(gpu="reference", cpu_model="cpu", warp="1.17", python="3.14", numpy="2", precision="FP64")
+    base = dict(case="plain", representation="sampled", cohort="native-repeat-1", end_s=72000,
+                extended=True, settings={"timing_repeat_end_s": 72000}, source="same", hardware=hardware)
+    first = dict(base, sources=["b", "a"], series=["extended-b", "extended-a"])
+    second = dict(base, sources=["c", "b"], series=["extended-c", "extended-b"])
+    merged = merged_repeat_receipt(receipts=[first, second])
+    assert merged["sources"] == ["a", "b", "c"]
+    assert merged["series"] == ["extended-a", "extended-b", "extended-c"]
+    with pytest.raises(ValueError, match="Different recession histories"):
+        merged_repeat_receipt(receipts=[first, dict(second, series=["extended-c", "unmatched"])])
+    with pytest.raises(ValueError, match="physical endpoint"):
+        merged_repeat_receipt(receipts=[first, dict(second, end_s=57600)])
+    with pytest.raises(ValueError, match="hardware"):
+        merged_repeat_receipt(receipts=[first, dict(second, hardware=dict(hardware, gpu="other"))])
+
+
+def test_partial_repeat_receipts_publish_on_the_original_common_horizon(tmp_path):
+    from research.floodwarp_methods_paper import metrics, runner
+    from research.floodwarp_methods_paper.fidelity.native_products import grouped
+
+    hardware = dict(gpu="reference", cpu_model="cpu", warp="1.17", python="3.14", numpy="2", precision="FP64")
+    settings = dict(rain_end_s=21600, window_s=7200, minimum_peak_m3s=1e-5,
+                    minimum_volume_m3=0.01, dry_supply_fraction=1e-6)
+    data = dict(frames=[dict(t_s=28800, section_m3s=0., outlet_m3s=0.)],
+                rain_m3=100, initial_m3=0, final_storage_m3=0, infiltration_m3=100, residual_m3=0)
+    records = {}
+    for index, (method, parents) in enumerate((("fv1", ["a"]), ("adaptive", ["a", "b"]))):
+        ident = parents[-1]
+        records[ident] = dict(id=ident, s=dict(case="hill", method=method, hours=8, dx=5), d=data,
+                              native_sha="terrain", hardware=hardware, solver_source="numerics")
+        runner.write_json(path=tmp_path / "extended_runs" / f"group_{index}.json",
+                          data=dict(case="hill", representation="sampled", cohort="native-repeat-1",
+                                    end_s=28800, extended=False, settings=settings, source="driver",
+                                    hardware=hardware, sources=parents, series=[]))
+    target = tmp_path / "products"
+    result = grouped(directory=tmp_path, records=records, expected={}, target=target)
+    assert [r["id"] for r in result["complete-native-repeat-1", "hill", "native metre area means"]] == ["a", "b"]
+    horizon, = metrics.csv_read(file=target / "recession_horizons.csv")
+    assert int(horizon["configurations"]) == 2
+    assert float(horizon["common_end_h"]) == 8
+    assert len(metrics.csv_read(file=target / "recession_terminal.csv")) == 4
+
+
 def test_marginal_policy_winners_are_repeated_together():
     assert timing_repeats.close_options(
         points={"dense": 10.0, "tiles": 10.1, "auto": 12.0}, relative_gap=0.05

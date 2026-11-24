@@ -132,6 +132,15 @@ The transfer records the two gauge northings in the native projected CRS. Each l
 
 `native-timing-repeats` repeats alternatives within 5% of the cheapest measured execution policy or cheapest tolerance-feasible configuration, twice more at the primary endpoint. The 5% band decides which GPU costs to remeasure. It has no hydraulic interpretation. The selection is recorded before repeating trajectories. `native-products` rebuilds the timing distribution, including all execution IDs, before applying the median to cost comparisons. Repeats share the same terrain and storm in statistical analyses.
 
+To inventory only the independent dense Hancock timings selected for the 10 m plain, run:
+
+```bash
+./scripts/run_floodwarp_paper.sh native-timing-repeats --case 'plain-709-*' --method hancock_dense --dx 10 --dry-run
+```
+
+Omit `--dry-run` to measure those configurations. A later full invocation reuses each completed timing at the same physical endpoint. Overlapping selections contribute one observation per execution identity.
+
+
 `native-step-history` replays dense, tiled and automatic Hancock on the matched 1 km² spatial-storm plain at 1 and 10 m after the training-partition storms. Each replay must reproduce the measured transport at both gauges every reporting interval and the primary final field hashes. The ordered FP64 timestep arrays and their hashes are saved separately from uninstrumented runtime measurements. Original outputs that lack an ordered history keep their unrecorded status.
 
 `advisor-design` checks the planned and measured support by physical terrain realisation. `advisor-cli-check` invokes the installed Python package on actual GeoTIFFs. Pass `--control-json` to the advisor with `window_m` set to west, south, width and height in the analysed metric CRS, `axis` set to `west_east` or `south_north`, and a nonnegative `spill_head_m` above the native spill. Bounds must align with the native and requested grids. A missing control window leaves opening connectivity unassessed.

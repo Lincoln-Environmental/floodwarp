@@ -33,7 +33,7 @@ def native_intervals(*, primary, horizon):
     return frames, sum(f["hydraulic_s"] for f in frames), detail
 
 
-def attach(*, directory, groups, partial=False, target=None, canonical_native_cost=False):
+def attach(*, directory, groups, partial=False, target=None, canonical_native_cost=False, merged_receipts=()):
     if target is None:
         target = directory / "results"
     result = {}
@@ -47,6 +47,9 @@ def attach(*, directory, groups, partial=False, target=None, canonical_native_co
         if key in receipts:
             raise ValueError(f"Ambiguous recession implementation for {key[:3]}")
         receipts[key] = g
+    for receipt in merged_receipts:
+        key = receipt["cohort"], receipt["case"], receipt["representation"], tuple(sorted(receipt["sources"]))
+        receipts[key] = receipt
     for key, all_items in groups.items():
         cohort, case, rep = key
         if cohort == "fixed" or rep not in ("sampled", "10m bed"):

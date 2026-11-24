@@ -1,6 +1,8 @@
 """Re-run close measured alternatives through the same recession on the same GPU."""
 
 from collections import defaultdict
+import fnmatch
+import getopt
 import json
 from pathlib import Path
 import sys
@@ -91,7 +93,18 @@ def candidates(*, target, tolerances, relative_gap):
     return {key: values for key, values in selected.items() if values}
 
 
-def run(*, directory, relative_gap, additional_repeats, dry):
+def requested_options(*, selected, case, method, dx):
+    runs = {}
+    for (event, end), options in selected.items():
+        if fnmatch.fnmatchcase(event, case):
+            options = {(name, spacing) for name, spacing in options
+                       if (method is None or method == name) and (dx is None or spacing == dx)}
+            if options:
+                runs[event, end] = options
+    return runs
+
+
+def run(*, directory, relative_gap, additional_repeats, dry, case="*", method=None, dx=None):
     target = directory / "native_results"
     thresholds = json.loads((directory / "native_advisor_settings.json").read_text())
     selected = candidates(
@@ -105,6 +118,8 @@ def run(*, directory, relative_gap, additional_repeats, dry):
         if row["horizon"] == "complete-native-metre":
             primary[row["case"], float(row["end_h"])].append(row["source_id"])
     for key, ids in primary.items():
+        if not fnmatch.fnmatchcase(key[0], case):
+            continue
         identity = dict(
             runs=sorted(ids),
             gap=relative_gap,
@@ -125,7 +140,7 @@ def run(*, directory, relative_gap, additional_repeats, dry):
                 path=path,
                 data=dict(inputs=identity, options=sorted(selected.get(key, set()))),
             )
-    selected = {key: options for key, options in selected.items() if options}
+    selected = requested_options(selected=selected, case=case, method=method, dx=dx)
     specs = list(
         native_matrix.specifications(study=directory.parent, config=cfg, design=design)
     )
@@ -162,10 +177,16 @@ if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     relative_gap = 0.05
     additional_repeats = 2
-    dry = "--dry-run" in sys.argv[1:]
+    flags, extra = getopt.getopt(sys.argv[1:], "", ["dry-run", "resume", "case=", "method=", "dx="])
+    if extra:
+        raise ValueError(f"Unexpected timing repeat arguments {extra}")
+    options = dict(flags)
     run(
         directory=directory,
         relative_gap=relative_gap,
         additional_repeats=additional_repeats,
-        dry=dry,
+        dry="--dry-run" in options,
+        case=options.get("--case", "*"),
+        method=options.get("--method"),
+        dx=float(options["--dx"]) if "--dx" in options else None,
     )
