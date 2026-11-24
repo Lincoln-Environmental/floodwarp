@@ -11,7 +11,7 @@ from research.floodwarp_methods_paper.terrain.generators import native_inputs
 from research.floodwarp_methods_paper.terrain.generators.mean_dem import mean_cells
 
 
-def measure(*, dx, distance, settings, receipt, bundle, forcing, gravity):
+def measure(*, dx, distance, settings, receipt, bundle, forcing, gravity, method, mode):
     x = settings["section_x_m"]
     lo, hi = settings["section_y_bounds_m"]
     margin = settings["side_margin_m"]
@@ -54,9 +54,9 @@ def measure(*, dx, distance, settings, receipt, bundle, forcing, gravity):
     bx[:, -1] = 2
     model = create_model(
         terrain=terrain,
-        solver_method="fv2",
-        limiter="adaptive",
-        execution_mode="dense",
+        solver_method=method,
+        execution_mode=mode,
+        **({"flux_scheme": "contact_hll"} if method == "fv1" else {"limiter": "adaptive"}),
         device="cpu",
         gravity=gravity,
         explicit_maximum_dt=settings["maximum_dt_s"],
@@ -82,6 +82,8 @@ def measure(*, dx, distance, settings, receipt, bundle, forcing, gravity):
         out.append(
             dict(
                 grid_m=dx,
+                method=method,
+                execution=mode,
                 extension_m=distance,
                 section_x_m=x,
                 south_m=lo,
@@ -98,7 +100,7 @@ def measure(*, dx, distance, settings, receipt, bundle, forcing, gravity):
     return out
 
 
-def run(*, directory, settings):
+def run(*, directory, settings, method, mode):
     root = directory.parents[2]
     parent = directory / "mean_storms"
     receipt = json.loads((parent / "terrain.json").read_text())
@@ -118,6 +120,8 @@ def run(*, directory, settings):
         settings=settings,
         physical_sha=runner.digest(receipt),
         device="cpu",
+        method=method,
+        mode=mode,
     )
     dest = directory / "free_reach" / runner.digest(identity)[:24]
     dest.mkdir(parents=True, exist_ok=True)
@@ -135,6 +139,8 @@ def run(*, directory, settings):
                     bundle=bundle,
                     forcing=prefix["data"]["forcing"],
                     gravity=prefix["data"]["numerical"]["gravity"],
+                    method=method,
+                    mode=mode,
                 )
                 temp = path.with_suffix(".tmp")
                 metrics.csv_write(file=temp, rows=rows)
@@ -142,6 +148,7 @@ def run(*, directory, settings):
             combined.extend(metrics.csv_read(file=path))
             print(
                 "Native reach",
+                method,
                 dx,
                 "m grid,",
                 distance,
@@ -154,4 +161,6 @@ def run(*, directory, settings):
 if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     settings = json.loads((directory / "free_reach_settings.json").read_text())
-    run(directory=directory, settings=settings)
+    modes = {"hancock": "tiles", "fv1": "sparse", "fv2": "dense"}
+    for method, mode in modes.items():
+        run(directory=directory, settings=settings, method=method, mode=mode)

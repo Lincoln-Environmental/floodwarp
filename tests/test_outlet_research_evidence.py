@@ -10,6 +10,31 @@ from research.floodwarp_methods_paper.fidelity import (
     timing_repeats,
 )
 
+def test_fixed_reach_report_rejects_displaced_section(tmp_path):
+    import json
+    from research.floodwarp_methods_paper import metrics, runner
+    from research.floodwarp_methods_paper.fidelity.repaired_outlet_report import reach_comparison
+
+    settings = dict(times_s=[0, 60], section_x_m=200, section_y_bounds_m=[10, 70])
+    (tmp_path / "free_reach_settings.json").write_text(json.dumps(settings))
+    (tmp_path / "mean_storms").mkdir()
+    terrain = {"native_spacing": 1}
+    (tmp_path / "mean_storms/terrain.json").write_text(json.dumps(terrain))
+    contract = dict(settings=settings, solver="test-repair", physical_sha=runner.digest(terrain), device="cpu")
+    folder = tmp_path / "free_reach" / runner.digest(contract)[:24]
+    folder.mkdir(parents=True)
+    (folder / "inputs.json").write_text(json.dumps(contract))
+    sample = dict(start_s=0, end_s=60, section_x_m=200, south_m=10, north_m=70, grid_m=5,
+                  extension_m=100, section_m3s=0.7, residual_m3=0)
+    options = dict(directory=tmp_path, destination=tmp_path,
+                   revisions={"repair": {"source_sha256": {"long-storms": "test-repair"}}})
+    metrics.csv_write(file=folder/"comparison.csv", rows=[sample])
+    reach_comparison(**options)
+    assert metrics.csv_read(file=tmp_path/"incised_reach.csv")[0]["physical_sha"] == runner.digest(terrain)
+    metrics.csv_write(file=folder/"comparison.csv", rows=[dict(sample, section_x_m=300)])
+    with pytest.raises(ValueError, match="physical sections"):
+        reach_comparison(**options)
+
 
 def test_spatial_cost_ends_at_the_snapshot():
     frames = [dict(t_s=t, steps=n, hydraulic_s=s) for t, n, s in

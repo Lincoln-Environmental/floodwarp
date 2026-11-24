@@ -83,6 +83,7 @@ def derived_identity(*, root, study, stage):
             for name in (
                 "paper_summary.md",
                 "outlet_results/events.csv",
+                "outlet_results/incised_reach.csv",
                 "outlet_results/last_40m.csv",
                 "outlet_results/extent.csv",
                 "outlet_results/depth_disagreement.csv",

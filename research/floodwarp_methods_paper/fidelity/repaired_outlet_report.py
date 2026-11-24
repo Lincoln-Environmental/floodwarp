@@ -44,6 +44,53 @@ def split_sheet_bias(*, settings, dt):
     return 100 * (math.hypot(1, acceleration * dt / (2 * normal_speed)) - 1)
 
 
+def reach_comparison(*, directory, destination, revisions):
+    rows = []
+    observations = {}
+    settings = json.loads((directory / "free_reach_settings.json").read_text())
+    physical_sha = runner.digest(json.loads((directory / "mean_storms/terrain.json").read_text()))
+    for path in sorted((directory / "free_reach").glob("*/comparison.csv")):
+        contract = json.loads((path.parent / "inputs.json").read_text())
+        kind = next((s for s, r in revisions.items() if r["source_sha256"]["long-storms"] == contract["solver"]), None)
+        if kind is None:
+            continue
+        if runner.digest(contract)[:24] != path.parent.name:
+            raise ValueError("Changed physical reach experiment identity")
+        if contract["settings"] != settings or contract["physical_sha"] != physical_sha:
+            continue
+        frame = contract["settings"]["times_s"][-2:]
+        for row in metrics.csv_read(file=path):
+            if [float(row["start_s"]), float(row["end_s"])] != frame:
+                continue
+            if abs(float(row["residual_m3"])) > 1.e-8:
+                raise ValueError("Native reach water account failed")
+            if (int(row["section_x_m"]) != settings["section_x_m"]
+                    or [int(row["south_m"]), int(row["north_m"])] != settings["section_y_bounds_m"]):
+                raise ValueError("Native reach measurements represent different physical sections")
+            method, dx = contract.get("method", "fv2"), int(row["grid_m"])
+            offset = int(row["extension_m"])
+            key = (kind, method, dx, offset)
+            q = float(row["section_m3s"])
+            if key in observations and observations[key] != q:
+                raise ValueError("Repeated physically identical reach forecasts differ")
+            observations[key] = q
+            rows.append(dict(revision=kind, method=method, execution=contract.get("mode", "dense"),
+                             device=contract["device"], physical_sha=physical_sha, run_id=path.parent.name, dx_m=dx,
+                             extension_m=offset, section_x_m=row["section_x_m"], start_s=frame[0], end_s=frame[1],
+                             discharge_m3s=q, residual_m3=row["residual_m3"]))
+    metrics.csv_write(file=destination / "incised_reach.csv", rows=rows)
+    text = ["", "## Fixed incised section at 10,040 m", "",
+            "Mean discharge (m³/s) from 30 to 60 seconds on the same physical 120 m-wide section. "
+            "Boundary placement is varied independently of the section position. The reach has no exact discharge reference.",
+            "", "| Version | Formulation | Grid (m) | At FREE face | 100 m buffer | 200 m buffer |",
+            "|---|---|---:|---:|---:|---:|"]
+    for tag, method, dx in sorted({k[:3] for k in observations}):
+        values = [observations.get((tag, method, dx, offset)) for offset in (0, 100, 200)]
+        text.append(f"| {tag} | {method} | {dx} | "
+                    + " | ".join(f"{q:.5f}" if q is not None else "pending" for q in values) + " |")
+    return [*text, "", "[Measurement windows and source runs](incised_reach.csv)"]
+
+
 def run(*, directory):
     source = directory / "outlet_results"
     rows = metrics.csv_read(file=source / "events.csv")
@@ -125,8 +172,8 @@ def run(*, directory):
         f"Across both formulations, all measured orientations, the face and the buffered section, this predicts the observed 30–60 s bias "
         f"to within {mismatch:.2e} percentage points. [Numerical and predicted residual](uniform_sheet_source_balance.csv) "
         "FV1 reconstructs from piecewise-constant cell beds. At this grade, the bed drops 0.07329 m per metre, exceeding the 0.03 m sheet depth even on the finest tested grid. Its hydrostatic cut to the higher cell bed clips the downstream state. At the 0.1 s cap the buffered FV1 deficit drops from 46.84% on 10 m cells to 36.82% on 1 m cells. The extra face deficit falls from 25.66 percentage points to below the displayed precision.",
-        "",
-        "## Full incised storm",
+        *reach_comparison(directory=directory, destination=source, revisions=revisions),
+        "", "## Full incised storm",
         "",
         "The gauge remains at the eastern edge of the original 104.8576 km² catchment. The extension continues the 1 m valley, "
         "initial channel state and soil. Its additional rainfall is zero. The source fields on the original footprint retain their historical values.",

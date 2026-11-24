@@ -98,11 +98,17 @@ On the same 10 m incised terrain, the corrected 16-hour Hancock and RK2 peaks we
 
 The pre-repair and corrected hydraulic sources match commits `0afdd684d2d1` and `46afa3f280a5`. The corrected FP64 storm measurements used NVIDIA GeForce RTX 4070 Ti SUPER, 595.99.02, 16376 MiB. [Source and workstation receipts](../fidelity/outlet_results/revision_evidence.json)
 
+At the fixed 120 m-wide incised section on the 10 m grid, adding a 100 m downstream buffer changed mean RK2 discharge from 2.46253 to 3.32420 m³/s before the repair and from 3.32413 to 3.32420 m³/s after it. These accepted volumes between 30 and 60 s measure sensitivity to outlet placement. [Fixed-section measurements on the 1, 5 and 10 m grids](../fidelity/outlet_results/incised_reach.csv)
+
 At 10 m, FV1 minus Hancock net export was +41,131 m³. The corresponding cumulative infiltration differences were +17,863 m³ inside the rainfall footprint and -59,098 m³ outside. The final storage difference was +104 m³. At hour eight their areas above 5 cm were 0.7233 and 0.0000 km².
 
 At 5 m, FV1 minus Hancock net export was +81,117 m³. The corresponding cumulative infiltration differences were +6,211 m³ inside the rainfall footprint and -87,383 m³ outside. The final storage difference was +56 m³. At hour eight their areas above 5 cm were 0.5847 and 0.0000 km².
 
 Of the hour-eight area above 5 cm in FV1 alone on the direct 5 m grid, 100.00% lay downstream of the independent internal gauge and 100.00% lay outside the rainfall footprint. The final 40 m contained 2.36% of this disagreement. [Reach and rainfall-footprint decomposition](../fidelity/outlet_results/regional_contrasts.csv)
+
+During the corrected 10 m Hancock crest minute, 2,834.2 m³ entered the final 40 m, 2,831.0 m³ passed the FREE face, 2.8 m³ infiltrated, and surface storage changed by +0.4 m³. Over the post-rain recession, drawdown in that strip after infiltration accounted for 0.63% of outlet export. [Accepted transport and strip water accounts](../fidelity/outlet_results/last_40m.csv)
+
+During the corrected 10 m RK2 crest minute, 2,862.9 m³ entered the final 40 m, 2,859.6 m³ passed the FREE face, 2.7 m³ infiltrated, and surface storage changed by +0.5 m³. Over the post-rain recession, drawdown in that strip after infiltration accounted for 0.62% of outlet export. [Accepted transport and strip water accounts](../fidelity/outlet_results/last_40m.csv)
 
 Halving the RK2 CFL on the 5 m grid changed the one-minute peak from 48.115 to 48.123 m³/s. Net export changed by -17,792 m³, infiltration by +17,792 m³ and final storage by +0 m³. The normal and half-CFL runs accepted 77,045 and 146,457 timesteps.
 

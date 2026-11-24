@@ -29,6 +29,19 @@ def repaired_budgets(*, directory):
         lines.append(f"The pre-repair and corrected hydraulic sources match commits `{before}` and `{after}`. "
                      f"The corrected FP64 storm measurements used {' and '.join(gpu)}. "
                      "[Source and workstation receipts](../fidelity/outlet_results/revision_evidence.json)")
+    reach = directory / "incised_reach.csv"
+    if reach.is_file():
+        profiles = {(r["revision"], r["method"], int(r["extension_m"])): float(r["discharge_m3s"])
+                    for r in csv_read(file=reach) if int(r["dx_m"]) == 10}
+        if all((version, "fv2", offset) in profiles for version in ("audit", "repair") for offset in (0, 100)):
+            old_face, old_buffer, new_face, new_buffer = (
+                profiles[(version, "fv2", offset)] for version in ("audit", "repair") for offset in (0, 100)
+            )
+            lines.append(f"At the fixed 120 m-wide incised section on the 10 m grid, adding a 100 m "
+                         f"downstream buffer changed mean RK2 discharge from {old_face:.5f} to {old_buffer:.5f} m³/s "
+                         f"before the repair and from {new_face:.5f} to {new_buffer:.5f} m³/s after it. "
+                         "These accepted volumes between 30 and 60 s measure sensitivity to outlet placement. "
+                         "[Fixed-section measurements on the 1, 5 and 10 m grids](../fidelity/outlet_results/incised_reach.csv)")
     for row in csv_read(file=balances):
         if (row["first_method"],row["second_method"],row["extension_m"]) != ("fv1","hancock_adaptive","0"):
             continue
@@ -55,6 +68,22 @@ def repaired_budgets(*, directory):
                          f"{100*strip/total:.2f}% of this disagreement. "
                          "[Reach and rainfall-footprint decomposition](../fidelity/outlet_results/regional_contrasts.csv)")
     events = csv_read(file=directory / "events.csv")
+    strip_path = directory / "last_40m.csv"
+    if strip_path.exists():
+        terminal = {(r["method"], r["period"]): r for r in csv_read(file=strip_path)
+                    if int(r["dx_m"]) == 10 and int(r["extension_m"]) == 0 and float(r["cfl_factor"]) == 1}
+        for method, name in (("hancock_adaptive", "Hancock"), ("adaptive", "RK2")):
+            peak = terminal.get((method, "crest_minute"))
+            recession = terminal.get((method, "post_rain_recession"))
+            if peak and recession:
+                lines.append(f"During the corrected 10 m {name} crest minute, "
+                             f"{float(peak['net_into_strip_m3']):,.1f} m³ entered the final 40 m, "
+                             f"{float(peak['net_export_m3']):,.1f} m³ passed the FREE face, "
+                             f"{float(peak['infiltration_m3']):.1f} m³ infiltrated, and surface storage "
+                             f"changed by {float(peak['end_storage_m3']) - float(peak['start_storage_m3']):+.1f} m³. "
+                             f"Over the post-rain recession, drawdown in that strip after infiltration "
+                             f"accounted for {100*float(recession['fraction_from_strip_storage']):.2f}% of outlet export. "
+                             "[Accepted transport and strip water accounts](../fidelity/outlet_results/last_40m.csv)")
     temporal = {float(r["cfl_factor"]): r for r in events if r["method"] == "adaptive"
                 and int(r["dx_m"]) == 5 and int(r["extension_m"]) == 0}
     if {0.5, 1.0} <= temporal.keys():

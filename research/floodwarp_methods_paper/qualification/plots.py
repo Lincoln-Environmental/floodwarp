@@ -62,8 +62,9 @@ def value(*, study, out, by_case, fronts):
             "li",
         ):
             pts = []
-            for case, rows in by_case.items():
-                for dx in {r["dx"] for r in rows}:
+            for case in sorted(by_case):
+                rows = by_case[case]
+                for dx in sorted({r["dx"] for r in rows}, key=float):
                     g = {
                         r["method"]: r
                         for r in rows
