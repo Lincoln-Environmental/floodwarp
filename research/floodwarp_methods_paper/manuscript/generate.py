@@ -277,10 +277,13 @@ def native_operational_balances(*, study, minimum_cells):
                  if r["horizon"] == "complete-native-metre" and r["solver_source"] == source}
     times = {ident: float(r["hydraulic_median_s"])
              for r in csv_read(file=folder / "timing_distribution.csv")
-             if r["horizon"] == "completed recession"
+             if r["horizon"] == "completed recession" and r["hydraulic_median_s"]
              for ident in r["run_ids"].split()}
     verified = {(r["fv1_id"], r["dense_id"], r["tiled_id"]) for r in csv_read(file=pairs)
                 if r["cohort"] == "complete-native-metre"}
+    parity_file = folder / "recession_execution_parity.csv"
+    parity_pairs = {(r["dense_id"], r["other_id"]) for r in csv_read(file=parity_file)
+                    if r["final_state_equal"] == "True" and r["interval_transport_equal"] == "True"} if parity_file.is_file() else set()
     groups = defaultdict(dict)
     for r in completed.values():
         if int(r["cells"]) >= minimum_cells and float(r["factor"]) == 1:
@@ -297,21 +300,23 @@ def native_operational_balances(*, study, minimum_cells):
         options = [methods[m] for m in ("hancock_dense", "hancock_adaptive") if m in methods]
         if fv is None or not options:
             continue
-        if len(options) == 2 and (fv["source_id"], options[0]["source_id"], options[1]["source_id"]) not in verified:
-            raise ValueError("Native costs lack hydraulic parity for the compared Hancock executions")
-        best = min(times[r["source_id"]] for r in options)
-        winners = [r for r in options if times[r["source_id"]] == best]
-        h = winners[0]
-        policy = " / ".join(r["execution_mode"] for r in winners)
+        if len(options) == 2:
+            ids = options[0]["source_id"], options[1]["source_id"]
+            if (fv["source_id"], *ids) not in verified and ids not in parity_pairs:
+                raise ValueError("Native costs lack hydraulic parity for the compared Hancock executions")
+        best = min((times[r["source_id"]] for r in options if r["source_id"] in times), default=None)
+        winners = [r for r in options if best is not None and times.get(r["source_id"]) == best]
+        h = winners[0] if winners else options[0]
+        policy = " / ".join(r["execution_mode"] for r in winners) if winners else "timing pending"
         if len(options) == 1:
             policy += " only measured"
         cells = int(fv["cells"])
         delta_export = float(fv["net_outlet_m3"]) - float(h["net_outlet_m3"])
         delta_soil = float(fv["infiltration_m3"]) - float(h["infiltration_m3"])
-        ratio = best / times[fv["source_id"]]
+        ratio = f"{best / times[fv['source_id']]:.3f}" if best and fv["source_id"] in times else "timing pending"
         rows.append(f"| {case} | {cells:,} | {cells * dx**2 / 1e6:.3f} | {dx} | {end_h:g} | {cadence:g} | "
                     f"{float(fv['outlet_peak_m3s']):.5g} | {float(h['outlet_peak_m3s']):.5g} | "
-                    f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {policy} | {ratio:.3f} |")
+                    f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {policy} | {ratio} |")
         if all(r.get(key) not in ("", None) for r in (fv, h)
                for key in ("section_x_m", "section_peak_m3s", "net_section_m3")):
             if flow is None:

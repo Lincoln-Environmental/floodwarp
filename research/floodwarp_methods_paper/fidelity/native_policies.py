@@ -45,7 +45,7 @@ def collect(*, groups, verified, cadence, target):
     for (cohort, case, rep), items in sorted(groups.items()):
         grids = defaultdict(dict)
         for it in items:
-            if it["factor"] != 1:
+            if it["factor"] != 1 or it.get("raw_timing_status") == "shared GPU observed":
                 continue
             spec = it["s"]
             key = (

@@ -156,3 +156,12 @@ Omit `--dry-run` to measure those configurations. A later full invocation reuses
 The qualification driver fits on development and validation terrains, freezes the model, then runs the independent test partition. The final `orton-transfer` stage compares the established full-domain 48-hour Orton Bradley HIRDS design event on 20, 10 and 5 m grids. Design-event transfer has no observed discharge reference. Historical experiment receipts retain their recorded implementation identities. Tables and figures read these archives independently of the hydraulic stages.
 
 The frozen grid selector records the physical areas at which two independent validation terrains supported the same objective and spacing pair. A proposed grid change must fall within the range of those validated areas. The design inventory records the cell counts at both candidate spacings and at the finer reference spacing. A million-cell reference and a million-cell candidate support different operational claims.
+
+The GPU timing audit accepts per-process samples from `nvidia-smi pmon -s um -o DT`. Identify the numerical worker PID, device and running case on the workstation when collecting a trace. Preserve the original time zone. Import a finished trace with the manual driver.
+
+```bash
+./scripts/run_floodwarp_paper.sh gpu-timing-samples --case "$case_name" --log "$pmon_file" \
+    --pid "$solver_pid" --gpu "$gpu_index" --device-uuid "$gpu_uuid" --zone UTC --closed-log
+```
+
+For a live trace, pass `--before` with an exclusive Unix timestamp already passed by the sampler. The receipt retains UTC seconds, solver SM utilisation, the largest SM utilisation of another compute process on that device, and a hash of the source bytes. Complete forecast products link samples to the authenticated initial invocation and its own recorded recession invocations. Positive SM utilisation by both processes in a sample flags the raw timing as shared. Hydraulic field and transport results remain available. Cost comparisons exclude the affected execution and use a matched timing repeat where available. Gaps between samples and unmonitored runs leave GPU isolation unknown.

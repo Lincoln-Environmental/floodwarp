@@ -74,7 +74,7 @@ def feasible_cost(*, rows, target, tolerances, spacings, name="fidelity", file_p
                     )
                 )
         for fv in points:
-            if fv["method"] != "fv1" or fv["dx"] not in spacings:
+            if fv["method"] != "fv1" or fv["dx"] not in spacings or fv["runtime_s"] is None:
                 continue
             allowed = [r for r in valid if r["runtime_s"] <= fv["runtime_s"]]
             best = min((r["absolute_error"] for r in allowed), default=None)

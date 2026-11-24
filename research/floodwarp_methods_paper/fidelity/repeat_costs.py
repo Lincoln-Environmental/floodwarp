@@ -53,9 +53,10 @@ def collect(*, rows, target):
                 raise ValueError(
                     f"{key_field} changed across nominally identical timing repeats"
                 )
-        times = np.array([r["hydraulic_s"] for r in measurements], dtype=float)
+        usable = [r for r in measurements if r.get("raw_timing_status") != "shared GPU observed"]
+        times = np.array([r["hydraulic_s"] for r in usable], dtype=float)
         total = [
-            r["end_to_end_s"] for r in measurements if r["end_to_end_s"] is not None
+            r["end_to_end_s"] for r in usable if r["end_to_end_s"] is not None
         ]
         vals = dict(
             zip(
@@ -79,18 +80,20 @@ def collect(*, rows, target):
         summaries.append(
             dict(
                 vals,
-                independent_timings=len(repeats),
+                independent_timings=len(usable),
+                shared_gpu_executions=len(measurements) - len(usable),
+                included_run_ids=" ".join(r["source_id"] for r in usable),
                 campaigns=" ".join(map(str, repeats)),
                 run_ids=" ".join(r["source_id"] for r in measurements),
                 accepted_steps=measurements[0]["steps"],
-                hydraulic_median_s=float(np.median(times)),
-                hydraulic_min_s=float(times.min()),
-                hydraulic_max_s=float(times.max()),
-                hydraulic_q25_s=float(np.quantile(times, 0.25)),
-                hydraulic_q75_s=float(np.quantile(times, 0.75)),
+                hydraulic_median_s=float(np.median(times)) if times.size else None,
+                hydraulic_min_s=float(times.min()) if times.size else None,
+                hydraulic_max_s=float(times.max()) if times.size else None,
+                hydraulic_q25_s=float(np.quantile(times, 0.25)) if times.size else None,
+                hydraulic_q75_s=float(np.quantile(times, 0.75)) if times.size else None,
                 end_to_end_timings=len(total),
                 end_to_end_median_s=float(np.median(total)) if total else None,
-                has_three_timings=len(repeats) >= 3,
+                has_three_timings=len(usable) >= 3,
             )
         )
     metrics.csv_write(file=target / "timing_distribution.csv", rows=summaries)

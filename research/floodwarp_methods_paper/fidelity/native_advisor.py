@@ -104,6 +104,10 @@ def sample_rows(*, directory, partitions, require_full, config, design):
         ident = row["source_id"]
         budget = diagnostics[ident]
         obs = hyd[ident]
+        if not obs["runtime_s"]:
+            if require_full:
+                raise ValueError(f"Forecast {ident} requires a replacement GPU timing before advisor assessment")
+            continue
         errors = {
             o: conservative_error(record=obs, field=m, margin="uncertainty_" + str(m))
             for o, m in WAVE.items()

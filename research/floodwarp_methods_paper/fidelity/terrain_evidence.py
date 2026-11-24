@@ -61,11 +61,11 @@ def assess(*, rows, controls):
         features = record.get("features", {})
         connection = features.get("critical_connection_lost")
         disposition = terrain_control_status(features=features, objective=goal)
-        screened.append(dict(row, hydraulic_eligible=row["eligible"], terrain_disposition=disposition,
+        screened.append(dict(row, hydraulic_eligible=row.get("hydraulic_eligible", row["eligible"]), terrain_disposition=disposition,
                              eligible=row["eligible"] and disposition == "admissible"))
         audit.append(dict(case=row["case"], dx_m=row["dx"], experiment_id=row["experiment_id"],
                           station=row["station"], objective=metric, advisor_objective=goal,
-                          reference_id=row["reference_id"], hydraulic_eligible=row["eligible"],
+                          reference_id=row["reference_id"], hydraulic_eligible=row.get("hydraulic_eligible", row["eligible"]),
                           disposition=disposition, descriptor_id=record.get("identity"),
                           critical_connection_lost=connection, barrier_lowering_m=features.get("barrier_lowering_m"),
                           lost_channel_fraction=features.get("lost_channel_fraction")))

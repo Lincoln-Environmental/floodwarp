@@ -88,7 +88,7 @@ def matched(*, rows, objectives):
     pairs = []
     for key, g in groups.items():
         policies = [
-            r for name, r in g.items() if name in ("hancock_dense", "hancock_adaptive")
+            r for name, r in g.items() if name in ("hancock_dense", "hancock_adaptive") and r["runtime_s"] is not None
         ]
         if policies:
             g["hancock_fastest"] = min(policies, key=hydraulic_time)
@@ -133,7 +133,7 @@ def matched(*, rows, objectives):
                         absolute_error_reduction=gain,
                         reference_envelope_sum=u,
                         exceeds_reference=abs(gain) > u,
-                        runtime_ratio=b["runtime_s"] / a["runtime_s"],
+                        runtime_ratio=b["runtime_s"] / a["runtime_s"] if a["runtime_s"] and b["runtime_s"] else None,
                         gradient=a.get("gradient"),
                     )
                 )
@@ -194,9 +194,9 @@ def frontiers(*, rows, objectives):
             groups[key].append(r)
     result = []
     for (cohort, case, rep, station, cap, dt, reference, end_h, k), g in groups.items():
-        valid = [r for r in g if r.get("qualified_" + k)]
+        valid = [r for r in g if r.get("qualified_" + k) and r["runtime_s"] is not None]
         for r in g:
-            ok = r.get("qualified_" + k, False)
+            ok = r.get("qualified_" + k, False) and r["runtime_s"] is not None
             err = abs(r[k]) if r.get(k) is not None else None
             dominated = (
                 any(
@@ -231,6 +231,8 @@ def frontiers(*, rows, objectives):
                     end_h=end_h,
                     steps=r.get("steps"),
                     runtime_s=r["runtime_s"],
+                    **({"hydraulic_eligible": r.get("qualified_" + k, False), "timing_eligible": False}
+                       if r["runtime_s"] is None else {}),
                     eligible=ok,
                     nondominated=not dominated if ok else None,
                 )

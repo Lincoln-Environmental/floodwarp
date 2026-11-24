@@ -16,6 +16,7 @@ from research.floodwarp_methods_paper.fidelity import (
     extended_analysis,
     endpoints,
     final_depth,
+    gpu_sharing,
     fv1_clock_report,
     native_archive,
     native_matrix,
@@ -200,6 +201,11 @@ def describe(*, item, settings, status, directory):
         both_stations_passed=matched,
         residual_m3=d["residual_m3"],
         hydraulic_s=d["hydraulic_s"],
+        raw_timing_status=item["raw_timing_status"],
+        gpu_active_samples=item["gpu_active_samples"],
+        gpu_shared_samples=item["gpu_shared_samples"],
+        first_shared_utc_s=item["first_shared_utc_s"],
+        last_shared_utc_s=item["last_shared_utc_s"],
         hardware=item["hardware"],
         solver_source=item["solver_source"],
         timing_repeat=s.get("timing_repeat"),
@@ -502,14 +508,18 @@ def run(*, directory, require_complete):
         member = dict(i,s=dict(spec,method=spec.get("requested_method",spec["method"])))
         prefix_groups.setdefault(key,[]).append(member)
     initial_parity = parity.compare(directory=directory,groups=prefix_groups,target=target,original_window=True)
-    original = [
-        describe(item=i, settings=settings, status="original_window", directory=directory)
-        for i in records.values()
-    ]
     groups = grouped(
         directory=directory, records=records, target=target, expected=expected
     )
     verification = native_archive.observations(directory=directory, records=records, groups=groups)
+    gpu_sharing.assess(directory=directory, records=records, groups=groups, verification=verification)
+    for members in prefix_groups.values():
+        for item in members:
+            item["raw_timing_status"] = records[item["id"]]["raw_timing_status"]
+    original = [
+        describe(item=i, settings=settings, status="original_window", directory=directory)
+        for i in records.values()
+    ]
     metrics.csv_write(file=target / "verified_archives.csv", rows=verification)
     timing_sources = [dict(case=case, id=item["id"], parent_id=item["parent_id"], cohort=cohort,
                            method=item["s"]["method"], dx_m=item["s"]["dx"], end_h=item["s"]["hours"],

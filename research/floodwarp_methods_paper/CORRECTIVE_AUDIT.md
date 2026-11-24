@@ -470,6 +470,7 @@ Each row compares fields at the stated physical time on identical hydraulic cell
 | hill-8500-back-1000x1000 | 12.0 | 1 | FV1 | 1.0 | 0.0092575 | 6.2974 | empty union | empty union |
 | hill-8500-back-1000x1000 | 8.0 | 1 | Hancock | 1.0 | 0.010741 | 0.018788 | empty union | empty union |
 | hill-8500-back-1000x1000 | 12.0 | 1 | Hancock | 1.0 | 0 | 0.018788 | empty union | empty union |
+| plain-709-intense-1000x1000 | 8.0 | 1 | RK2 | 0.5 | 0.00029241 | 0.00049697 | 1.00000 | 1.00000 |
 | plain-709-intense-1000x1000 | 8.0 | 10 | FV1 | 1.0 | 51.745 | 28.641 | 0.72401 | 0.44878 |
 | plain-709-intense-1000x1000 | 8.0 | 5 | FV1 | 1.0 | 53.231 | 29.119 | 0.71496 | 0.43857 |
 | plain-709-intense-1000x1000 | 8.0 | 1 | FV1 | 1.0 | 26.762 | 20.658 | 0.97715 | 0.80541 |

@@ -26,7 +26,7 @@ def marginal_budget_options(*, rows, relative_gap):
     """Find configurations whose timing could change the best qualified error at an FV1 budget."""
     selected = set()
     for anchor in rows:
-        if anchor["method"] != "fv1":
+        if anchor["method"] != "fv1" or not anchor["runtime_s"]:
             continue
         budget = float(anchor["runtime_s"])
         lower, upper = budget / (1 + relative_gap), budget * (1 + relative_gap)
@@ -132,10 +132,20 @@ def run(*, directory, relative_gap, additional_repeats, dry, case="*", method=No
     for row in metrics.csv_read(file=target / "measured_windows.csv"):
         if row["horizon"] == "complete-native-metre":
             primary[row["case"], float(row["end_h"])].append(row["source_id"])
+    distributions = target / "timing_distribution.csv"
+    shared = defaultdict(dict)
+    if distributions.is_file():
+        for row in metrics.csv_read(file=distributions):
+            if (row["horizon"] == "completed recession" and float(row["cfl_factor"]) == 1
+                    and int(row.get("shared_gpu_executions") or 0) > 0):
+                shared[row["case"], float(row["end_h"])][row["method"], int(row["dx_m"])] = int(row["shared_gpu_executions"])
     for key, ids in primary.items():
         if not fnmatch.fnmatchcase(key[0], case):
             continue
+        if shared[key]:
+            selected.setdefault(key, set()).update(shared[key])
         identity = dict(
+            shared_clocks=sorted([name, spacing, count] for (name, spacing), count in shared[key].items()),
             runs=sorted(ids),
             gap=relative_gap,
             thresholds=thresholds,
@@ -161,22 +171,24 @@ def run(*, directory, relative_gap, additional_repeats, dry, case="*", method=No
     )
     if dry or not selected:
         print(
-            f"{len(selected)} completed domains currently have close alternatives. "
+            f"{len(selected)} completed domains currently have close alternatives or shared GPU clocks. "
             f"Repeat {additional_repeats} independent executions when the gap is at most {100 * relative_gap:g}% of the fastest."
         )
     machine = None if dry or not selected else runner.machine(root=directory.parents[2])
     for (case, end), members in sorted(selected.items()):
-        for replicate in range(1, additional_repeats + 1):
+        # Replace a shared primary and retain three independent cost observations.
+        repeat_count = additional_repeats + max(shared[case, end].get(m, 0) for m in members)
+        for replicate in range(1, repeat_count + 1):
             items = [
                 dict(s, timing_repeat=replicate)
                 for s in specs
                 if s["case"] == case
                 and s["factor"] == 1
                 and (s["requested_method"], s["dx"]) in members
+                and replicate <= additional_repeats + shared[case, end].get((s["requested_method"], s["dx"]), 0)
             ]
-            print(
-                case, end, "h", sorted(members), "timing repeat", replicate, flush=True
-            )
+            options = sorted((s["requested_method"], s["dx"]) for s in items)
+            print(case, end, "h", options, "timing repeat", replicate, flush=True)
             if not dry:
                 native_matrix.run_group(
                     directory=directory,

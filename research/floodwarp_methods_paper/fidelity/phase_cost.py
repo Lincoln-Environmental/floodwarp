@@ -125,11 +125,12 @@ def collect(*, groups, directory, cadence, edges, phase_edges, target=None, repr
                     dx=item["s"]["dx"],
                     method=item["s"]["method"],
                     cfl_factor=item["factor"],
+                    **({"raw_timing_status": item["raw_timing_status"]} if "raw_timing_status" in item else {}),
                     **event_diagnostics(item=item),
                 )
             )
         for i in items:
-            if i["factor"] == 1:
+            if i["factor"] == 1 and i.get("raw_timing_status") != "shared GPU observed":
                 grid[i["s"]["dx"]][i["s"]["method"]] = i
         for dx, methods in grid.items():
             if "fv1" not in methods:

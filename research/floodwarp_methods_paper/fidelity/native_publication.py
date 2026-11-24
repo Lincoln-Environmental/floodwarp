@@ -247,6 +247,8 @@ def selection_costs(*, events, windows, timing):
             raise ValueError("Automatic policy has no measured explicit schedule")
         records = {policy: samples[event[key]] for policy, key in
                    (("dense", "dense_id"), ("tiles", "tiled_id"), ("auto", "auto_id"))}
+        if any(not r["hydraulic_median_s"] for r in records.values()):
+            continue
         times = {key: float(r["hydraulic_median_s"]) for key, r in records.items()}
         best = min(times["dense"], times["tiles"])
         row = dict(case=event["case"], dx_m=event["dx_m"], end_h=float(event["end_h"]), chosen=chosen,
@@ -294,15 +296,18 @@ def run(*, directory):
         policy = r.get("resolved_execution_mode") or r["execution_mode"]
         if r["execution_mode"] == "auto":
             policy = "auto → " + policy
+        timing = f"{float(r['hydraulic_s']):.2f}"
+        if r.get("raw_timing_status") == "shared GPU observed":
+            timing += " (shared GPU)"
         text.append(
             f"| {r['case']} | {r['dx_m']} | {method} | {policy} | "
             f"{r['factor']} | {float(r['end_h']):g} | {float(r['interval_s']):g} | {float(r['section_peak_m3s']):.3f} | "
-            f"{float(r['outlet_peak_m3s']):.3f} | {float(r['net_outlet_m3']):,.0f} | {float(r['hydraulic_s']):.2f} | {int(r['steps']):,} |"
+            f"{float(r['outlet_peak_m3s']):.3f} | {float(r['net_outlet_m3']):,.0f} | {timing} | {int(r['steps']):,} |"
         )
     text.extend(
         [
             "",
-            f"{sum(r['eligible'] for r in counts)} of {sum(r['measurements'] for r in counts)} assessed objective/configuration rows have an eligible numerical reference. "
+            f"{sum(r['eligible'] for r in counts)} of {sum(r['measurements'] for r in counts)} assessed objective/configuration rows have both an eligible numerical reference and a usable cost. "
             "Multiple objectives on the same simulation share a physical realisation. "
             "A frontier can be estimated only among eligible observations for the same case, common time window and reference.",
             "",
@@ -400,7 +405,9 @@ def run(*, directory):
         complete = [r for r in measured if r["has_three_timings"] == "True"]
         text.extend(["",f"{len(complete)} of {len(measured)} matched full-recession configurations have at least three "
                      "independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs "
-                     "where available. End-to-end timing includes setup and recorded continuation work.",
+                     "where available. End-to-end timing includes setup and recorded continuation work. "
+                     "Simultaneous compute observed in GPU process samples excludes that execution from cost medians. "
+                     "Raw times, sample counts and unmonitored observations remain in measured_windows.csv.",
                      "", "[Timing identities, quartiles and range](../native_results/timing_distribution.csv)"])
         policy_sources = [*policy_sources,distribution]
     wave_evidence = sorted((directory / "wave_clock").glob("*/*.npz"))
@@ -438,6 +445,7 @@ def run(*, directory):
                 source / "hydrograph_pareto.csv",
                 source / "recession_depth_pareto.csv",
                 Path(__file__),
+                *sorted((directory / "gpu_samples").glob("*.json")),
                 *policy_sources,
                 *decision_files,
                 *terrain_sources,

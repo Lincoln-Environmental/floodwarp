@@ -84,7 +84,7 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | fan-705-spatial-5120x5120 | 5 | Hancock | tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.62 | 35,833 |
 | fan-705-spatial-5120x5120 | 5 | Hancock | auto → tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.60 | 35,833 |
 
-82 of 648 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
+82 of 648 assessed objective/configuration rows have both an eligible numerical reference and a usable cost. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
@@ -100,9 +100,9 @@ For decisions requiring preservation of assessed terrain controls, the same cost
 
 For 4 matched CPU/CUDA initial storm windows ending at 8 h, the largest absolute discharge difference was 9.7e-13 m³/s at the outlet and 4.85e-13 m³/s at the internal section. Accepted step counts differed in 0 of 1,920 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)
 
-In 1 matched recession record(s), summing the saved depth field and summing active cells for the hydraulic diagnostic differed by up to 1.42e-14 m³. Both FP64 totals were reproduced exactly from the authenticated checkpoint arrays.
+In 2 matched recession record(s), summing the saved depth field and summing active cells for the hydraulic diagnostic differed by up to 9.09e-13 m³. Both FP64 totals were reproduced exactly from the authenticated checkpoint arrays.
 
-For 2 matched CPU/CUDA settled recession windows ending at 40 h, the largest absolute discharge difference was 3.64e-13 m³/s at the outlet and 2.43e-13 m³/s at the internal section. Accepted step counts differed in 0 of 4,800 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_recession_controls.csv)
+For 3 matched CPU/CUDA settled recession windows ending at 32, 40 h, the largest absolute discharge difference was 9.7e-13 m³/s at the outlet and 4.85e-13 m³/s at the internal section. Accepted step counts differed in 0 of 6,720 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_recession_controls.csv)
 
 The measured-windows table includes endpoint inundated areas at 5 and 10 cm on each solver's own model grid. Each area sums the archived subcell wet fractions over the observation grid. Where the internal gauge lies on an observation cell face, the same table reports storage upstream and downstream at the identical forecast time. The two volumes must sum to the independently recorded domain storage. Map-error and IoU comparisons use common spatial support. [Threshold areas and storage](../native_results/measured_windows.csv)
 
@@ -155,7 +155,7 @@ Each upper-panel point represents a measured forecast window. Each lower-panel p
 
 The first ratio measures the cost of selecting a schedule using the two explicit runs. The second compares the measured automatic run with its selected explicit counterpart and includes timing variability. Each cost uses its available hydraulic timing median. [Run identities, sample sizes and timing ranges](execution_choice_cost.csv)
 
-0 of 75 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
+0 of 75 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work. Simultaneous compute observed in GPU process samples excludes that execution from cost medians. Raw times, sample counts and unmonitored observations remain in measured_windows.csv.
 
 [Timing identities, quartiles and range](../native_results/timing_distribution.csv)
 
