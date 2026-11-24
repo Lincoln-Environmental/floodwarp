@@ -122,27 +122,46 @@ def threshold_areas(*, archive, support_m, dx_m):
     return areas
 
 
-def endpoint_areas(*, item, directory):
+def section_storage(*, depths, support_m, section_x_m, storage_m3):
+    """Integrate observed mean depths on each side of an exactly represented section."""
+    totals = depths.sum(axis=0, dtype=np.float64) * support_m**2
+    if not np.isclose(float(totals.sum()), storage_m3, rtol=2e-11, atol=1e-8):
+        raise ValueError("Archived depth field disagrees with the endpoint water account")
+    split = round(section_x_m / support_m)
+    if split * support_m != section_x_m:
+        return dict(upstream_storage_m3=None, downstream_storage_m3=None)
+    if not 0 < split < len(totals):
+        raise ValueError("Internal gauge must divide the observed catchment")
+    return dict(upstream_storage_m3=float(totals[:split].sum()), downstream_storage_m3=float(totals[split:].sum()))
+
+
+def endpoint_observations(*, item, directory, section_x_m):
     spec = item["s"]
     end = round(spec["hours"] * 3600)
     ident = item["id"]
     path = endpoints.endpoint_path(directory=directory, ident=ident, end_s=end)
-    if path.is_file():
-        with np.load(path, allow_pickle=False) as archive:
+    has_receipt = path.is_file()
+    if not has_receipt:
+        if item.get("parent_id", ident) != ident:
+            raise ValueError("Missing completion fields for model-grid inundation measurement")
+        path = item["path"] / "spatial.npz"
+    with np.load(path, allow_pickle=False) as archive:
+        support = spec["support"]
+        if has_receipt:
             receipt = json.loads(archive["receipt"].item())
             if receipt["id"] != ident or receipt["end_s"] != end:
                 raise ValueError("Extent measurement belongs to a different forecast window")
-            return threshold_areas(archive=archive, support_m=receipt["support"], dx_m=spec["dx"])
-    if item.get("parent_id", ident) != ident:
-        raise ValueError("Missing completion fields for model-grid inundation measurement")
-    with np.load(item["path"] / "spatial.npz", allow_pickle=False) as archive:
-        return threshold_areas(archive=archive, support_m=spec["support"], dx_m=spec["dx"])
+            support = receipt["support"]
+        regions = section_storage(depths=archive["depth"], support_m=support, section_x_m=section_x_m,
+                                  storage_m3=item["d"]["final_storage_m3"])
+        return dict(**regions, **threshold_areas(archive=archive, support_m=support, dx_m=spec["dx"]))
 
 
 def describe(*, item, settings, status, directory):
     d, s = item["d"], item["s"]
     outlet = gauge_observation(item=item, station="outlet")
     section = gauge_observation(item=item, station="section")
+    section_x_m = (round(s["dimensions"][0] / s["dx"]) // 2) * s["dx"]
     matched, stations = recession.settled(
         frames=d["frames"],
         storage=d["final_storage_m3"],
@@ -172,7 +191,7 @@ def describe(*, item, settings, status, directory):
         outlet_unique_outward_peak_interval_end_s=outlet["unique_outward_peak_interval_end_s"],
         end_outlet_m3s=outlet["end_m3s"],
         net_outlet_m3=outlet["net_m3"],
-        section_x_m=(round(s["dimensions"][0] / s["dx"]) // 2) * s["dx"],
+        section_x_m=section_x_m,
         section_peak_m3s=section["peak_m3s"],
         section_unique_outward_peak_interval_end_s=section["unique_outward_peak_interval_end_s"],
         net_section_m3=section["net_m3"],
@@ -188,7 +207,7 @@ def describe(*, item, settings, status, directory):
         end_to_end_s=d.get("end_to_end_s"),
         hydraulic_s_per_step=d["hydraulic_s"]/d["steps"],
         steps=d["steps"],
-        **endpoint_areas(item=item, directory=directory),
+        **endpoint_observations(item=item, directory=directory, section_x_m=section_x_m),
     )
 
 

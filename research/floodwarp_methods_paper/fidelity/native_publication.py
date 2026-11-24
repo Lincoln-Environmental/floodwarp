@@ -348,7 +348,9 @@ def run(*, directory):
                          "[Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)"])
     text.extend(["", "The measured-windows table includes endpoint inundated areas at 5 and 10 cm "
                  "on each solver's own model grid. Each area sums the archived subcell wet fractions over "
-                 "the observation grid. Map-error and IoU comparisons use separately identified common spatial support. "
+                 "the observation grid. Where the internal gauge lies on an observation cell face, the same table reports "
+                 "storage upstream and downstream at the identical forecast time. The two volumes must sum to the "
+                 "independently recorded domain storage. Map-error and IoU comparisons use common spatial support. "
                  "[Threshold areas and storage](../native_results/measured_windows.csv)"])
     timing_provenance = source / "timing_provenance.csv"
     if timing_provenance.exists():

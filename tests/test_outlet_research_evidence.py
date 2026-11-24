@@ -476,6 +476,18 @@ def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
         orton_transfer.read_complete(folder=folder, identity=identity)
 
 
+def test_section_storage_uses_aligned_gauges_and_checks_the_domain_ledger():
+    from research.floodwarp_methods_paper.fidelity.native_products import section_storage
+
+    data = np.array([[0., .4], [.1, .5]])
+    measured = section_storage(depths=data, support_m=10, section_x_m=10, storage_m3=100.)
+    assert measured == {"upstream_storage_m3": 10., "downstream_storage_m3": 90.}
+    unsplit = section_storage(depths=data, support_m=10, section_x_m=5, storage_m3=100.)
+    assert all(amount is None for amount in unsplit.values())
+    with pytest.raises(ValueError, match="endpoint water account"):
+        section_storage(depths=data, support_m=10, section_x_m=10, storage_m3=99.)
+
+
 def test_model_grid_extent_counts_subcell_wet_area_before_aggregation():
     from research.floodwarp_methods_paper.fidelity.native_products import threshold_areas
 

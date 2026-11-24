@@ -90,7 +90,7 @@ For decisions requiring preservation of assessed terrain controls, the same cost
 
 For 2 matched CPU/CUDA storm windows, the largest absolute discharge difference was 9.1e-14 m³/s at the outlet and 1.82e-13 m³/s at the internal section. Accepted step counts differed in 0 of 960 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)
 
-The measured-windows table includes endpoint inundated areas at 5 and 10 cm on each solver's own model grid. Each area sums the archived subcell wet fractions over the observation grid. Map-error and IoU comparisons use separately identified common spatial support. [Threshold areas and storage](../native_results/measured_windows.csv)
+The measured-windows table includes endpoint inundated areas at 5 and 10 cm on each solver's own model grid. Each area sums the archived subcell wet fractions over the observation grid. Where the internal gauge lies on an observation cell face, the same table reports storage upstream and downstream at the identical forecast time. The two volumes must sum to the independently recorded domain storage. Map-error and IoU comparisons use common spatial support. [Threshold areas and storage](../native_results/measured_windows.csv)
 
 Of 65 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
 
