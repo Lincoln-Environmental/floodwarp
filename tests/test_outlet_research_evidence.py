@@ -470,6 +470,16 @@ def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
         orton_transfer.read_complete(folder=folder, identity=identity)
 
 
+def test_model_grid_extent_counts_subcell_wet_area_before_aggregation():
+    from research.floodwarp_methods_paper.fidelity.native_products import threshold_areas
+
+    data = {"wet_fraction_5cm": np.array([[.25, .75]]), "wet_fraction_10cm": np.array([[0., .25]])}
+    assert threshold_areas(archive=data, support_m=10, dx_m=5) == {
+        "model_grid_wet_area_5cm_m2": 100, "model_grid_wet_area_10cm_m2": 25}
+    with pytest.raises(ValueError, match="cell area"):
+        threshold_areas(archive=dict(data, wet_fraction_5cm=np.array([[.1]])), support_m=10, dx_m=5)
+
+
 def test_cpu_cuda_comparison_uses_each_accepted_transport_interval_and_actual_rain_window():
     from research.floodwarp_methods_paper.fidelity import device_controls
 

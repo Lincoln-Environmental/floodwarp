@@ -14,6 +14,7 @@ from research.floodwarp_methods_paper.fidelity import (
     catalogue,
     device_controls,
     extended_analysis,
+    endpoints,
     final_depth,
     native_archive,
     native_matrix,
@@ -107,7 +108,38 @@ def gauge_observation(*, item, station):
     )
 
 
-def describe(*, item, settings, status):
+def threshold_areas(*, archive, support_m, dx_m):
+    areas = {}
+    for cm in (5, 10):
+        fractions = archive[f"wet_fraction_{cm}cm"]
+        if not np.all(np.isfinite(fractions) & (fractions >= 0) & (fractions <= 1)):
+            raise ValueError("Invalid model-grid wet fraction")
+        cells = float(fractions.sum()) * (support_m / dx_m)**2
+        count = round(cells)
+        if not np.isclose(cells, count, rtol=0., atol=1e-6):
+            raise ValueError("Fractional observations disagree with the model grid cell area")
+        areas[f"model_grid_wet_area_{cm}cm_m2"] = count * dx_m**2
+    return areas
+
+
+def endpoint_areas(*, item, directory):
+    spec = item["s"]
+    end = round(spec["hours"] * 3600)
+    ident = item["id"]
+    path = endpoints.endpoint_path(directory=directory, ident=ident, end_s=end)
+    if path.is_file():
+        with np.load(path, allow_pickle=False) as archive:
+            receipt = json.loads(archive["receipt"].item())
+            if receipt["id"] != ident or receipt["end_s"] != end:
+                raise ValueError("Extent measurement belongs to a different forecast window")
+            return threshold_areas(archive=archive, support_m=receipt["support"], dx_m=spec["dx"])
+    if item.get("parent_id", ident) != ident:
+        raise ValueError("Missing completion fields for model-grid inundation measurement")
+    with np.load(item["path"] / "spatial.npz", allow_pickle=False) as archive:
+        return threshold_areas(archive=archive, support_m=spec["support"], dx_m=spec["dx"])
+
+
+def describe(*, item, settings, status, directory):
     d, s = item["d"], item["s"]
     outlet = gauge_observation(item=item, station="outlet")
     section = gauge_observation(item=item, station="section")
@@ -156,6 +188,7 @@ def describe(*, item, settings, status):
         end_to_end_s=d.get("end_to_end_s"),
         hydraulic_s_per_step=d["hydraulic_s"]/d["steps"],
         steps=d["steps"],
+        **endpoint_areas(item=item, directory=directory),
     )
 
 
@@ -450,7 +483,7 @@ def run(*, directory, require_complete):
         prefix_groups.setdefault(key,[]).append(member)
     initial_parity = parity.compare(directory=directory,groups=prefix_groups,target=target,original_window=True)
     original = [
-        describe(item=i, settings=settings, status="original_window")
+        describe(item=i, settings=settings, status="original_window", directory=directory)
         for i in records.values()
     ]
     groups = grouped(
@@ -466,7 +499,7 @@ def run(*, directory, require_complete):
     metrics.csv_write(file=target / "timing_provenance.csv", rows=timing_sources)
     final_parity = parity.compare(directory=directory,groups=groups,target=target)
     complete = [
-        describe(item=i, settings=settings, status=key[0])
+        describe(item=i, settings=settings, status=key[0], directory=directory)
         for key, items in groups.items()
         for i in items
     ]
