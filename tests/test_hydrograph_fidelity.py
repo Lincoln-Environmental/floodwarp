@@ -285,7 +285,7 @@ def test_interval_receipt_preserves_shorter_horizon(tmp_path):
 
 def test_csv_archive_preserves_missing_and_numeric_types(tmp_path):
     import sqlite3
-    from research.floodwarp_methods_paper.fidelity.catalogue import database
+    from research.floodwarp_methods_paper.fidelity.catalogue import database, verify_database
 
     (tmp_path / "observations.csv").write_text(
         "experiment_id,delay_s,qualified\n00001234,-3.5,True\n00005678,,False\n"
@@ -296,6 +296,11 @@ def test_csv_archive_preserves_missing_and_numeric_types(tmp_path):
             "select * from observations order by experiment_id"
         ).fetchall() == [("00001234", -3.5, 1), ("00005678", None, 0)]
         assert db.execute("select rows from csv_sources").fetchone() == (2,)
+    assert verify_database(target=tmp_path) == {"source_files": 1, "observations": 2}
+    with sqlite3.connect(tmp_path / "fidelity.sqlite") as db:
+        db.execute("UPDATE observations SET delay_s=3.5 WHERE delay_s=-3.5")
+    with pytest.raises(ValueError, match="SQLite observation differs"):
+        verify_database(target=tmp_path)
 
 
 def test_irregular_accepted_volume_brackets_each_quantile(config):

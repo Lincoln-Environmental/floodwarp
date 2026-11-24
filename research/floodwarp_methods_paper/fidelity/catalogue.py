@@ -1,7 +1,7 @@
 """Typed SQLite mirror of the observed result tables with verifiable source and row counts."""
 
 import csv
-from itertools import chain
+from itertools import chain, zip_longest
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -70,6 +70,52 @@ def database(*, target):
         path.replace(target / "fidelity.sqlite")
     finally:
         path.unlink(missing_ok=True)
+
+
+def verify_database(*, target):
+    """Compare every stored observation and its source receipt with the CSV archive."""
+    files = {p.name: p for p in target.glob("*.csv")}
+    path = target / "fidelity.sqlite"
+    count = 0
+    with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True) as db:
+        if db.execute("PRAGMA integrity_check").fetchone() != ("ok",):
+            raise ValueError("Invalid fidelity SQLite database")
+        receipts = {name: (sha, rows) for name, sha, rows in
+                    db.execute("SELECT file,sha256,rows FROM csv_sources")}
+        if files.keys() != receipts.keys():
+            raise ValueError("SQLite source inventory differs from the CSV archive")
+        tables = {"csv_sources"}
+        for name, file in files.items():
+            sha, row_count = receipts[name]
+            if runner.checksum(file) != sha:
+                raise ValueError(f"SQLite source checksum differs for {name}")
+            with file.open(newline="") as stream:
+                reader = csv.reader(stream)
+                header = next(reader, [])
+                if not header:
+                    if row_count:
+                        raise ValueError(f"Missing CSV header for {name}")
+                    continue
+                tables.add(file.stem)
+                table = '"' + file.stem.replace('"', '""') + '"'
+                query = db.execute("SELECT * FROM " + table + " ORDER BY rowid")
+                if [column[0] for column in query.description] != header:
+                    raise ValueError(f"SQLite columns differ for {name}")
+                rows = 0
+                for fields, stored in zip_longest(reader, query):
+                    if fields is None or stored is None:
+                        raise ValueError(f"SQLite row count differs for {name}")
+                    expected = tuple(cell(value=v, name=k) for k, v in zip(header, fields, strict=True))
+                    rows += 1
+                    if stored != expected:
+                        raise ValueError(f"SQLite observation differs for {name} at data row {rows}")
+                if rows != row_count:
+                    raise ValueError(f"SQLite receipt row count differs for {name}")
+                count += rows
+        actual = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if actual != tables:
+            raise ValueError("Unexpected table in fidelity SQLite database")
+    return dict(source_files=len(files), observations=count)
 
 
 def manifest(*, directory, package):

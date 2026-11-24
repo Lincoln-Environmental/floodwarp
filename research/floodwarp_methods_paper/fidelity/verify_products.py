@@ -2,8 +2,8 @@
 
 import json
 from pathlib import Path
-import sqlite3
 from research.floodwarp_methods_paper import metrics, runner
+from research.floodwarp_methods_paper.fidelity import catalogue
 
 
 def validate(*, directory):
@@ -18,21 +18,7 @@ def validate(*, directory):
     for relative, expected in spatial.items():
         if runner.checksum(directory / relative) != expected:
             raise ValueError(f"Spatial archive checksum mismatch: {relative}")
-    with sqlite3.connect(
-        "file:" + str(results / "fidelity.sqlite") + "?mode=ro", uri=True
-    ) as db:
-        if db.execute("PRAGMA integrity_check").fetchone() != ("ok",):
-            raise ValueError("Invalid SQLite database")
-        for file, sha, rows in db.execute("SELECT file,sha256,rows FROM csv_sources"):
-            path = results / file
-            if runner.checksum(path) != sha or len(metrics.csv_read(path)) != rows:
-                raise ValueError(f"CSV/database disagreement: {file}")
-            table = '"' + path.stem.replace('"', '""') + '"'
-            if (
-                rows
-                and db.execute("SELECT COUNT(*) FROM " + table).fetchone()[0] != rows
-            ):
-                raise ValueError(f"SQLite row count mismatch: {file}")
+    catalogue.verify_database(target=results)
     ends = metrics.csv_read(results / "recession_horizons.csv")
     primary = [g for g in ends if g["cohort"] == "legacy"]
     if len(primary) != 48 or any(float(r["common_end_h"]) < 8 for r in ends):
