@@ -58,10 +58,12 @@ The gauge remains at the eastern edge of the original 104.8576 km² catchment. T
 | adaptive | 5 | 0 | 1.0 | 48.330 | 48.115 | 4.800 | 47.960 | 48.032 | 822,874.5 |
 | fv1 | 5 | 0 | 1.0 | 49.186 | 49.186 | 5.350 | 49.087 | 49.101 | 910,143.2 |
 | hancock_adaptive | 5 | 0 | 1.0 | 48.286 | 48.019 | 4.800 | 47.849 | 47.934 | 829,026.1 |
+| adaptive | 5 | 400 | 0.5 | — | 48.123 | 4.817 | 47.982 | 48.039 | 805,071.9 |
 | adaptive | 5 | 400 | 1.0 | — | 48.115 | 4.800 | 47.960 | 48.032 | 822,871.8 |
+| fv1 | 5 | 400 | 1.0 | — | 49.164 | 5.350 | 49.066 | 49.079 | 910,243.2 |
 | hancock_adaptive | 5 | 400 | 1.0 | — | 48.019 | 4.800 | 47.849 | 47.934 | 829,017.1 |
 
-12 of 14 trajectories have completed the historical 16-hour comparison. Each hydrograph is an interval average of accepted transport. On these irregular terrains a solver difference alone does not establish accuracy.
+14 of 14 trajectories have completed the historical 16-hour comparison. Each hydrograph is an interval average of accepted transport. On these irregular terrains a solver difference alone does not establish accuracy.
 
 [Water accounts, infiltration inside and outside the rainfall footprint](events.csv) · [Crest and whole-recession last 40 m budgets](last_40m.csv) · [Spatial extent](extent.csv) · [Wet-union depth differences on common spatial support](depth_disagreement.csv) · [Spatial reference qualification](spatial_reference_checks.csv) · [Hydrograph and infiltration reference qualification](reference_checks.csv)
 
@@ -73,6 +75,7 @@ A focused CUDA regression briefly shared the GPU during the direct 5 m half-CFL 
 |---|---|---:|---:|---:|---:|---:|
 | 10 | 0 | +41,130.9 | +17,863.3 | -59,098.2 | +104.1 | +1.18e-09 |
 | 10 | 400 | +41,333.9 | +17,862.7 | -59,196.6 | +0.0 | +1.27e-09 |
+| 5 | 400 | +81,226.1 | +6,210.4 | -87,436.5 | +0.1 | +1.35e-08 |
 | 5 | 0 | +81,117.1 | +6,210.5 | -87,383.4 | +55.8 | +1.26e-08 |
 
 ## Hour-eight inundation and maximum extent

@@ -56,6 +56,8 @@ Halving the RK2 CFL on the 5 m grid changed the one-minute peak from 48.115 to 4
 
 The direct-outlet observables passing all three reference checks were peak magnitude, net exported volume. These checks support comparisons on the coarser grid. Practical 5 m absolute accuracy remains unresolved. [Reference qualification by observable](fidelity/outlet_results/reference_checks.csv)
 
+For all outward discharge over the fixed 16-hour window, the fraction of volume redistributed in time relative to the normal 5 m RK2 forecast was 14.53% for 10 m FV1 and 3.69% for 10 m Hancock. Their centroid shifts were +28.8 and -7.4 minutes. Applying the same shape diagnostic to the spatial, fine-formulation and temporal controls gave 2.51%, 0.54% and 1.05%. The initial moving channel contributes to these distributions. Rainfall-only hydrograph shape remains unresolved. [Fixed-window comparisons and reference controls](fidelity/outlet_results/fixed_window_shape.csv)
+
 With a 5% tolerance on peak discharge, FV1 at 10 m had the lowest measured hydraulic cost (38.4 s). Its absolute error against the 5 m RK2 reference was 0.53%, rising to 1.48% when reference sensitivity was included.
 
 With a 10% tolerance on net exported volume, adaptive Hancock at 10 m had the lowest measured hydraulic cost (39.5 s). Its absolute error against the 5 m RK2 reference was 5.62%, rising to 9.78% when reference sensitivity was included.
@@ -63,5 +65,17 @@ With a 10% tolerance on net exported volume, adaptive Hancock at 10 m had the lo
 The two decision tables retain the event endpoint, output cadence and reference for each observable. The hydraulic costs use independent timing medians where available. [Cost at a stated tolerance](tables/19_incised_cost_at_tolerance.md) · [Error within a measured runtime](tables/20_incised_error_at_budget.md)
 
 Under intense rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 4.331 and 6.806 m³/s. They exported 28,772 and 109,391 m³ through the common 32-hour endpoint. Under moderate rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 0.894 and 0.915 m³/s. They exported 24,912 and 38,983 m³ through the common 40-hour endpoint. Both gauges passed the recession criterion. These CPU controls measure formulation disagreement. [Six-hour rainfall and complete recession accounts](fidelity/strong_storms/completed.csv)
+
+## Practical grid selection on native terrain
+
+The validation design includes 2 independent terrains with an admissible 5 and 10 m pair and all scheduled depth reference controls (hill-8200, rolling-8105). Completed runs currently qualify 0 terrain pairs for depth. [Design and measured eligibility by observable](fidelity/advisor_design/paired.json)
+
+The test design includes 2 independent terrains with an admissible 5 and 10 m pair and all scheduled depth reference controls (fan-8400, rolling-8300). Completed runs currently qualify 0 terrain pairs for depth. [Design and measured eligibility by observable](fidelity/advisor_design/paired.json)
+
+On floodplain-8103 at 5 m, the installed DEM reader measured maximum local barrier lowering of 0.183 m. Its solver decision was `refine_terrain`. [Installed CLI and archived features](fidelity/advisor_design/installed_cli.csv)
+
+On floodplain-8103 at 10 m, the installed DEM reader measured maximum local barrier lowering of 0.169 m. Its solver decision was `refine_terrain`. [Installed CLI and archived features](fidelity/advisor_design/installed_cli.csv)
+
+Joint method and grid selection on the new final terrains awaits the held-out evaluation.
 
 With quarter-second accepted transport at 200 m, 5 m Hancock took 0.149 s and 1 m FV1 took 1.348 s (9.03×). Their respective sharp-pulse peak biases were -54.09% and -58.60%. Refining Hancock to 1 m reduced its peak bias to -7.94%. [Quarter-second analytical comparisons](fidelity/results/sharp_pulses.csv)

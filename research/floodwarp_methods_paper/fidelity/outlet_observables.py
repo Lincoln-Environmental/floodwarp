@@ -144,6 +144,28 @@ def qualify(*, directory, destination, experiments):
             item["cost_for_comparison_s"] = float(repeats[0]["hydraulic_median_s"])
         groups[key].append(item)
     rows, checks = assessment.storm_rows(groups=groups, cfg=design)
+    fixed_windows = []
+    shape_checks = {(r["case"], r["representation"], r["station"]): r["qualified"]
+                    for r in checks if r["metric"] == "shape_tv_pct"}
+    for (_, case, representation), items in groups.items():
+        fine, controls = assessment.references(items=items)
+        if not fine:
+            continue
+        for station in ("outlet", "section"):
+            for item in items:
+                comparison = assessment.compare(it=item, ref=fine, station=station, cfg=design)
+                fixed_windows.append(dict(
+                    case=case, representation=representation, station=station, id=item["id"],
+                    reference_id=fine["id"], method=item["s"]["method"], grid_m=item["s"]["dx"],
+                    cfl_factor=item["factor"], end_h=item["s"]["hours"], interval_s=comparison["interval_max_s"],
+                    reference_role=next((name for name, peer in controls.items() if peer and peer["id"] == item["id"]),
+                                        "reference" if item["id"] == fine["id"] else "candidate"),
+                    **{key: comparison.get(key) for key in (
+                        "reference_status", "model_active_at_start", "reference_active_at_start", "reference_truncated",
+                        "model_truncated", "shape_tv_pct", "centroid_delay_s", "width80_bias_pct", "integrated_abs_pct")},
+                    complete_event_window_eligible=assessment.limits(row=comparison, key="shape_tv_pct"),
+                    event_shape_reference_qualified=shape_checks[case, representation, station]))
+    metrics.csv_write(file=destination / "fixed_window_shape.csv", rows=fixed_windows)
     for row in rows:
         row["cells_simulated"] = row["cells"] + sum(
             contract["identity"]["extension_m"]

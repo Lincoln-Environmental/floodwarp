@@ -13,6 +13,62 @@ def fmt(value):
     return "unavailable" if value in (None, "") else f"{float(value):.4g}"
 
 
+def native_advisor_findings(*, study):
+    import json
+    from research.floodwarp_methods_paper import runner
+
+    folder = study / "fidelity"
+    checklist = folder / "advisor_design/paired.json"
+    if not checklist.is_file():
+        return ""
+    design = json.loads(checklist.read_text())
+    paired = {r["split"]: r for r in design["pairs"] if r["dx"] == [5, 10] and r["objective"] == "depth"}
+    lines = ["## Practical grid selection on native terrain"]
+    for partition in ("validation", "test"):
+        row = paired[partition]
+        lines.append(f"The {partition} design includes {len(row['possible'])} independent terrains with an admissible "
+                     f"5 and 10 m pair and all scheduled depth reference controls ({', '.join(row['possible'])}). "
+                     f"Completed runs currently qualify {len(row['observed_qualified'])} terrain pairs for depth. "
+                     "[Design and measured eligibility by observable](../fidelity/advisor_design/paired.json)")
+    cli_path = folder / "advisor_design/installed_frozen_cli.csv"
+    if not cli_path.exists():
+        cli_path = folder / "advisor_design/installed_cli.csv"
+    if cli_path.is_file():
+        controls = [r for r in csv_read(file=cli_path) if r["terrain_id"] == "floodplain-8103"]
+        for r in sorted(controls, key=cli_spacing):
+            lines.append(f"On floodplain-8103 at {r['dx_m']} m, the installed DEM reader measured maximum local "
+                         f"barrier lowering of {float(r['max_lowering_m']):.3f} m. Its solver decision was "
+                         f"`{r['status']}`. [Installed CLI and archived features](../fidelity/advisor_design/{cli_path.name})")
+    pointer = folder / "native_advisor/heldout_evaluation.json"
+    if pointer.exists():
+        active = json.loads(pointer.read_text())
+        archive = folder / active["path"]
+        evidence = json.loads((archive / "sources.json").read_text())
+        data = archive / "joint_summary.csv"
+        if (runner.checksum(archive / "sources.json") != active["sha256"]
+                or runner.checksum(data) != evidence["files"][data.name]):
+            raise ValueError("Unverified held-out joint decision summary")
+        setting = json.loads((folder / "native_advisor_settings.json").read_text())["fit_percent"]
+        for r in csv_read(file=data):
+            if (r["rule"] != "advisor" or r.get("subset") != "new final terrains"
+                    or float(r["percentage_scenario"]) != setting):
+                continue
+            regret = fmt(r["median_regret_pct"]) + "%" if r["median_regret_pct"] else "unassessable"
+            lines.append(f"With {r['requested_dx']} m requested on the prospectively held-out final terrains "
+                         f"({setting}% scenario), joint method and grid selection covered {r['successful_selections']} "
+                         f"of {r['empirical_feasible_opportunities']} feasible opportunities. Of {r['decisions']} "
+                         f"decisions, {r['false_feasible']} were false-feasible and {r['abstentions']} abstained. "
+                         f"Median runtime regret was {regret} across {r['regret_assessable']} "
+                         f"assessable choices. [Joint rules and measured oracle](../fidelity/{active['path']}/joint_summary.csv)")
+    else:
+        lines.append("Joint method and grid selection on the new final terrains awaits the held-out evaluation.")
+    return "\n" + "\n\n".join(lines) + "\n"
+
+
+def cli_spacing(row):
+    return float(row["dx_m"])
+
+
 def repaired_budgets(*, directory):
     import json
 
@@ -103,6 +159,24 @@ def repaired_budgets(*, directory):
     lines.append(f"The direct-outlet observables passing all three reference checks were {status}. "
                  "These checks support comparisons on the coarser grid. Practical 5 m absolute accuracy remains unresolved. "
                  "[Reference qualification by observable](../fidelity/outlet_results/reference_checks.csv)")
+    window_path = directory / "fixed_window_shape.csv"
+    if window_path.is_file():
+        at_outlet = [r for r in csv_read(file=window_path) if r["representation"] == "0 m downstream extension"
+                     and r["station"] == "outlet" and r["shape_tv_pct"]]
+        coarse = {r["method"]: r for r in at_outlet if int(r["grid_m"]) == 10}
+        controls = {r["reference_role"]: r for r in at_outlet}
+        if {"fv1", "hancock_adaptive"} <= coarse.keys() and {"space", "cross", "time"} <= controls.keys():
+            lines.append(f"For all outward discharge over the fixed 16-hour window, the fraction of volume "
+                         f"redistributed in time relative to the normal 5 m RK2 forecast was "
+                         f"{float(coarse['fv1']['shape_tv_pct']):.2f}% for 10 m FV1 and "
+                         f"{float(coarse['hancock_adaptive']['shape_tv_pct']):.2f}% for 10 m Hancock. "
+                         f"Their centroid shifts were {float(coarse['fv1']['centroid_delay_s'])/60:+.1f} and "
+                         f"{float(coarse['hancock_adaptive']['centroid_delay_s'])/60:+.1f} minutes. "
+                         "Applying the same shape diagnostic to the spatial, fine-formulation and temporal controls "
+                         f"gave {float(controls['space']['shape_tv_pct']):.2f}%, "
+                         f"{float(controls['cross']['shape_tv_pct']):.2f}% and {float(controls['time']['shape_tv_pct']):.2f}%. "
+                         "The initial moving channel contributes to these distributions. Rainfall-only hydrograph shape "
+                         "remains unresolved. [Fixed-window comparisons and reference controls](../fidelity/outlet_results/fixed_window_shape.csv)")
     budgets = csv_read(file=directory / "least_cost_fidelity.csv")
     for metric, label, tolerance in (("peak_bias_pct", "peak discharge", 5),
                                       ("net_export_bias_pct", "net exported volume", 10)):
@@ -439,6 +513,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 )
                 correction += repaired_budgets(directory=repaired.parent)
                 correction += widespread_plain(study=study)
+                correction += native_advisor_findings(study=study)
         transfer = study / "fidelity/orton_transfer/transfer.csv"
         if transfer.exists():
             transfers = csv_read(file=transfer)

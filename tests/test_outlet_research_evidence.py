@@ -384,6 +384,44 @@ def test_spatial_qualification_requires_independent_time_control():
     "method,mode", (("hancock", "dense"), ("hancock", "tiles"), ("fv2", "dense"))
 )
 @pytest.mark.parametrize("device", ("cpu", "cuda:0"))
+def test_internal_mask_edge_transmits_only_at_explicit_free_contact(method, mode, device):
+    import warp as wp
+    from floodwarp.inputs import boundary_faces, terrain_from_array
+    from floodwarp.model import advance, create_model
+
+    if device.startswith("cuda") and not wp.is_cuda_available():
+        pytest.skip("CUDA unavailable")
+    dx, grade, n, depth = 10., .07329, .035, .03
+    active = np.zeros((5, 36), dtype=bool)
+    active[1, :32] = active[3, :32] = True
+    speed = depth**(2/3) * np.sqrt(grade) / n
+    bed = np.broadcast_to(-grade * (np.arange(36) + .5) * dx, active.shape)
+    terrain = terrain_from_array(elevation=bed, active=active, dx=dx, dy=dx,
+                                 row_order="south_to_north", vertical_datum="local")
+    bx, by = boundary_faces(terrain=terrain)
+    bx[1, 32] = 2
+    model = create_model(terrain=terrain, solver_method=method, limiter="adaptive", execution_mode=mode,
+                         device=device, initial_depth=np.where(active, depth, 0.), manning_n=n,
+                         boundary_qx=bx, boundary_qy=by, explicit_maximum_dt=.05)
+    s = model.solver
+    s.set_momentum(hu=active * (depth * speed), hv=np.zeros_like(bed))
+    advance(model=model, end_time=5.)
+    start_volume = s.get_cumulative_face_volumes()["qx"][1, 32]
+    advance(model=model, end_time=10.)
+    volume = s.get_cumulative_face_volumes()
+    assert (volume["qx"][1, 32] - start_volume) / 5 == pytest.approx(dx * depth * speed, rel=.01)
+    assert volume["qx"][3, 32] == 0
+    np.testing.assert_array_equal(volume["qy"], np.zeros_like(volume["qy"]))
+    assert not np.any(s.get_water_depth()[~active])
+    ledger = s.cumulative_accounting()
+    assert ledger["boundary_outflow"] == pytest.approx(volume["qx"][1, 32], abs=1e-10)
+    assert abs(ledger["residual"]) < 1e-9
+
+
+@pytest.mark.parametrize(
+    "method,mode", (("hancock", "dense"), ("hancock", "tiles"), ("fv2", "dense"))
+)
+@pytest.mark.parametrize("device", ("cpu", "cuda:0"))
 def test_sloping_lake_with_stage_and_opposite_free_face(method, mode, device):
     import warp as wp
     from floodwarp.inputs import boundary_faces, terrain_from_array

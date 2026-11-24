@@ -471,7 +471,10 @@ def validate(*, directory, settings, config, design):
     for pct in settings["assessment_percentages"]:
         for dx in settings["practical_pair_m"]:
             cohort = [r for r in paired if r["percentage_scenario"] == pct and r["requested_dx"] == dx]
-            paired_summary.extend(dict(s,percentage_scenario=pct,requested_dx=dx) for s in advisor.summary(rows=cohort))
+            final = [r for r in cohort if r["terrain_id"] in settings["new_final_terrain_ids"]]
+            for subset, trials in (("all held-out terrains", cohort), ("new final terrains", final)):
+                paired_summary.extend(dict(s, percentage_scenario=pct, requested_dx=dx, subset=subset)
+                                      for s in advisor.summary(rows=trials))
     metrics.csv_write(file=output / "joint_summary.csv",rows=paired_summary)
     runner.write_json(
         path=output / "sources.json",
