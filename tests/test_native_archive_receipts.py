@@ -79,3 +79,24 @@ def test_native_timing_joins_original_policy_intervals_to_the_measured_tail():
             native_intervals(primary=primary, horizon=invalid)
     with pytest.raises(ValueError, match="timing total"):
         native_intervals(primary=primary, horizon=dict(horizon, hydraulic_s=1))
+
+
+def test_native_phase_totals_combine_recorded_prefix_aggregate_and_tail_intervals():
+    from research.floodwarp_methods_paper.fidelity.phase_cost import event_diagnostics
+
+    base = dict(id="continued", parent_id="primary")
+    frames = [dict(t_s=60, steps=20), dict(t_s=120, steps=18, compilation_s=.09,
+                                           graph_capture_s=.03, extraction_s=.4)]
+    data = dict(frames=frames, spatial=[dict(live_pool_mib=32)], hydraulic_s=4,
+                native_timing_provenance=dict(initial_intervals=1),
+                native_prefix_diagnostics=dict(preload_s=.6, graph_capture_s=.2, extraction_s=.5,
+                                               setup_s=1.1, live_pool_mib=48))
+    row = event_diagnostics(item=dict(base, d=data))
+    assert row["graph_capture_s"] == pytest.approx(.23)
+    assert row["compilation_s"] == pytest.approx(.69)
+    assert row["extraction_s"] == pytest.approx(.9)
+    assert row["graph_capture_s_intervals"] == 2
+    assert row["sampled_pool_peak_mib"] == 48 and row["source_final_pool_mib"] == 48
+    del frames[-1]["compilation_s"]
+    row = event_diagnostics(item=dict(base, d=data))
+    assert row["compilation_s"] is None and row["compilation_s_intervals"] == 1

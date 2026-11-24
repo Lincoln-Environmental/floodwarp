@@ -127,6 +127,10 @@ def attach(*, directory, groups, partial=False, target=None, canonical_native_co
             if canonical_native_cost and (cohort == "native-metre" or cohort.startswith("native-repeat-")):
                 frames, elapsed, timing = native_intervals(primary=base["d"], horizon=s)
                 d["native_timing_provenance"] = timing
+                d["native_prefix_diagnostics"] = {
+                    k: base["d"][k] for k in ("preload_s", "graph_capture_s", "extraction_s",
+                                               "live_pool_mib", "setup_s") if k in base["d"]
+                }
             original_spatial = {
                 row["t_s"]: row
                 for row in base["d"].get("spatial", base["d"].get("samples", []))

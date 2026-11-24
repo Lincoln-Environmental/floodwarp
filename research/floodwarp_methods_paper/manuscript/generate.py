@@ -290,7 +290,7 @@ def native_operational_balances(*, study, minimum_cells):
         ratio = best / times[fv["source_id"]]
         area_km2 = int(p["cells"]) * float(p["dx_m"]) ** 2 / 1e6
         rows.append(f"| {p['case']} | {int(p['cells']):,} | {area_km2:.3f} | {p['dx_m']} | {float(p['end_h']):g} | {float(h['interval_s']):g} | "
-                    f"{float(fv['outlet_peak_m3s']):.2f} | {float(h['outlet_peak_m3s']):.2f} | "
+                    f"{float(fv['outlet_peak_m3s']):.5g} | {float(h['outlet_peak_m3s']):.5g} | "
                     f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {ratio:.3f} |")
     if not rows:
         return ""

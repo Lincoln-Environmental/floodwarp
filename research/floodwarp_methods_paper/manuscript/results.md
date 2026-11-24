@@ -158,15 +158,15 @@ Each row compares solvers on the same event and physical footprint. Domain area 
 | Storm | Cells | Area (km²) | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | Δ net export (m³) | Δ infiltration (m³) | Hancock / FV1 time |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | coastal-703-moderate-10240x10240 | 1,048,576 | 104.858 | 10 | 32 | 300 | 131.72 | 112.55 | +870,045 | -835,214 | 1.752 |
-| fan-705-spatial-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 10.59 | 10.12 | -3,662 | +2,883 | 1.245 |
-| fan-711-spatial-10000x5000 | 500,000 | 50.000 | 10 | 16 | 300 | 15.22 | 15.83 | -28,081 | +25,783 | 1.067 |
+| fan-705-spatial-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 10.59 | 10.125 | -3,662 | +2,883 | 1.245 |
+| fan-711-spatial-10000x5000 | 500,000 | 50.000 | 10 | 16 | 300 | 15.22 | 15.825 | -28,081 | +25,783 | 1.067 |
 | floodplain-702-moderate-10240x10240 | 1,048,576 | 104.858 | 10 | 28 | 300 | 141.05 | 123.69 | +1,123,372 | -1,137,291 | 1.954 |
-| hill-706-back-10240x10240 | 1,048,576 | 104.858 | 10 | 16 | 300 | 1174.70 | 1251.56 | +128,872 | -130,907 | 1.477 |
-| plain-701-spatial-10240x10240 | 1,048,576 | 104.858 | 10 | 52 | 300 | 0.00 | 0.00 | +0 | +0 | 0.943 |
-| plain-709-spatial-1000x1000 | 1,000,000 | 1.000 | 1 | 20 | 300 | 0.02 | 0.04 | -256 | +230 | 1.223 |
-| plain-710-spatial-5000x5000 | 250,000 | 25.000 | 10 | 60 | 300 | 0.00 | 0.00 | +0 | -0 | 0.878 |
-| plain-712-spatial-20480x10240 | 2,097,152 | 209.715 | 10 | 40 | 300 | 0.00 | 0.00 | +0 | +0 | 1.094 |
-| rolling-704-soil-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 61.21 | 25.64 | +161,747 | -161,747 | 2.002 |
+| hill-706-back-10240x10240 | 1,048,576 | 104.858 | 10 | 16 | 300 | 1174.7 | 1251.6 | +128,872 | -130,907 | 1.477 |
+| plain-701-spatial-10240x10240 | 1,048,576 | 104.858 | 10 | 52 | 300 | 0 | 0 | +0 | +0 | 0.943 |
+| plain-709-spatial-1000x1000 | 1,000,000 | 1.000 | 1 | 20 | 300 | 0.015501 | 0.035363 | -256 | +230 | 1.223 |
+| plain-710-spatial-5000x5000 | 250,000 | 25.000 | 10 | 60 | 300 | 0 | 0 | +0 | -0 | 0.878 |
+| plain-712-spatial-20480x10240 | 2,097,152 | 209.715 | 10 | 40 | 300 | 0 | 0 | +0 | +0 | 1.094 |
+| rolling-704-soil-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 61.208 | 25.644 | +161,747 | -161,747 | 2.002 |
 | rolling-713-moderate-20480x10240 | 2,097,152 | 209.715 | 10 | 24 | 300 | 464.91 | 330.56 | +1,070,101 | -1,073,309 | 2.263 |
 
 The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions use the independently screened reference for each observable. [Water budgets and internal gauges](../fidelity/native_results/measured_windows.csv) · [Policy-specific observations and reference eligibility](../fidelity/native_publication/README.md)

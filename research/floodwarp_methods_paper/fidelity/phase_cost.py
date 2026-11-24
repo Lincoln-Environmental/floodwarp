@@ -73,12 +73,27 @@ def event_diagnostics(*, item):
         result[field + "_intervals"] = len(values)
         result[field] = reducer(values) if len(values) == len(frames) else None
     result["diagnostic_intervals"] = len(frames)
+    prefix = data.get("native_prefix_diagnostics")
+    if prefix is not None or (item.get("parent_id", item["id"]) == item["id"] and "preload_s" in data):
+        original = data if prefix is None else prefix
+        initial_count = len(frames) if prefix is None else data["native_timing_provenance"]["initial_intervals"]
+        tail = frames[initial_count:]
+        result["initial_setup_s"] = original.get("setup_s")
+        for field, prefix_field in (("graph_capture_s", "graph_capture_s"), ("compilation_s", "preload_s"),
+                                    ("extraction_s", "extraction_s")):
+            initial = original.get(prefix_field)
+            tail_values = [r[field] for r in tail if r.get(field) is not None]
+            result["initial_" + field] = initial
+            result[field + "_intervals"] = (initial_count if initial is not None else 0) + len(tail_values)
+            result[field] = (initial + sum(tail_values)
+                             if initial is not None and len(tail_values) == len(tail) else None)
     mem = [r["live_pool_mib"] for r in sections if r.get("live_pool_mib") is not None]
     result["sampled_pool_peak_mib"] = max(mem) if mem else None
     result["pool_snapshots"] = len(mem)
-    result["source_final_pool_mib"] = data.get(
-        "live_pool_mib", data.get("process_pool_mib")
-    )
+    result["source_final_pool_mib"] = (prefix or data).get("live_pool_mib", data.get("process_pool_mib"))
+    if result["source_final_pool_mib"] is not None:
+        result["sampled_pool_peak_mib"] = max([*mem, result["source_final_pool_mib"]])
+        result["pool_snapshots"] += 1
     for k in (
         "inflow_m3",
         "outflow_m3",
