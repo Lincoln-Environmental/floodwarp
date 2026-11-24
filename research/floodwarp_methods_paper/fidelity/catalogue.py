@@ -76,6 +76,7 @@ def manifest(*, directory, package):
     root = directory.parents[2]
     raw = (
         "long_pulses",
+        "sharp_pulses",
         "oblique_runs",
         "pulse_runs",
         "storm_runs",

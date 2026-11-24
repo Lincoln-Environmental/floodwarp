@@ -95,6 +95,15 @@ def summary(*, directory, storms, pulses, decisions):
             lines.append(
                 f"| {r['dx']} | {r['method']} | {r['peak_bias_pct']:+.1f}% | {r['volume_bias_pct']:+.2f}% | {describe(rows=[r], field='width80_bias_pct')}% | {describe(rows=[r], field='shape_tv_pct')}% | {describe(rows=[r], field='centroid_delay_s')} | {r['runtime_s']:.3f} |"
             )
+    sharp = [r for r in pulses if r["cohort"] == "sharp-refined"]
+    if sharp:
+        count = sum(r["qualified_peak_bias_pct"] for r in sharp)
+        lines.extend(
+            [
+                "",
+                f"The quarter-second sharp-pulse study qualified {count}/{len(sharp)} station comparisons for peak magnitude. Original one-second records remain in the archive. Separate coarsening of each new hydrograph measures the effect of output cadence on exactly the same accepted trajectory. [Sharp-pulse results](results/sharp_pulses.csv) · [Cadence effects](results/sharp_reporting_intervals.csv) · [Independent analytical check](results/sharp_reference_checks.csv)",
+            ]
+        )
     base = selected(
         rows=pulses,
         case="smooth",
@@ -390,6 +399,11 @@ def run(*, directory, default_percent, factors):
     pulses = assessment.pulse_rows(directory=directory, cfg=cfg)
     from research.floodwarp_methods_paper.fidelity import pulse_products
 
+    if (directory / "sharp_pulses/current.txt").is_file():
+        from research.floodwarp_methods_paper.fidelity import sharp_pulse
+
+        sharp_settings = json.loads((directory / "sharp_settings.json").read_text())
+        pulses.extend(sharp_pulse.review(directory=directory, settings=sharp_settings))
     pulse_products.distance_effects(rows=pulses, target=directory / "results")
     from research.floodwarp_methods_paper.fidelity.extended_analysis import (
         horizon_effects,

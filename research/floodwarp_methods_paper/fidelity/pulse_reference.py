@@ -68,8 +68,15 @@ def section_flux(*, edges, station, config, profile):
     return np.asarray(integrals) / np.diff(edges)
 
 
-def verify(*, directory, absolute_tolerance, relative_tolerance):
-    folder = directory / "long_pulses"
+def verify(
+    *,
+    directory,
+    absolute_tolerance,
+    relative_tolerance,
+    archive_name="long_pulses",
+    result_name="pulse_reference_checks.csv",
+):
+    folder = directory / archive_name
     archive = folder / (folder / "current.txt").read_text().strip()
     config = json.loads((archive / "inputs.json").read_text())["cfg"]
     rows = []
@@ -110,7 +117,7 @@ def verify(*, directory, absolute_tolerance, relative_tolerance):
                             max_absolute_difference_m3s=np.max(abs(curve - q)),
                         )
                     )
-    metrics.csv_write(file=directory / "results/pulse_reference_checks.csv", rows=rows)
+    metrics.csv_write(file=directory / "results" / result_name, rows=rows)
     largest = max(r["max_absolute_difference_m3s"] for r in rows)
     print(
         f"Checked {len(rows)} archived section records. Largest difference {largest:.3g} m³/s."
