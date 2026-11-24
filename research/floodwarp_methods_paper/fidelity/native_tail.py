@@ -247,6 +247,47 @@ def crest_windows(*, histories, rain_end_s, original_end_s):
     return rows
 
 
+def cadence_peaks(*, histories, windows, minutes):
+    """Coarsen accepted interval volumes with no reconstruction of peaks between observations."""
+    records = {v["id"]: v["frames"] for v in histories}
+    rows = []
+    for window in windows:
+        if window["window"] != "whole_record":
+            continue
+        original = window["interval_s"]
+        for m in minutes:
+            period = 60 * m
+            duration = window["end_s"]
+            if period % original or duration % period:
+                raise ValueError(
+                    "Sampling period must combine complete recorded intervals"
+                )
+            frames = records[window["id"]][: duration // original]
+            q = np.array([f["outlet_m3s"] for f in frames])
+            coarse = q.reshape(-1, period // original).mean(axis=1)
+            count = period // original
+            moving = np.convolve(q, np.ones(count) / count, mode="valid")
+            peak = float(coarse.max())
+            np.testing.assert_allclose(
+                coarse.sum() * period, window["net_volume_m3"], rtol=2e-13, atol=1e-9
+            )
+            rows.append(
+                dict(
+                    id=window["id"],
+                    dx_m=window["dx_m"],
+                    method=window["method"],
+                    end_h=duration / 3600,
+                    interval_s=period,
+                    peak_m3s=peak,
+                    first_peak_end_s=int((np.argmax(coarse) + 1) * period),
+                    moving_peak_m3s=float(moving.max()),
+                    first_moving_peak_end_s=int((np.argmax(moving) + count) * original),
+                    net_volume_m3=window["net_volume_m3"],
+                )
+            )
+    return rows
+
+
 def plot_outlet(*, dest, histories, forcing):
     import matplotlib.pyplot as plt
     from research.floodwarp_methods_paper.fidelity.figures import save
@@ -286,7 +327,7 @@ def history_order(v):
     return v["method"], v["dx"]
 
 
-def report(*, dest, rows, strip_m, crests):
+def report(*, dest, rows, strip_m, crests, cadence):
     summary = [r for r in rows if r["strip_width_m"] == strip_m]
     lines = [
         "# Discharge after rainfall in the incised catchment",
@@ -312,6 +353,38 @@ def report(*, dest, rows, strip_m, crests):
             f"| {names[row['method']]} | {row['dx_m']} | {row['start_h']:g}–{row['end_h']:g} | "
             f"{row['net_export_m3']:,.1f} | {row['net_into_strip_m3']:,.1f} | "
             f"{row['net_storage_contribution_m3']:,.1f} | {share} |"
+        )
+    matched = {(r["method"], r["dx_m"], r["start_h"], r["end_h"]): r for r in summary}
+    paired = []
+    for (method, dx, start, end), coarse in matched.items():
+        if dx != 10 or (method, 5, start, end) not in matched:
+            continue
+        fine = matched[method, 5, start, end]
+        paired.append(
+            dict(
+                method=method,
+                start_h=start,
+                end_h=end,
+                strip_width_m=strip_m,
+                coarse_id=coarse["id"],
+                fine_id=fine["id"],
+                extra_net_export_m3=coarse["net_export_m3"] - fine["net_export_m3"],
+                extra_upstream_supply_m3=coarse["net_into_strip_m3"]
+                - fine["net_into_strip_m3"],
+                extra_storage_contribution_m3=coarse["net_storage_contribution_m3"]
+                - fine["net_storage_contribution_m3"],
+            )
+        )
+    metrics.csv_write(file=dest / "paired_reach_budgets.csv", rows=paired)
+    for pair in paired:
+        lines.extend(
+            [
+                "",
+                f"Between hours {pair['start_h']:g} and {pair['end_h']:g}, the 10 m minus 5 m "
+                f"{names[pair['method']]} difference in outlet volume was {pair['extra_net_export_m3']:+,.0f} m³. "
+                f"The upstream face supplied {pair['extra_upstream_supply_m3']:+,.0f} m³ of this difference. "
+                f"Storage release in the reach, including net rain and infiltration, supplied {pair['extra_storage_contribution_m3']:+,.0f} m³.",
+            ]
         )
     lines.extend(
         [
@@ -348,9 +421,28 @@ def report(*, dest, rows, strip_m, crests):
     lines.extend(
         [
             "",
-            "[Rainfall and recession windows](crest_windows.csv) · [Rainfall and both discharge sections](incised_rain_and_routed_discharge.pdf)",
+            "[Peaks at different observation intervals](interval_peaks.csv) · [Rainfall and recession windows](crest_windows.csv) · [Rainfall and both discharge sections](incised_rain_and_routed_discharge.pdf)",
         ]
     )
+    latest = max(r["end_h"] for r in cadence)
+    lines.extend(
+        [
+            "",
+            f"## Peak sensitivity to sampling through hour {latest:g}",
+            "",
+            "The fixed intervals start at storm onset. The moving interval can end at any recorded minute. "
+            "Both average accepted discharge volumes over the full stated duration.",
+            "",
+            "| Method | Grid (m) | Interval (min) | Fixed peak (m³/s) | Moving peak (m³/s) |",
+            "|---|---:|---:|---:|---:|",
+        ]
+    )
+    for r in cadence:
+        if r["end_h"] == latest:
+            lines.append(
+                f"| {names[r['method']]} | {r['dx_m']} | {r['interval_s'] / 60:g} | "
+                f"{r['peak_m3s']:.2f} | {r['moving_peak_m3s']:.2f} |"
+            )
     (dest / "README.md").write_text("\n".join(lines) + "\n")
 
 
@@ -453,7 +545,19 @@ def run(*, directory, settings, replay_peak):
         original_end_s=original_ends.pop(),
     )
     metrics.csv_write(file=dest / "crest_windows.csv", rows=crests)
-    report(dest=dest, rows=total, strip_m=settings["report_strip_m"], crests=crests)
+    cadence = cadence_peaks(
+        histories=histories.values(),
+        windows=crests,
+        minutes=settings["integration_minutes"],
+    )
+    metrics.csv_write(file=dest / "interval_peaks.csv", rows=cadence)
+    report(
+        dest=dest,
+        rows=total,
+        strip_m=settings["report_strip_m"],
+        crests=crests,
+        cadence=cadence,
+    )
     plot_outlet(
         dest=dest,
         histories=histories.values(),

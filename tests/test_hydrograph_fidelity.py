@@ -929,3 +929,54 @@ def test_independent_native_references_hold_out_the_entire_realisation():
         assert {s["dx"] for s in group} == {1, 5, 10}
         assert all(s["dx"] == s["dem"] and s["initial_grid"] == "native_1m_block_mean" for s in group)
         assert {s["factor"] for s in group if s["method"] == "adaptive" and s["dx"] == 1} == {0.5, 1}
+
+
+def test_native_terrain_readback_rejects_child_and_parent_mismatches(tmp_path):
+    from research.floodwarp_methods_paper.fidelity.native_audit import read_grids
+    from research.floodwarp_methods_paper.terrain.generators.mean_dem import mean_cells
+
+    native = np.arange(400, dtype=float).reshape(20, 20)
+    five = mean_cells(values=native, factor=5)
+    ten = mean_cells(values=five, factor=2)
+    terrain = dict(inputs={"grids_m": [1, 5, 10], "native_m": 1}, native_sha256={"bed": "test"},
+                   files={"bed_5m.npy": "five", "bed_10m.npy": "ten"}, max_direct_10m_difference={"bed": 0.})
+    for dx, a in ((1, native), (5, five), (10, ten)):
+        np.save(tmp_path / f"bed_{dx}m.npy", a)
+    assert read_grids(folder=tmp_path, terrain=terrain)[0]["parents_with_different_children"] == 4
+    bad = five.copy()
+    bad[0, 0] += 4.
+    bad[0, 1] -= 4.
+    np.save(tmp_path / "bed_5m.npy", bad)
+    with pytest.raises(AssertionError):
+        read_grids(folder=tmp_path, terrain=terrain)
+    np.save(tmp_path / "bed_5m.npy", five)
+    np.save(tmp_path / "bed_10m.npy", ten + 1.)
+    with pytest.raises(AssertionError):
+        read_grids(folder=tmp_path, terrain=terrain)
+
+
+def test_time_aggregation_can_hide_a_crest_crossing_an_output_edge():
+    from research.floodwarp_methods_paper.fidelity.native_tail import cadence_peaks, crest_windows
+
+    frames = [dict(t_s=(i + 1) * 60, outlet_m3s=q) for i, q in enumerate((0, 8, 8, 0))]
+    histories = [dict(id="pulse", method="fv1", dx=5, frames=frames, settled=True)]
+    windows = crest_windows(histories=histories, rain_end_s=120, original_end_s=240)
+    rows = cadence_peaks(histories=histories, windows=windows, minutes=[1, 2])
+    assert [r["peak_m3s"] for r in rows] == [8, 4]
+    assert rows[-1]["moving_peak_m3s"] == 8
+    assert rows[-1]["first_moving_peak_end_s"] == 180
+    assert rows[0]["net_volume_m3"] == rows[1]["net_volume_m3"] == 960
+
+
+def test_infiltration_accounting_includes_cells_outside_the_rain_footprint():
+    from research.floodwarp_methods_paper.fidelity.native_infiltration import losses
+
+    soil = np.array([0.002, 0.001])
+    kw = dict(rain=np.array([0.01, 0.0]), h=np.zeros(2), multiplier=np.array([1., 0.]),
+              dx=10, seconds=3600, capacity=0.002 / 3600)
+    regions = losses(soil=soil, **kw)
+    assert regions["rain_footprint"]["infiltration_m3"] == pytest.approx(0.2)
+    assert regions["outside_rain_footprint"]["infiltration_m3"] == pytest.approx(0.1)
+    assert regions["outside_rain_footprint"]["equivalent_area_hours_km2_h"] == pytest.approx(0.00005)
+    with pytest.raises(ValueError):
+        losses(soil=soil*2, **kw)

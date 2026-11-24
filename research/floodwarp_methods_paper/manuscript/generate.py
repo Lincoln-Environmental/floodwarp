@@ -51,6 +51,65 @@ def completed_storms(*, study):
     )
 
 
+def native_incised_crests(*, study):
+    path = study / "fidelity/native_tail/crest_windows.csv"
+    if not path.is_file():
+        return ""
+    by_end = defaultdict(dict)
+    for row in csv_read(file=path):
+        if row["method"] == "adaptive" and row["window"] == "whole_record":
+            by_end[int(row["end_s"])][int(row["dx_m"])] = row
+    shared = [t for t, group in by_end.items() if {5, 10} <= group.keys()]
+    if not shared:
+        return ""
+    end = max(shared)
+    parts = []
+    for dx in (10, 5):
+        record = by_end[end][dx]
+        hour, remaining = divmod(int(record["first_peak_interval_end_s"]), 3600)
+        parts.append(f"{float(record['peak_interval_mean_m3s']):.2f} m³/s at {hour} h {remaining // 60:02d} min on the {dx} m grid")
+    return (
+        f"Through the matched {end / 3600:g}-hour window, the highest recorded FV2 RK2 outlet "
+        f"interval means were {parts[0]} and {parts[1]}. Each interval spans "
+        f"{by_end[end][10]['interval_s']} seconds. Disagreement in these two measured maxima "
+        "establishes grid sensitivity. The physical storm peak remains unresolved."
+    )
+
+
+def incised_storage_and_infiltration(*, study):
+    base = study / "fidelity"
+    paragraphs = []
+    path = base / "native_tail/crest_minute_budgets.csv"
+    if path.is_file():
+        rows = [r for r in csv_read(file=path) if int(r["strip_width_m"]) == 40]
+        details = [
+            f"{float(r['net_storage_share_pct']):.2f}% on the {int(r['dx_m'])} m grid"
+            for r in sorted(rows, key=grid_spacing)
+        ]
+        if details:
+            paragraphs.append(
+                "The replay measured the source of discharge during the highest post-hour-eight minute at each spacing. "
+                "Net drawdown in the last 40 m supplied " + " and ".join(details)
+                + ". That water may have entered the reach earlier. [Crest-minute budgets](../fidelity/native_tail/CREST.md)"
+            )
+    path = base / "native_outlet/runoff_partition.csv"
+    if path.is_file():
+        for row in csv_read(file=path):
+            if row["method"] == "hancock_adaptive" and int(row["dx_m"]) == 5:
+                paragraphs.append(
+                    f"On the 5 m grid, FV1 exported {float(row['extra_fv1_export_m3']):,.0f} m³ more water than Hancock by hour {float(row['end_h']):g}. "
+                    f"Lower cumulative infiltration accounted for {float(row['less_fv1_infiltration_m3']):,.0f} m³ of the difference and lower final storage for "
+                    f"{float(row['less_fv1_final_storage_m3']):,.0f} m³. The net infiltration difference arose on cells outside the rainfall footprint. "
+                    "These terms close the water balance under the same prescribed infiltration capacity. "
+                    "[Runoff and infiltration by grid](../fidelity/native_outlet/runoff_partition.csv)"
+                )
+    return "\n\n".join(paragraphs)
+
+
+def grid_spacing(row):
+    return int(row["dx_m"])
+
+
 def generate(*, study):
     p = study / "processed"
     raw = csv_read(p / "metrics/storms.csv")
@@ -207,11 +266,15 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                            "The steady-sheet experiment checks this effect independently against exact discharge. "
                            "[Outlet placement and terminal storage](../fidelity/native_outlet/README.md)\n")
         if (study / "fidelity/native_tail/README.md").is_file():
+            correction += "\n" + native_incised_crests(study=study) + "\n"
             correction += ("\nRunoff travel time and catchment storage allow the outlet maximum to follow rainfall. "
                            "The incised diagnostic compares accepted flow at successive cross-sections with "
                            "storage and infiltration over the intervening reach. The matched finer-grid checks "
                            "test how strongly the outlet timing and magnitude depend on representation. "
                            "[Recession water balance](../fidelity/native_tail/README.md)\n")
+        detail = incised_storage_and_infiltration(study=study)
+        if detail:
+            correction += "\n" + detail + "\n"
         result += correction
         discussion += correction
         audit += correction.replace("](../", "](")

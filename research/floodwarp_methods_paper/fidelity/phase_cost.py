@@ -92,14 +92,14 @@ def event_diagnostics(*, item):
     return result
 
 
-def collect(*, groups, directory, cadence, edges, phase_edges, target=None):
+def collect(*, groups, directory, cadence, edges, phase_edges, target=None, representation="sampled"):
     if target is None:
         target = directory / "results"
     chunks = []
     diagnostics = []
     totals = defaultdict(list)
     for (cohort, case, rep), items in groups.items():
-        if not cohort.startswith("complete-") or rep != "sampled":
+        if not cohort.startswith("complete-") or rep != representation:
             continue
         grid = defaultdict(dict)
         for item in items:

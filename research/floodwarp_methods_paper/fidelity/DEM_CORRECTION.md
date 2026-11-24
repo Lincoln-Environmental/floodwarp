@@ -64,4 +64,13 @@ Read-back of the solver input rasters found different elevations among the four 
 
 The free boundary produced measurable terminal-cell storage on the native-averaged grids. Independent analytical and reach controls move the boundary while holding the measurement location fixed. [Local depth differences and independent outlet checks](native_outlet/README.md)
 
-The corrected whole-event comparison is pending. The original eight-hour staircase result cannot supply it.
+| Method | Grid (m) | Common end (h) | Peak (m³/s) | Net outlet (m³) | Storage (m³) |
+|---|---:|---:|---:|---:|---:|
+| adaptive | 10 | 16 | 66.399 | 825,018 | 3,481 |
+| adaptive | 5 | 16 | 48.330 | 809,311 | 647 |
+| hancock_adaptive | 10 | 16 | 79.651 | 825,170 | 3,457 |
+| hancock_adaptive | 5 | 16 | 48.286 | 809,296 | 635 |
+| fv1 | 10 | 16 | 48.371 | 910,217 | 104 |
+| fv1 | 5 | 16 | 49.186 | 910,143 | 56 |
+
+[Measured area-mean storms through matched recession](mean_storms/complete_events.csv)

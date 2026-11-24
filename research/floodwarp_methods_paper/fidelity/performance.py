@@ -89,7 +89,8 @@ def costs(*, directory, rows):
                         median=median(a),
                         lower_quartile=np.percentile(a, 25),
                         upper_quartile=np.percentile(a, 75),
-                        n_within_target=sum(x <= 1.5 for x in a),
+                        minimum=min(a),
+                        maximum=max(a),
                     )
                 )
     metrics.csv_write(

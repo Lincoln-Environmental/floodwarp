@@ -59,6 +59,29 @@ def specifications(*, study, config, design):
                     experiment_class=experiment,
                 )
 
+        reference = design["incised_reference"]
+        if seed == reference["seed"] and experiment == "operational":
+            fine = reference["dx_m"]
+            for name in reference["methods"]:
+                factors = (
+                    [1.0, design["reference_cfl_factor"]]
+                    if name == "adaptive"
+                    else [1.0]
+                )
+                for factor in factors:
+                    yield dict(
+                        base,
+                        dx=fine,
+                        dem=fine,
+                        method=name,
+                        requested_method=name,
+                        factor=factor,
+                        initial_grid="native_1m_block_mean",
+                        terrain_aggregation="native_1m_block_mean",
+                        experiment_class=experiment,
+                        reference_role="incised_recession",
+                    )
+
     length, width = design["reference_dimensions_m"]
     for domain in design["reference_domains"]:
         name = (
@@ -168,9 +191,8 @@ def prior_prefix(*, directory, spec, receipt, solver, inputs, machine, settings)
     return None
 
 
-def run_group(*, directory, specs, config, design, settings, machine):
+def physical_inputs(*, directory, base, config, design):
     root = directory.parents[2]
-    base = specs[0]
     inputs = dict(
         cfg=config,
         template=json.loads(
@@ -186,6 +208,36 @@ def run_group(*, directory, specs, config, design, settings, machine):
         channel_core_m=design["channel_core_min_depth_m"],
         include_native=base["experiment_class"]
         in ("fixed_physical_domain", "independent_reference"),
+    )
+    return inputs, bundle, receipt
+
+
+def audit_terrain(*, directory, base, config, design):
+    from research.floodwarp_methods_paper.fidelity.native_audit import read_grids
+
+    _, bundle, terrain = physical_inputs(
+        directory=directory, base=base, config=config, design=design
+    )
+    rows = read_grids(folder=bundle, terrain=terrain)
+    identity = runner.digest(terrain)
+    dest = directory / "native_terrain" / base["case"] / identity
+    dest.mkdir(parents=True, exist_ok=True)
+    runner.write_json(path=dest / "inputs.json", data=terrain)
+    metrics.csv_write(file=dest / "area_means.csv", rows=rows)
+    print(
+        base["case"],
+        terrain["native_cells"],
+        "native 1 m cells verified",
+        identity,
+        flush=True,
+    )
+
+
+def run_group(*, directory, specs, config, design, settings, machine):
+    root = directory.parents[2]
+    base = specs[0]
+    inputs, bundle, receipt = physical_inputs(
+        directory=directory, base=base, config=config, design=design
     )
     output = directory / "native_matrix" / base["case"]
     output.mkdir(parents=True, exist_ok=True)
@@ -378,7 +430,17 @@ def run(*, directory, arguments):
     flags, rest = getopt.getopt(
         arguments,
         "",
-        ["dry-run", "resume", "force", "case=", "method=", "dx=", "dem=", "suite="],
+        [
+            "dry-run",
+            "resume",
+            "force",
+            "terrain-only",
+            "case=",
+            "method=",
+            "dx=",
+            "dem=",
+            "suite=",
+        ],
     )
     if rest:
         raise ValueError("Unknown arguments " + str(rest))
@@ -414,6 +476,9 @@ def run(*, directory, arguments):
         raise ValueError("No native storm matches the requested selection")
     if "--dry-run" in opts:
         for items in groups.values():
+            if "--terrain-only" in opts:
+                print("Verify native 1 m terrain and area means", items[0]["case"])
+                continue
             for s in items:
                 print(
                     s["case"],
@@ -423,6 +488,12 @@ def run(*, directory, arguments):
                     s["factor"],
                     s["experiment_class"],
                 )
+        return
+    if "--terrain-only" in opts:
+        for specs in groups.values():
+            audit_terrain(
+                directory=directory, base=specs[0], config=config, design=design
+            )
         return
     machine = runner.machine(root=directory.parents[2])
     for specs in groups.values():

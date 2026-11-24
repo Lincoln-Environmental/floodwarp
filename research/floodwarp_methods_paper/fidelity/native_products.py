@@ -15,6 +15,7 @@ from research.floodwarp_methods_paper.fidelity import (
     extended_analysis,
     final_depth,
     native_matrix,
+    phase_cost,
     recession,
     statistics,
 )
@@ -321,6 +322,11 @@ def run(*, directory, require_complete):
     metrics.csv_write(file=target / "measured_windows.csv", rows=original + complete)
     hydro = json.loads((directory / "design.json").read_text())
     application = json.loads((directory / "application_settings.json").read_text())
+    phase_cost.collect(
+        groups=groups, directory=directory, target=target, representation="native metre area means",
+        cadence=application["cost_interval_s"], edges=application["wet_fraction_edges"],
+        phase_edges=application["phase_end_hours"],
+    )
     rows, checks = assessment.storm_rows(groups=groups, cfg=hydro)
     metrics.csv_write(file=target / "hydraulic_fidelity.csv", rows=rows)
     metrics.csv_write(file=target / "reference_checks.csv", rows=checks)
@@ -353,7 +359,7 @@ def run(*, directory, require_complete):
         "",
         "Outlet peaks are interval means of accepted face transport. The original-window table may end while substantial flow continues. Numerical error rankings require common recession endpoints and separate spatial, temporal and formulation checks for the observable.",
         "",
-        "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures) · [5 cm and 10 cm native extent](incised_practical_extent.csv) · [Matched-grid depth differences](incised_state_disagreement.csv)",
+        "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures) · [5 cm and 10 cm native extent](incised_practical_extent.csv) · [Matched-grid depth differences](incised_state_disagreement.csv) · [Accepted steps, retries, memory and accounting](whole_storm_diagnostics.csv) · [Costs by phase and footprint](cost_by_phase.csv)",
     ]
     (target / "README.md").write_text("\n".join(text) + "\n")
     print(text[2], flush=True)

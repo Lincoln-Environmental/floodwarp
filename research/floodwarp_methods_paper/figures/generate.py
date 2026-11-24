@@ -610,7 +610,7 @@ def advisor(*, study, out):
     save(fig=fig, folder=out, name="12_advisor_validation")
 
 
-def generate(*, study):
+def paper_style():
     plt.switch_backend("Agg")
     plt.rcParams.update(
         {
@@ -626,6 +626,10 @@ def generate(*, study):
             "svg.hashsalt": "floodwarp-methods-paper",
         }
     )
+
+
+def generate(*, study):
+    paper_style()
     out = study / "figures"
     workflow(out=out)
     exact_profiles(study=study, out=out)

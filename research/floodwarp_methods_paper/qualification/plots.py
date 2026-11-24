@@ -42,12 +42,13 @@ def scale_cost(*, rows, out):
                 s=13,
                 alpha=0.7,
             )
-        ax.axhline(1.5, ls=":", color="black", lw=0.9)
         if key in ("cells", "hancock_steps"):
             ax.set_xscale("log")
         ax.set(xlabel=title, ylabel="Hydraulic runtime / FV1")
     axs[0, 0].legend(frameon=False, ncol=3)
     save(fig=fig, folder=out, name="13_execution_cost")
+    svg = out / "13_execution_cost.svg"
+    svg.write_text("\n".join(line.rstrip() for line in svg.read_text().splitlines()) + "\n")
 
 
 def value(*, study, out, by_case, fronts):
