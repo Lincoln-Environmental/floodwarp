@@ -237,13 +237,16 @@ def run(*, directory):
          "The post-repair wide-matrix qualification is pending. Historical window identities and numerical sources are retained in the linked data. "
          "[Repaired incised comparison](../outlet_results/README.md)"),
         "",
-        "| Case | Grid (m) | Method | Execution | CFL factor | End (h) | Peak (m³/s) | Export (m³) | Primary hydraulic time (s) | Steps |",
-        "|---|---:|---|---|---:|---:|---:|---:|---:|---:|",
+        "The internal gauge spans the middle column of x faces. Both peaks use interval-mean discharge from "
+        "accepted face volumes. Positive net transport points downstream.",
+        "",
+        "| Case | Grid (m) | Method | Execution | CFL factor | End (h) | Cadence (s) | Internal peak (m³/s) | Outlet peak (m³/s) | Net export (m³) | Primary hydraulic time (s) | Steps |",
+        "|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for r in rows:
         text.append(
             f"| {r['case']} | {r['dx_m']} | {r['method']} | {r.get('resolved_execution_mode') or r['execution_mode']} | "
-            f"{r['factor']} | {float(r['end_h']):g} | "
+            f"{r['factor']} | {float(r['end_h']):g} | {float(r['interval_s']):g} | {float(r['section_peak_m3s']):.3f} | "
             f"{float(r['outlet_peak_m3s']):.3f} | {float(r['net_outlet_m3']):,.0f} | {float(r['hydraulic_s']):.2f} | {int(r['steps']):,} |"
         )
     text.extend(

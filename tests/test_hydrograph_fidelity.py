@@ -59,6 +59,23 @@ def test_delay_and_scaling(config):
     assert row["shape_tv_pct"] > 0
 
 
+def test_native_gauges_resolve_internal_transport_and_dry_outlet():
+    from research.floodwarp_methods_paper.fidelity.native_products import gauge_observation
+
+    frames = [dict(t_s=t, section_m3s=q, outlet_m3s=0.0)
+              for t, q in ((5, -2), (18, 4), (20, 1))]
+    item = {"d": {"frames": frames}}
+    section = gauge_observation(item=item, station="section")
+    assert section["peak_m3s"] == 4
+    assert section["unique_outward_peak_interval_end_s"] == 18
+    assert section["net_m3"] == 44
+    outlet = gauge_observation(item=item, station="outlet")
+    assert outlet["net_m3"] == outlet["peak_m3s"] == 0
+    assert outlet["unique_outward_peak_interval_end_s"] is None
+    frames[-1]["section_m3s"] = 4
+    assert gauge_observation(item=item, station="section")["unique_outward_peak_interval_end_s"] is None
+
+
 def test_irregular_bins_and_combined(config):
     t = np.array([0, 1, 2, 4, 8, 12, 17, 21, 25])
     ref = np.array([0, 1, 3, 1, 0, 0, 0, 0.0])

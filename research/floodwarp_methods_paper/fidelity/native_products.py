@@ -89,9 +89,25 @@ def prefixes(*, directory):
     return records
 
 
+def gauge_observation(*, item, station):
+    edges, discharge = assessment.curve(it=item, station=station)
+    peak = float(discharge.max())
+    # Each ordinate is accepted net face volume divided by its own interval.
+    crest = np.flatnonzero(discharge == peak)
+    return dict(
+        peak_m3s=peak,
+        unique_outward_peak_interval_end_s=float(edges[crest[0] + 1])
+        if peak > 0 and crest.size == 1 else None,
+        net_m3=float(discharge @ np.diff(edges)),
+        end_m3s=float(discharge[-1]),
+        end_s=float(edges[-1]),
+    )
+
+
 def describe(*, item, settings, status):
     d, s = item["d"], item["s"]
-    edges, q = assessment.curve(it=item, station="outlet")
+    outlet = gauge_observation(item=item, station="outlet")
+    section = gauge_observation(item=item, station="section")
     matched, stations = recession.settled(
         frames=d["frames"],
         storage=d["final_storage_m3"],
@@ -110,16 +126,21 @@ def describe(*, item, settings, status):
         source_id=item["id"],
         native_sha=item["native_sha"],
         horizon=status,
-        end_h=edges[-1] / 3600,
+        end_h=outlet["end_s"] / 3600,
         interval_s=s["interval"],
         cells=round(np.prod(s["dimensions"]) / s["dx"] ** 2),
         initial_m3=d["initial_m3"],
         rain_m3=d["rain_m3"],
         infiltration_m3=d["infiltration_m3"],
         storage_m3=d["final_storage_m3"],
-        outlet_peak_m3s=float(q.max()),
-        end_outlet_m3s=float(q[-1]),
-        net_outlet_m3=float(q @ np.diff(edges)),
+        outlet_peak_m3s=outlet["peak_m3s"],
+        outlet_unique_outward_peak_interval_end_s=outlet["unique_outward_peak_interval_end_s"],
+        end_outlet_m3s=outlet["end_m3s"],
+        net_outlet_m3=outlet["net_m3"],
+        section_x_m=(round(s["dimensions"][0] / s["dx"]) // 2) * s["dx"],
+        section_peak_m3s=section["peak_m3s"],
+        section_unique_outward_peak_interval_end_s=section["unique_outward_peak_interval_end_s"],
+        net_section_m3=section["net_m3"],
         late_outward_volume_fraction=stations["outlet"]["recent_to_volume"],
         both_stations_passed=matched,
         residual_m3=d["residual_m3"],

@@ -2,30 +2,34 @@
 
 All positions share the same native metre grid origin. Each 10 m elevation averages its four 5 m children. Each row reports the cost of its recorded method, execution policy and common event endpoint. The normalized-error Pareto tables use independently screened references for each hydraulic observable.
 
-The post-repair wide-matrix qualification is pending. Historical window identities and numerical sources are retained in the linked data. [Repaired incised comparison](../outlet_results/README.md)
+The primary event rows use the current numerical source `7e935dd08d51`.
 
-| Case | Grid (m) | Method | Execution | CFL factor | End (h) | Peak (m³/s) | Export (m³) | Primary hydraulic time (s) | Steps |
-|---|---:|---|---|---:|---:|---:|---:|---:|---:|
-| incised-707-spatial-10240x10240 | 10 | adaptive | dense | 1.0 | 16 | 66.399 | 825,018 | 364.24 | 95,614 |
-| incised-707-spatial-10240x10240 | 5 | adaptive | dense | 1.0 | 16 | 48.330 | 809,311 | 2451.83 | 155,174 |
-| incised-707-spatial-10240x10240 | 10 | hancock_adaptive | tiles | 1.0 | 16 | 79.651 | 825,170 | 74.94 | 95,424 |
-| incised-707-spatial-10240x10240 | 5 | hancock_adaptive | tiles | 1.0 | 16 | 48.286 | 809,296 | 464.12 | 155,194 |
-| incised-707-spatial-10240x10240 | 10 | fv1 | sparse | 1.0 | 16 | 48.371 | 910,217 | 38.43 | 48,782 |
-| incised-707-spatial-10240x10240 | 5 | fv1 | sparse | 1.0 | 16 | 49.186 | 910,143 | 298.66 | 99,493 |
+The internal gauge spans the middle column of x faces. Both peaks use interval-mean discharge from accepted face volumes. Positive net transport points downstream.
 
-0 of 36 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
+| Case | Grid (m) | Method | Execution | CFL factor | End (h) | Cadence (s) | Internal peak (m³/s) | Outlet peak (m³/s) | Net export (m³) | Primary hydraulic time (s) | Steps |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| plain-701-spatial-10240x10240 | 10 | fv1 | sparse | 1.0 | 52 | 300 | 11.935 | 0.000 | 0 | 35.74 | 48,849 |
+| plain-701-spatial-10240x10240 | 10 | hancock_dense | dense | 1.0 | 52 | 300 | 10.643 | 0.000 | 0 | 83.41 | 41,769 |
+| plain-701-spatial-10240x10240 | 10 | hancock_adaptive | tiles | 1.0 | 52 | 300 | 10.643 | 0.000 | 0 | 33.69 | 41,769 |
+| plain-701-spatial-10240x10240 | 10 | hancock_auto | tiles | 1.0 | 52 | 300 | 10.643 | 0.000 | 0 | 33.68 | 41,769 |
+| plain-701-spatial-10240x10240 | 10 | li | native | 1.0 | 52 | 300 | 10.579 | 0.000 | 0 | 42.69 | 18,644 |
+| plain-701-spatial-10240x10240 | 10 | euler_mc | dense | 1.0 | 52 | 300 | 10.300 | 0.000 | 0 | 90.75 | 41,095 |
+| plain-701-spatial-10240x10240 | 10 | adaptive | dense | 1.0 | 52 | 300 | 10.643 | 0.000 | 0 | 159.34 | 42,003 |
+
+0 of 42 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
 ## Dense and tiled execution
 
-[original-window, 3 matched grid/event comparisons](policy_cost_original_window.pdf)
+[complete-native-metre, 1 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
+[original-window, 1 matched grid/event comparisons](policy_cost_original_window.pdf)
 
 Each upper-panel point represents a measured forecast window. Each lower-panel point represents a recorded timing interval (minutes: 15). Footprints are sampled at interval end. A ratio below one favours tiles. The same trajectory can contribute to both the initial window and the matched recession products.
 
 [Policy run identities and timings](../native_results/policy_cost_events.csv) · [Individual timing intervals](../native_results/policy_cost_windows.csv)
 
-0 of 0 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
+0 of 7 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
 
 [Timing identities, quartiles and range](../native_results/timing_distribution.csv)
 
