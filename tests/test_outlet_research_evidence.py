@@ -257,6 +257,9 @@ def test_transfer_inventory_retains_contract_for_selected_run(tmp_path):
     resumed, = inventory(**physical, method="hancock", spacing=10)
     assert resumed["id"] == entry["id"] and resumed["archived_windows"] == 1
     assert not resumed["complete"]
+    (folder / "complete.json").touch()
+    orphan, = inventory(**physical, method="hancock", spacing=10)
+    assert not orphan["complete"]
 
 
 def test_native_frontier_includes_water_accounts_and_depth_at_matched_cadence(tmp_path):
@@ -437,6 +440,7 @@ def test_transfer_preserves_failed_and_resumed_wall_timings(tmp_path):
 
 
 def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
+    import json
     from research.floodwarp_methods_paper import metrics, runner
     from research.floodwarp_methods_paper.fidelity import orton_transfer
 
@@ -449,6 +453,12 @@ def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
     fields = orton_transfer.observation_checksums(folder=folder, hours=4, checkpoint_h=4)
     entry = dict(id=ident, dx_m=10, method="rk2", duration_h=4, observation_sha256=runner.digest(fields))
     runner.write_json(path=folder / "complete.json", data=entry)
+    with pytest.raises(ValueError, match="no completed execution receipt"):
+        orton_transfer.read_complete(folder=folder, identity=identity)
+    with orton_transfer.measured_attempt(folder=folder, machine={"gpu": "reference"}, ident=ident):
+        pass
+    receipt, = folder.glob("attempt_*/completed.json")
+    assert json.loads(receipt.read_text())["restored_unconfirmed_summary"] is True
     assert orton_transfer.read_complete(folder=folder, identity=identity) == entry
     metrics.csv_write(file=tmp_path / "transfer.csv", rows=[entry])
     assert orton_transfer.verify_index(directory=tmp_path) == 1

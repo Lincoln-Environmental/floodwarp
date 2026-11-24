@@ -35,6 +35,10 @@ def observation_checksums(*, folder, hours, checkpoint_h):
     return {p.name: runner.checksum(p) for p in paths}
 
 
+def completed_attempt(*, folder):
+    return (folder / "complete.json").is_file() and any(folder.glob("attempt_*/completed.json"))
+
+
 def read_complete(*, folder, identity):
     result = folder / "complete.json"
     entry = json.loads(result.read_text())
@@ -46,7 +50,12 @@ def read_complete(*, folder, identity):
                                    checkpoint_h=identity["settings"]["checkpoint_h"])
     if runner.digest(actual) != entry["observation_sha256"]:
         raise ValueError("Changed transfer observations or input manifest")
+    if not completed_attempt(folder=folder):
+        raise ValueError("Transfer summary has no completed execution receipt")
     for receipt in folder.glob("attempt_*/completed.json"):
+        started = json.loads(receipt.with_name("started.json").read_text())
+        if started["id"] != entry["id"]:
+            raise ValueError("Completed transfer attempt belongs to a different forecast")
         saved = json.loads(receipt.read_text())
         if saved["summary_sha256"] != runner.checksum(result):
             raise ValueError("Changed completed transfer summary")
@@ -79,7 +88,7 @@ def simulate(
     cache = directory.parents[2] / ".fidelity-restarts/orton_transfer" / dest.name
     cache.mkdir(parents=True, exist_ok=True)
     result = dest / "complete.json"
-    if result.exists():
+    if completed_attempt(folder=dest):
         return read_complete(folder=dest, identity=identity)
     names = {
         "fv1": ("contact_hll", "sparse"),
@@ -248,7 +257,11 @@ def simulate(
     answer["observation_sha256"] = runner.digest(observation_checksums(
         folder=dest, hours=forcing["duration_h"], checkpoint_h=settings["checkpoint_h"],
     ))
-    recession.atomic_json(path=result, payload=answer)
+    if result.exists():
+        if answer != json.loads(result.read_text()):
+            raise ValueError("Restored transfer observations disagree with the unconfirmed summary")
+    else:
+        recession.atomic_json(path=result, payload=answer)
     return answer
 
 
@@ -261,8 +274,9 @@ def measured_attempt(*, folder, machine, ident):
     attempt = folder / f"attempt_{time_ns()}"
     attempt.mkdir(parents=True)
     resume = any(folder.glob("hour_*.json"))
+    restoring_summary = (folder / "complete.json").is_file()
     start = perf_counter()
-    runner.write_json(path=attempt / "started.json", data=dict(id=ident, hardware=machine, resumed=resume))
+    runner.write_json(path=attempt / "started.json", data=dict(id=ident, hardware=machine, resumed=resume, restoring_summary=restoring_summary))
     try:
         yield
     except BaseException:
@@ -271,6 +285,7 @@ def measured_attempt(*, folder, machine, ident):
         raise
     runner.write_json(path=attempt / "completed.json", data=dict(
         seconds=perf_counter() - start, uninterrupted_from_start=not resume,
+        restored_unconfirmed_summary=restoring_summary,
         summary_sha256=runner.checksum(folder / "complete.json"),
     ))
 
@@ -288,7 +303,7 @@ def inventory(*, directory, identity, settings, native_shape, method, spacing, c
             rows.append(dict(
                 identity=contract, case=physical_case, grid_m=dx, method=candidate,
                 nx=ceil(native_shape[1] / (dx // 5)), ny=ceil(native_shape[0] / (dx // 5)),
-                complete=(dest / "complete.json").is_file(),
+                complete=completed_attempt(folder=dest),
                 archived_windows=len(list(dest.glob("hour_*.json"))), id=dest.name,
             ))
     return rows
@@ -360,7 +375,7 @@ def run(*, directory, settings, arguments):
                 contract = dict(identity, dx=grid, method=candidate)
                 key = runner.digest(contract)[:24]
                 result = root / key / "complete.json"
-                if result.exists():
+                if completed_attempt(folder=result.parent):
                     rows.append(read_complete(folder=result.parent, identity=contract))
         metrics.csv_write(file=root / "transfer.csv", rows=rows)
         orton_controls.compare(release=release, destination=root, settings=settings, rows=rows)
