@@ -344,6 +344,25 @@ Each row compares solvers on the same event and physical footprint. Domain area 
 | rolling-704-soil-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 61.208 | 25.644 | +161,747 | -161,747 | tiles | 2.002 |
 | rolling-713-moderate-20480x10240 | 2,097,152 | 209.715 | 10 | 24 | 300 | 464.91 | 330.56 | +1,070,101 | -1,073,309 | tiles | 2.263 |
 
+### Storm input and remaining inundation
+
+Catchment-mean rainfall divides the integrated six-hour rainfall volume by the whole modelled area. A spatially concentrated storm can deliver a much greater depth inside its rainfall footprint. The areas count original hydraulic cells at the common end time. Maximum extent during the storm is a separate observable.
+
+| Storm | Grid (m) | End (h) | Rain (m³) | Catchment mean (mm) | FV1 storage (m³) | Hancock storage (m³) | FV1 ≥5 cm (m²) | Hancock ≥5 cm (m²) | FV1 ≥10 cm (m²) | Hancock ≥10 cm (m²) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| coastal-703-moderate-10240x10240 | 10 | 32 | 8,650,752 | 82.50 | 64,521 | 99,353 | 292,900 | 496,100 | 7,700 | 9,000 |
+| fan-705-spatial-5120x5120 | 5 | 12 | 218,302 | 8.33 | 805 | 27 | 5,950 | 0 | 2,850 | 0 |
+| fan-711-spatial-10000x5000 | 10 | 16 | 416,379 | 8.33 | 2,297 | 0 | 16,900 | 0 | 9,100 | 0 |
+| floodplain-702-moderate-10240x10240 | 10 | 28 | 8,650,752 | 82.50 | 32,309 | 18,390 | 198,200 | 43,300 | 74,400 | 200 |
+| hill-706-back-10240x10240 | 10 | 16 | 14,889,779 | 142.00 | 2,035 | 0 | 5,800 | 0 | 4,400 | 0 |
+| hill-8500-back-1000x1000 | 1 | 12 | 142,000 | 142.00 | 0 | 0 | 0 | 0 | 0 | 0 |
+| plain-701-spatial-10240x10240 | 10 | 52 | 873,210 | 8.33 | 0 | 0 | 0 | 0 | 0 | 0 |
+| plain-709-spatial-1000x1000 | 1 | 20 | 8,328 | 8.33 | 111 | 84 | 771 | 677 | 336 | 286 |
+| plain-710-spatial-5000x5000 | 10 | 60 | 208,189 | 8.33 | 0 | 0 | 0 | 0 | 0 | 0 |
+| plain-712-spatial-20480x10240 | 10 | 40 | 1,746,419 | 8.33 | 0 | 0 | 0 | 0 | 0 | 0 |
+| rolling-704-soil-5120x5120 | 5 | 12 | 3,080,192 | 117.50 | 0 | 0 | 0 | 0 | 0 | 0 |
+| rolling-713-moderate-20480x10240 | 10 | 24 | 17,301,504 | 82.50 | 3,208 | 0 | 20,600 | 0 | 0 | 0 |
+
 The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions use the independently screened reference for each observable. [Water budgets and internal gauges](fidelity/native_results/measured_windows.csv) · [Policy-specific observations and reference eligibility](fidelity/native_publication/README.md)
 
 ## Practical grid selection on native terrain

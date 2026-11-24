@@ -1,5 +1,6 @@
 """Populate results and discussion from the frozen experiment outputs."""
 
+from math import isclose
 from pathlib import Path
 from research.floodwarp_methods_paper import synthesis
 from statistics import median
@@ -287,6 +288,7 @@ def native_operational_balances(*, study, minimum_cells):
                 raise ValueError("Duplicate primary method in matched native costs")
             groups[key][r["method"]] = r
     rows = []
+    storage_rows = []
     for (case, _, dx, cadence, end_h, _), methods in sorted(groups.items()):
         fv = methods.get("fv1")
         options = [methods[m] for m in ("hancock_dense", "hancock_adaptive") if m in methods]
@@ -307,6 +309,17 @@ def native_operational_balances(*, study, minimum_cells):
         rows.append(f"| {case} | {cells:,} | {cells * dx**2 / 1e6:.3f} | {dx} | {end_h:g} | {cadence:g} | "
                     f"{float(fv['outlet_peak_m3s']):.5g} | {float(h['outlet_peak_m3s']):.5g} | "
                     f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {policy} | {ratio:.3f} |")
+        rain = float(fv["rain_m3"])
+        for key in ("rain_m3", "initial_m3"):
+            if not isclose(float(fv[key]), float(h[key]), rel_tol=1e-9, abs_tol=1e-7):
+                raise ValueError(f"Compared storm inputs disagree in {key} for {case}")
+        fv_storage, h_storage = float(fv["storage_m3"]), float(h["storage_m3"])
+        storage_rows.append(
+            f"| {case} | {dx} | {end_h:g} | {rain:,.0f} | {1000 * rain / (cells * dx**2):.2f} | "
+            f"{fv_storage:,.0f} | {h_storage:,.0f} | "
+            f"{int(fv['model_grid_wet_area_5cm_m2']):,} | {int(h['model_grid_wet_area_5cm_m2']):,} | "
+            f"{int(fv['model_grid_wet_area_10cm_m2']):,} | {int(h['model_grid_wet_area_10cm_m2']):,} |"
+        )
     if not rows:
         return ""
     return "\n" + "\n".join([
@@ -318,6 +331,13 @@ def native_operational_balances(*, study, minimum_cells):
         "| Storm | Cells | Area (km²) | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | "
         "Δ net export (m³) | Δ infiltration (m³) | Measured Hancock policy | Hancock / FV1 time |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|", *rows, "",
+        "### Storm input and remaining inundation", "",
+        "Catchment-mean rainfall divides the integrated six-hour rainfall volume by the whole modelled area. "
+        "A spatially concentrated storm can deliver a much greater depth inside its rainfall footprint. "
+        "The areas count original hydraulic cells at the common end time. Maximum extent during the storm is a separate observable.", "",
+        "| Storm | Grid (m) | End (h) | Rain (m³) | Catchment mean (mm) | FV1 storage (m³) | Hancock storage (m³) | "
+        "FV1 ≥5 cm (m²) | Hancock ≥5 cm (m²) | FV1 ≥10 cm (m²) | Hancock ≥10 cm (m²) |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|", *storage_rows, "",
         "The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions "
         "use the independently screened reference for each observable. "
         "[Water budgets and internal gauges](../fidelity/native_results/measured_windows.csv) · "
