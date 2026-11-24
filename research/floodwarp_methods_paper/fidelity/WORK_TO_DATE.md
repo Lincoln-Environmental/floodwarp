@@ -14,6 +14,21 @@ At the section 200 m from the initial pulse centre, the analytical peak averaged
 | 5 m | -47.97% | -10.08% | -10.71% | +92.88% | +4.07% | +5.54% |
 | 10 m | -60.50% | -27.08% | -28.34% | +155.68% | +22.70% | +26.03% |
 
+### Measured 5 m Hancock and 1 m FV1 costs
+
+The following runs cover the same 1,600 × 40 m channel and 176 s of propagation, with the same Courant cap and 1 s output. Hydraulic times exclude compilation, graph capture and field extraction. The signed biases use the exact wave at 200 m. A single timing per configuration supports this channel comparison.
+
+| Pulse | Method | Hydraulic time (s) | Peak bias | Central 80% width bias |
+|---|---|---:|---:|---:|
+| Double | FV1 sparse, 1 m | 1.170 | -32.86% | +13.78% |
+| Double | Hancock dense, 5 m | 0.082 | -22.29% | +6.06% |
+| Sharp | FV1 sparse, 1 m | 1.178 | unresolved | unresolved |
+| Sharp | Hancock dense, 5 m | 0.082 | unresolved | unresolved |
+| Smooth | FV1 sparse, 1 m | 1.150 | -19.34% | +24.11% |
+| Smooth | Hancock dense, 5 m | 0.082 | -10.08% | +4.07% |
+
+The sharp pulse spans about five one-second observations. The qualification threshold is six. [Analytical check at quarter-second intervals](results/sharp_analytical_cadence.csv)
+
 [Measured physical and relative quantities](results/pulses.csv) · [Independent integrations of the reference](results/pulse_reference_checks.csv)
 
 ## Six-hour rainfall on the small domains

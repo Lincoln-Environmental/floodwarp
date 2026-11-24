@@ -12,6 +12,9 @@ from research.floodwarp_methods_paper.fidelity import assessment
 
 def pulse_comparison(*, directory):
     records = metrics.csv_read(file=directory / "results/pulses.csv")
+    folder = directory / "long_pulses"
+    archive = folder / (folder / "current.txt").read_text().strip()
+    pulse = json.loads((archive / "inputs.json").read_text())["cfg"]
     chosen = {
         (int(row["dx"]), row["method"]): row
         for row in records
@@ -37,7 +40,46 @@ def pulse_comparison(*, directory):
         text.append(
             f"| {spacing} m | " + " | ".join(f"{v:+.2f}%" for v in values) + " |"
         )
+    text.extend(
+        [
+            "",
+            "### Measured 5 m Hancock and 1 m FV1 costs",
+            "",
+            f"The following runs cover the same {pulse['length']:,} × {pulse['width']:g} m channel and {pulse['duration']:g} s of propagation, with the same Courant cap and {pulse['interval']:g} s output. Hydraulic times exclude compilation, graph capture and field extraction. The signed biases use the exact wave at 200 m. A single timing per configuration supports this channel comparison.",
+            "",
+            "| Pulse | Method | Hydraulic time (s) | Peak bias | Central 80% width bias |",
+            "|---|---|---:|---:|---:|",
+        ]
+    )
+    for profile in sorted({r["case"] for r in records}):
+        for method, spacing, name in (
+            ("fv1", 1, "FV1 sparse"),
+            ("hancock_adaptive", 5, "Hancock dense"),
+        ):
+            selected = [
+                r
+                for r in records
+                if r["case"] == profile
+                and r["method"] == method
+                and int(r["dx"]) == spacing
+                and float(r["distance_m"]) == 200
+                and float(r["cap_courant"]) == 0.13
+            ]
+            (row,) = selected
+            values = [
+                f"{float(row[key]):+.2f}%"
+                if row["qualified_" + key] == "True"
+                else "unresolved"
+                for key in ("peak_bias_pct", "width80_bias_pct")
+            ]
+            text.append(
+                f"| {profile.capitalize()} | {name}, {spacing} m | {float(row['runtime_s']):.3f} | "
+                + " | ".join(values)
+                + " |"
+            )
     text += [
+        "",
+        "The sharp pulse spans about five one-second observations. The qualification threshold is six. [Analytical check at quarter-second intervals](results/sharp_analytical_cadence.csv)",
         "",
         "[Measured physical and relative quantities](results/pulses.csv) · [Independent integrations of the reference](results/pulse_reference_checks.csv)",
     ]
