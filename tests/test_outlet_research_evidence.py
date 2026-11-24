@@ -1077,3 +1077,28 @@ def test_moving_subcritical_reach_responds_to_tailwater(method, mode, device):
             assert flux[-1] < exact and flux[-2] < exact
             assert water[:, -2].min() > depth
         assert abs(model.solver.cumulative_accounting()["residual"]) < 1e-11
+
+
+def test_native_grid_shape_table_matches_comparator_and_flags_initial_flow(tmp_path):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.manuscript.generate import native_floor_hydrographs
+
+    target = tmp_path / "fidelity/native_results/hydraulic_fidelity.csv"
+    common = dict(case="basin", cohort="complete-native-metre", station="outlet", dx=1, ref_dx=1,
+                  hours=12, interval_max_s=60, reference_id="rk", reference_status="usable",
+                  width_resolved=True, reference_active_at_start=True, model_active_at_start=True,
+                  reference_truncated=False, model_truncated=False, centroid_delay_s=90,
+                  shape_tv_pct=2.0, width80_bias_pct=4.0, net_export_bias_pct=0, peak_bias_pct=-3.0)
+    rows = [dict(common, method=method, formulation=label, experiment_id=ident) for method, label, ident in
+            (("fv1", "FV1", "fv"), ("hancock_dense", "Hancock", "ha"), ("adaptive", "RK2", "rk"))]
+    metrics.csv_write(file=target, rows=rows)
+    report = native_floor_hydrographs(study=tmp_path, spacing_m=1)
+    assert "| FV1 | -3 | +0 | +1.5 | +4 | 2 | includes initial flow |" in report
+    rows[0]["model_truncated"] = True
+    metrics.csv_write(file=target, rows=rows)
+    report = native_floor_hydrographs(study=tmp_path, spacing_m=1)
+    assert "| FV1 | -3 | +0 | unresolved | unresolved | unresolved | recession incomplete |" in report
+    rows[2]["experiment_id"] = "other"
+    metrics.csv_write(file=target, rows=rows)
+    with pytest.raises(ValueError, match="comparator differs"):
+        native_floor_hydrographs(study=tmp_path, spacing_m=1)

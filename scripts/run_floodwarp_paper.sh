@@ -108,6 +108,9 @@ main() {
     if [[ $stage == outlet-states ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.outlet_states "${selected_options[@]}"
     fi
+    if [[ $stage == native-status && ${#selected_options[@]} == 1 && ${selected_options[0]} == --inventory ]]; then
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_status --inventory
+    fi
     if [[ $stage == gpu-timing-samples ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.gpu_sharing "${selected_options[@]}"
     fi

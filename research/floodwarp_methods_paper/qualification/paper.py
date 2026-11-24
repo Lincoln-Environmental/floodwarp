@@ -621,7 +621,7 @@ def material(*, study):
     audit.extend(
         [
             "",
-            "Final 1 cm inundation is the common prediction target in the enlarged advisor. The historical paper also retains time-integrated inundation results. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)",
+            "The archived advisor used final inundation at 1 cm for this table. The current practical comparisons use 5 cm and 10 cm for final and maximum extent. The earlier 1 cm results remain available as thin-water diagnostics. Costs are stratified by the Hancock wetted and scheduled fractions at the end of each 15-minute window and use the FV1 time for exactly the same physical window. [Window-level costs](processed/million/wetness_cost.csv) · [Joint solver and resolution validation](processed/advisor/joint_resolution.csv)",
         ]
     )
     feasible = csv_read(p / "pareto/least_cost.csv")

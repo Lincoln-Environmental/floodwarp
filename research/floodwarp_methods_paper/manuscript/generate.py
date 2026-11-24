@@ -417,6 +417,61 @@ def plain_grid_fidelity(*, study, cases):
                       "[Per-configuration observations and physical input identities](../fidelity/native_results/measured_windows.csv)", ""])
 
 
+def native_floor_hydrographs(*, study, spacing_m):
+    source = study / "fidelity/native_results/hydraulic_fidelity.csv"
+    if not source.is_file():
+        return ""
+    cases = defaultdict(dict)
+    for row in csv_read(file=source):
+        if (row["cohort"] != "complete-native-metre" or row["station"] != "outlet"
+                or not row["ref_dx"] or float(row["ref_dx"]) != spacing_m or float(row["dx"]) != spacing_m
+                or row["method"] not in ("fv1", "hancock_dense", "adaptive")):
+            continue
+        key = (row["case"], float(row["hours"]), float(row["interval_max_s"]), row["reference_id"])
+        if row["method"] in cases[key]:
+            raise ValueError("Duplicate method in a native-grid hydrograph comparison")
+        cases[key][row["method"]] = row
+    output = []
+    metrics = ("peak_bias_pct", "net_export_bias_pct", "centroid_delay_s", "width80_bias_pct", "shape_tv_pct")
+    for (case, end, cadence, reference), members in sorted(cases.items()):
+        if set(members) != {"fv1", "hancock_dense", "adaptive"}:
+            continue
+        if members["adaptive"]["experiment_id"] != reference:
+            raise ValueError("Native-grid hydrograph comparator differs from the matched RK2 trajectory")
+        for method in ("fv1", "hancock_dense"):
+            row = members[method]
+            usable = row["reference_status"] == "usable"
+            adequate = usable and row["width_resolved"] == "True"
+            tail = row["reference_truncated"] == "True" or row["model_truncated"] == "True"
+            antecedent = row["reference_active_at_start"] == "True" or row["model_active_at_start"] == "True"
+            scope = ("flow screen failed" if not usable else "under-resolved width" if not adequate
+                     else "recession incomplete" if tail else "includes initial flow" if antecedent else "whole storm")
+            values = []
+            for metric in metrics:
+                measured = row.get(metric)
+                if not measured or (metric in metrics[2:] and (not adequate or tail)):
+                    values.append("unresolved")
+                    continue
+                value = float(measured) / (60 if metric == "centroid_delay_s" else 1)
+                values.append(format(value, ".3g" if metric == "shape_tv_pct" else "+.3g"))
+            output.append(f"| {case} | {end:g} | {cadence:g} | {row['formulation']} | " + " | ".join(values) + f" | {scope} |")
+    if not output:
+        return ""
+    return "\n".join(["", f"### Outlet hydrograph sensitivity on the native {spacing_m:g} m grid", "",
+        "Each percentage uses ordinary-CFL RK2 on the same bed and event as the comparison scale. "
+        "Negative peak differences indicate attenuation. Positive centroid delays indicate later transport. "
+        "Centroids use interval-integrated transport. Subinterval differences describe these integrals at the displayed cadence. "
+        "Width is the time taken to pass the central 80% of outward volume. Shape is total variation between "
+        "volume-normalised hydrographs on the original clock. Initial flow contributes to all reported "
+        "whole-window metrics on events that begin with an active outlet. Absolute storm accuracy at the "
+        "native terrain floor remains unresolved.", "",
+        "| Event | End (h) | Cadence (s) | Method | Peak difference (%) | Net export difference (%) | "
+        "Centroid delay (min) | Width difference (%) | Shape difference (%) | Window |",
+        "|---|---:|---:|---|---:|---:|---:|---:|---:|---|", *output, "",
+        "[Paired run IDs, internal and outlet hydrograph metrics, temporal screens and reference checks]"
+        "(../fidelity/native_results/hydraulic_fidelity.csv)", ""])
+
+
 def plain_embankment(*, study, cases, face_m):
     file = study / "fidelity/native_results/embankment_transport.csv"
     if not file.is_file():
@@ -1000,6 +1055,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                                                                      "plain-709-intense-1000x1000": "Intense"})
                 correction += plain_embankment(study=study, cases={"plain-709-moderate-1000x1000": "Moderate",
                                                                   "plain-709-intense-1000x1000": "Intense"}, face_m=880)
+                correction += native_floor_hydrographs(study=study, spacing_m=1)
                 correction += native_reach_contrasts(study=study)
                 correction += native_grid_field_comparison(study=study)
                 correction += native_advisor_findings(study=study)

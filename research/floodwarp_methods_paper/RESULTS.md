@@ -290,6 +290,21 @@ This exploratory fixed-section measurement locates changes in net routing during
 
 [Transverse profiles of crest elevation and transport](supplementary/operational_storms/plain_709_embankment_profiles.pdf). Shading marks the opening band.
 
+### Outlet hydrograph sensitivity on the native 1 m grid
+
+Each percentage uses ordinary-CFL RK2 on the same bed and event as the comparison scale. Negative peak differences indicate attenuation. Positive centroid delays indicate later transport. Centroids use interval-integrated transport. Subinterval differences describe these integrals at the displayed cadence. Width is the time taken to pass the central 80% of outward volume. Shape is total variation between volume-normalised hydrographs on the original clock. Initial flow contributes to all reported whole-window metrics on events that begin with an active outlet. Absolute storm accuracy at the native terrain floor remains unresolved.
+
+| Event | End (h) | Cadence (s) | Method | Peak difference (%) | Net export difference (%) | Centroid delay (min) | Width difference (%) | Shape difference (%) | Window |
+|---|---:|---:|---|---:|---:|---:|---:|---:|---|
+| hill-8500-back-1000x1000 | 12 | 60 | FV1 | -0.205 | +0.551 | -0.679 | +1.93 | 1.23 | includes initial flow |
+| hill-8500-back-1000x1000 | 12 | 60 | Hancock | -0.000624 | +0.000946 | +0.00529 | -0.00262 | 0.00374 | includes initial flow |
+| plain-709-moderate-1000x1000 | 40 | 60 | FV1 | -42.8 | -39.2 | +104 | +11 | 7.76 | whole storm |
+| plain-709-moderate-1000x1000 | 40 | 60 | Hancock | -0.0341 | -0.0136 | +0.0994 | +0.0242 | 0.0103 | whole storm |
+| plain-709-spatial-1000x1000 | 20 | 300 | FV1 | -56.2 | -47.9 | +19.2 | +16.2 | 8.53 | whole storm |
+| plain-709-spatial-1000x1000 | 20 | 300 | Hancock | -0.143 | -0.177 | +0.175 | -0.028 | 0.0752 | whole storm |
+
+[Paired run IDs, internal and outlet hydrograph metrics, temporal screens and reference checks](fidelity/native_results/hydraulic_fidelity.csv)
+
 ### Where export differences develop
 
 The table gives FV1 minus dense Hancock on either side of the internal gauge. The upstream east face is the gauge and the downstream east face is the outlet. Infiltration and retained storage come from separate cell fields. Each reach closes against its initial water, rain and signed transport on all four sides.
