@@ -63,6 +63,8 @@ Each run subdivides the same 10 m bed and physical inputs. Outlet peaks are acce
 | FV2 RK2 | 5 m | 0.4 | 33.536 | 386,724 | 53.15% | 502,761 | 1708.1 |
 | Hancock tiled | 5 m | 0.4 | 34.293 | 401,852 | 51.84% | 491,800 | 516.0 |
 
+At hour 8, outward boundary transport on the finer FV2 grid was 382,037 m³ lower. It held 404,827 m³ more water and had infiltrated 22,790 m³ less. The area at or above 1 cm was 10.84 km² at 5 m and 2.05 km² at 10 m. [Storage and inundation maps](incised_crest/initial_window_storage.pdf) · [Water balance and run identities](incised_crest/initial_window_storage.csv)
+
 The incised diagnostic was defined after observing a late crest. It remains separate from advisor training and test decisions. Each control needs the same recession coverage before its hydrograph can support a solver ranking.
 
 [Incised one-minute and 15-minute hydrographs](figures/incised_native_cadence.pdf) · [Original terrain, calibration and advisor results](../CORRECTIVE_AUDIT.md)

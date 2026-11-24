@@ -1,6 +1,7 @@
 """Measure the largest outward crest before and after the original eight-hour forecast."""
 
 import json
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -82,7 +83,111 @@ def method_name(row):
     return row["method"]
 
 
+def prefix_storage(*, directory, design):
+    """Locate the change in storage on a common spatial support at the original endpoint."""
+    folder = directory / "incised_crest"
+    controls = {}
+    for path in folder.glob("*/result.json"):
+        record = json.loads(path.read_text())
+        inputs = record["inputs"]
+        spec = inputs["spec"]
+        if (
+            inputs["design"] != design
+            or spec["method"] != "adaptive"
+            or inputs["factor"] != 1
+        ):
+            continue
+        if spec["dx"] in controls:
+            raise ValueError("Ambiguous spatial comparison of incised controls")
+        controls[spec["dx"]] = (path, spec, record["data"])
+    spacings = sorted(
+        dx
+        for dx, method, factor in design["controls"]
+        if method == "adaptive" and factor == 1
+    )
+    if len(spacings) != 2 or set(controls) != set(spacings):
+        raise ValueError("Two completed fixed-bed FV2 refinements are required")
+    fine, coarse = spacings
+    support = controls[coarse][1]["support"]
+    extent = controls[coarse][1]["dimensions"]
+    arrays = {}
+    rows = []
+    for dx in spacings:
+        path, spec, data = controls[dx]
+        if (
+            data["hours_completed"] != design["diagnostic_start_h"]
+            or spec["support"] != support
+            or spec["dimensions"] != extent
+            or spec["dem"] != design["bed_m"]
+        ):
+            raise ValueError(
+                "Storage maps require matched physical extent, support, bed and time"
+            )
+        with np.load(path.with_name("spatial.npz")) as archive:
+            depth = archive["depth"]
+            wet = archive["wet_fraction_1cm"]
+        if (
+            depth.shape != (extent[1] // support, extent[0] // support)
+            or wet.shape != depth.shape
+        ):
+            raise ValueError("Unexpected common-support map dimensions")
+        storage = float(depth.sum() * support**2)
+        np.testing.assert_allclose(
+            storage, data["final_storage_m3"], rtol=1e-12, atol=0
+        )
+        arrays[dx] = depth, wet
+        rows.append(
+            dict(
+                run_id=path.parent.name,
+                dx_m=dx,
+                bed_m=spec["dem"],
+                support_m=support,
+                end_h=data["hours_completed"],
+                initial_m3=data["initial_m3"],
+                rain_m3=data["rain_m3"],
+                inflow_m3=data["inflow_m3"],
+                infiltration_m3=data["infiltration_m3"],
+                outflow_m3=data["outflow_m3"],
+                storage_m3=storage,
+                residual_m3=data["residual_m3"],
+                inundated_1cm_km2=float(wet.sum() * support**2 / 1e6),
+            )
+        )
+    metrics.csv_write(file=folder / "initial_window_storage.csv", rows=rows)
+    depth_change, wet_change = (
+        a - b for a, b in zip(arrays[fine], arrays[coarse], strict=True)
+    )
+    fig, axes = plt.subplots(
+        1, 2, figsize=(7.2, 3.8), layout="constrained", sharex=True, sharey=True
+    )
+    for ax, field, label in zip(
+        axes,
+        (100 * depth_change, 100 * wet_change),
+        ("Difference in mean depth (cm)", "Area ≥1 cm (percentage-point difference)"),
+        strict=True,
+    ):
+        limit = float(np.abs(field).max())
+        image = ax.imshow(
+            field,
+            origin="lower",
+            extent=(0, extent[0] / 1000, 0, extent[1] / 1000),
+            interpolation="nearest",
+            cmap="RdBu_r",
+            vmin=-limit,
+            vmax=limit,
+        )
+        ax.set_xlabel("Easting (km)")
+        fig.colorbar(image, ax=ax, orientation="horizontal", label=label, shrink=0.94)
+    axes[0].set_ylabel("Northing (km)")
+    fig.suptitle(
+        f"Incised catchment at {design['diagnostic_start_h']:g} h, FV2 at {fine:g} m minus FV2 at {coarse:g} m"
+    )
+    figures.save(fig=fig, folder=folder, name="initial_window_storage")
+    return rows
+
+
 def generate(*, directory, design):
+    prefix_storage(directory=directory, design=design)
     folder = directory / "incised_crest"
     root = directory / "extended_runs"
     groups = [
@@ -168,7 +273,7 @@ def generate(*, directory, design):
     text.extend(
         [
             "",
-            "The maximum within each window can occur at a different time across methods and cadences. Agreement across models alone cannot establish a physical crest. [Measured 60 and 900 s peaks](peak_windows.csv) · [Hydrographs at the outlet and internal section](incised_crest.pdf) · [Recession checks](recession_terminal.csv)",
+            "The maximum within each window can occur at a different time across methods and cadences. Agreement across models alone cannot establish a physical crest. [Measured 60 and 900 s peaks](peak_windows.csv) · [Hydrographs at the outlet and internal section](incised_crest.pdf) · [Recession checks](recession_terminal.csv) · [Water balance and inundation on the fixed bed at hour eight](initial_window_storage.csv) · [Spatial storage difference at hour eight](initial_window_storage.pdf)",
         ]
     )
     (folder / "README.md").write_text("\n".join(text) + "\n")
@@ -177,4 +282,7 @@ def generate(*, directory, design):
 if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     design = json.loads((directory / "incised_settings.json").read_text())
-    generate(directory=directory, design=design)
+    if sys.argv[1:] == ["incised-storage"]:
+        prefix_storage(directory=directory, design=design)
+    else:
+        generate(directory=directory, design=design)

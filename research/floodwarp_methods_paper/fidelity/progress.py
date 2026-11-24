@@ -174,7 +174,20 @@ def incised_windows(*, directory, design):
             f"| {labels[method]} | {dx:g} m | {cfl:g} | {q.max():.3f} | "
             f"{volume:,.0f} | {fraction} | {data['final_storage_m3']:,.0f} | {data['hydraulic_s']:.1f} |"
         )
+    storage = folder / "initial_window_storage.csv"
+    if storage.is_file():
+        fine, coarse = sorted(metrics.csv_read(file=storage), key=grid_spacing)
+        text.extend(
+            [
+                "",
+                f"At hour {float(fine['end_h']):g}, outward boundary transport on the finer FV2 grid was {float(coarse['outflow_m3']) - float(fine['outflow_m3']):,.0f} m³ lower. It held {float(fine['storage_m3']) - float(coarse['storage_m3']):,.0f} m³ more water and had infiltrated {float(coarse['infiltration_m3']) - float(fine['infiltration_m3']):,.0f} m³ less. The area at or above 1 cm was {float(fine['inundated_1cm_km2']):.2f} km² at {float(fine['dx_m']):g} m and {float(coarse['inundated_1cm_km2']):.2f} km² at {float(coarse['dx_m']):g} m. [Storage and inundation maps](incised_crest/initial_window_storage.pdf) · [Water balance and run identities](incised_crest/initial_window_storage.csv)",
+            ]
+        )
     return text
+
+
+def grid_spacing(row):
+    return float(row["dx_m"])
 
 
 def generate(*, directory):

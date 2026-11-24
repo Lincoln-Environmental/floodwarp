@@ -23,6 +23,7 @@ run_stage() {
         storage-tail-report) module=tail_report ;;
         native-horizons) module=native_horizons ;;
         incised-reference) module=incised_crest ;;
+        incised-storage) module=crest_report; extra=("$1") ;;
         native-review) module=operational_review ;;
         small-review) module=small_review ;;
         rolling-reference|storm-controls|recession|operational-preview|operational-pairs|storage-tail) module=continuation; extra=("$1") ;;
@@ -39,7 +40,7 @@ run_stage() {
 main() {
     local stage=${1:-help} dry=false module
     if [[ $stage == help || $stage == --help ]]; then
-        echo "Usage: $0 {all|status|summary|verify-kernels|pulses|pulse-recession|sharp-pulses|sharp-reference|pulse-reference|pulse-figures|operational-preview|operational-pairs|native-horizons|storage-tail|storage-tail-report|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|incised-reference|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
+        echo "Usage: $0 {all|status|summary|verify-kernels|pulses|pulse-recession|sharp-pulses|sharp-reference|pulse-reference|pulse-figures|operational-preview|operational-pairs|native-horizons|storage-tail|storage-tail-report|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|incised-reference|incised-storage|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
         return
     fi
     shift
