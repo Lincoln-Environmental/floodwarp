@@ -8,6 +8,7 @@ run_stage() {
     local -a extra=()
     case "$1" in
         status) module=status ;;
+        summary) module=progress ;;
         verify-kernels) module=verification ;;
         verify) module=verify_products ;;
         pulses) module=pulse ;;
@@ -37,7 +38,7 @@ run_stage() {
 main() {
     local stage=${1:-help} dry=false module
     if [[ $stage == help || $stage == --help ]]; then
-        echo "Usage: $0 {all|status|verify-kernels|pulses|pulse-recession|pulse-reference|pulse-figures|operational-preview|operational-pairs|native-horizons|storage-tail|storage-tail-report|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|incised-reference|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
+        echo "Usage: $0 {all|status|summary|verify-kernels|pulses|pulse-recession|pulse-reference|pulse-figures|operational-preview|operational-pairs|native-horizons|storage-tail|storage-tail-report|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|incised-reference|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
         return
     fi
     shift

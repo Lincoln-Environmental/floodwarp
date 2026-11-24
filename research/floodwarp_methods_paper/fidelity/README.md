@@ -2,7 +2,7 @@
 
 Run `./scripts/run_hydrograph_fidelity.sh all` in the pinned FloodWarp checkout. The manual master script also exposes `hydrograph-fidelity` and `fidelity-figures`. The former runs the channel, storm-control, orientation and analysis stages. The latter rebuilds figures entirely from disk. Individual stages accept `--dry-run` and completed numerical cases resume by source, hardware and input identity. `analyse` reads archived measurements, rebuilds the objective-specific advisor supplement, database, report, figures and manuscript. The previous paper's absolute errors and frozen advisor training records retain their original definitions.
 
-[Measured findings](REPORT.md) · [Tables and SQLite database](results) · [Figures](figures) · [Screening configuration](design.json)
+[Measured work to date](WORK_TO_DATE.md) (regenerate with `./scripts/run_hydrograph_fidelity.sh summary`) · [Full analysis](REPORT.md) · [Tables and SQLite database](results) · [Figures](figures) · [Screening configuration](design.json)
 
 ## Which hydrograph is the reference?
 
