@@ -42,9 +42,13 @@ def completed_attempt(*, folder):
 def read_complete(*, folder, identity):
     result = folder / "complete.json"
     entry = json.loads(result.read_text())
+    manifest = json.loads((folder / "inputs.json").read_text())
+    if (entry["duration_h"] != manifest["forcing"]["duration_h"]
+            or entry["interval_s"] != identity["settings"]["cadence_s"]):
+        raise ValueError("Transfer observations must cover the imposed storm at its prescribed cadence")
     if (entry["id"], entry["dx_m"], entry["method"]) != (
         runner.digest(identity)[:24], identity["dx"], identity["method"]
-    ) or json.loads((folder / "inputs.json").read_text())["identity"] != identity:
+    ) or manifest["identity"] != identity:
         raise ValueError("Transfer result differs from source and physical contract")
     actual = observation_checksums(folder=folder, hours=entry["duration_h"],
                                    checkpoint_h=identity["settings"]["checkpoint_h"])
@@ -62,9 +66,11 @@ def read_complete(*, folder, identity):
     return entry
 
 
-def verify_index(*, directory):
+def verify_index(*, directory, required_ids=()):
     table = directory / "transfer.csv"
     if not table.exists():
+        if required_ids:
+            raise ValueError(f"Transfer index missing for {len(required_ids)} requested forecasts")
         return 0
     seen = set()
     for row in metrics.csv_read(file=table):
@@ -77,6 +83,9 @@ def verify_index(*, directory):
         if row != {key: str(value) if value is not None else "" for key, value in entry.items()}:
             raise ValueError("Transfer index differs from completed forecast " + ident)
         seen.add(ident)
+    missing = set(required_ids) - seen
+    if missing:
+        raise ValueError("Missing completed transfer forecasts: " + ", ".join(sorted(missing)))
     return len(seen)
 
 
@@ -252,8 +261,8 @@ def simulate(
         answer[f"gauge_{position}m_peak_end_s"] = int(times[top])
         answer[f"gauge_{position}m_net_volume_m3"] = float(series.sum() * interval)
     for cm in settings["thresholds_cm"]:
-        answer[f"final_area_{cm}cm_m2"] = int((h > cm / 100).sum()) * dx**2
-        answer[f"maximum_area_{cm}cm_m2"] = int((maximum > cm / 100).sum()) * dx**2
+        answer[f"final_area_{cm}cm_m2"] = int((h >= cm / 100).sum()) * dx**2
+        answer[f"maximum_area_{cm}cm_m2"] = int((maximum >= cm / 100).sum()) * dx**2
     answer["observation_sha256"] = runner.digest(observation_checksums(
         folder=dest, hours=forcing["duration_h"], checkpoint_h=settings["checkpoint_h"],
     ))
@@ -312,7 +321,7 @@ def inventory(*, directory, identity, settings, native_shape, method, spacing, c
 def run(*, directory, settings, arguments):
     import rasterio
 
-    flags, rest = getopt.getopt(arguments, "", ["dry-run", "resume", "case=", "method=", "dx="])
+    flags, rest = getopt.getopt(arguments, "", ["dry-run", "resume", "verify-only", "case=", "method=", "dx="])
     if rest:
         raise ValueError(f"Unknown transfer arguments {rest}")
     options = dict(flags)
@@ -348,6 +357,11 @@ def run(*, directory, settings, arguments):
               "cells,", plan["archived_windows"], "checkpoint windows, complete", plan["complete"], flush=True)
     if "--dry-run" in options:
         return
+    required = {p["id"] for p in plans}
+    if "--verify-only" in options:
+        verify_index(directory=directory / "orton_transfer", required_ids=required)
+        print(f"Verified all {len(required)} requested complete transfer forecasts", flush=True)
+        return
     machine = runner.machine(root=directory.parents[2])
     state = archive.release_initial(directory=release)
     for dx in dict.fromkeys(p["grid_m"] for p in plans):
@@ -379,6 +393,7 @@ def run(*, directory, settings, arguments):
                     rows.append(read_complete(folder=result.parent, identity=contract))
         metrics.csv_write(file=root / "transfer.csv", rows=rows)
         orton_controls.compare(release=release, destination=root, settings=settings, rows=rows)
+    verify_index(directory=directory / "orton_transfer", required_ids=required)
 
 
 if __name__ == "__main__":
