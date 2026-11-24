@@ -24,10 +24,10 @@ def fingerprints(*, directory, item):
     return out
 
 
-def compare(*, directory, groups, target):
+def compare(*, directory, groups, target, original_window=False):
     out = []
     for (cohort, case, rep), items in sorted(groups.items()):
-        if not cohort.startswith("complete-"):
+        if not original_window and not cohort.startswith("complete-"):
             continue
         for dx in sorted({i["s"]["dx"] for i in items}):
             peers = {
@@ -71,5 +71,6 @@ def compare(*, directory, groups, target):
                         **fields,
                     )
                 )
-    metrics.csv_write(file=target / "recession_execution_parity.csv", rows=out)
+    name = "original_execution_parity.csv" if original_window else "recession_execution_parity.csv"
+    metrics.csv_write(file=target / name, rows=out)
     return out

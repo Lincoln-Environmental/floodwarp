@@ -205,6 +205,8 @@ def samples(
 
 
 def assess(*, model, rows, rules):
+    from floodwarp.solver_advisor.model import terrain_requires_refinement
+
     groups = defaultdict(list)
     for r in rows:
         groups[r["case"], r["features"]["resolution"]].append(r)
@@ -213,11 +215,7 @@ def assess(*, model, rows, rules):
         for objective, tol in model["tolerances"].items():
             actual = {r["method"]: r for r in group if r["qualified"][objective]}
             terrain = group[0]["features"]
-            admissible = not terrain.get("critical_connection_lost") and not (
-                terrain.get("lost_channel_fraction", 0) > 0
-                and objective
-                in ("inundation", "discharge", "peak_timing", "peak_discharge")
-            )
+            admissible = not terrain_requires_refinement(features=terrain, objective=objective)
             affordable = [
                 r
                 for r in actual.values()

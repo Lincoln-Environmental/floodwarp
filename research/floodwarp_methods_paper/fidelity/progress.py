@@ -237,7 +237,7 @@ def generate(*, directory):
     text = [
         "# FloodWarp results to date",
         "",
-        f"Paired sparse FV1 and adaptive Hancock forecasts are complete on {len(longest)} native 1,048,576-cell landforms. Each received six hours of rain. The verified endpoints range from {min(float(r['end_h']) for r in longest.values()):g} to {max(float(r['end_h']) for r in longest.values()):g} h. Taking the longest measured pair once per landform, Hancock's median hydraulic runtime is {median(ratios):.2f}× FV1 (range {min(ratios):.2f}–{max(ratios):.2f}×). Execution policies here were selected from original-window measurements.",
+        f"In the original centre-sampled archive, paired sparse FV1 and adaptive Hancock forecasts are complete on {len(longest)} 1,048,576-cell landforms. Each received six hours of rain. The verified endpoints range from {min(float(r['end_h']) for r in longest.values()):g} to {max(float(r['end_h']) for r in longest.values()):g} h. Taking the longest measured pair once per landform, Hancock's median hydraulic runtime is {median(ratios):.2f}× FV1 (range {min(ratios):.2f}–{max(ratios):.2f}×). Execution policies here were selected from original-window measurements.",
         "",
         "[Landform timings, storage, omitted export and accepted timesteps](NATIVE_RECESSIONS.md) · [Common-timestep GPU qualification](../../../validation/hancock_long_storm_review/DECISION.md) · [Hancock structures and verification](../../../docs/HANCOCK_STRUCTURES.md)",
         "",
@@ -297,6 +297,25 @@ def generate(*, directory):
         ]
         common = f"{max(verified):g} h" if verified else "pending"
         text.append(f"| {name} | {count}/{planned} | {common} |")
+    native_file = directory / "mean_storms/complete_events.csv"
+    if native_file.is_file():
+        completed = metrics.csv_read(file=native_file)
+        practical = [
+            "## Incised storm on metre-derived terrain", "",
+            "The 10 m bed averages four 5 m elevations. Each 5 m elevation averages 25 native metre cells. "
+            "The six forecasts used a common rainfall field and native initial water. Peak discharge is a one-minute mean of accepted face volumes.",
+            "", "| Grid (m) | Method | End (h) | Peak (m³/s) | Outlet volume (m³) | Infiltration (m³) | Hydraulic time (s) |",
+            "|---:|---|---:|---:|---:|---:|---:|",
+        ]
+        names = {"adaptive": "FV2 RK2", "hancock_adaptive": "Hancock tiled", "fv1": "FV1 sparse"}
+        for row in completed:
+            practical.append(f"| {row['dx_m']} | {names[row['method']]} | {float(row['end_h']):g} | "
+                             f"{float(row['outlet_peak_m3s']):.2f} | {float(row['net_outlet_m3']):,.0f} | "
+                             f"{float(row['infiltration_m3']):,.0f} | {float(row['hydraulic_s']):.1f} |")
+        practical.extend(["", "Runoff can peak after rainfall ends. The two FV2 grids disagree about the largest one-minute peak. "
+                          "Repeated measurements at the outlet and upstream sections locate the water released during that interval. "
+                          "[Hydrographs](native_tail/README.md) · [Peak-minute budget](native_tail/CREST.md) · [Runoff partition](native_outlet/runoff_partition.csv)", ""])
+        text[2:2] = practical
     text += incised_windows(directory=directory, design=incised_design)
     text += [
         "",

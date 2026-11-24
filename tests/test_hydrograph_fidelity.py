@@ -980,3 +980,88 @@ def test_infiltration_accounting_includes_cells_outside_the_rain_footprint():
     assert regions["outside_rain_footprint"]["equivalent_area_hours_km2_h"] == pytest.approx(0.00005)
     with pytest.raises(ValueError):
         losses(soil=soil*2, **kw)
+
+
+def test_native_spill_elevation_requires_a_face_connected_path():
+    from research.floodwarp_methods_paper.fidelity.native_features import spill_level
+
+    bed = np.array([[0., 9., 9.], [9., 1., 9.], [9., 9., 0.]])
+    assert spill_level(bed=bed) == 9
+    bed[1, 0], bed[1, 2] = 2, 3
+    assert spill_level(bed=bed) == 3
+
+
+def test_rebuilt_native_states_validate_soil_and_faces_as_well_as_depth():
+    from types import SimpleNamespace
+    from research.floodwarp_methods_paper.fidelity.restore_native import verify_fields
+    from research.floodwarp_methods_paper.terrain.generators.generate import array_sha
+
+    class Array:
+        def __init__(self, values):
+            self.values = values
+
+        def numpy(self):
+            return self.values
+
+    def q():
+        return np.array([[[0.002, 0.001, 0.0]]])
+
+    def maximum():
+        return np.array([[0.004]])
+
+    fields = {k: Array(np.ones(2)) for k in ("volume_x", "volume_y", "soil", "rain_sum")}
+    solver = SimpleNamespace(_fields=fields, get_conservative_state=q, get_max_water_depth=maximum)
+    expected = dict(state=array_sha(q()), maximum=array_sha(maximum()), **{k: array_sha(v.numpy()) for k, v in fields.items()})
+    verify_fields(solver=solver, expected=expected)
+    fields["volume_x"].values[0] = 0
+    with pytest.raises(ValueError, match="volume_x"):
+        verify_fields(solver=solver, expected=expected)
+
+
+def test_native_advisor_freezes_before_scoring_held_out_groups(tmp_path, monkeypatch):
+    from research.floodwarp_methods_paper.fidelity import native_advisor
+
+    directory = tmp_path / "research/paper/fidelity"
+    directory.mkdir(parents=True)
+    setting = dict(fit_percent=10, assessment_percentages=[5, 10], depth_tolerance_m=.01,
+                   validation_groups_per_spacing=2, hardware="test GPU", rules=["advisor", "slope", "fv1", "hancock_dense", "oracle"],
+                   new_final_terrain_ids=["test0"], evaluation_wet_edges=[0, .01, .05, .2, .5, 1])
+    config = dict(advisor=dict(heldout_family="mixed", neighbours=[2],coverage_quantile=.95,quantile=.9))
+    accessed = []
+
+    def sample_rows(*, partitions, **kwargs):
+        accessed.append(partitions)
+        data=[]
+        for part in partitions:
+            for i in range(3):
+                group=f"{part}{i}"
+                for dx in (5,10):
+                    for m,work in (("fv1",1),("hancock_dense",2)):
+                        f=dict(mean_slope=.01+i*.001,resolution=dx,cells=(1000//dx)**2,area_m2=1e6,
+                               rain_mm=50.,forecast_duration_h=8.)
+                        goals=native_advisor.tolerances(pct=10,depth_m=.01)
+                        errors={o:.001*work for o in goals}
+                        data.append(dict(terrain_id=group,case=group,landform="plain",storm="moderate",split=part,
+                                         run_id=f"{group}-{dx}-{m}",method=m,features=f,hardware="test GPU",
+                                         runtime_s=float(work),memory_mib=4.,wet_fraction=.1,sampled_regime=None,
+                                         errors=errors,qualified=dict.fromkeys(goals,True)))
+        return data
+
+    def revision(*args,**kwargs):
+        return "test-revision"
+
+    monkeypatch.setattr(native_advisor, "sample_rows",sample_rows)
+    monkeypatch.setattr(native_advisor.subprocess,"check_output",revision)
+    args=dict(directory=directory,config=config,design={},settings=setting)
+    path=native_advisor.train(**args)
+    assert accessed==[("development","validation")]
+    frozen=json.loads(path.read_text())
+    assert set(frozen["training_terrain_ids"]).isdisjoint(frozen["validation_terrain_ids"])
+    assert (path.parent/"frozen.json").is_file()
+    test=native_advisor.validate(**args)
+    assert accessed[-1]==("test",)
+    assert all((test/name).is_file() for name in ("decisions.csv","strata.csv","candidate_predictions.csv"))
+    assert json.loads(path.read_text()) == frozen
+    path.write_text("{}")
+    with pytest.raises(ValueError,match="checksum"):
+        native_advisor.validate(**args)

@@ -190,6 +190,34 @@ def candidate_cost(row):
     return row["runtime_median_s"]
 
 
+def terrain_requires_refinement(*, features, objective):
+    from floodwarp.solver_advisor.fidelity import METRICS
+
+    return bool(
+        features.get("critical_connection_lost")
+        or (
+            features.get("maximum_barrier_lowering_m") is not None
+            and features.get("barrier_lowering_m", 0.0)
+            > features["maximum_barrier_lowering_m"]
+        )
+        or features.get("lost_channel_fraction", 0) > 0
+        and objective
+        in (
+            "inundation",
+            "discharge",
+            "peak_timing",
+            "peak_discharge",
+            *METRICS,
+            "relative_hydrograph_rmse",
+            "event_discharge_error",
+            "final_inundation_5cm",
+            "final_inundation_10cm",
+            "maximum_inundation_5cm",
+            "maximum_inundation_10cm",
+        )
+    )
+
+
 def recommend(
     *,
     model,
@@ -210,7 +238,7 @@ def recommend(
         "maximum_flood_depth": "maximum_depth",
         "inundation_extent": "final_inundation_5cm",
         "thin_film_extent_1cm": "inundation",
-        "outlet_discharge": "discharge",
+        "outlet_discharge": model.get("outlet_discharge_objective", "discharge"),
         "computational_runtime": "runtime",
     }.get(objective, objective)
     if objective in METRICS and "fidelity_validation" not in model:
@@ -240,31 +268,15 @@ def recommend(
     )
     if objective == "inundation" and "inundation_target" in model:
         result["target"] = model["inundation_target"]
-    if (
-        features.get("critical_connection_lost")
-        or (
-            features.get("maximum_barrier_lowering_m") is not None
-            and features.get("barrier_lowering_m", 0.0)
-            > features["maximum_barrier_lowering_m"]
-        )
-        or features.get("lost_channel_fraction", 0) > 0
-        and objective
-        in (
-            "inundation",
-            "discharge",
-            "peak_timing",
-            "peak_discharge",
-            *METRICS,
-            "final_inundation_5cm",
-            "final_inundation_10cm",
-            "maximum_inundation_5cm",
-            "maximum_inundation_10cm",
-        )
-    ):
+    if terrain_requires_refinement(features=features, objective=objective):
         result.update(
             status="refine_terrain",
             reason="The represented DEM loses a required hydraulic connection or exceeds the specified barrier tolerance.",
         )
+        return result
+    if ("native_objective_spacings" in model and objective != "runtime"
+        and features["resolution"] not in model["native_objective_spacings"].get(objective, ())):
+        result["reason"] = "This native-grid objective lacks independent validation at the requested spacing."
         return result
     if practical_extent and (
         tolerance is None

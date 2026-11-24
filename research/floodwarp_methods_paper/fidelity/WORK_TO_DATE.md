@@ -1,6 +1,21 @@
 # FloodWarp results to date
 
-Paired sparse FV1 and adaptive Hancock forecasts are complete on 8 native 1,048,576-cell landforms. Each received six hours of rain. The verified endpoints range from 12 to 48 h. Taking the longest measured pair once per landform, Hancock's median hydraulic runtime is 1.92× FV1 (range 0.95–2.77×). Execution policies here were selected from original-window measurements.
+## Incised storm on metre-derived terrain
+
+The 10 m bed averages four 5 m elevations. Each 5 m elevation averages 25 native metre cells. The six forecasts used a common rainfall field and native initial water. Peak discharge is a one-minute mean of accepted face volumes.
+
+| Grid (m) | Method | End (h) | Peak (m³/s) | Outlet volume (m³) | Infiltration (m³) | Hydraulic time (s) |
+|---:|---|---:|---:|---:|---:|---:|
+| 10 | FV2 RK2 | 16 | 66.40 | 825,018 | 444,115 | 364.2 |
+| 5 | FV2 RK2 | 16 | 48.33 | 809,311 | 462,657 | 2451.8 |
+| 10 | Hancock tiled | 16 | 79.65 | 825,170 | 443,988 | 74.9 |
+| 5 | Hancock tiled | 16 | 48.29 | 809,296 | 462,684 | 464.1 |
+| 10 | FV1 sparse | 16 | 48.37 | 910,217 | 362,294 | 38.4 |
+| 5 | FV1 sparse | 16 | 49.19 | 910,143 | 362,416 | 298.7 |
+
+Runoff can peak after rainfall ends. The two FV2 grids disagree about the largest one-minute peak. Repeated measurements at the outlet and upstream sections locate the water released during that interval. [Hydrographs](native_tail/README.md) · [Peak-minute budget](native_tail/CREST.md) · [Runoff partition](native_outlet/runoff_partition.csv)
+
+In the original centre-sampled archive, paired sparse FV1 and adaptive Hancock forecasts are complete on 8 1,048,576-cell landforms. Each received six hours of rain. The verified endpoints range from 12 to 48 h. Taking the longest measured pair once per landform, Hancock's median hydraulic runtime is 1.92× FV1 (range 0.95–2.77×). Execution policies here were selected from original-window measurements.
 
 [Landform timings, storage, omitted export and accepted timesteps](NATIVE_RECESSIONS.md) · [Common-timestep GPU qualification](../../../validation/hancock_long_storm_review/DECISION.md) · [Hancock structures and verification](../../../docs/HANCOCK_STRUCTURES.md)
 

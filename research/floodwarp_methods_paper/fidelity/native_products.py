@@ -16,6 +16,7 @@ from research.floodwarp_methods_paper.fidelity import (
     final_depth,
     native_matrix,
     phase_cost,
+    parity,
     recession,
     statistics,
 )
@@ -307,6 +308,13 @@ def run(*, directory, require_complete):
         )
     records = prefixes(directory=directory)
     compare_incised_windows(directory=directory, records=records, target=target)
+    prefix_groups = {}
+    for i in records.values():
+        spec = i["s"]
+        key = "original-window", spec["case"], f"{i['native_sha']}, {spec['hours']} h, repeat {spec.get('timing_repeat', 0)}"
+        member = dict(i,s=dict(spec,method=spec.get("requested_method",spec["method"])))
+        prefix_groups.setdefault(key,[]).append(member)
+    parity.compare(directory=directory,groups=prefix_groups,target=target,original_window=True)
     original = [
         describe(item=i, settings=settings, status="original_window")
         for i in records.values()
@@ -314,6 +322,7 @@ def run(*, directory, require_complete):
     groups = grouped(
         directory=directory, records=records, target=target, expected=expected
     )
+    parity.compare(directory=directory,groups=groups,target=target)
     complete = [
         describe(item=i, settings=settings, status=key[0])
         for key, items in groups.items()
@@ -327,6 +336,8 @@ def run(*, directory, require_complete):
         cadence=application["cost_interval_s"], edges=application["wet_fraction_edges"],
         phase_edges=application["phase_end_hours"],
     )
+    additional = json.loads((directory/"native_advisor_settings.json").read_text())["reference_limits"]
+    hydro = dict(hydro, reference_limits={**hydro["reference_limits"], **additional})
     rows, checks = assessment.storm_rows(groups=groups, cfg=hydro)
     metrics.csv_write(file=target / "hydraulic_fidelity.csv", rows=rows)
     metrics.csv_write(file=target / "reference_checks.csv", rows=checks)
@@ -359,7 +370,7 @@ def run(*, directory, require_complete):
         "",
         "Outlet peaks are interval means of accepted face transport. The original-window table may end while substantial flow continues. Numerical error rankings require common recession endpoints and separate spatial, temporal and formulation checks for the observable.",
         "",
-        "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures) · [5 cm and 10 cm native extent](incised_practical_extent.csv) · [Matched-grid depth differences](incised_state_disagreement.csv) · [Accepted steps, retries, memory and accounting](whole_storm_diagnostics.csv) · [Costs by phase and footprint](cost_by_phase.csv)",
+        "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures) · [5 cm and 10 cm native extent](incised_practical_extent.csv) · [Matched-grid depth differences](incised_state_disagreement.csv) · [Accepted steps, retries, memory and accounting](whole_storm_diagnostics.csv) · [Costs by phase and footprint](cost_by_phase.csv) · [Original policy parity](original_execution_parity.csv) · [Recession policy parity](recession_execution_parity.csv)",
     ]
     (target / "README.md").write_text("\n".join(text) + "\n")
     print(text[2], flush=True)

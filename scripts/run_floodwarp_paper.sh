@@ -68,6 +68,29 @@ main() {
         echo 'Run check to establish the environment' >&2
         return 1
     fi
+    if [[ $stage == figures || $stage == tables || $stage == manuscript ]]; then
+        if [[ -f research/floodwarp_methods_paper/fidelity/native_results/measured_windows.csv ]]; then
+            if [[ $dry == true ]]; then
+                ./scripts/run_hydrograph_fidelity.sh native-publication --dry-run
+            else
+                ./scripts/run_hydrograph_fidelity.sh native-publication
+            fi
+        fi
+    fi
+    if [[ $stage == terrain-features || $stage == advisor-train || $stage == advisor-validate ]]; then
+        local native_stage="native-$stage"
+        if [[ $stage == figures || $stage == tables || $stage == manuscript ]]; then
+        if [[ -f research/floodwarp_methods_paper/fidelity/native_results/measured_windows.csv ]]; then
+            if [[ $dry == true ]]; then
+                ./scripts/run_hydrograph_fidelity.sh native-publication --dry-run
+            else
+                ./scripts/run_hydrograph_fidelity.sh native-publication
+            fi
+        fi
+    fi
+    if [[ $stage == terrain-features ]]; then native_stage="native-features"; fi
+        exec ./scripts/run_hydrograph_fidelity.sh "$native_stage" "${selected_options[@]}"
+    fi
     if [[ $stage == million-terrain ]]; then
         exec ./scripts/run_hydrograph_fidelity.sh native-storms --terrain-only "${selected_options[@]}"
     fi
@@ -83,7 +106,7 @@ main() {
     if [[ $stage == heldout-references ]]; then
         exec ./scripts/run_hydrograph_fidelity.sh native-storms --suite heldout_references "${selected_options[@]}"
     fi
-    if [[ $stage == historical-million-terrain || $stage == historical-resolution || $stage == historical-million-storms || $stage == historical-large-references || $stage == historical-large-refinements || $stage == historical-heldout-references ]]; then
+    if [[ $stage == historical-terrain-features || $stage == historical-advisor-train || $stage == historical-advisor-validate || $stage == historical-million-terrain || $stage == historical-resolution || $stage == historical-million-storms || $stage == historical-large-references || $stage == historical-large-refinements || $stage == historical-heldout-references ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.controller "${stage#historical-}" "${selected_options[@]}"
     fi
     if [[ $stage == native-products || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then

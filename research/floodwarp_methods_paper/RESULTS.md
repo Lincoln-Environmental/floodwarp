@@ -84,6 +84,8 @@ Through the matched 16-hour window, the highest recorded FV2 RK2 outlet interval
 
 Runoff travel time and catchment storage allow the outlet maximum to follow rainfall. The incised diagnostic compares accepted flow at successive cross-sections with storage and infiltration over the intervening reach. The matched finer-grid checks test how strongly the outlet timing and magnitude depend on representation. [Recession water balance](fidelity/native_tail/README.md)
 
-The replay measured the source of discharge during the highest post-hour-eight minute at each spacing. Net drawdown in the last 40 m supplied 99.76% on the 10 m grid. That water may have entered the reach earlier. [Crest-minute budgets](fidelity/native_tail/CREST.md)
+[Matched native-grid costs and observable-specific reference eligibility](fidelity/native_publication/README.md)
+
+The replay measured the source of discharge during the highest post-hour-eight minute at each spacing. Net drawdown in the last 40 m supplied 100.00% on the 5 m grid and 99.76% on the 10 m grid. That water may have entered the reach earlier. [Crest-minute budgets](fidelity/native_tail/CREST.md)
 
 On the 5 m grid, FV1 exported 100,848 m³ more water than Hancock by hour 16. Lower cumulative infiltration accounted for 100,268 m³ of the difference and lower final storage for 579 m³. The net infiltration difference arose on cells outside the rainfall footprint. These terms close the water balance under the same prescribed infiltration capacity. [Runoff and infiltration by grid](fidelity/native_outlet/runoff_partition.csv)

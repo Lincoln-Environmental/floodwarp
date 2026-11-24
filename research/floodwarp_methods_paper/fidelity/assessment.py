@@ -123,6 +123,8 @@ def compare(*, it, ref, station, cfg):
     tr, b = curve(it=ref, station=station)
     np.testing.assert_array_equal(t, tr)
     result = evaluate(edges=t, model=a, reference=b, config=cfg)
+    if result.get("active_nrmse_peak") is not None:
+        result["active_nrmse_peak_pct"] = 100 * result["active_nrmse_peak"]
     for prefix, run in (("model", it), ("reference", ref)):
         if run["d"]["initial_m3"] == 0 and run["s"]["landform"] != "coastal":
             result[prefix + "_active_at_start"] = False

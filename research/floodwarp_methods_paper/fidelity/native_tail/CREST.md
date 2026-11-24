@@ -4,6 +4,10 @@ These measurements cover the highest one-minute outlet discharge after hour eigh
 
 | Grid (m) | Peak interval ends (h:min) | Width of reach (m) | Outlet (m³/s) | Net inflow to reach (m³/s) | Net local release (m³/s) | Local share (%) |
 |---:|---:|---:|---:|---:|---:|---:|
+| 5 | 11:47 | 10 | 17.478 | 4.860 | 12.618 | 72.19 |
+| 5 | 11:47 | 20 | 17.478 | 0.000 | 17.478 | 100.00 |
+| 5 | 11:47 | 40 | 17.478 | 0.000 | 17.478 | 100.00 |
+| 5 | 11:47 | 400 | 17.478 | 0.000 | 17.478 | 100.00 |
 | 10 | 10:51 | 10 | 66.399 | 24.730 | 41.669 | 62.75 |
 | 10 | 10:51 | 20 | 66.399 | 0.292 | 66.107 | 99.56 |
 | 10 | 10:51 | 40 | 66.399 | 0.160 | 66.239 | 99.76 |

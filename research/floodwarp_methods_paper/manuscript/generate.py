@@ -272,6 +272,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                            "storage and infiltration over the intervening reach. The matched finer-grid checks "
                            "test how strongly the outlet timing and magnitude depend on representation. "
                            "[Recession water balance](../fidelity/native_tail/README.md)\n")
+        if (study / "fidelity/native_publication/README.md").is_file():
+            correction += "\n[Matched native-grid costs and observable-specific reference eligibility](../fidelity/native_publication/README.md)\n"
         detail = incised_storage_and_infiltration(study=study)
         if detail:
             correction += "\n" + detail + "\n"

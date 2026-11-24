@@ -92,6 +92,7 @@ def manifest(*, directory, package):
         "mean_windows",
         "native_matrix",
         "native_terrain",
+        "native_features",
         "native_results",
         "native_cpu_control",
         "native_outlet",

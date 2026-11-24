@@ -30,6 +30,10 @@ run_stage() {
         free-plane) module=free_plane ;;
         free-reach) module=free_reach ;;
         native-outlet) module=native_outlet ;;
+        native-states) module=restore_native ;;
+        native-features) module=native_features ;;
+        native-advisor-train|native-advisor-validate) module=native_advisor; extra=("$1") ;;
+        native-publication) module=native_publication ;;
         native-infiltration) module=native_infiltration ;;
         crest-sources) module=crest_sources ;;
         native-tail|native-peak-replay) module=native_tail; extra=("$1") ;;
@@ -60,7 +64,7 @@ main() {
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_matrix "$@"
     fi
     if [[ $stage == help || $stage == --help ]]; then
-        echo "Usage: $0 {all|status|summary|verify-kernels|pulses|pulse-recession|sharp-pulses|sharp-reference|pulse-reference|pulse-figures|operational-preview|operational-pairs|native-horizons|storage-tail|storage-tail-report|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|incised-reference|incised-storage|area-mean-storms|area-mean-terrain|native-input-audit|native-restart-control|free-plane|free-reach|native-outlet|native-tail|native-peak-replay|native-infiltration|crest-sources|outlet-report|native-storms|native-products|verify-native|historical-all|incised-plane|incised-reach|incised-checkpoints|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
+        echo "Usage: $0 {all|status|summary|verify-kernels|pulses|pulse-recession|sharp-pulses|sharp-reference|pulse-reference|pulse-figures|operational-preview|operational-pairs|native-horizons|storage-tail|storage-tail-report|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|incised-reference|incised-storage|area-mean-storms|area-mean-terrain|native-input-audit|native-restart-control|free-plane|free-reach|native-outlet|native-states|native-features|native-publication|native-advisor-train|native-advisor-validate|native-tail|native-peak-replay|native-infiltration|crest-sources|outlet-report|native-storms|native-products|verify-native|historical-all|incised-plane|incised-reach|incised-checkpoints|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
         return
     fi
     shift
@@ -68,7 +72,7 @@ main() {
         case "$option" in --dry-run) dry=true ;; --resume) ;; *) echo "Unsupported option: $option" >&2; return 2 ;; esac
     done
     if [[ $stage == all ]]; then
-        for item in verify-kernels pulses pulse-recession sharp-pulses pulse-reference orientation area-mean-terrain area-mean-storms native-input-audit native-restart-control free-plane free-reach native-storms native-products native-outlet native-tail native-peak-replay crest-sources native-infiltration outlet-report verify-native; do run_stage "$item"; done
+        for item in verify-kernels pulses pulse-recession sharp-pulses pulse-reference orientation area-mean-terrain area-mean-storms native-states native-input-audit native-restart-control free-plane free-reach native-storms native-features native-products native-outlet native-tail native-peak-replay crest-sources native-infiltration outlet-report verify-native native-advisor-train native-advisor-validate native-publication; do run_stage "$item"; done
     elif [[ $stage == historical-all ]]; then
         for item in verify-kernels pulses pulse-recession sharp-pulses pulse-reference operational-preview native-review orientation storm-controls storage-tail storage-tail-report operational-pairs native-horizons rolling-reference area-mean-terrain area-mean-storms incised-plane incised-reach recession small-review policy-recession bed-recession endpoint-fields analyse verify; do run_stage "$item"; done
     else

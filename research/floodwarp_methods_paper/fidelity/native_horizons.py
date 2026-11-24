@@ -147,7 +147,7 @@ def generate(*, directory):
     text = [
         "# Million-cell discharge after the original end time",
         "",
-        f"Paired native-grid recession measurements are available for {count} of the {len(cases)} primary landforms. Each pair received six hours of rainfall. The original end time includes the modelled recession available in the earlier archive. The omitted share is the additional outward volume divided by total outward volume through the paired end time.",
+        f"Paired recession measurements from the original centre-sampled terrain are available for {count} of the {len(cases)} primary landforms. Each pair received six hours of rainfall. These runs compare methods on the same represented grid. The practical cross-grid comparison uses separate metre-derived area averages. [Corrected incised event](mean_storms/complete_events.csv) The omitted share is the additional outward volume divided by total outward volume through the paired end time.",
         "",
         "| Landform | Method | Original end (h) | Paired end (h) | Outlet volume after original end (%) | Total hydraulic time (s) | Runtime / FV1 |",
         "|---|---|---:|---:|---:|---:|---:|",
