@@ -15,7 +15,31 @@ def times(*, folder):
     )
 
 
-def summary(*, pair, reference, edges, threshold):
+def timing_fields(*, folder, edges, interval, peak, threshold):
+    """Time of a resolved interior maximum and the last observed wet-to-dry crossing."""
+    top_first = np.full(peak.shape, np.inf)
+    top_last = np.full(peak.shape, -np.inf)
+    maximum_time = np.full(peak.shape, np.nan)
+    last_wet = np.full(peak.shape, np.nan)
+    for t in edges:
+        with np.load(folder / f"{t}.npz") as snapshot:
+            h = snapshot["h"]
+        last_wet[h >= threshold] = t
+        near = h >= 0.99 * peak
+        top_first[near] = np.minimum(top_first[near], t)
+        top_last[near] = t
+        maximum_time[(h == peak) & ~np.isfinite(maximum_time)] = t
+    maximum_time[
+        (peak < threshold)
+        | (top_first == edges[0])
+        | (top_last == edges[-1])
+        | (top_last - top_first > interval)
+    ] = np.nan
+    last_wet[last_wet == edges[-1]] = np.nan
+    return maximum_time, last_wet + interval
+
+
+def summary(*, pair, reference, edges, threshold, landmarks=None):
     a_name, a = pair
     b_name, b = reference
     if a["interval"] != b["interval"] or a["support"] != b["support"]:
@@ -88,6 +112,34 @@ def summary(*, pair, reference, edges, threshold):
         sampled_maximum_bias_m=np.mean(delta),
         sampled_maximum_rmse_m=np.sqrt(np.mean(delta**2)),
     )
+    model_times = timing_fields(
+        folder=a_name,
+        edges=edges,
+        interval=a["interval"],
+        peak=peak["model"],
+        threshold=threshold,
+    )
+    reference_times = timing_fields(
+        folder=b_name,
+        edges=edges,
+        interval=b["interval"],
+        peak=peak["ref"],
+        threshold=threshold,
+    )
+    for name, model_time, ref_time in zip(
+        ("maximum_depth_time", "last_recession"),
+        model_times,
+        reference_times,
+        strict=True,
+    ):
+        difference = model_time - ref_time
+        row[name + "_assessable_cells"] = int(np.isfinite(difference).sum())
+        row[name + "_median_delay_s"] = spatial.median_finite(field=difference)
+        row[name + "_median_abs_difference_s"] = spatial.median_finite(
+            field=abs(difference)
+        )
+        if landmarks is not None:
+            landmarks[name] = difference
     return rows, row, delay
 
 
@@ -105,6 +157,7 @@ def run(*, directory):
     series = []
     summaries = []
     maps = {}
+    landmarks = {}
     for case, items in groups.items():
         refs = [pair for pair in items if pair[1]["method"] == "adaptive"]
         if not refs:
@@ -122,20 +175,25 @@ def run(*, directory):
                 raise ValueError(
                     f"Incomplete transient archive for {case} {pair[0].name}"
                 )
+            fields = {}
             rows, stats, delay = summary(
                 pair=pair,
                 reference=ref,
                 edges=edges,
                 threshold=config["arrival_depth_m"],
+                landmarks=fields,
             )
             series.extend(rows)
             summaries.append(stats)
             if pair[1]["method"] in ("fv1", "hancock_adaptive", "hancock_dense"):
                 maps[pair[0].name] = delay
+                for label, field in fields.items():
+                    landmarks[pair[0].name + "_" + label] = field
     target = directory / "results"
     metrics.csv_write(file=target / "transient_sections.csv", rows=series)
     metrics.csv_write(file=target / "transient_arrival.csv", rows=summaries)
     np.savez_compressed(target / "transient_arrival.npz", **maps)
+    np.savez_compressed(target / "transient_landmarks.npz", **landmarks)
     runner.write_json(
         path=target / "transient_manifest.json",
         data={

@@ -641,3 +641,17 @@ def test_coarse_cadence_moves_dominant_crest_to_earlier_event(config):
     revised = np.array([0, 300, 750, 1200, 1500, 1800])
     assert cadence_observation(edges=revised, flow=np.ones(5), seconds=900,
                               config=config)["cadence_status"] == "missing_observed_boundary"
+
+
+def test_spatial_peak_and_final_recession_censor_nonunique_and_persistent_water(tmp_path):
+    from research.floodwarp_methods_paper.fidelity.transient import timing_fields
+
+    h = np.array([[0, 0, .2, 0], [.2, .2, .2, 0], [.1, 0, .2, 0],
+                  [0, .2, .2, 0], [0, 0, .2, 0]])
+    t = [0, 900, 1800, 2700, 3600]
+    for k, time in enumerate(t):
+        np.savez(tmp_path / f"{time}.npz", h=h[k])
+    peak, recession = timing_fields(folder=tmp_path, edges=t, interval=900,
+                                    peak=h.max(axis=0), threshold=.01)
+    np.testing.assert_equal(peak, [900, np.nan, np.nan, np.nan])
+    np.testing.assert_equal(recession, [2700, 3600, np.nan, np.nan])
