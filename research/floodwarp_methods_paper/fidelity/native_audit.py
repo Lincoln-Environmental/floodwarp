@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 from research.floodwarp_methods_paper import metrics, runner
@@ -42,13 +43,41 @@ def read_grids(*, folder, terrain):
     return rows
 
 
+def restore_inputs(*, directory, terrain, cache_root, design):
+    from research.floodwarp_methods_paper.fidelity.mean_storms import base_inputs
+
+    base, inputs = base_inputs(directory=directory, design=design)
+    folder, measured = native_inputs.generate(
+        spec=base, inputs=inputs, cache_root=cache_root, strip_rows=design["strip_rows"],
+        channel_core_m=design["channel_core_min_depth_m"], include_native=1 in terrain["inputs"]["grids_m"],
+    )
+    if measured != terrain:
+        raise ValueError("Regenerated incised physical inputs differ from the archived storm receipt")
+    return folder
+
+
 def audit(*, directory):
     terrain = json.loads((directory / "mean_storms/terrain.json").read_text())
-    ident = runner.digest(terrain["inputs"])
-    folder = directory.parents[2] / ".fidelity-restarts/native_inputs" / ident
-    native_inputs.verify(folder=folder, identity=terrain["inputs"])
+    design = json.loads((directory / "mean_settings.json").read_text())
+    folder = restore_inputs(directory=directory, terrain=terrain,
+                            cache_root=directory.parents[2] / ".fidelity-restarts/native_inputs",
+                            design=design)
     rows = read_grids(folder=folder, terrain=terrain)
+    evidence = dict(input_receipt_sha256=runner.digest(terrain), checker_sha256=runner.checksum(Path(__file__)),
+                    native_cells=terrain["native_cells"], native_field_sha256=terrain["native_sha256"],
+                    verified_raster_sha256=terrain["files"], source_sha256=terrain["inputs"]["sources"])
+    proof = directory / "native_input_reproduction" / runner.digest(evidence)[:24] / "verified.json"
+    if proof.is_file():
+        if json.loads(proof.read_text()) != evidence:
+            raise ValueError("Changed independent raster regeneration receipt")
+    else:
+        with TemporaryDirectory(prefix="floodwarp-incised-inputs-") as temporary:
+            rebuilt = restore_inputs(directory=directory, terrain=terrain, cache_root=Path(temporary), design=design)
+            if read_grids(folder=rebuilt, terrain=terrain) != rows:
+                raise ValueError("Independent clean build disagrees with cached spatial inputs")
+        runner.write_json(path=proof, data=evidence)
     metrics.csv_write(file=directory / "mean_storms/grid_audit.csv", rows=rows)
+    print(f"Verified {len(rows)} fields over {terrain['native_cells']:,} native cells, input {runner.digest(terrain)}")
 
 
 if __name__ == "__main__":

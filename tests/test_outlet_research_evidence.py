@@ -35,6 +35,42 @@ def test_fixed_reach_report_rejects_displaced_section(tmp_path):
     with pytest.raises(ValueError, match="physical sections"):
         reach_comparison(**options)
 
+def test_missing_incised_checkpoint_restoration_checks_fields_and_interval_transport(tmp_path, monkeypatch):
+    import json
+    from floodwarp.inputs import terrain_from_array
+    from floodwarp.model import advance, create_model, save_checkpoint
+    from research.floodwarp_methods_paper.fidelity import outlet_states
+
+    base = tmp_path/"primary"
+    base.mkdir()
+    cache = tmp_path/"checkpoints"
+    identity = dict(dx=5, cfl_factor=1, extension_m=0, settings={}, stopping={}, method="hancock")
+    window = dict(start_s=0, end_s=1, frames=[dict(t_s=1, gauge=0.0, hydraulic_s=.9)])
+
+    def build(*, path):
+        terrain = terrain_from_array(elevation=np.zeros((3, 3)), dx=5., dy=5.,
+                                     row_order="south_to_north", vertical_datum="local")
+        model = create_model(terrain=terrain, solver_method="hancock", device="cpu", initial_depth=.1)
+        advance(model=model, end_time=1.)
+        save_checkpoint(model=model, path=path)
+
+    def replay(*, run_dir, **kwargs):
+        run_dir.mkdir(parents=True, exist_ok=True)
+        build(path=cache/run_dir.name/"1.npz")
+        (run_dir/"1.json").write_text(json.dumps(dict(window, frames=[dict(window["frames"][0], hydraulic_s=3.0)])))
+
+    build(path=tmp_path/"original.npz")
+    proof = outlet_states.state_receipt(path=tmp_path/"original.npz", ident=base.name, end=1)
+    (base/"state_1.json").write_text(json.dumps(proof))
+    (base/"1.json").write_text(json.dumps(window))
+    monkeypatch.setattr(outlet_states.outlet_storms, "trajectory", replay)
+    options = dict(directory=tmp_path, base=base, identity=identity, missing=[1], cache=cache, control={})
+    outlet_states.restore(**options)
+    assert outlet_states.state_receipt(path=cache/"primary/1.npz", ident=base.name, end=1) == proof
+    (base/"1.json").write_text(json.dumps(dict(window, frames=[dict(window["frames"][0], gauge=.01)])))
+    with pytest.raises(ValueError, match="accepted hydraulic measurements"):
+        outlet_states.restore(**options)
+
 
 def test_spatial_cost_ends_at_the_snapshot():
     frames = [dict(t_s=t, steps=n, hydraulic_s=s) for t, n, s in
@@ -42,6 +78,22 @@ def test_spatial_cost_ends_at_the_snapshot():
     assert outlet_observables.window_cost(frames=frames, end_s=120) == (0.4, 9)
     with pytest.raises(ValueError, match="endpoint"):
         outlet_observables.window_cost(frames=frames, end_s=150)
+
+def test_repeat_selection_covers_cross_grid_decisions_on_the_same_snapshot():
+    from research.floodwarp_methods_paper.fidelity.outlet_timing import marginal_decisions
+
+    common = dict(case="fixed gauge", representation="no buffer", reference_id="fine",
+                  station="domain", objective="depth_rmse_m", cap="0", interval_s="60", end_h=8,
+                  eligible="True", reference_sensitivity="0.002")
+    coarse = dict(common, method="hancock_adaptive", dx="10", runtime_s="102", absolute_error="0.004",
+                  experiment_id="coarse")
+    fine = dict(common, method="fv1", dx="5", runtime_s="100", absolute_error="0.008",
+                experiment_id="fine-candidate", interval_s="60.0")
+    later = dict(coarse, end_h=16, experiment_id="other-endpoint")
+    unresolved = dict(coarse, method="adaptive", eligible="False", experiment_id="unqualified")
+    result = marginal_decisions(frontier=[coarse, fine, later, unresolved],
+                                tolerances={"depth_rmse_m": [0.01]}, fraction=0.05)
+    assert result == {"coarse", "fine-candidate"}
 
 
 def test_transfer_inventory_retains_contract_for_selected_run(tmp_path):

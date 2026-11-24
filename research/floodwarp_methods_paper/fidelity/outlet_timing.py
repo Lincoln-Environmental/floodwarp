@@ -27,6 +27,25 @@ def cost_groups(*, rows, fraction):
     )
 
 
+def marginal_decisions(*, frontier, tolerances, fraction):
+    """Repeat peers whose timing could change a decision on one fixed hydraulic support."""
+    groups = defaultdict(list)
+    for row in frontier:
+        key = (row["case"], row["representation"], row["reference_id"], row["station"],
+               row["objective"], row["cap"], float(row["interval_s"]), float(row["end_h"]))
+        groups[key].append(row)
+    selected = set()
+    for group in groups.values():
+        options = timing_repeats.marginal_budget_options(rows=group, relative_gap=fraction)
+        selected.update(r["experiment_id"] for r in group if (r["method"], int(r["dx"])) in options)
+        for tolerance in tolerances.get(group[0]["objective"], []):
+            qualified_costs = {r["experiment_id"]: float(r["runtime_s"]) for r in group
+                               if r["eligible"] == "True" and r["reference_sensitivity"] != ""
+                               and float(r["absolute_error"]) + float(r["reference_sensitivity"]) <= tolerance}
+            selected.update(timing_repeats.close_options(points=qualified_costs, relative_gap=fraction))
+    return selected
+
+
 def read_frames(*, path, end):
     data = [
         json.loads(p.read_text())
@@ -55,11 +74,16 @@ def replicate(*, directory, base, end, replicate_id, control):
     original = record["identity"]
     if runner.digest(original)[:24] != base.name:
         raise ValueError("Incorrect primary storm identity")
+    machine = runner.machine(root=directory.parents[2])
+    environment = {key: machine[key] for key in ("gpu", "cpu_model", "warp", "python", "precision")}
+    if any(record["hardware"][key] != value for key, value in environment.items()):
+        raise ValueError("Independent timing requires the primary GPU, driver, CPU and numerical environment")
     identity = dict(
         original,
         timing_repeat=replicate_id,
         primary=base.name,
         timing_driver=runner.checksum(Path(__file__)),
+        timing_environment=environment,
     )
     dest = directory / "outlet_timing_repeats" / runner.digest(identity)[:24]
     receipt = dest / f"timing_{end}.json"
@@ -90,6 +114,9 @@ def replicate(*, directory, base, end, replicate_id, control):
         directory=directory, ident=base.name, end=end
     ) != checkpoint_hashes(directory=directory, ident=dest.name, end=end):
         raise ValueError("Timed trajectory changed the primary final state")
+    measured_machine = json.loads((dest / "inputs.json").read_text())["hardware"]
+    if any(measured_machine[key] != value for key, value in environment.items()):
+        raise ValueError("Repeat launch hardware differs from its timing contract")
     timing = dict(
         primary=base.name,
         id=dest.name,
@@ -99,7 +126,7 @@ def replicate(*, directory, base, end, replicate_id, control):
         extension_m=original["extension_m"],
         end_s=end,
         interval_s=original["settings"]["interval_s"],
-        gpu=record["hardware"]["gpu"],
+        **environment,
         solver_sha=original["numerical"],
         steps=result["steps"],
         policy=control["data"]["execution"],
@@ -121,6 +148,13 @@ def run(*, directory, fraction, repeats, dry):
             continue
         rows = metrics.csv_read(file=file)
         selected = cost_groups(rows=rows, fraction=fraction)
+        for name in ("fidelity", "depth_extent"):
+            front = file.parent / ("pareto.csv" if name == "fidelity" else "spatial_pareto.csv")
+            limits = defaultdict(set)
+            for decision in metrics.csv_read(file=file.parent / f"least_cost_{name}.csv"):
+                limits[decision["objective"]].add(float(decision["tolerance"]))
+            selected.update(marginal_decisions(frontier=metrics.csv_read(file=front),
+                                               tolerances=limits, fraction=fraction))
         for r in rows:
             if r["run_id"] not in selected:
                 continue
@@ -153,6 +187,10 @@ def run(*, directory, fraction, repeats, dry):
                     end_s=end,
                     interval_s=contract["identity"]["settings"]["interval_s"],
                     gpu=contract["hardware"]["gpu"],
+                    cpu_model=contract["hardware"]["cpu_model"],
+                    warp=contract["hardware"]["warp"],
+                    python=contract["hardware"]["python"],
+                    precision=contract["hardware"]["precision"],
                     solver_sha=contract["identity"]["numerical"],
                     steps=int(r["steps"]),
                     policy=control["data"]["execution"],
