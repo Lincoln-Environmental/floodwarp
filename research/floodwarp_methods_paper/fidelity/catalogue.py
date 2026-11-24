@@ -133,6 +133,7 @@ def manifest(*, directory, package):
         "mixed_native",
         "endpoint_fields",
         "storage_tail",
+        "reach_balances",
         "incised_crest",
         "mean_storms",
         "mean_windows",

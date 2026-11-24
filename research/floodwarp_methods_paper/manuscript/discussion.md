@@ -189,6 +189,21 @@ On plain-709-moderate-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 change
 
 On plain-709-intense-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.175% and net export by -14.9 m³ through 32 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](../fidelity/native_results/fv1_temporal_sensitivity.csv)
 
+### Where export differences develop
+
+The table gives FV1 minus dense Hancock on either side of the internal gauge. The upstream east face is the gauge and the downstream east face is the outlet. Infiltration and retained storage come from separate cell fields. Each reach closes against its initial water, rain and signed transport on all four sides.
+
+| Storm | Grid (m) | End (h) | Cadence (s) | Gauge x (m) | Reach | Δ eastward export (m³) | Δ infiltration (m³) | Δ retained storage (m³) |
+|---|---:|---:|---:|---:|---|---:|---:|---:|
+| plain-709-moderate-1000x1000 | 1 | 40 | 60 | 500 | upstream | -1,461 | +1,461 | +0 |
+| plain-709-moderate-1000x1000 | 1 | 40 | 60 | 500 | downstream | -16,994 | +9,873 | +5,659 |
+| plain-709-moderate-1000x1000 | 5 | 40 | 60 | 500 | upstream | -1,146 | +1,146 | +0 |
+| plain-709-moderate-1000x1000 | 5 | 40 | 60 | 500 | downstream | -14,311 | +7,943 | +5,222 |
+| plain-709-moderate-1000x1000 | 10 | 40 | 60 | 500 | upstream | -756 | +756 | +0 |
+| plain-709-moderate-1000x1000 | 10 | 40 | 60 | 500 | downstream | -14,071 | +7,094 | +6,221 |
+
+[Per-formulation water accounts and field identities](../fidelity/native_results/regional_water.csv)
+
 ## Native hydraulic cell comparisons
 
 Each row compares fields at the stated physical time on identical hydraulic cells against ordinary-CFL RK2 for the same storm. Depth RMSE covers all cells. Extent uses thresholds on individual cells. The half-CFL RK2 rows measure temporal sensitivity. Absolute practical accuracy at the native terrain floor remains unresolved.

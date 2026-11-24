@@ -105,3 +105,35 @@ def native_grid_differences(*, directory, records):
                 raise ValueError("Contradictory map comparisons for the same forecast pair")
             measurements[key] = row
     return [measurements[key] for key in sorted(measurements)]
+
+
+def regional_water(*, directory, completed):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity import reach_balances
+
+    events = {r["source_id"]: r for r in completed if r["horizon"] == "complete-native-metre"}
+    implementation = runner.checksum(path=directory / "reach_balances.py")
+    result = {}
+    for path in sorted((directory / "reach_balances").glob("*/receipt.json")):
+        receipt = json.loads(path.read_text())
+        identity = receipt["identity"]
+        event = identity["event"]
+        ident = event["source_id"]
+        if ident not in events or identity["analysis_sha"] != implementation:
+            continue
+        source = events[ident]
+        table = path.with_name("water.csv")
+        endpoint = directory / "endpoint_fields" / ident / f"{int(float(event['end_h']) * 3600)}.npz"
+        if (runner.digest(identity)[:24] != path.parent.name or runner.checksum(path=table) != receipt["water_sha"]
+                or runner.checksum(path=endpoint) != identity["endpoint_sha"]
+                or identity["hydraulic_source"] != source["solver_source"]
+                or any(str(source[key]) != value for key, value in event.items())):
+            raise ValueError("Regional water account differs from the archived event")
+        rows = metrics.csv_read(file=table)
+        if ident in result or [r["reach"] for r in rows] != ["upstream", "downstream"]:
+            raise ValueError("Duplicate or missing regional water account")
+        reaches = [dict(reach=r["reach"], **{k: float(v) for k, v in r.items() if k != "reach"}) for r in rows]
+        reach_balances.verify_totals(reaches=reaches, event=source)
+        result[ident] = [dict(**event, **r, physical_sha=identity["physical_sha"], receipt_id=path.parent.name)
+                         for r in reaches]
+    return [row for ident in sorted(result) for row in result[ident]]

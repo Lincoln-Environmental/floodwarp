@@ -374,6 +374,42 @@ def native_operational_balances(*, study, minimum_cells):
     ])
 
 
+def native_reach_contrasts(*, study):
+    file = study / "fidelity/native_results/regional_water.csv"
+    if not file.exists():
+        return ""
+    groups = defaultdict(dict)
+    for row in csv_read(file=file):
+        if float(row["factor"]) != 1:
+            continue
+        key = (row["case"], float(row["dx_m"]), float(row["end_h"]), float(row["interval_s"]),
+               float(row["section_x_m"]), row["physical_sha"])
+        reaches = groups[key].setdefault(row["method"], {})
+        if row["reach"] in reaches:
+            raise ValueError("Duplicate water account for one matched reach")
+        reaches[row["reach"]] = row
+    rows = []
+    for (case, dx, end, cadence, section, _), peers in sorted(groups.items()):
+        if "fv1" not in peers or "hancock_dense" not in peers:
+            continue
+        for reach in ("upstream", "downstream"):
+            fv, h = (peers[m][reach] for m in ("fv1", "hancock_dense"))
+            values = [float(fv[k]) - float(h[k]) for k in ("east_eastward_m3", "infiltration_m3", "storage_m3")]
+            rows.append(f"| {case} | {dx:g} | {end:g} | {cadence:g} | {section:g} | {reach} | "
+                        + " | ".join(f"{v:+,.0f}" for v in values) + " |")
+    if not rows:
+        return ""
+    return "\n".join(["", "### Where export differences develop", "",
+                      "The table gives FV1 minus dense Hancock on either side of the internal gauge. "
+                      "The upstream east face is the gauge and the downstream east face is the outlet. "
+                      "Infiltration and retained storage come from separate cell fields. Each reach closes "
+                      "against its initial water, rain and signed transport on all four sides.", "",
+                      "| Storm | Grid (m) | End (h) | Cadence (s) | Gauge x (m) | Reach | Δ eastward export (m³) | "
+                      "Δ infiltration (m³) | Δ retained storage (m³) |",
+                      "|---|---:|---:|---:|---:|---|---:|---:|---:|", *rows, "",
+                      "[Per-formulation water accounts and field identities](../fidelity/native_results/regional_water.csv)", ""])
+
+
 def native_grid_field_comparison(*, study):
     file = study / "fidelity/native_results/native_grid_field_differences.csv"
     rows = csv_read(file=file) if file.exists() else []
@@ -862,6 +898,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                             "[Time refinement, both gauge records and water accounts]"
                             "(../fidelity/native_results/fv1_temporal_sensitivity.csv)\n"
                         )
+                correction += native_reach_contrasts(study=study)
                 correction += native_grid_field_comparison(study=study)
                 correction += native_advisor_findings(study=study)
         transfer = study / "fidelity/orton_transfer/transfer.csv"

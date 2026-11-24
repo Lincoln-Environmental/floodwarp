@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--resume | --force] [--dry-run]
 Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
         million-terrain million-pilots million-storms million-auto large-references large-refinements heldout-references million-profiles million-repeats recession-controls execution-policy pareto
-        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-step-history native-timing-repeats native-publication summary strong-storm-controls fv1-temporal-control native-grid-maps free-plane free-reach outlet-storms outlet-results outlet-timing-repeats advisor-design advisor-cli-check orton-transfer outlet-qualification verify-kernels verify-native all historical-all
+        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-step-history native-timing-repeats native-publication summary strong-storm-controls fv1-temporal-control native-grid-maps native-reach-balances free-plane free-reach outlet-storms outlet-results outlet-timing-repeats advisor-design advisor-cli-check orton-transfer outlet-qualification verify-kernels verify-native all historical-all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
 The native-input-audit stage reconstructs and verifies the incised storm rasters on a clean checkout.
 The outlet-states stage verifies archived field hashes and restores missing workstation checkpoints.
@@ -108,8 +108,32 @@ main() {
     if [[ $stage == outlet-states ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.outlet_states "${selected_options[@]}"
     fi
+    if [[ $stage == native-grid-maps || $stage == native-reach-balances ]]; then
+        for flag in "${!selected_options[@]}"; do
+            if [[ ${selected_options[flag]} == --force ]]; then selected_options[flag]=--recompute; fi
+        done
+    fi
+    if [[ $stage == native-reach-balances ]]; then
+        local reach_driver=research.floodwarp_methods_paper.fidelity.reach_balances spacing
+        for flag in "${selected_options[@]}"; do
+            if [[ $flag == --dx || $flag == --dx=* ]]; then
+                exec "$python_bin" -m "$reach_driver" "${selected_options[@]}"
+            fi
+        done
+        for spacing in 1 5 10; do
+            "$python_bin" -m "$reach_driver" --dx "$spacing" "${selected_options[@]}"
+        done
+        return
+    fi
     if [[ $stage == native-grid-maps ]]; then
-        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_map_comparison "${selected_options[@]}"
+        local map_driver=research.floodwarp_methods_paper.fidelity.native_map_comparison
+        for flag in "${selected_options[@]}"; do
+            if [[ $flag == --case || $flag == --case=* ]]; then
+                exec "$python_bin" -m "$map_driver" "${selected_options[@]}"
+            fi
+        done
+        "$python_bin" -m "$map_driver" "${selected_options[@]}"
+        exec "$python_bin" -m "$map_driver" --case plain-709-intense-1000x1000 "${selected_options[@]}"
     fi
     if [[ $stage == fv1-temporal-control ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.fv1_clock "${selected_options[@]}"
@@ -123,6 +147,7 @@ main() {
             "$0" native-products "${selected_options[@]}"
             if [[ $part == fit ]]; then
                 "$0" native-grid-maps "${selected_options[@]}"
+                "$0" native-reach-balances "${selected_options[@]}"
                 "$0" native-step-history "${selected_options[@]}"
             fi
             "$0" native-timing-repeats "${selected_options[@]}"
