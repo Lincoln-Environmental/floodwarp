@@ -255,6 +255,52 @@ def repaired_budgets(*, directory):
     return "\n" + "\n\n".join(lines) + "\n"
 
 
+def native_operational_balances(*, study, cells):
+    import json
+
+    folder = study / "fidelity/native_results"
+    budgets = folder / "measured_windows.csv"
+    pairs = folder / "policy_cost_events.csv"
+    if not budgets.is_file() or not pairs.is_file():
+        return ""
+    source = json.loads((study / "fidelity/outlet_results/sources.json").read_text())["solver"]
+    completed = {r["source_id"]: r for r in csv_read(file=budgets)
+                 if r["horizon"] == "complete-native-metre" and r["solver_source"] == source}
+    times = {ident: float(r["hydraulic_median_s"])
+             for r in csv_read(file=folder / "timing_distribution.csv")
+             if r["horizon"] == "completed recession"
+             for ident in r["run_ids"].split()}
+    rows = []
+    for p in csv_read(file=pairs):
+        ids = [p[k] for k in ("fv1_id", "dense_id", "tiled_id")]
+        if (p["cohort"] != "complete-native-metre" or int(p["cells"]) != cells
+                or not all(key in completed for key in ids)):
+            continue
+        fv, h, tiled = (completed[key] for key in ids)
+        delta_export = float(fv["net_outlet_m3"]) - float(h["net_outlet_m3"])
+        delta_soil = float(fv["infiltration_m3"]) - float(h["infiltration_m3"])
+        best = min(times[h["source_id"]], times[tiled["source_id"]])
+        ratio = best / times[fv["source_id"]]
+        rows.append(f"| {p['case']} | {p['dx_m']} | {float(p['end_h']):g} | {float(h['interval_s']):g} | "
+                    f"{float(fv['outlet_peak_m3s']):.2f} | {float(h['outlet_peak_m3s']):.2f} | "
+                    f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {ratio:.3f} |")
+    if not rows:
+        return ""
+    return "\n" + "\n".join([
+        f"## Complete {cells:,}-cell storms on native-metre terrain", "",
+        "Peaks are interval means of accepted outlet transport. The volume columns give FV1 minus Hancock. "
+        "Costs use the faster of the two verified explicit Hancock policies through the common recession endpoint "
+        "and the median hydraulic time where repeats exist.", "",
+        "| Storm | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | "
+        "Δ net export (m³) | Δ infiltration (m³) | Hancock / FV1 time |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|", *rows, "",
+        "The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions "
+        "use the independently screened reference for each observable. "
+        "[Water budgets and internal gauges](../fidelity/native_results/measured_windows.csv) · "
+        "[Policy-specific observations and reference eligibility](../fidelity/native_publication/README.md)", "",
+    ])
+
+
 def widespread_plain(*, study):
     import json
 
@@ -572,6 +618,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 )
                 correction += repaired_budgets(directory=repaired.parent)
                 correction += widespread_plain(study=study)
+                correction += native_operational_balances(study=study, cells=1024**2)
                 correction += native_advisor_findings(study=study)
         transfer = study / "fidelity/orton_transfer/transfer.csv"
         if transfer.exists():

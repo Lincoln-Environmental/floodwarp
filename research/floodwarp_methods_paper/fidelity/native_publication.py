@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from research.floodwarp_methods_paper import metrics, runner
 from research.floodwarp_methods_paper.fidelity import native_control_report
+from research.floodwarp_methods_paper.fidelity.assessment import numerical_identity
 from research.floodwarp_methods_paper.fidelity.figures import save
 
 
@@ -16,6 +17,9 @@ OBJECTIVES = {
     "peak_delay_pct": ("Peak timing error", "% of reference duration"),
     "shape_tv_pct": ("Hydrograph shape error", "%"),
     "active_nrmse_peak_pct": ("Active-window RMSE", "% of reference peak"),
+    "net_export_bias_pct": ("Net exported volume error", "%"),
+    "infiltration_bias_pct": ("Cumulative infiltration error", "%"),
+    "depth_rmse_m": ("Final depth RMSE", "m"),
     "extent_error_5cm": ("Final extent error at 5 cm", "1 − IoU"),
     "maximum_extent_error_10cm": ("Maximum extent error at 10 cm", "1 − IoU"),
 }
@@ -59,7 +63,7 @@ def measured_fronts(*, directory, output):
             )
         if not any(r["eligible"] == "True" for r in records):
             continue
-        fig, axes = plt.subplots(2, 3, figsize=(9, 5.5), layout="constrained")
+        fig, axes = plt.subplots(3, 3, figsize=(10, 8), layout="constrained")
         for ax, (metric, (title, unit)) in zip(
             axes.flat, OBJECTIVES.items(), strict=True
         ):
@@ -244,8 +248,12 @@ def run(*, directory):
         "|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for r in rows:
+        method = numerical_identity(method=r["method"])["formulation"]
+        policy = r.get("resolved_execution_mode") or r["execution_mode"]
+        if r["execution_mode"] == "auto":
+            policy = "auto → " + policy
         text.append(
-            f"| {r['case']} | {r['dx_m']} | {r['method']} | {r.get('resolved_execution_mode') or r['execution_mode']} | "
+            f"| {r['case']} | {r['dx_m']} | {method} | {policy} | "
             f"{r['factor']} | {float(r['end_h']):g} | {float(r['interval_s']):g} | {float(r['section_peak_m3s']):.3f} | "
             f"{float(r['outlet_peak_m3s']):.3f} | {float(r['net_outlet_m3']):,.0f} | {float(r['hydraulic_s']):.2f} | {int(r['steps']):,} |"
         )

@@ -242,6 +242,51 @@ def test_transfer_inventory_retains_contract_for_selected_run(tmp_path):
     assert not resumed["complete"]
 
 
+def test_native_frontier_includes_water_accounts_and_depth_at_matched_cadence(tmp_path):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity.native_publication import measured_fronts
+
+    folder = tmp_path / "native_results"
+    folder.mkdir()
+    output = tmp_path / "figures"
+    output.mkdir()
+    run = dict(cohort="complete", case="storm", representation="native", reference_id="same",
+               interval_s="60", end_h=16, station="outlet", eligible=True, nondominated=True,
+               runtime_s=1, absolute_error=2, formulation="FV1", execution_mode="sparse", dx=5)
+    metrics.csv_write(file=folder / "hydrograph_pareto.csv", rows=[
+        dict(run, objective="net_export_bias_pct"),
+        dict(run, interval_s="60.0", objective="infiltration_bias_pct", eligible=False, nondominated=None),
+    ])
+    metrics.csv_write(file=folder / "recession_depth_pareto.csv", rows=[
+        dict(run, station="domain", interval_s="60.0", objective="depth_rmse_m", absolute_error=.001),
+    ])
+    counts = measured_fronts(directory=tmp_path, output=output)
+    assert {r["metric"]: r["eligible"] for r in counts} == {
+        "net_export_bias_pct": 1, "infiltration_bias_pct": 0, "depth_rmse_m": 1,
+    }
+    assert len(list(output.glob("*_pareto.pdf"))) == 1
+
+
+def test_recession_without_rk2_retains_its_real_endpoint_and_no_reference(tmp_path):
+    from pathlib import Path
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity import final_depth, native_publication
+
+    study = Path(__file__).resolve().parents[1] / "research/floodwarp_methods_paper/fidelity"
+    target = tmp_path / "native_results"
+    target.mkdir()
+    forecasts = [dict(id="measured-fv1", factor=1, d=dict(hydraulic_s=138., steps=74331),
+                      s=dict(method="fv1", dx=10, interval=300, hours=28))]
+    final_depth.process(groups={("complete-native-metre", "floodplain", "native"): forecasts},
+                        directory=study, target=target, settings={"thresholds_m": [.05, .1]})
+    rows = metrics.csv_read(file=target / "recession_depth_pareto.csv")
+    assert rows and all(r["end_h"] == "28" and r["reference_id"] == ""
+                        and r["eligible"] == "False" for r in rows)
+    metrics.csv_write(file=target / "hydrograph_pareto.csv", rows=[])
+    counts = native_publication.measured_fronts(directory=tmp_path, output=tmp_path)
+    assert counts and all(r["eligible"] == 0 and r["end_h"] == 28 for r in counts)
+
+
 def test_transfer_figure_reads_the_observed_times_and_sections(tmp_path):
     import json
     from research.floodwarp_methods_paper import metrics

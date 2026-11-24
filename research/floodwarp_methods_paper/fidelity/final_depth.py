@@ -109,6 +109,8 @@ def process(*, groups, directory, target, settings):
                     method=i["s"]["method"],
                     dx=i["s"]["dx"],
                     id=i["id"],
+                    end_h=i["s"]["hours"],
+                    reference_id="",
                     reference_status="missing_reference",
                 )
                 for i in items

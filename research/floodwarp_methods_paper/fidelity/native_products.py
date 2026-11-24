@@ -250,6 +250,9 @@ def grouped(*, directory, records, target, expected):
         ):
             continue
         items = [records[k] for k in r["sources"]]
+        if ({i["s"]["case"] for i in items} != {r["case"]}
+                or len({i["native_sha"] for i in items}) != 1):
+            raise ValueError("Matched recession forecasts must share a case and native physical inputs")
         if (
             r["cohort"] == "native-metre"
             and set(
@@ -305,24 +308,33 @@ def plot_curves(*, directory, records):
     for item in records:
         groups.setdefault(item["s"]["case"], []).append(item)
     for case, items in groups.items():
-        fig, axes = plt.subplots(
-            3, 1, figsize=(7.2, 6.5), sharex=True, layout="constrained"
-        )
-        for item in items:
-            s = item["s"]
-            edges, q = assessment.curve(it=item, station="outlet")
-            label = f"{s.get('requested_method', s['method'])}, {s['dx']:g} m, CFL ×{item['factor']:g}"
-            axes[0].stairs(q, edges / 3600, label=label)
-            volumes = np.cumsum(q * np.diff(edges))
-            axes[1].plot(edges / 3600, np.r_[0, volumes] / 1000.0)
-            if volumes[-1] > 0 and q.min() >= 0:
-                axes[2].plot(edges / 3600, np.r_[0, volumes] / volumes[-1])
-        axes[0].set_ylabel("Outlet flow (m³/s)")
-        axes[0].legend(fontsize=7, ncol=2)
-        axes[1].set_ylabel("Net export (10³ m³)")
-        axes[2].set_ylabel("Fraction exported")
-        axes[2].set_xlabel("Time since storm start (h)")
-        for ax in axes:
+        fig, axes = plt.subplots(3, 2, figsize=(9, 7), sharex=True, layout="constrained")
+        for column, (station, title) in enumerate((("section", "Internal section"), ("outlet", "Outlet"))):
+            flow, net, fraction = axes[:, column]
+            flow.set_title(title)
+            for item in items:
+                s = item["s"]
+                edges, q = assessment.curve(it=item, station=station)
+                t_h = edges / 3600
+                method = assessment.numerical_identity(method=s.get("requested_method", s["method"]))
+                label = f"{method['formulation']} {method['execution_mode']} · {s['dx']:g} m"
+                if item["factor"] != 1:
+                    label += f" · CFL ×{item['factor']:g}"
+                line = flow.stairs(q, t_h, label=label)
+                volumes = np.r_[0, np.cumsum(q * np.diff(edges))]
+                net.plot(t_h, volumes / 1000, color=line.get_edgecolor())
+                if volumes[-1] > 0 and q.min() >= 0:
+                    fraction.plot(t_h, volumes / volumes[-1], color=line.get_edgecolor())
+            if not fraction.lines:
+                fraction.text(.5, .5, "No positive unidirectional series",
+                              ha="center", va="center", transform=fraction.transAxes)
+            fraction.set_xlabel("Time since storm start (h)")
+        axes[0, 0].set_ylabel("Discharge (m³/s)")
+        axes[1, 0].set_ylabel("Net transport (10³ m³)")
+        axes[2, 0].set_ylabel("Fraction of event transport")
+        handles, labels = axes[0, 0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", fontsize=7, ncols=3)
+        for ax in axes.flat:
             ax.axvline(6, ls=":", lw=1, color="0.4")
         metadata = {"pdf": {"CreationDate": None}, "svg": {"Date": None}, "png": {}}
         with plt.rc_context({"svg.hashsalt": case}):
