@@ -1116,7 +1116,7 @@ def test_native_policy_costs_use_matched_totals_and_record_auto(tmp_path):
         frames = [dict(t_s=t, steps=10, hydraulic_s=s, outlet_m3s=0., section_m3s=0.)
                   for t, s in zip((900, 1800), times, strict=True)]
         data = dict(frames=frames, hydraulic_s=sum(times), hashes=dict.fromkeys(
-            ("state", "maximum", "volume_x", "volume_y", "soil", "rain_sum"), "same"))
+            ("state", "maximum", "volume_x", "volume_y", "soil", "rain_sum"), "a" * 64))
         item = dict(id=method, s=dict(dx=1, hours=.5, method=method, dimensions=[10, 20]),
                     d=data, native_sha="same-grid", factor=1.)
         groups["original-window", "plain", "native"].append(item)
@@ -1132,6 +1132,15 @@ def test_native_policy_costs_use_matched_totals_and_record_auto(tmp_path):
         native_policies.collect(groups=groups, verified=[], cadence=900, target=tmp_path)
     del groups["original-window", "plain", "native"][1]["d"]["hashes"]["soil"]
     with pytest.raises(ValueError, match="soil"):
+        parity.compare(directory=tmp_path, groups=groups, target=tmp_path, original_window=True)
+    for member in groups["original-window", "plain", "native"]:
+        member["d"]["hashes"]["soil"] = None
+    with pytest.raises(ValueError, match="Invalid SHA-256 fingerprint.*soil"):
+        parity.compare(directory=tmp_path, groups=groups, target=tmp_path, original_window=True)
+    for member in groups["original-window", "plain", "native"]:
+        member["d"]["hashes"]["soil"] = "a" * 64
+        member["d"]["frames"] = member["d"]["frames"][:-1]
+    with pytest.raises(ValueError, match="Incomplete interval transport history"):
         parity.compare(directory=tmp_path, groups=groups, target=tmp_path, original_window=True)
 
 

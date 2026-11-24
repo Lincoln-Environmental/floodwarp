@@ -1,6 +1,7 @@
 """Exact state and accepted-transport comparisons at matched recession endpoints."""
 
 import json
+import re
 import numpy as np
 from research.floodwarp_methods_paper import metrics
 from research.floodwarp_methods_paper.fidelity.endpoints import endpoint_path
@@ -28,6 +29,18 @@ def fingerprints(*, directory, item):
     if d.get("accepted_history_sha256"):
         out["accepted_dt"] = d["accepted_history_sha256"]
     return out
+
+
+def validate_interval_history(*, run, observations, case):
+    times = np.array([f["t_s"] for f in observations])
+    spans = np.diff(np.r_[0., times])
+    if not len(times) or times[-1] != round(run["s"]["hours"] * 3600) or not np.all(spans > 0):
+        raise ValueError(f"Incomplete interval transport history for {case}")
+    cadence = run["s"].get("interval")
+    if cadence and np.any(spans != cadence):
+        raise ValueError(f"Missing scheduled interval transport for {case}")
+    if not all(np.isfinite([f[k] for f in observations]).all() for k in ("outlet_m3s", "section_m3s")):
+        raise ValueError(f"Nonfinite interval transport for {case}")
 
 
 def compare(*, directory, groups, target, original_window=False):
@@ -64,6 +77,12 @@ def compare(*, directory, groups, target, original_window=False):
                     raise ValueError(f"Missing final state/depth or maximum fingerprint for {case}")
                 if set(a) != set(b):
                     raise ValueError(f"Asymmetric parity evidence for {case}: {sorted(set(a) ^ set(b))}")
+                for name in shared:
+                    if any(not isinstance(value, str) or re.fullmatch(r"[a-f0-9]{64}", value) is None
+                           for value in (a[name], b[name])):
+                        raise ValueError(f"Invalid SHA-256 fingerprint for {case}: {name}")
+                for run, observations in ((dense, frames), (other, more)):
+                    validate_interval_history(run=run, observations=observations, case=case)
                 fields = {k: a[k] == b[k] for k in shared if k != "q"}
                 fields.update(
                     {
