@@ -234,6 +234,45 @@ def frontiers(*, rows, objectives):
     return result
 
 
+def cadence_observation(*, edges, flow, seconds, config):
+    """Rebin only where a cumulative face-volume observation exists on every boundary."""
+    dt = np.diff(edges)
+    if edges[-1] % seconds:
+        return {"cadence_status": "incomplete_last_bin"}
+    coarse_edges = np.arange(0, edges[-1] + seconds, seconds)
+    idx = np.searchsorted(edges, coarse_edges)
+    if not np.array_equal(edges[idx], coarse_edges):
+        return {"cadence_status": "missing_observed_boundary"}
+    coarse = np.add.reduceat(flow * dt, idx[:-1]) / seconds
+    repeated = np.repeat(coarse, np.diff(idx))
+    delta = evaluate(edges=edges, model=repeated, reference=flow, config=config)
+    result = dict(
+        cadence_status=delta["reference_status"],
+        coarse_interval_s=seconds,
+        native_peak_m3s=float(flow.max()),
+        coarse_peak_m3s=float(coarse.max()),
+        peak_bias_pct=delta.get("peak_bias_pct"),
+        shape_tv_pct=delta.get("shape_tv_pct"),
+        width80_bias_pct=delta.get("width80_bias_pct"),
+        volume_error_m3=(repeated - flow) @ dt,
+    )
+    if delta["reference_status"] == "usable":
+        for label, q, t in (("native", flow, edges), ("coarse", coarse, coarse_edges)):
+            maxima = np.flatnonzero(q == q.max())
+            result[label + "_maximum_bins"] = int(len(maxima))
+            result[label + "_peak_first_bin_start_s"] = float(t[maxima[0]])
+            result[label + "_peak_last_bin_end_s"] = float(t[maxima[-1] + 1])
+        result["peak_shift_lower_s"] = (
+            result["coarse_peak_first_bin_start_s"]
+            - result["native_peak_last_bin_end_s"]
+        )
+        result["peak_shift_upper_s"] = (
+            result["coarse_peak_last_bin_end_s"]
+            - result["native_peak_first_bin_start_s"]
+        )
+    return result
+
+
 def cadence(*, groups, cfg):
     rows = []
     for (cohort, case, rep), items in groups.items():
@@ -241,12 +280,8 @@ def cadence(*, groups, cfg):
             for station in ("outlet", "section"):
                 t, q = curve(it=i, station=station)
                 dt = np.diff(t)
-                if dt.max() >= 900 or t[-1] % 900 or np.any(900 % dt):
+                if dt.max() >= 900:
                     continue
-                bins = ((t[1:] - 1) // 900).astype(int)
-                coarse = np.bincount(bins, weights=q * dt) / 900
-                coarse_same = np.repeat(coarse, np.bincount(bins))
-                delta = evaluate(edges=t, model=coarse_same, reference=q, config=cfg)
                 rows.append(
                     dict(
                         cohort=cohort,
@@ -257,10 +292,7 @@ def cadence(*, groups, cfg):
                         station=station,
                         id=i["id"],
                         native_interval=dt.max(),
-                        peak_bias_pct=delta.get("peak_bias_pct"),
-                        shape_tv_pct=delta.get("shape_tv_pct"),
-                        width80_bias_pct=delta.get("width80_bias_pct"),
-                        volume_error_m3=(coarse_same - q) @ dt,
+                        **cadence_observation(edges=t, flow=q, seconds=900, config=cfg),
                     )
                 )
     return rows

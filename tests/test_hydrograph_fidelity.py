@@ -624,3 +624,20 @@ def test_fixed_crest_grid_refines_initial_state_and_rainfall_coordinates():
             np.testing.assert_array_equal(child[1][y::2, x::2], 1 - child[0][y::2, x::2])
     with pytest.raises(ValueError, match="integer subdivision"):
         fixed_fields(parent=parent, dx=3, dem=10)
+
+
+def test_coarse_cadence_moves_dominant_crest_to_earlier_event(config):
+    from research.floodwarp_methods_paper.fidelity.statistics import cadence_observation
+
+    t = np.arange(61) * 60
+    q = np.zeros(60)
+    q[:15] = 2
+    q[30] = 10
+    result = cadence_observation(edges=t, flow=q, seconds=900, config=config)
+    assert result["peak_bias_pct"] == -80
+    assert result["peak_shift_lower_s"] == -1860
+    assert result["peak_shift_upper_s"] == -900
+    assert result["volume_error_m3"] == pytest.approx(0, abs=1e-12)
+    revised = np.array([0, 300, 750, 1200, 1500, 1800])
+    assert cadence_observation(edges=revised, flow=np.ones(5), seconds=900,
+                              config=config)["cadence_status"] == "missing_observed_boundary"
