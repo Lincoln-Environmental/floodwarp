@@ -195,6 +195,18 @@ def generate(*, directory):
         "",
         "[Outlet and internal section volumes, peak discharges, storage, timing and run identities](results/native_horizons.csv) · [Effect of 15-minute reporting on peak magnitude and the interval containing the maximum](results/native_cadence.csv)",
     ]
+    from research.floodwarp_methods_paper.fidelity import crest_report
+
+    design = json.loads((directory / "incised_settings.json").read_text())
+    if crest_report.native_panel(
+        directory=directory, case=design["case"], records=outlets
+    ):
+        text.extend(
+            [
+                "",
+                "[One-minute and 15-minute hydrographs for the incised catchment](figures/incised_native_cadence.pdf)",
+            ]
+        )
     (directory / "NATIVE_RECESSIONS.md").write_text("\n".join(text) + "\n")
 
 

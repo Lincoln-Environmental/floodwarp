@@ -41,3 +41,5 @@ Using the longest paired native horizon once per landform, Hancock's median runt
 The mixed catchment also has a 12-hour residual-storage check at a later endpoint. Repeated horizons follow the same trajectories. Each timing covers both rainfall and recession. The Hancock policy in this comparison was selected from the original-window measurements. Independent spatial and temporal refinements determine eligibility for accuracy comparisons and can require a later shared endpoint.
 
 [Outlet and internal section volumes, peak discharges, storage, timing and run identities](results/native_horizons.csv) · [Effect of 15-minute reporting on peak magnitude and the interval containing the maximum](results/native_cadence.csv)
+
+[One-minute and 15-minute hydrographs for the incised catchment](figures/incised_native_cadence.pdf)
