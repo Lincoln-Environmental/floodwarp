@@ -11,6 +11,7 @@ from research.floodwarp_methods_paper import metrics, runner
 from research.floodwarp_methods_paper.fidelity import (
     assessment,
     hydrograph,
+    figures,
     pulse,
     pulse_recession,
     pulse_reference,
@@ -160,6 +161,13 @@ def review(*, directory, settings):
             raise ValueError("The reference sharp hydrograph is still undersampled")
     metrics.csv_write(file=target / "sharp_pulses.csv", rows=rows)
     metrics.csv_write(file=target / "sharp_reporting_intervals.csv", rows=cadence)
+    for dx in settings["figure_spacings_m"]:
+        figures.channel(
+            directory=directory,
+            dx=dx,
+            profile=settings["profile"],
+            archive_name="sharp_pulses",
+        )
     return rows
 
 

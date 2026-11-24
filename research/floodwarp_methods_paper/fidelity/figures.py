@@ -74,16 +74,16 @@ def overlay(*, folder, series, name, xlabel, time_unit, title):
     save(fig=fig, folder=folder, name=name)
 
 
-def channel(*, directory, dx):
+def channel(*, directory, dx, profile="smooth", archive_name="long_pulses"):
     os.environ.setdefault("SOURCE_DATE_EPOCH", "0")
     plt.rcParams["svg.hashsalt"] = "floodwarp-hydrograph-fidelity"
     folder = directory / "figures"
     cfg = json.loads((directory / "design.json").read_text())["pulse"]
-    archive = directory / "long_pulses"
+    archive = directory / archive_name
     source = archive / (archive / "current.txt").read_text().strip()
     q = []
     for method in cfg["methods"]:
-        with np.load(source / f"smooth_{dx}_0.13_{method}.npz") as f:
+        with np.load(source / f"{profile}_{dx}_0.13_{method}.npz") as f:
             if not q:
                 q.append(("Exact", f["edges"], f["truth"][:, -1], "#242424", "-"))
             q.append(
@@ -95,13 +95,17 @@ def channel(*, directory, dx):
                     STYLES[method],
                 )
             )
+    if profile == "smooth":
+        name = "channel_hydrographs" if dx == 10 else f"channel_hydrographs_{dx}m"
+    else:
+        name = f"channel_{profile}_{dx}m"
     overlay(
         folder=folder,
         series=q,
-        name="channel_hydrographs" if dx == 10 else f"channel_hydrographs_{dx}m",
+        name=name,
         xlabel="Time (s)",
         time_unit="s",
-        title=f"Smooth pulse, {dx} m grid, 200 m downstream",
+        title=f"{profile.capitalize()} pulse, {dx} m grid, 200 m downstream",
     )
 
 
@@ -113,6 +117,13 @@ def plots(*, directory, groups):
     cfg = json.loads((directory / "design.json").read_text())["pulse"]
     for spacing in (1, 5, 10):
         channel(directory=directory, dx=spacing)
+        if (directory / "sharp_pulses/current.txt").is_file():
+            channel(
+                directory=directory,
+                dx=spacing,
+                profile="sharp",
+                archive_name="sharp_pulses",
+            )
     for case, cohort, rep, dx in (
         ("floodplain-double-rain", "complete-double", "10m bed", 10),
         ("mixed-708-spatial-10240x10240", "complete-expanded", "sampled", 10),
