@@ -14,6 +14,7 @@ from research.floodwarp_methods_paper.fidelity import (
     catalogue,
     extended_analysis,
     final_depth,
+    native_archive,
     native_matrix,
     native_policies,
     phase_cost,
@@ -417,6 +418,8 @@ def run(*, directory, require_complete):
     groups = grouped(
         directory=directory, records=records, target=target, expected=expected
     )
+    verification = native_archive.observations(directory=directory, records=records, groups=groups)
+    metrics.csv_write(file=target / "verified_archives.csv", rows=verification)
     final_parity = parity.compare(directory=directory,groups=groups,target=target)
     complete = [
         describe(item=i, settings=settings, status=key[0])
@@ -484,7 +487,7 @@ def run(*, directory, require_complete):
         "",
         "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures) · [5 cm and 10 cm native extent](incised_practical_extent.csv) · [Matched-grid depth differences](incised_state_disagreement.csv) · [Accepted steps, retries, memory and accounting](whole_storm_diagnostics.csv) · [Costs by phase and footprint](cost_by_phase.csv) · [Original policy parity](original_execution_parity.csv) · [Recession policy parity](recession_execution_parity.csv)",
         "",
-        "[Rainfall, outlet discharge, wet area and cumulative GPU runtime by event](event_figures.csv) · [Verified dense, tiled and automatic policy costs](policy_cost_events.csv) · [Matched 15-minute timing windows](policy_cost_windows.csv) · [Independent timings, run IDs and spread](timing_distribution.csv)",
+        "[Rainfall, outlet discharge, wet area and cumulative GPU runtime by event](event_figures.csv) · [Verified dense, tiled and automatic policy costs](policy_cost_events.csv) · [Matched 15-minute timing windows](policy_cost_windows.csv) · [Independent timings, run IDs and spread](timing_distribution.csv) · [Verified raw files and matched horizon receipts](verified_archives.csv)",
     ]
     (target / "README.md").write_text("\n".join(text) + "\n")
     print(text[2], flush=True)
