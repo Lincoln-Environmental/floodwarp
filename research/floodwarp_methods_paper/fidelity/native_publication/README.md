@@ -49,6 +49,19 @@ Each upper-panel point represents a measured forecast window. Each lower-panel p
 
 [Policy run identities and timings](../native_results/policy_cost_events.csv) · [Individual timing intervals](../native_results/policy_cost_windows.csv)
 
+### Automatic policy over the complete event
+
+| Case | Grid (m) | End (h) | Auto chose | Fastest explicit | Chosen explicit / fastest explicit | Actual auto / chosen explicit |
+|---|---:|---:|---|---|---:|---:|
+| coastal-703-moderate-10240x10240 | 10 | 32 | dense | tiles | 1.102 | 0.992 |
+| fan-705-spatial-5120x5120 | 5 | 12 | tiles | tiles | 1.000 | 0.999 |
+| floodplain-702-moderate-10240x10240 | 10 | 28 | dense | tiles | 1.121 | 0.987 |
+| hill-706-back-10240x10240 | 10 | 16 | dense | tiles | 1.076 | 0.982 |
+| plain-701-spatial-10240x10240 | 10 | 52 | tiles | tiles | 1.000 | 1.000 |
+| rolling-704-soil-5120x5120 | 5 | 12 | dense | tiles | 1.139 | 1.067 |
+
+The first ratio measures the cost of selecting a schedule using the two explicit runs. The second compares the measured automatic run with its selected explicit counterpart and includes timing variability. Each cost uses its available hydraulic timing median. [Run identities, sample sizes and timing ranges](execution_choice_cost.csv)
+
 0 of 27 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
 
 [Timing identities, quartiles and range](../native_results/timing_distribution.csv)

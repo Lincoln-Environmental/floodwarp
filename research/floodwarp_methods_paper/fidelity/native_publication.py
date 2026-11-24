@@ -214,7 +214,49 @@ def policy_report(*, source, output):
                   "window and the matched recession products.",
                   "", "[Policy run identities and timings](../native_results/policy_cost_events.csv) · "
                   "[Individual timing intervals](../native_results/policy_cost_windows.csv)"])
-    return lines, [window_file, event_file]
+    measurements = source / "measured_windows.csv"
+    distribution = source / "timing_distribution.csv"
+    summaries = selection_costs(events=events, windows=metrics.csv_read(file=measurements),
+                                timing=metrics.csv_read(file=distribution))
+    metrics.csv_write(file=output / "execution_choice_cost.csv", rows=summaries)
+    if summaries:
+        lines.extend(["", "### Automatic policy over the complete event", "",
+                      "| Case | Grid (m) | End (h) | Auto chose | Fastest explicit | Chosen explicit / fastest explicit | Actual auto / chosen explicit |",
+                      "|---|---:|---:|---|---|---:|---:|"])
+        for r in summaries:
+            lines.append(f"| {r['case']} | {r['dx_m']} | {r['end_h']:g} | {r['chosen']} | {r['fastest_explicit']} | "
+                         f"{r['chosen_over_fastest']:.3f} | {r['auto_over_chosen']:.3f} |")
+        lines.extend(["", "The first ratio measures the cost of selecting a schedule using the two explicit runs. "
+                      "The second compares the measured automatic run with its selected explicit counterpart and includes timing variability. "
+                      "Each cost uses its available hydraulic timing median. "
+                      "[Run identities, sample sizes and timing ranges](execution_choice_cost.csv)"])
+    return lines, [window_file, event_file, measurements, distribution]
+
+
+def selection_costs(*, events, windows, timing):
+    modes = {r["source_id"]: r["resolved_execution_mode"] for r in windows
+             if r["horizon"] == "complete-native-metre" and r["method"] == "hancock_auto"}
+    samples = {ident: r for r in timing if r["horizon"] == "completed recession"
+               for ident in r["run_ids"].split()}
+    out = []
+    for event in events:
+        if event["cohort"] != "complete-native-metre" or not event["auto_id"]:
+            continue
+        chosen = modes[event["auto_id"]]
+        if chosen not in ("dense", "tiles"):
+            raise ValueError("Automatic policy has no measured explicit schedule")
+        records = {policy: samples[event[key]] for policy, key in
+                   (("dense", "dense_id"), ("tiles", "tiled_id"), ("auto", "auto_id"))}
+        times = {key: float(r["hydraulic_median_s"]) for key, r in records.items()}
+        best = min(times["dense"], times["tiles"])
+        row = dict(case=event["case"], dx_m=event["dx_m"], end_h=float(event["end_h"]), chosen=chosen,
+                   fastest_explicit=", ".join(p for p in ("dense", "tiles") if times[p] == best),
+                   chosen_over_fastest=times[chosen]/best, auto_over_chosen=times["auto"]/times[chosen])
+        for policy, r in records.items():
+            for field in ("run_ids", "independent_timings", "hydraulic_median_s", "hydraulic_min_s", "hydraulic_max_s"):
+                row[policy + "_" + field] = r[field]
+        out.append(row)
+    return out
 
 
 def run(*, directory):

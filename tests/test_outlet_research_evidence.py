@@ -284,6 +284,22 @@ def test_native_frontier_includes_water_accounts_and_depth_at_matched_cadence(tm
     assert len(list(output.glob("*_pareto.pdf"))) == 1
 
 
+def test_automatic_schedule_choice_cost_is_distinct_from_run_variability():
+    from research.floodwarp_methods_paper.fidelity.native_publication import selection_costs
+
+    event = dict(cohort="complete-native-metre", case="wet", dx_m=10, end_h="28", dense_id="d",
+                 tiled_id="t", auto_id="a")
+    auto = dict(horizon=event["cohort"], source_id="a", resolved_execution_mode="dense", method="hancock_auto")
+    samples = [dict(horizon="completed recession", run_ids=ids, independent_timings=3,
+                    hydraulic_median_s=cost, hydraulic_min_s=cost-.1, hydraulic_max_s=cost+.1)
+               for ids, cost in (("a a1 a2", 11.9), ("d d1 d2", 12.), ("t t1 t2", 10.))]
+    result, = selection_costs(events=[event], windows=[auto], timing=samples)
+    assert result["fastest_explicit"] == "tiles" and result["chosen"] == "dense"
+    assert result["chosen_over_fastest"] == 1.2
+    assert result["auto_over_chosen"] == pytest.approx(11.9 / 12.)
+    assert result["tiles_run_ids"] == "t t1 t2"
+
+
 def test_recession_without_rk2_retains_its_real_endpoint_and_no_reference(tmp_path):
     from pathlib import Path
     from research.floodwarp_methods_paper import metrics
