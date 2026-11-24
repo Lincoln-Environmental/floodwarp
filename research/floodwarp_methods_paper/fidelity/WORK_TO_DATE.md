@@ -4,6 +4,8 @@ Paired sparse FV1 and adaptive Hancock forecasts are complete on 8 native 1,048,
 
 [Landform timings, storage, omitted export and accepted timesteps](NATIVE_RECESSIONS.md) · [Common-timestep GPU qualification](../../../validation/hancock_long_storm_review/DECISION.md) · [Hancock structures and verification](../../../docs/HANCOCK_STRUCTURES.md)
 
+The 5 m incised runs that replicated 10 m elevations are a staircase diagnostic. Practical terrain comparisons use bottom-up native cell averages. [Cause, verification and corrected runs](DEM_CORRECTION.md)
+
 ## Travelling flood pulse
 
 At the section 200 m from the initial pulse centre, the analytical peak averaged over one second is 2.274 m³/s. The central 80% of discharge passes in 14.69 s. The table gives signed bias relative to this solution.
@@ -62,7 +64,7 @@ The following counts describe the original forecast windows. A separate matched-
 
 ### Incised channel through hour 8
 
-Each run subdivides the same 10 m bed and physical inputs. Outlet peaks are accepted face transport averaged over the reporting interval. Late export is the fraction of outward volume passing in the final 2 h of this window. Stored water can contribute to the later hydrograph.
+These historical runs repeat each 10 m parent elevation on its children. They diagnose artificial terrain steps. Outlet peaks are accepted face transport averaged over the reporting interval. Late export is the fraction of outward volume passing in the final 2 h of this window. Stored water can contribute to the later hydrograph.
 
 | Method | Grid | CFL | Peak (m³/s) | Outlet volume (m³) | Late export | End storage (m³) | Hydraulic time (s) |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -71,8 +73,8 @@ Each run subdivides the same 10 m bed and physical inputs. Outlet peaks are acce
 | FV2 RK2 | 5 m | 0.4 | 33.536 | 386,724 | 53.15% | 502,761 | 1708.1 |
 | Hancock tiled | 5 m | 0.4 | 34.293 | 401,852 | 51.84% | 491,800 | 516.0 |
 
-At hour 8, outward boundary transport on the finer FV2 grid was 382,037 m³ lower. It held 404,827 m³ more water and had infiltrated 22,790 m³ less. The area at or above 1 cm was 10.84 km² at 5 m and 2.05 km² at 10 m. [Storage and inundation maps](incised_crest/initial_window_storage.pdf) · [Water balance and run identities](incised_crest/initial_window_storage.csv)
+At hour 8, outward boundary transport on the finer FV2 grid was 382,037 m³ lower. It held 404,827 m³ more water and had infiltrated 22,790 m³ less. At depths ≥5 cm the inundated area was 3.426 versus 0.039 km² (5 m versus 10 m grid). At depths ≥10 cm the corresponding areas were 0.520 versus 0.037 km². [Storage and inundation maps](incised_crest/initial_window_storage.pdf) · [Water balance and run identities](incised_crest/initial_window_storage.csv)
 
-The incised diagnostic was defined after observing a late crest. It remains separate from advisor training and test decisions. Each control needs the same recession coverage before its hydrograph can support a solver ranking.
+The incised diagnostic was defined after observing a late crest. It remains separate from advisor training and test decisions. Practical grid comparisons require the correctly aggregated DEMs and matched recession.
 
 [Incised one-minute and 15-minute hydrographs](figures/incised_native_cadence.pdf) · [Original terrain, calibration and advisor results](../CORRECTIVE_AUDIT.md)

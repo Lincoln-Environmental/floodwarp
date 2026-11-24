@@ -137,7 +137,7 @@ def incised_windows(*, directory, design):
         "",
         f"### Incised channel through hour {end_h:g}",
         "",
-        f"Each run subdivides the same {design['bed_m']:g} m bed and physical inputs. Outlet peaks are accepted face transport averaged over the reporting interval. Late export is the fraction of outward volume passing in the final {window_s / 3600:g} h of this window. Stored water can contribute to the later hydrograph.",
+        f"These historical runs repeat each {design['bed_m']:g} m parent elevation on its children. They diagnose artificial terrain steps. Outlet peaks are accepted face transport averaged over the reporting interval. Late export is the fraction of outward volume passing in the final {window_s / 3600:g} h of this window. Stored water can contribute to the later hydrograph.",
         "",
         "| Method | Grid | CFL | Peak (m³/s) | Outlet volume (m³) | Late export | End storage (m³) | Hydraulic time (s) |",
         "|---|---:|---:|---:|---:|---:|---:|---:|",
@@ -180,7 +180,7 @@ def incised_windows(*, directory, design):
         text.extend(
             [
                 "",
-                f"At hour {float(fine['end_h']):g}, outward boundary transport on the finer FV2 grid was {float(coarse['outflow_m3']) - float(fine['outflow_m3']):,.0f} m³ lower. It held {float(fine['storage_m3']) - float(coarse['storage_m3']):,.0f} m³ more water and had infiltrated {float(coarse['infiltration_m3']) - float(fine['infiltration_m3']):,.0f} m³ less. The area at or above 1 cm was {float(fine['inundated_1cm_km2']):.2f} km² at {float(fine['dx_m']):g} m and {float(coarse['inundated_1cm_km2']):.2f} km² at {float(coarse['dx_m']):g} m. [Storage and inundation maps](incised_crest/initial_window_storage.pdf) · [Water balance and run identities](incised_crest/initial_window_storage.csv)",
+                f"At hour {float(fine['end_h']):g}, outward boundary transport on the finer FV2 grid was {float(coarse['outflow_m3']) - float(fine['outflow_m3']):,.0f} m³ lower. It held {float(fine['storage_m3']) - float(coarse['storage_m3']):,.0f} m³ more water and had infiltrated {float(coarse['infiltration_m3']) - float(fine['infiltration_m3']):,.0f} m³ less. At depths ≥5 cm the inundated area was {float(fine['inundated_5cm_km2']):.3f} versus {float(coarse['inundated_5cm_km2']):.3f} km² (5 m versus 10 m grid). At depths ≥10 cm the corresponding areas were {float(fine['inundated_10cm_km2']):.3f} versus {float(coarse['inundated_10cm_km2']):.3f} km². [Storage and inundation maps](incised_crest/initial_window_storage.pdf) · [Water balance and run identities](incised_crest/initial_window_storage.csv)",
             ]
         )
     return text
@@ -244,6 +244,8 @@ def generate(*, directory):
         "",
         "[Landform timings, storage, omitted export and accepted timesteps](NATIVE_RECESSIONS.md) · [Common-timestep GPU qualification](../../../validation/hancock_long_storm_review/DECISION.md) · [Hancock structures and verification](../../../docs/HANCOCK_STRUCTURES.md)",
         "",
+        "The 5 m incised runs that replicated 10 m elevations are a staircase diagnostic. Practical terrain comparisons use bottom-up native cell averages. [Cause, verification and corrected runs](DEM_CORRECTION.md)",
+        "",
         *pulse_comparison(directory=directory),
         "",
         *storm_comparison(directory=directory),
@@ -301,7 +303,7 @@ def generate(*, directory):
     text += incised_windows(directory=directory, design=incised_design)
     text += [
         "",
-        "The incised diagnostic was defined after observing a late crest. It remains separate from advisor training and test decisions. Each control needs the same recession coverage before its hydrograph can support a solver ranking.",
+        "The incised diagnostic was defined after observing a late crest. It remains separate from advisor training and test decisions. Practical grid comparisons require the correctly aggregated DEMs and matched recession.",
         "",
         "[Incised one-minute and 15-minute hydrographs](figures/incised_native_cadence.pdf) · [Original terrain, calibration and advisor results](../CORRECTIVE_AUDIT.md)",
     ]

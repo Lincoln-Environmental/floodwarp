@@ -88,6 +88,7 @@ def manifest(*, directory, package):
         "endpoint_fields",
         "storage_tail",
         "incised_crest",
+        "mean_storms",
         "verification",
         "extension_timings",
     )

@@ -655,3 +655,38 @@ def test_spatial_peak_and_final_recession_censor_nonunique_and_persistent_water(
                                     peak=h.max(axis=0), threshold=.01)
     np.testing.assert_equal(peak, [900, np.nan, np.nan, np.nan])
     np.testing.assert_equal(recession, [2700, 3600, np.nan, np.nan])
+
+
+def test_mean_dem_pyramid_uses_native_cells_for_every_landform(tmp_path):
+    from research.floodwarp_methods_paper.terrain.generators import mean_dem
+    from research.floodwarp_methods_paper.qualification import hydraulics, matrix
+
+    root = Path(__file__).resolve().parents[1]
+    study = root / "research/floodwarp_methods_paper"
+    from research.floodwarp_methods_paper.plan import read_config
+
+    cfg = read_config(path=study / "configs/study.json")
+    template = json.loads((root / "validation/hancock_long_storm_review/cases.json").read_text())
+    options = matrix.design(study=study)
+    for family in cfg["synthetic"]["landforms"]:
+        spec = dict(landform=family, seed=707, initial="channel", dimensions=[80,60], controls=True, initial_grid="parent")
+        cache, desc = mean_dem.generate(spec=spec, inputs=dict(cfg=cfg,template=template,options=options), cache_root=tmp_path,strip_rows=20)
+        fields, _ = hydraulics.represented(options=options, settings=spec, design=cfg["synthetic"], template=template, family=family,seed=707,initial="channel",dx=1,dem=1)
+        five = np.load(cache / "bed_5m.npy")
+        ten = np.load(cache / "bed_10m.npy")
+        expected = fields[0].reshape(12,5,16,5).mean(axis=(1,3))
+        np.testing.assert_allclose(five,expected,rtol=1e-14,atol=1e-12)
+        np.testing.assert_array_equal(ten,five.reshape(6,2,8,2).mean(axis=(1,3)))
+        assert desc["native_1m_cells"] == 4800
+
+
+def test_mean_dem_averages_an_offcentre_feature_and_rejects_partial_footprints():
+    from research.floodwarp_methods_paper.terrain.generators.mean_dem import mean_cells
+
+    z=np.zeros((10,10))
+    z[0,0]=100.
+    five=mean_cells(values=z,factor=5)
+    np.testing.assert_array_equal(five, [[4,0],[0,0]])
+    np.testing.assert_array_equal(mean_cells(values=five,factor=2), [[1.]])
+    with pytest.raises(ValueError):
+        mean_cells(values=z[:9],factor=5)

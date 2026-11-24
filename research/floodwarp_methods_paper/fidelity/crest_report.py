@@ -110,6 +110,10 @@ def prefix_storage(*, directory, design):
     fine, coarse = spacings
     support = controls[coarse][1]["support"]
     extent = controls[coarse][1]["dimensions"]
+    thresholds = json.loads((directory / "application_settings.json").read_text())[
+        "endpoint_depth"
+    ]["thresholds_m"]
+    levels = [round(t * 100) for t in thresholds]
     arrays = {}
     rows = []
     for dx in spacings:
@@ -125,17 +129,16 @@ def prefix_storage(*, directory, design):
             )
         with np.load(path.with_name("spatial.npz")) as archive:
             depth = archive["depth"]
-            wet = archive["wet_fraction_1cm"]
-        if (
-            depth.shape != (extent[1] // support, extent[0] // support)
-            or wet.shape != depth.shape
+            wet = {cm: archive[f"wet_fraction_{cm}cm"] for cm in levels}
+        if depth.shape != (extent[1] // support, extent[0] // support) or any(
+            a.shape != depth.shape for a in wet.values()
         ):
             raise ValueError("Unexpected common-support map dimensions")
         storage = float(depth.sum() * support**2)
         np.testing.assert_allclose(
             storage, data["final_storage_m3"], rtol=1e-12, atol=0
         )
-        arrays[dx] = depth, wet
+        arrays[dx] = {"depth": depth, **wet}
         rows.append(
             dict(
                 run_id=path.parent.name,
@@ -150,22 +153,27 @@ def prefix_storage(*, directory, design):
                 outflow_m3=data["outflow_m3"],
                 storage_m3=storage,
                 residual_m3=data["residual_m3"],
-                inundated_1cm_km2=float(wet.sum() * support**2 / 1e6),
+                **{
+                    f"inundated_{cm}cm_km2": float(a.sum() * support**2 / 1e6)
+                    for cm, a in wet.items()
+                },
             )
         )
     metrics.csv_write(file=folder / "initial_window_storage.csv", rows=rows)
-    depth_change, wet_change = (
-        a - b for a, b in zip(arrays[fine], arrays[coarse], strict=True)
-    )
     fig, axes = plt.subplots(
-        1, 2, figsize=(7.2, 3.8), layout="constrained", sharex=True, sharey=True
+        1, 3, figsize=(9, 3.6), layout="constrained", sharex=True, sharey=True
     )
-    for ax, field, label in zip(
+    for ax, key, label in zip(
         axes,
-        (100 * depth_change, 100 * wet_change),
-        ("Difference in mean depth (cm)", "Area ≥1 cm (percentage-point difference)"),
+        ("depth", 5, 10),
+        (
+            "Mean depth (cm)",
+            "Area ≥5 cm (percentage points)",
+            "Area ≥10 cm (percentage points)",
+        ),
         strict=True,
     ):
+        field = 100 * (arrays[fine][key] - arrays[coarse][key])
         limit = float(np.abs(field).max())
         image = ax.imshow(
             field,

@@ -190,6 +190,19 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
             + link.replace("](../", "](")
             + "\n"
         )
+    if (study / "fidelity/DEM_CORRECTION.md").is_file():
+        correction = (
+            "\n## DEM aggregation and extent thresholds\n\n"
+            "Earlier resolution experiments used cell-centre sampling or repeated parent elevations. "
+            "The incised fixed-bed refinement created artificial treads that substantially altered runoff. "
+            "These historical experiments do not establish accuracy at a practical resolution using an area-averaged DEM. "
+            "The corrected series averages 25 native 1 m elevations per 5 m cell, then four 5 m elevations per 10 m cell. "
+            "Report practical extent separately at 5 and 10 cm. Historical 1 cm extent is a shallow-water diagnostic. "
+            "[DEM construction, numerical controls and corrected outcomes](../fidelity/DEM_CORRECTION.md)\n"
+        )
+        result += correction
+        discussion += correction
+        audit += correction.replace("](../", "](")
     (study / "CORRECTIVE_AUDIT.md").write_text(audit)
     manuscript = study / "manuscript"
     (manuscript / "results.md").write_text(result)

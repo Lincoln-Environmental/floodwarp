@@ -432,6 +432,9 @@ def run(*, directory, default_percent, factors):
     generate(study=directory.parent)
     from research.floodwarp_methods_paper.fidelity import catalogue, progress
 
+    from research.floodwarp_methods_paper.fidelity import bed_audit_report
+
+    bed_audit_report.run(directory=directory)
     progress.generate(directory=directory)
     catalogue.database(target=directory / "results")
     hashes = catalogue.manifest(
