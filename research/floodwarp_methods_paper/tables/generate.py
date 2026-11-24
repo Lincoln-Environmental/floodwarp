@@ -549,6 +549,9 @@ def from_records(*, study, output):
     transfer_file = study / "fidelity/orton_transfer/transfer.csv"
     if transfer_file.exists():
         measured = csv_read(file=transfer_file)
+        from research.floodwarp_methods_paper.fidelity import orton_controls
+
+        geometry = orton_controls.matched_geometry(directory=transfer_file.parent, rows=measured)
         contrasts = csv_read(file=transfer_file.with_name("historical_transfer.csv"))
         release_fv1 = {r["run_id"]: r for r in contrasts if r["historical_method"] == "floodwarp_fv1"}
         if set(release_fv1) != {r["id"] for r in measured}:
@@ -558,6 +561,9 @@ def from_records(*, study, output):
                 "final_area_5cm_m2", "maximum_area_5cm_m2", "final_area_10cm_m2", "maximum_area_10cm_m2")
         output["17_orton_storm"] = ("Orton Bradley 48-hour design-storm transfer and differences from release FV1 at 5 m",
                                    [dict({k: r[k] for k in keys},
+                                         stage_width_m=geometry[int(r["dx_m"])]["stage_width_m"],
+                                         max_stage_displacement_m=geometry[int(r["dx_m"])]["max_stage_displacement_m"],
+                                         added_footprint_m2=geometry[int(r["dx_m"])]["added_footprint_m2"],
                                          release_fv1_peak_difference_pct=release_fv1[r["id"]]["signed_peak_difference_pct"],
                                          release_fv1_peak_time_difference_s=release_fv1[r["id"]]["peak_end_difference_s"],
                                          release_fv1_export_difference_m3=release_fv1[r["id"]]["net_export_difference_m3"])

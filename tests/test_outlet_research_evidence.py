@@ -342,6 +342,28 @@ def test_transfer_figure_reads_the_observed_times_and_sections(tmp_path):
         orton_transfer(study=tmp_path, out=out)
 
 
+def test_transfer_geometry_keeps_gauges_fixed_across_represented_outlet_changes(tmp_path):
+    from research.floodwarp_methods_paper import runner
+    from research.floodwarp_methods_paper.fidelity.orton_controls import matched_geometry
+
+    rows = []
+    for method, dx, width in (("fv1", 5, 1060), ("fv1", 10, 1110), ("hancock", 10, 1110)):
+        identity = dict(method=method, dx=dx, dem="native", inputs="forcing", spatial_reference={"south_m": 0})
+        run_id = runner.digest(identity)[:24]
+        rows.append(dict(id=run_id, method=method, dx_m=str(dx)))
+        manifest = dict(identity=identity, geometry=dict(stage_width_m=width),
+                        gauges_above_southern_origin_m=[2000, 4000])
+        path = tmp_path / run_id / "inputs.json"
+        runner.write_json(path=path, data=manifest)
+    assert matched_geometry(directory=tmp_path, rows=rows)[10]["stage_width_m"] == 1110
+    runner.write_json(path=path, data=dict(manifest, gauges_above_southern_origin_m=[2005, 4000]))
+    with pytest.raises(ValueError, match="gauge positions"):
+        matched_geometry(directory=tmp_path, rows=rows)
+    runner.write_json(path=path, data=dict(manifest, geometry=dict(stage_width_m=1100)))
+    with pytest.raises(ValueError, match="different represented outlet geometry"):
+        matched_geometry(directory=tmp_path, rows=rows)
+
+
 def test_historical_transfer_uses_identical_windows_and_checks_accepted_volume(tmp_path):
     import json
     from research.floodwarp_methods_paper import metrics

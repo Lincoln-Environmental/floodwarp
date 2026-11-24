@@ -24,6 +24,28 @@ def release_curves(*, file: Path, end_s: int, cadence_s: int):
     return ends, curves
 
 
+def matched_geometry(*, directory: Path, rows):
+    """Read the represented stage and footprint shared by the methods at each spacing."""
+    per_grid = {}
+    physical = None
+    for row in rows:
+        manifest = json.loads((directory / row["id"] / "inputs.json").read_text())
+        dx = int(row["dx_m"])
+        source = manifest["identity"]
+        if source["dx"] != dx or source["method"] != row["method"]:
+            raise ValueError("Transfer geometry belongs to a different grid or method")
+        identity = (source["dem"], source["inputs"], source["spatial_reference"],
+                    manifest["gauges_above_southern_origin_m"])
+        if physical is not None and physical != identity:
+            raise ValueError("Transfer grids differ in native DEM, forcing inputs or gauge positions")
+        physical = identity
+        geometry = manifest["geometry"]
+        if dx in per_grid and geometry != per_grid[dx]:
+            raise ValueError("Compared methods have different represented outlet geometry")
+        per_grid[dx] = geometry
+    return per_grid
+
+
 def compare(*, release: Path, destination: Path, settings, rows):
     file = release / "outputs/orton_bradley_hydrographs_72h.csv"
     digest = runner.checksum(file)
