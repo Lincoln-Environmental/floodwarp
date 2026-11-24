@@ -111,3 +111,25 @@ def test_paper_reports_distinct_final_and_ever_wet_support():
     maximum = spatial_table_support(field=field, objective="maximum_extent_error_10cm")
     assert final["reference_wet_cells"] == 7 and final["wet_union_cells"] == 8
     assert maximum["reference_wet_cells"] == 2 and maximum["wet_union_cells"] == 3
+
+
+def test_native_cell_comparison_requires_fingerprinted_maximum(tmp_path):
+    import numpy as np
+
+    from research.floodwarp_methods_paper.fidelity.native_map_comparison import load_maps
+    from research.floodwarp_methods_paper.terrain.generators.generate import array_sha
+
+    path = tmp_path / "state.npz"
+    q = np.array([[.1, 0., 0.], [.04, 0., 0.]])
+    maximum = np.array([.2, .11])
+    manifest = dict(sha256=dict(q=array_sha(q), maximum=array_sha(maximum)))
+    np.savez(path, q=q, maximum=maximum, _direct_manifest=json.dumps(manifest), control=np.array([3600.]))
+    fields = dict(state=array_sha(q), maximum=array_sha(maximum), volume_x="x", soil="soil")
+    item = dict(id="ordinary", d=dict(hashes=fields, numerical=dict(ny=1, nx=2)), s=dict(hours=1))
+    index = {(fields["state"], "x", "soil"): path}
+    depth, peak = load_maps(item=item, index=index)
+    np.testing.assert_array_equal(depth, [[.1, .04]])
+    np.testing.assert_array_equal(peak, [[.2, .11]])
+    fields["maximum"] = "wrong"
+    with pytest.raises(ValueError, match="disagree"):
+        load_maps(item=item, index=index)

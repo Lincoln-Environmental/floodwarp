@@ -570,6 +570,8 @@ def run(*, directory, require_complete):
         else [i for items in primary.values() for i in items],
     )
     fv1_clock_report.report(directory=directory, output=target, write_table=True)
+    metrics.csv_write(file=target / "native_grid_field_differences.csv",
+                      rows=native_archive.native_grid_differences(directory=directory, records=records))
     catalogue.database(target=target)
     counted = {r["case"] for r in complete if r["horizon"] == "complete-native-metre"}
     text = [

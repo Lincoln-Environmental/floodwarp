@@ -55,3 +55,43 @@ def observations(*, directory, records, groups):
             rows.append(dict(id=item["id"], parent_id=parent, case=case, evidence="matched recession",
                              end_s=end_s, **evidence))
     return rows
+
+
+def native_grid_differences(*, directory, records):
+    from research.floodwarp_methods_paper import metrics
+
+    measurements = {}
+    receipts = sorted((directory / "native_grid_maps").glob("*/receipt.json"))
+    if not receipts:
+        return []
+    implementation = {name: runner.checksum(path=directory / name)
+                      for name in ("native_map_comparison.py", "final_depth.py")}
+    for receipt in receipts:
+        archive = json.loads(receipt.read_text())
+        contract = archive["identity"]
+        if contract["implementation"] != implementation:
+            continue
+        observations = contract["observations"]
+        if not observations.keys() <= records.keys():
+            continue
+        ident = receipt.parent.name
+        file = receipt.parent / "differences.csv"
+        if runner.digest(contract)[:24] != ident or runner.checksum(path=file) != archive["table_sha256"]:
+            raise ValueError("Changed native grid field comparison")
+        for key, raw in observations.items():
+            item = records[key]
+            if (raw["result_sha256"] != runner.checksum(path=item["path"] / "result.json")
+                    or raw["fields"] != item["d"]["hashes"]):
+                raise ValueError("Original native-grid fields disagree with the comparison identity")
+        rows = metrics.csv_read(file=file)
+        if ({r["id"] for r in rows} != observations.keys() - {contract["normal_rk2"]}
+                or len(rows) != len(observations) - 1):
+            raise ValueError("Incomplete native-grid field comparison")
+        for row in rows:
+            key = (row["id"], row["comparator_id"])
+            if key[0] not in observations or key[1] != contract["normal_rk2"]:
+                raise ValueError("Field comparison has different participants from its receipt")
+            if key in measurements and measurements[key] != row:
+                raise ValueError("Contradictory map comparisons for the same forecast pair")
+            measurements[key] = row
+    return [measurements[key] for key in sorted(measurements)]

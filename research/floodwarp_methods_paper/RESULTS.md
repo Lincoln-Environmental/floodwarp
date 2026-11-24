@@ -237,6 +237,24 @@ On plain-709-moderate-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 change
 
 On plain-709-intense-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.175% and net export by -14.9 m³ through 32 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](fidelity/native_results/fv1_temporal_sensitivity.csv)
 
+## Native hydraulic cell comparisons
+
+Each row compares fields on identical hydraulic cells against ordinary-CFL RK2 for the same storm. Depth RMSE covers all cells. Extent uses thresholds on individual cells. The half-CFL RK2 rows measure temporal sensitivity. Absolute practical accuracy at the native terrain floor remains unresolved.
+
+| Storm | End (h) | Grid (m) | Compared formulation | CFL factor | Depth RMSE (mm) | Maximum-depth RMSE (mm) | 5 cm IoU | 10 cm IoU |
+|---|---:|---:|---|---:|---:|---:|---:|---:|
+| hill-8500-back-1000x1000 | 8 | 1 | RK2 | 0.5 | 0.0083048 | 0.0084534 | empty union | empty union |
+| hill-8500-back-1000x1000 | 8 | 1 | FV1 | 1.0 | 0.10716 | 6.2974 | empty union | empty union |
+| hill-8500-back-1000x1000 | 8 | 1 | Hancock | 1.0 | 0.010741 | 0.018788 | empty union | empty union |
+| plain-709-moderate-1000x1000 | 8 | 1 | RK2 | 0.5 | 3.3885e-05 | 0.001106 | 1.00000 | 1.00000 |
+| plain-709-moderate-1000x1000 | 8 | 1 | FV1 | 1.0 | 19.012 | 15.655 | 0.77918 | 0.79998 |
+| plain-709-moderate-1000x1000 | 8 | 1 | Hancock | 1.0 | 0.0053159 | 0.0035165 | 0.99991 | 0.99974 |
+| plain-709-spatial-1000x1000 | 8 | 1 | RK2 | 0.5 | 0.00094817 | 0.0012903 | 1.00000 | 1.00000 |
+| plain-709-spatial-1000x1000 | 8 | 1 | FV1 | 1.0 | 0.5193 | 0.54444 | 0.98380 | 0.99025 |
+| plain-709-spatial-1000x1000 | 8 | 1 | Hancock | 1.0 | 0.010704 | 0.010765 | 1.00000 | 0.99803 |
+
+[Wet-union errors, connectivity and map identities](fidelity/native_results/native_grid_field_differences.csv)
+
 ## Practical grid selection on native terrain
 
 The validation design includes 2 independent terrains with an admissible 5 and 10 m pair and all scheduled depth reference controls (hill-8200, rolling-8105). Completed runs currently qualify 0 terrain pairs for depth. [Design and measured eligibility by observable](fidelity/advisor_design/paired.json)

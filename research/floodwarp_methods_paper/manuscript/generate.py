@@ -2,6 +2,7 @@
 
 from math import isclose
 from pathlib import Path
+from operator import itemgetter
 from research.floodwarp_methods_paper import synthesis
 from statistics import median
 from collections import defaultdict
@@ -290,7 +291,7 @@ def native_operational_balances(*, study, minimum_cells):
     rows = []
     storage_rows = []
     station_rows = []
-    flow = json.loads((study / "fidelity/design.json").read_text())
+    flow = None
     for (case, _, dx, cadence, end_h, _), methods in sorted(groups.items()):
         fv = methods.get("fv1")
         options = [methods[m] for m in ("hancock_dense", "hancock_adaptive") if m in methods]
@@ -311,17 +312,24 @@ def native_operational_balances(*, study, minimum_cells):
         rows.append(f"| {case} | {cells:,} | {cells * dx**2 / 1e6:.3f} | {dx} | {end_h:g} | {cadence:g} | "
                     f"{float(fv['outlet_peak_m3s']):.5g} | {float(h['outlet_peak_m3s']):.5g} | "
                     f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {policy} | {ratio:.3f} |")
-        if float(fv["section_x_m"]) != float(h["section_x_m"]):
-            raise ValueError("Internal gauge coordinates differ in a matched storm comparison")
-        station_cells = []
-        for station, volume in (("section", "net_section_m3"), ("outlet", "net_outlet_m3")):
-            peak_f, peak_h = [float(r[station + "_peak_m3s"]) for r in (fv, h)]
-            discharge_difference = "unresolved"
-            if peak_h >= flow["minimum_peak_m3s"] and float(h[volume]) >= flow["minimum_volume_m3"]:
-                discharge_difference = f"{100 * (peak_f / peak_h - 1):+.2f}"
-            station_cells.extend((f"{peak_f:.5g}", f"{peak_h:.5g}", discharge_difference))
-        station_rows.append(f"| {case} | {dx} | {end_h:g} | {float(h['section_x_m']):g} | "
-                            + " | ".join(station_cells) + " |")
+        if all(r.get(key) not in ("", None) for r in (fv, h)
+               for key in ("section_x_m", "section_peak_m3s", "net_section_m3")):
+            if flow is None:
+                flow = json.loads((study / "fidelity/design.json").read_text())
+            if float(fv["section_x_m"]) != float(h["section_x_m"]):
+                raise ValueError("Internal gauge coordinates differ in a matched storm comparison")
+            station_cells = []
+            for station, volume in (("section", "net_section_m3"), ("outlet", "net_outlet_m3")):
+                peak_f, peak_h = [float(r[station + "_peak_m3s"]) for r in (fv, h)]
+                discharge_difference = "unresolved"
+                if peak_h >= flow["minimum_peak_m3s"] and float(h[volume]) >= flow["minimum_volume_m3"]:
+                    discharge_difference = f"{100 * (peak_f / peak_h - 1):+.2f}"
+                station_cells.extend((f"{peak_f:.5g}", f"{peak_h:.5g}", discharge_difference))
+            station_rows.append(f"| {case} | {dx} | {end_h:g} | {float(h['section_x_m']):g} | "
+                                + " | ".join(station_cells) + " |")
+        else:
+            station_rows.append(f"| {case} | {dx} | {end_h:g} | unmeasured | — | — | — | "
+                                f"{float(fv['outlet_peak_m3s']):.5g} | {float(h['outlet_peak_m3s']):.5g} | — |")
         rain = float(fv["rain_m3"])
         for key in ("rain_m3", "initial_m3"):
             if not isclose(float(fv[key]), float(h[key]), rel_tol=1e-9, abs_tol=1e-7):
@@ -364,6 +372,29 @@ def native_operational_balances(*, study, minimum_cells):
         "[Water budgets and internal gauges](../fidelity/native_results/measured_windows.csv) · "
         "[Policy-specific observations and reference eligibility](../fidelity/native_publication/README.md)", "",
     ])
+
+
+def native_grid_field_comparison(*, study):
+    file = study / "fidelity/native_results/native_grid_field_differences.csv"
+    rows = csv_read(file=file) if file.exists() else []
+    if not rows:
+        return ""
+    text = ["## Native hydraulic cell comparisons", "",
+            "Each row compares fields on identical hydraulic cells against ordinary-CFL RK2 for the same "
+            "storm. Depth RMSE covers all cells. Extent uses thresholds on individual cells. "
+            "The half-CFL RK2 rows measure temporal sensitivity. Absolute practical accuracy at the native "
+            "terrain floor remains unresolved.", "",
+            "| Storm | End (h) | Grid (m) | Compared formulation | CFL factor | Depth RMSE (mm) | "
+            "Maximum-depth RMSE (mm) | 5 cm IoU | 10 cm IoU |",
+            "|---|---:|---:|---|---:|---:|---:|---:|---:|"]
+    for r in sorted(rows, key=itemgetter("case", "method", "cfl_factor")):
+        name = {"hancock_dense": "Hancock", "fv1": "FV1", "adaptive": "RK2"}[r["method"]]
+        ious = [format(float(r[k]), ".5f") if r[k] else "empty union" for k in ("iou_5cm", "iou_10cm")]
+        text.append(f"| {r['case']} | {r['end_h']} | {float(r['dx_m']):g} | {name} | {r['cfl_factor']} | "
+                    f"{1000 * float(r['depth_rmse_m']):.5g} | {1000 * float(r['maximum_depth_rmse_m']):.5g} | "
+                    f"{ious[0]} | {ious[1]} |")
+    text.extend(["", "[Wet-union errors, connectivity and map identities](../fidelity/native_results/native_grid_field_differences.csv)"])
+    return "\n" + "\n".join(text) + "\n"
 
 
 def native_timing_correction(*, study):
@@ -831,6 +862,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                             "[Time refinement, both gauge records and water accounts]"
                             "(../fidelity/native_results/fv1_temporal_sensitivity.csv)\n"
                         )
+                correction += native_grid_field_comparison(study=study)
                 correction += native_advisor_findings(study=study)
         transfer = study / "fidelity/orton_transfer/transfer.csv"
         if transfer.exists():

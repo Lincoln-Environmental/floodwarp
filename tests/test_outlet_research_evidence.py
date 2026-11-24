@@ -607,6 +607,7 @@ def test_manuscript_reports_single_measured_hancock_policy_and_checks_dual_polic
         dict(horizon="completed recession", hydraulic_median_s=t, run_ids=ident)
         for ident, t in (("h", 1.5), ("f", 1), ("t", 1.1))])
     report = native_operational_balances(study=tmp_path, minimum_cells=1000000)
+    assert "| unmeasured | — | — | — | 10 | 10 | — |" in report
     assert "| dense only measured | 1.500 |" in report
     assert "| 1,600 | 1.60 | 200 | 200 | 20 | 20 | 5 | 5 |" in report
     metrics.csv_write(file=directory / "measured_windows.csv", rows=[dict(dense, rain_m3=1500), fv1])
