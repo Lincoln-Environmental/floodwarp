@@ -107,6 +107,36 @@ def test_extent_display_aggregates_fine_cell_areas_before_drawing(tmp_path):
         assert fields["rain_fraction"].item() == .5
         assert fields["infiltration_difference_m"].item() == .02
 
+
+def test_simultaneous_extent_distinguishes_moving_wave_from_cumulative_footprint():
+    frames = {t: dict(area_above_5cm_m2=area, ever_above_5cm_m2=envelope,
+                      area_above_10cm_m2=0, ever_above_10cm_m2=0)
+              for t, area, envelope in ((0, 0, 0), (900, 100, 100), (1800, 100, 200), (2700, 25, 225))}
+    args = dict(case={"run_id": "fixture"}, end=2700, cadence=900, thresholds_cm=(5, 10))
+    samples, (wet, dry) = outlet_results.extent_history(frames=frames, **args)
+    assert len(samples) == 4 and (wet["largest_sampled_area_m2"], wet["area_ever_flooded_m2"]) == (100, 225)
+    assert wet["first_peak_h"] == .25 and dry["first_peak_h"] is None
+    frames[2700]["ever_above_5cm_m2"] = 125
+    with pytest.raises(ValueError, match="envelope"):
+        outlet_results.extent_history(frames=frames, **args)
+
+
+def test_recession_export_difference_includes_storage_at_rain_cessation():
+    def account(*, storage, inside, outside, gauge):
+        return dict(footprint_storage_m3=storage, footprint_rain_m3=100, gauge=gauge,
+                    footprint_infiltration_m3=inside+outside, infiltration_inside_rain_m3=inside,
+                    infiltration_outside_rain_m3=outside)
+
+    cases = []
+    for method, start, stop in (
+        ("fv1", account(storage=40, inside=5, outside=10, gauge=45), account(storage=5, inside=7, outside=13, gauge=75)),
+        ("hancock", account(storage=25, inside=5, outside=18, gauge=52), account(storage=0, inside=7, outside=26, gauge=67)),
+    ):
+        cases.append(outlet_results.phase_account(case=dict(run_id=method, method=method, dx_m=5, extension_m=0),
+                                                   start=start, stop=stop))
+    row, = outlet_results.water_differences(summaries=cases)
+    assert row["initial_storage_m3"] == 15 and row["gauge_m3"] == 15
+    assert row["unexplained_export_m3"] == 0 and row["infiltration_outside_rain_m3"] == -5
 def test_repeat_selection_covers_cross_grid_decisions_on_the_same_snapshot():
     from research.floodwarp_methods_paper.fidelity.outlet_timing import marginal_decisions
 

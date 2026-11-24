@@ -344,9 +344,45 @@ def spatial_qualification(*, peers, states, hour, thresholds, settings):
     return rows
 
 
+def extent_history(*, frames, case, end, cadence, thresholds_cm):
+    snapshots = []
+    for second in range(0, end + 1, cadence):
+        record = frames[second]
+        sample = dict(case, hour=second / 3600)
+        for cm in thresholds_cm:
+            keys = (f"area_above_{cm}cm_m2", f"ever_above_{cm}cm_m2")
+            area, envelope = (record[key] for key in keys)
+            previous = snapshots[-1][keys[1]] if snapshots else 0
+            if not (0 <= area <= envelope and previous <= envelope):
+                raise ValueError("Inundated area and cumulative envelope disagree")
+            sample.update(zip(keys, (area, envelope), strict=True))
+        snapshots.append(sample)
+    if snapshots[-1]["hour"] * 3600 != end:
+        raise ValueError("Final extent is missing from the sampling grid")
+    peaks = []
+    for cm in thresholds_cm:
+        key = f"area_above_{cm}cm_m2"
+        peak = max(sample[key] for sample in snapshots)
+        peaks.append(dict(case, threshold_cm=cm, snapshot_interval_s=cadence, samples=len(snapshots),
+                          largest_sampled_area_m2=peak,
+                          first_peak_h=next(s["hour"] for s in snapshots if s[key] == peak) if peak else None,
+                          area_ever_flooded_m2=snapshots[-1][f"ever_above_{cm}cm_m2"]))
+    return snapshots, peaks
+
+
+def phase_account(*, case, start, stop):
+    volumes = {key: stop[key] - start[key] for key in (
+        "footprint_rain_m3", "infiltration_inside_rain_m3", "infiltration_outside_rain_m3",
+        "footprint_infiltration_m3",
+    )}
+    return dict(case, **volumes, gauge_m3=stop["gauge"] - start["gauge"],
+                initial_storage_m3=start["footprint_storage_m3"], footprint_storage_m3=stop["footprint_storage_m3"])
+
+
 def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
     summaries, strips, snapshots, peers = [], [], [], []
-    experiments = []
+    experiments, peak_extents = [], []
+    phases = {(0, rainfall_end): [], (rainfall_end, end): []}
     references = {}
     sources = {}
     timing_notes = json.loads((directory/"outlet_timing_notes.json").read_text())
@@ -408,6 +444,8 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
             peaks[label + "_peak_m3s"], peaks[label + "_end_s"] = value, t
         frames = {r["t_s"]: r for r in rows}
         frames[0] = initial
+        for (start, stop), accounts in phases.items():
+            accounts.append(phase_account(case=case, start=frames[start], stop=frames[stop]))
         for name, start, stop in (
             ("crest_minute", peaks["minute_end_s"] - cadence, peaks["minute_end_s"]),
             ("post_rain_recession", rainfall_end, end),
@@ -451,21 +489,18 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
                 outer_boundary_m3=final["boundary"],
             )
         )
-        for hour in (extent_hour, end / 3600):
-            record = frames[int(hour * 3600)]
-            snapshots.append(
-                dict(
-                    case,
-                    hour=hour,
-                    **{k: v for k, v in record.items() if "_above_" in k},
-                )
-            )
+        observed, maxima = extent_history(frames=frames, case=case, end=end,
+                                          cadence=identity["settings"]["spatial_s"],
+                                          thresholds_cm=tuple(round(100 * value) for value in thresholds))
+        snapshots.extend(observed)
+        peak_extents.extend(maxima)
         peers.append(dict(case, steps=stats["steps"]))
     dest.mkdir(parents=True, exist_ok=True)
     for name, rows in (
         ("events", summaries),
         ("last_40m", strips),
         ("extent", snapshots),
+        ("peak_extent", peak_extents),
     ):
         metrics.csv_write(file=dest / f"{name}.csv", rows=rows)
     differences, spatial_checks, contrasts = [], [], []
@@ -500,6 +535,10 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
     metrics.csv_write(
         file=dest / "water_differences.csv", rows=water_differences(summaries=summaries)
     )
+    metrics.csv_write(file=dest / "phase_volume_differences.csv", rows=[
+        dict(row, start_h=start / 3600, end_h=stop / 3600) for (start, stop), accounts in phases.items()
+        for row in water_differences(summaries=accounts)
+    ])
     outlet_observables.qualify(
         directory=directory, destination=dest, experiments=experiments
     )

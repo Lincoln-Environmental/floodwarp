@@ -270,7 +270,7 @@ def run(*, directory):
     for r in sorted(rows, key=sort_case):
         if float(r["cfl_factor"]) == 1 and int(r["extension_m"]) == 0:
             areas = {
-                int(float(a["hour"])): a for a in extents if a["run_id"] == r["run_id"]
+                float(a["hour"]): a for a in extents if a["run_id"] == r["run_id"]
             }
             quantities = [
                 float(areas[hour][f"{field}_above_{cm}cm_m2"]) / 1.0e6
@@ -282,6 +282,24 @@ def run(*, directory):
                 + " | ".join(f"{value:.4f}" for value in quantities)
                 + " |"
             )
+    peak_areas = metrics.csv_read(file=source / "peak_extent.csv")
+    text.extend(["", "The largest area inundated simultaneously at the 15-minute snapshots was",
+                 "", "| Model | Grid (m) | Above 5 cm (km²) | First peak (h) | Above 10 cm (km²) | First peak (h) |",
+                 "|---|---:|---:|---:|---:|---:|"])
+    for row in sorted(rows, key=sort_case):
+        if float(row["cfl_factor"]) != 1 or int(row["extension_m"]) != 0:
+            continue
+        cells = []
+        by_threshold = {int(s["threshold_cm"]): s for s in peak_areas if s["run_id"] == row["run_id"]}
+        for threshold in (5, 10):
+            sample = by_threshold[threshold]
+            cells.extend([f"{float(sample['largest_sampled_area_m2']) / 1e6:.4f}",
+                          sample["first_peak_h"] or "—"])
+        text.append(f"| {row['method']} | {row['dx_m']} | " + " | ".join(cells) + " |")
+    text.extend(["", "A peak between snapshots can exceed the sampled maximum. The cumulative extent counts "
+                 "each cell that crossed the threshold at any accepted step. [All sampled maxima](peak_extent.csv) · "
+                 "[15-minute inundation series](extent.csv) · "
+                 "[Inundated area through time](../../supplementary/incised/simultaneous_extent.pdf)"])
     text.extend(
         [
             "",
@@ -289,7 +307,8 @@ def run(*, directory):
             "For maxima, it averages the recorded native-cell maxima. The extent table above counts cells at each native hydraulic spacing. "
             "The 5 m trajectories quantify formulation and timestep sensitivity. A finer storm reference is required for absolute 5 m accuracy.",
             "",
-            "[Water-balance decomposition](water_differences.csv) · [Least measured cost by tolerance](least_cost_fidelity.csv) · "
+            "[Water-balance decomposition](water_differences.csv) · [Rain and recession accounts](phase_volume_differences.csv) · "
+            "[Least measured cost by tolerance](least_cost_fidelity.csv) · "
             "[Smallest qualified error within the FV1 budget](equal_cost_fidelity.csv)",
             "",
             "Depth and inundation costs run from the initial state to each snapshot. "

@@ -108,6 +108,31 @@ def repaired_budgets(*, directory):
                      f"The final storage difference was {float(row['footprint_storage_m3']):+,.0f} m³. "
                      f"At hour eight their areas above 5 cm were {float(first['area_above_5cm_m2'])/1e6:.4f} "
                      f"and {float(second['area_above_5cm_m2'])/1e6:.4f} km².")
+    phase_file = directory / "phase_volume_differences.csv"
+    if phase_file.is_file():
+        phases = {float(r["start_h"]): r for r in csv_read(file=phase_file)
+                  if r["first_method"] == "fv1" and r["second_method"] == "hancock_adaptive"
+                  and int(r["extension_m"]) == 0 and int(r["dx_m"]) == 5}
+        if len(phases) == 2:
+            rain, recession = (phases[k] for k in sorted(phases))
+            lines.append(f"At rain cessation ({float(rain['end_h']):g} h), the direct 5 m FV1-minus-Hancock "
+                         f"differences were {float(rain['gauge_m3']):+,.0f} m³ in cumulative export and "
+                         f"{float(rain['footprint_storage_m3']):+,.0f} m³ in remaining storage. "
+                         f"During the common recession alone FV1 exported {float(recession['gauge_m3']):+,.0f} m³ "
+                         f"relative to Hancock. [Rain and recession water accounts](../fidelity/outlet_results/phase_volume_differences.csv)")
+    maxima = directory / "peak_extent.csv"
+    if maxima.is_file():
+        direct = {r["method"]: r for r in csv_read(file=maxima) if int(r["dx_m"]) == 5
+                  and int(r["extension_m"]) == 0 and int(r["threshold_cm"]) == 5 and float(r["cfl_factor"]) == 1}
+        order = ("fv1", "hancock_adaptive", "adaptive")
+        if set(order) <= direct.keys():
+            areas = [float(direct[key]["largest_sampled_area_m2"]) / 1e6 for key in order]
+            interval = float(direct["fv1"]["snapshot_interval_s"]) / 60
+            lines.append(f"Across {direct['fv1']['samples']} snapshots at {interval:g}-minute intervals, the "
+                         f"largest simultaneous areas above 5 cm were {areas[0]:.4f}, {areas[1]:.4f} and "
+                         f"{areas[2]:.4f} km² for 5 m FV1, Hancock and RK2. These measurements cover the full "
+                         "direct-outlet storm and recession. Cumulative inundation also includes cells that "
+                         "flooded at different times. [Sampled maxima and cumulative extent](../fidelity/outlet_results/peak_extent.csv)")
     regions = directory / "regional_contrasts.csv"
     if regions.exists():
         eight = [r for r in csv_read(file=regions) if float(r["hour"]) == 8 and int(r["dx_m"]) == 5
@@ -125,6 +150,25 @@ def repaired_budgets(*, directory):
                          "[Reach and rainfall-footprint decomposition](../fidelity/outlet_results/regional_contrasts.csv) · "
                          "[Maps of inundation and cumulative infiltration](../supplementary/incised/hour_eight_water.pdf)")
     events = csv_read(file=directory / "events.csv")
+    measured_timings = directory / "independent_timings.csv"
+    if measured_timings.is_file():
+        records = csv_read(file=measured_timings)
+        costs = {(r["method"], int(r["dx_m"])): r for r in records
+                 if int(r["extension_m"]) == 0 and r["primary"] == r["id"] and int(r["end_s"]) == 57600}
+        for dx in sorted({spacing for _, spacing in costs}, reverse=True):
+            fv1, hancock = costs.get(("fv1", dx)), costs.get(("hancock_adaptive", dx))
+            if fv1 and hancock:
+                time_ratio = float(hancock["hydraulic_median_s"]) / float(fv1["hydraulic_median_s"])
+                step_ratio = int(hancock["steps"]) / int(fv1["steps"])
+                counts = [len({r["id"] for r in records if r["primary"] == peer["id"] and r["end_s"] == peer["end_s"]})
+                          for peer in (hancock, fv1)]
+                if min(counts) < 3:
+                    raise ValueError("A close storm cost comparison requires three independent timings per method")
+                lines.append(f"On the {dx} m direct-outlet grid, Hancock required {int(hancock['steps']):,} "
+                             f"accepted steps versus {int(fv1['steps']):,} for FV1. Across {counts[0]} and {counts[1]} "
+                             f"warmed timings respectively, the median Hancock runtime was {time_ratio / step_ratio:.2f}× as much "
+                             f"per accepted step and {time_ratio:.3f}× as much over the full 16 hours. "
+                             "[Independent timings and execution policies](../fidelity/outlet_results/independent_timings.csv)")
     strip_path = directory / "last_40m.csv"
     if strip_path.exists():
         terminal = {(r["method"], r["period"]): r for r in csv_read(file=strip_path)

@@ -760,6 +760,40 @@ def incised_spatial_contrasts(*, study):
         save(fig=fig, folder=study / "supplementary/incised", name="hour_eight_water")
 
 
+def incised_extent_history(*, study):
+    table = study / "fidelity/outlet_results/extent.csv"
+    if not table.is_file():
+        return
+    rows = csv_read(file=table)
+    direct = [row for row in rows if int(row["extension_m"]) == 0 and float(row["cfl_factor"]) == 1]
+    if not any(float(r["hour"]) == 0 for r in direct):
+        return
+    grids = sorted({int(r["dx_m"]) for r in direct}, reverse=True)
+    fig, axes = plt.subplots(2, len(grids), squeeze=False, sharex=True, sharey="row",
+                             figsize=(3.5 * len(grids), 4.9), layout="constrained")
+    methods = {"fv1": ("FV1", "#666666", "-"), "hancock_adaptive": ("Hancock", "#126482", "-"),
+               "adaptive": ("RK2", "#b95c22", "--")}
+    for col, dx in enumerate(grids):
+        for method, (label, colour, style) in methods.items():
+            points = {float(r["hour"]): r for r in direct if int(r["dx_m"]) == dx and r["method"] == method}
+            if not points:
+                continue
+            times = sorted(points)
+            for ax, cm in zip(axes[:, col], (5, 10), strict=True):
+                area = [float(points[t][f"area_above_{cm}cm_m2"]) / 1e6 for t in times]
+                ax.plot(times, area, color=colour, linestyle=style, linewidth=1.1, label=label)
+        axes[0, col].set_title(f"{dx} m hydraulic grid")
+        axes[1, col].set_xlabel("Time since storm start (h)")
+    for ax, cm in zip(axes[:, 0], (5, 10), strict=True):
+        ax.set_ylabel(f"Area above {cm} cm (km²)")
+    for ax in axes.flat:
+        ax.set_yscale("symlog", linthresh=0.01)
+        ax.set_yticks([0, .01, .1, 1, 4], labels=["0", "0.01", "0.1", "1", "4"])
+        ax.grid(axis="y", alpha=.2)
+    axes[0, 0].legend()
+    save(fig=fig, folder=study / "supplementary/incised", name="simultaneous_extent")
+
+
 def from_records(*, study):
     paper_style()
     out = study / "figures"
@@ -779,6 +813,7 @@ def from_records(*, study):
     plots.generate(study=study)
     outlet_repair(study=study,out=out)
     incised_spatial_contrasts(study=study)
+    incised_extent_history(study=study)
     orton_transfer(study=study, out=out)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),
