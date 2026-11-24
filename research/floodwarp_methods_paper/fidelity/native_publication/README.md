@@ -140,6 +140,8 @@ The first ratio measures the cost of selecting a schedule using the two explicit
 
 At 20 h in plain-709-spatial-1000x1000, the fastest cell-centred signal lay at domain coordinates (876.5, 423.5) m. The local depth was 0.1587 m, the gravity-wave speed 1.2475 m/s and the largest axial flow velocity 7.5e-07 m/s. The cell estimate implied a 0.16031458 s CFL bound. The hydraulic kernel recorded 0.16031457 s across reconstructed faces and a 0.15229884 s proposal for the next step. The cell location and the global face minimum are independent measurements at one checkpoint. [Checkpoint, field fingerprints and estimates](../wave_clock/42545c16666c1c94109b354a/72000.json)
 
+At 32 h in plain-709-moderate-1000x1000, the fastest cell-centred signal lay at domain coordinates (876.5, 423.5) m. The local depth was 0.1733 m, the gravity-wave speed 1.3037 m/s and the largest axial flow velocity 0.0068 m/s. The cell estimate implied a 0.15261143 s CFL bound. The hydraulic kernel recorded 0.15261146 s across reconstructed faces and a 0.14498089 s proposal for the next step. The cell location and the global face minimum are independent measurements at one checkpoint. [Checkpoint, field fingerprints and estimates](../wave_clock/5b5e097f78a5d2ecad78d4e9/115200.json)
+
 ## Terrain control elevations and connectivity
 
 A 80 m window surrounds the prescribed opening on each of 25 distinct native beds. Repeated storms on a bed count once. A connection requires a continuous path along shared cell faces from west to east. A single water-surface elevation is prescribed across each window. Its height above the native spill controls which paths are available.

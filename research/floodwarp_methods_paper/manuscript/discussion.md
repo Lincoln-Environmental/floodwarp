@@ -135,6 +135,25 @@ Each row compares solvers on the same event and physical footprint. Domain area 
 | rolling-704-soil-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 61.208 | 25.644 | +161,747 | -161,747 | tiles | 2.002 |
 | rolling-713-moderate-20480x10240 | 2,097,152 | 209.715 | 10 | 24 | 300 | 464.91 | 330.56 | +1,070,101 | -1,073,309 | tiles | 2.263 |
 
+### Internal section and outlet peaks
+
+Each section spans the domain width at the stated distance from its upstream grid edge. The signed percentage is 100 × (FV1 peak / Hancock peak − 1). Hancock supplies the comparison scale. Negligible outward flow gives an unresolved percentage. The peaks at the two gauges may occur at different times. Rainfall, infiltration and storage between the gauges also affect the outlet response.
+
+| Storm | Grid (m) | End (h) | Section x (m) | Section FV1 (m³/s) | Section Hancock (m³/s) | Difference (%) | Outlet FV1 (m³/s) | Outlet Hancock (m³/s) | Difference (%) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| coastal-703-moderate-10240x10240 | 10 | 32 | 5120 | 86.612 | 73.261 | +18.22 | 131.72 | 112.55 | +17.03 |
+| fan-705-spatial-5120x5120 | 5 | 12 | 2560 | 14.151 | 13.657 | +3.62 | 10.59 | 10.125 | +4.59 |
+| fan-711-spatial-10000x5000 | 10 | 16 | 5000 | 25.075 | 24.519 | +2.27 | 15.22 | 15.825 | -3.82 |
+| floodplain-702-moderate-10240x10240 | 10 | 28 | 5120 | 139.44 | 111.79 | +24.73 | 141.05 | 123.69 | +14.03 |
+| hill-706-back-10240x10240 | 10 | 16 | 5120 | 698.38 | 729.51 | -4.27 | 1174.7 | 1251.6 | -6.14 |
+| hill-8500-back-1000x1000 | 1 | 12 | 500 | 8.2382 | 8.2497 | -0.14 | 16.126 | 16.159 | -0.20 |
+| plain-701-spatial-10240x10240 | 10 | 52 | 5120 | 11.935 | 10.643 | +12.14 | 0 | 0 | unresolved |
+| plain-709-spatial-1000x1000 | 1 | 20 | 500 | 0.3576 | 0.35591 | +0.47 | 0.015501 | 0.035363 | -56.17 |
+| plain-710-spatial-5000x5000 | 10 | 60 | 2500 | 4.6395 | 4.1863 | +10.83 | 0 | 0 | unresolved |
+| plain-712-spatial-20480x10240 | 10 | 40 | 10240 | 7.4985 | 6.4621 | +16.04 | 0 | 0 | unresolved |
+| rolling-704-soil-5120x5120 | 5 | 12 | 2560 | 74.948 | 63.865 | +17.35 | 61.208 | 25.644 | +138.69 |
+| rolling-713-moderate-20480x10240 | 10 | 24 | 10240 | 395.76 | 330.54 | +19.73 | 464.91 | 330.56 | +40.64 |
+
 ### Storm input and remaining inundation
 
 Catchment-mean rainfall divides the integrated six-hour rainfall volume by the whole modelled area. A spatially concentrated storm can deliver a much greater depth inside its rainfall footprint. The areas count original hydraulic cells at the common end time. Maximum extent during the storm is a separate observable.

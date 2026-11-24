@@ -289,6 +289,8 @@ def native_operational_balances(*, study, minimum_cells):
             groups[key][r["method"]] = r
     rows = []
     storage_rows = []
+    station_rows = []
+    flow = json.loads((study / "fidelity/design.json").read_text())
     for (case, _, dx, cadence, end_h, _), methods in sorted(groups.items()):
         fv = methods.get("fv1")
         options = [methods[m] for m in ("hancock_dense", "hancock_adaptive") if m in methods]
@@ -309,6 +311,17 @@ def native_operational_balances(*, study, minimum_cells):
         rows.append(f"| {case} | {cells:,} | {cells * dx**2 / 1e6:.3f} | {dx} | {end_h:g} | {cadence:g} | "
                     f"{float(fv['outlet_peak_m3s']):.5g} | {float(h['outlet_peak_m3s']):.5g} | "
                     f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {policy} | {ratio:.3f} |")
+        if float(fv["section_x_m"]) != float(h["section_x_m"]):
+            raise ValueError("Internal gauge coordinates differ in a matched storm comparison")
+        station_cells = []
+        for station, volume in (("section", "net_section_m3"), ("outlet", "net_outlet_m3")):
+            peak_f, peak_h = [float(r[station + "_peak_m3s"]) for r in (fv, h)]
+            discharge_difference = "unresolved"
+            if peak_h >= flow["minimum_peak_m3s"] and float(h[volume]) >= flow["minimum_volume_m3"]:
+                discharge_difference = f"{100 * (peak_f / peak_h - 1):+.2f}"
+            station_cells.extend((f"{peak_f:.5g}", f"{peak_h:.5g}", discharge_difference))
+        station_rows.append(f"| {case} | {dx} | {end_h:g} | {float(h['section_x_m']):g} | "
+                            + " | ".join(station_cells) + " |")
         rain = float(fv["rain_m3"])
         for key in ("rain_m3", "initial_m3"):
             if not isclose(float(fv[key]), float(h[key]), rel_tol=1e-9, abs_tol=1e-7):
@@ -331,6 +344,14 @@ def native_operational_balances(*, study, minimum_cells):
         "| Storm | Cells | Area (km²) | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | "
         "Δ net export (m³) | Δ infiltration (m³) | Measured Hancock policy | Hancock / FV1 time |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|", *rows, "",
+        "### Internal section and outlet peaks", "",
+        "Each section spans the domain width at the stated distance from its upstream grid edge. "
+        "The signed percentage is 100 × (FV1 peak / Hancock peak − 1). Hancock supplies the comparison scale. "
+        "Negligible outward flow gives an unresolved percentage. The peaks at the two gauges may occur at different times. "
+        "Rainfall, infiltration and storage between the gauges also affect the outlet response.", "",
+        "| Storm | Grid (m) | End (h) | Section x (m) | Section FV1 (m³/s) | Section Hancock (m³/s) | Difference (%) | "
+        "Outlet FV1 (m³/s) | Outlet Hancock (m³/s) | Difference (%) |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|", *station_rows, "",
         "### Storm input and remaining inundation", "",
         "Catchment-mean rainfall divides the integrated six-hour rainfall volume by the whole modelled area. "
         "A spatially concentrated storm can deliver a much greater depth inside its rainfall footprint. "
