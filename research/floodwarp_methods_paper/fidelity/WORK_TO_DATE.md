@@ -1,8 +1,23 @@
 # FloodWarp results to date
 
-## Incised storm on metre-derived terrain
+## Repaired FREE outlet on the 104.86 km² incised catchment
 
-The 10 m bed averages four 5 m elevations. Each 5 m elevation averages 25 native metre cells. The six forecasts used a common rainfall field and native initial water. Peak discharge is a one-minute mean of accepted face volumes.
+Each pair reports discharge through the same physical section over six hours of rainfall and the common recession. Export integrates accepted face transport. Moving the boundary downstream retains that section as an internal gauge.
+
+| Grid (m) | Method | End (h) | Extension (m) | Peak at FREE face (m³/s) | Peak at buffered gauge (m³/s) | Unbuffered export (m³) | Buffered gauge volume (m³) |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 5 | FV2 RK2 | 16 | 400 | 48.115 | 48.115 | 822,875 | 822,872 |
+| 5 | FV1 sparse | 16 | 400 | 49.186 | 49.164 | 910,143 | 910,243 |
+| 5 | Hancock tiled | 16 | 400 | 48.019 | 48.019 | 829,026 | 829,017 |
+| 10 | FV2 RK2 | 16 | 400 | 47.660 | 47.660 | 857,174 | 857,183 |
+| 10 | FV1 sparse | 16 | 400 | 48.371 | 48.319 | 910,217 | 910,413 |
+| 10 | Hancock tiled | 16 | 400 | 47.184 | 47.185 | 869,086 | 869,079 |
+
+[Repaired outlet, water budgets and refinement checks](outlet_results/README.md) · [Current native-grid storm measurements and budget decisions](native_publication/README.md)
+
+## Archived incised storm before the FREE-outlet repair
+
+The 10 m bed averages four 5 m elevations. Each 5 m elevation averages 25 native metre cells. The six pre-repair forecasts used a common rainfall field and native initial water. Peak discharge is a one-minute mean of accepted face volumes.
 
 | Grid (m) | Method | End (h) | Peak (m³/s) | Outlet volume (m³) | Infiltration (m³) | Hydraulic time (s) |
 |---:|---|---:|---:|---:|---:|---:|

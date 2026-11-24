@@ -342,6 +342,24 @@ def test_transfer_figure_reads_the_observed_times_and_sections(tmp_path):
         orton_transfer(study=tmp_path, out=out)
 
 
+def test_progress_report_pairs_the_same_gauge_window_and_timestep_policy(tmp_path):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity.progress import repaired_incised
+
+    folder = tmp_path / "outlet_results"
+    folder.mkdir()
+    base = dict(dx_m=10, method="adaptive", cfl_factor=1, end_h=16, extension_m=0,
+                minute_peak_m3s=42, gauge_m3=100, outer_boundary_m3=50)
+    rows = [base, dict(base, extension_m=400, minute_peak_m3s=41, gauge_m3=99),
+            dict(base, extension_m=400, end_h=20, minute_peak_m3s=80),
+            dict(base, extension_m=400, minute_peak_m3s=70, cfl_factor=0.5)]
+    metrics.csv_write(file=folder / "events.csv", rows=rows)
+    report = repaired_incised(directory=tmp_path)
+    assert [line for line in report if line.startswith("| 10 ")] == [
+        "| 10 | FV2 RK2 | 16 | 400 | 42.000 | 41.000 | 100 | 99 |"
+    ]
+
+
 def test_transfer_geometry_keeps_gauges_fixed_across_represented_outlet_changes(tmp_path):
     from research.floodwarp_methods_paper import runner
     from research.floodwarp_methods_paper.fidelity.orton_controls import matched_geometry

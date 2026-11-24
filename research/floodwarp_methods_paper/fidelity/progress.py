@@ -233,6 +233,45 @@ def terrain_and_calibration(*, study):
     ]
 
 
+def repaired_incised(*, directory):
+    file = directory / "outlet_results/events.csv"
+    if not file.is_file():
+        return []
+    events = metrics.csv_read(file=file)
+    pairs = {}
+    for row in events:
+        if float(row["cfl_factor"]) != 1:
+            continue
+        key = (int(row["dx_m"]), row["method"], float(row["end_h"]))
+        reaches = pairs.setdefault(key, {})
+        length = int(row["extension_m"])
+        if length in reaches:
+            raise ValueError("Duplicate incised reach under the same physical comparison")
+        reaches[length] = row
+    lines = [
+        "## Repaired FREE outlet on the 104.86 km² incised catchment", "",
+        "Each pair reports discharge through the same physical section over six hours of rainfall "
+        "and the common recession. Export integrates accepted face transport. Moving the boundary "
+        "downstream retains that section as an internal gauge.", "",
+        "| Grid (m) | Method | End (h) | Extension (m) | Peak at FREE face (m³/s) | "
+        "Peak at buffered gauge (m³/s) | Unbuffered export (m³) | Buffered gauge volume (m³) |",
+        "|---:|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    names = {"adaptive": "FV2 RK2", "hancock_adaptive": "Hancock tiled", "fv1": "FV1 sparse"}
+    for (dx, method, hours), reaches in sorted(pairs.items()):
+        if 0 not in reaches:
+            continue
+        face = reaches[0]
+        for extension, gauge in sorted(reaches.items()):
+            if extension > 0:
+                lines.append(f"| {dx} | {names[method]} | {hours:g} | {extension} | "
+                             f"{float(face['minute_peak_m3s']):.3f} | {float(gauge['minute_peak_m3s']):.3f} | "
+                             f"{float(face['gauge_m3']):,.0f} | {float(gauge['gauge_m3']):,.0f} |")
+    lines.extend(["", "[Repaired outlet, water budgets and refinement checks](outlet_results/README.md) · "
+                  "[Current native-grid storm measurements and budget decisions](native_publication/README.md)", ""])
+    return lines
+
+
 def generate(*, directory):
     rows = metrics.csv_read(file=directory / "results/native_horizons.csv")
     longest = {}
@@ -310,9 +349,9 @@ def generate(*, directory):
     if native_file.is_file():
         completed = metrics.csv_read(file=native_file)
         practical = [
-            "## Incised storm on metre-derived terrain", "",
+            "## Archived incised storm before the FREE-outlet repair", "",
             "The 10 m bed averages four 5 m elevations. Each 5 m elevation averages 25 native metre cells. "
-            "The six forecasts used a common rainfall field and native initial water. Peak discharge is a one-minute mean of accepted face volumes.",
+            "The six pre-repair forecasts used a common rainfall field and native initial water. Peak discharge is a one-minute mean of accepted face volumes.",
             "", "| Grid (m) | Method | End (h) | Peak (m³/s) | Outlet volume (m³) | Infiltration (m³) | Hydraulic time (s) |",
             "|---:|---|---:|---:|---:|---:|---:|",
         ]
@@ -325,6 +364,7 @@ def generate(*, directory):
                           "Repeated measurements at the outlet and upstream sections locate the water released during that interval. "
                           "[Hydrographs](native_tail/README.md) · [Peak-minute budget](native_tail/CREST.md) · [Runoff partition](native_outlet/runoff_partition.csv)", ""])
         text[2:2] = practical
+    text[2:2] = repaired_incised(directory=directory)
     text += incised_windows(directory=directory, design=incised_design)
     text += [
         "",

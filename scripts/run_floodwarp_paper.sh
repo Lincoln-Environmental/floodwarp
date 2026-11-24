@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--resume | --force] [--dry-run]
 Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
         million-terrain million-pilots million-storms million-auto large-references large-refinements heldout-references million-profiles million-repeats recession-controls execution-policy pareto
-        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-step-history native-timing-repeats native-publication strong-storm-controls free-plane free-reach outlet-storms outlet-results outlet-timing-repeats advisor-design advisor-cli-check orton-transfer outlet-qualification verify-kernels verify-native all historical-all
+        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-step-history native-timing-repeats native-publication summary strong-storm-controls free-plane free-reach outlet-storms outlet-results outlet-timing-repeats advisor-design advisor-cli-check orton-transfer outlet-qualification verify-kernels verify-native all historical-all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
 The native-input-audit stage reconstructs and verifies the incised storm rasters on a clean checkout.
 The outlet-states stage verifies archived field hashes and restores missing workstation checkpoints.
@@ -127,7 +127,7 @@ main() {
                 ./scripts/run_hydrograph_fidelity.sh native-advisor-validate "${selected_options[@]}"
             fi
         done
-        for stage in verify-native advisor-design orton-transfer native-publication tables figures manuscript verify; do
+        for stage in verify-native advisor-design orton-transfer native-publication summary tables figures manuscript verify; do
             "$0" "$stage" "${selected_options[@]}"
         done
         return
@@ -135,7 +135,7 @@ main() {
     if [[ $stage == native-step-history ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_step_history "${selected_options[@]}"
     fi
-    if [[ $stage == outlet-timing-repeats || $stage == verify-kernels || $stage == native-timing-repeats || $stage == orton-transfer || $stage == outlet-results || $stage == advisor-cli-check || $stage == advisor-design || $stage == free-plane || $stage == free-reach || $stage == outlet-storms || $stage == native-products || $stage == native-publication || $stage == native-status || $stage == strong-storm-controls || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
+    if [[ $stage == summary || $stage == outlet-timing-repeats || $stage == verify-kernels || $stage == native-timing-repeats || $stage == orton-transfer || $stage == outlet-results || $stage == advisor-cli-check || $stage == advisor-design || $stage == free-plane || $stage == free-reach || $stage == outlet-storms || $stage == native-products || $stage == native-publication || $stage == native-status || $stage == strong-storm-controls || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
         exec ./scripts/run_hydrograph_fidelity.sh "$stage" "${selected_options[@]}"
     fi
     if [[ $stage == hydrograph-fidelity || $stage == fidelity-figures ]]; then
