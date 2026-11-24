@@ -76,8 +76,11 @@ def collect(*, directory, cases, minimum_volume):
         if methods not in ({"fv1", "hancock_dense"}, {"fv1", "hancock_adaptive"}):
             continue
         fv1 = next(r for r in pair if r["spec"]["method"] == "fv1")
+        fv1_steps = sum(f["steps"] for f in fv1["frames"])
         for r in pair:
             s = r["spec"]
+            steps = sum(f["steps"] for f in r["frames"])
+            time_ratio = r["hydraulic_s"] / fv1["hydraulic_s"]
             if s["case"] != case or r["end_s"] != end or not r["settled"]:
                 raise ValueError("Incomplete native comparison for " + case)
             if any(length / s["dx"] != 1024 for length in s["dimensions"]):
@@ -98,8 +101,12 @@ def collect(*, directory, cases, minimum_volume):
                         original_id=r["parent_id"],
                         receipt=str(file.relative_to(directory)),
                         hydraulic_s=r["hydraulic_s"],
-                        ratio_over_fv1=r["hydraulic_s"] / fv1["hydraulic_s"],
-                        steps=sum(f["steps"] for f in r["frames"]),
+                        ratio_over_fv1=time_ratio,
+                        steps=steps,
+                        fv1_steps=fv1_steps,
+                        steps_over_fv1=steps / fv1_steps,
+                        ms_per_accepted_step=1000 * r["hydraulic_s"] / steps,
+                        per_step_over_fv1=time_ratio * fv1_steps / steps,
                         storage_m3=r["storage_m3"],
                         infiltration_m3=r["infiltration_m3"],
                         residual_m3=r["residual_m3"],
@@ -159,6 +166,29 @@ def generate(*, directory):
         text.append(
             f"| {r['landform'].capitalize()} | {labels[r['method']]} | {r['original_h']:g} | {r['end_h']:g} | {share} | {r['hydraulic_s']:.2f} | {r['ratio_over_fv1']:.2f} |"
         )
+    longest = {}
+    for r in outlets:
+        if r["method"] == "fv1":
+            continue
+        if r["case"] not in longest or r["end_h"] > longest[r["case"]]["end_h"]:
+            longest[r["case"]] = r
+    if longest:
+        ratios = [r["ratio_over_fv1"] for r in longest.values()]
+        text.extend(
+            [
+                "",
+                "## Accepted timesteps and whole-event cost",
+                "",
+                f"Using the longest paired native horizon once per landform, Hancock's median runtime was {np.median(ratios):.2f}× FV1. It met the 1.5× target on {sum(v <= 1.5 for v in ratios)} of {len(ratios)} landforms. Time per accepted step includes time spent in rejected trials.",
+                "",
+                "| Landform | Hancock steps | FV1 steps | Step count ratio | Time per step ratio |",
+                "|---|---:|---:|---:|---:|",
+            ]
+        )
+        for r in longest.values():
+            text.append(
+                f"| {r['landform'].capitalize()} | {r['steps']:,} | {r['fv1_steps']:,} | {r['steps_over_fv1']:.3f} | {r['per_step_over_fv1']:.3f} |"
+            )
     text += [
         "",
         "The mixed catchment also has a 12-hour residual-storage check at a later endpoint. Repeated horizons follow the same trajectories. Each timing covers both rainfall and recession. The Hancock policy in this comparison was selected from the original-window measurements. Independent spatial and temporal refinements determine eligibility for accuracy comparisons and can require a later shared endpoint.",

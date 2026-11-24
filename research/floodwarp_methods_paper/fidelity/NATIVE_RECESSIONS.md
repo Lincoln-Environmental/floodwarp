@@ -23,6 +23,21 @@ Paired native-grid recession measurements are available for 8 of the 8 primary l
 | Rolling | FV1 sparse | 8 | 12 | 0.00 | 75.63 | 1.00 |
 | Rolling | Hancock tiled | 8 | 12 | 0.00 | 148.33 | 1.96 |
 
+## Accepted timesteps and whole-event cost
+
+Using the longest paired native horizon once per landform, Hancock's median runtime was 1.92× FV1. It met the 1.5× target on 3 of 8 landforms. Time per accepted step includes time spent in rejected trials.
+
+| Landform | Hancock steps | FV1 steps | Step count ratio | Time per step ratio |
+|---|---:|---:|---:|---:|
+| Coastal | 95,957 | 89,419 | 1.073 | 1.748 |
+| Fan | 44,834 | 36,997 | 1.212 | 1.162 |
+| Floodplain | 90,914 | 75,571 | 1.203 | 1.975 |
+| Hill | 102,531 | 63,229 | 1.622 | 1.705 |
+| Incised | 95,182 | 48,854 | 1.948 | 1.004 |
+| Mixed | 259,216 | 184,106 | 1.408 | 0.777 |
+| Plain | 41,536 | 48,220 | 0.861 | 1.106 |
+| Rolling | 54,823 | 43,936 | 1.248 | 1.572 |
+
 The mixed catchment also has a 12-hour residual-storage check at a later endpoint. Repeated horizons follow the same trajectories. Each timing covers both rainfall and recession. The Hancock policy in this comparison was selected from the original-window measurements. Independent spatial and temporal refinements determine eligibility for accuracy comparisons and can require a later shared endpoint.
 
 [Outlet and internal section volumes, peak discharges, storage, timing and run identities](results/native_horizons.csv) · [Effect of 15-minute reporting on peak magnitude and the interval containing the maximum](results/native_cadence.csv)
