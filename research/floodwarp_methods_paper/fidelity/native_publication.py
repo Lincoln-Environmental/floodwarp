@@ -322,6 +322,17 @@ def run(*, directory):
                  "Lowest qualified error within an FV1 runtime budget "
                  "[for discharge and water accounts](../native_results/equal_cost_fidelity.csv) · "
                  "[for depth and inundation](../native_results/equal_cost_depth_extent.csv)."])
+    timing_provenance = source / "timing_provenance.csv"
+    if timing_provenance.exists():
+        clocks = metrics.csv_read(file=timing_provenance)
+        affected = [r for r in clocks if int(r["changed_timing_intervals"])]
+        decision_files.append(timing_provenance)
+        text.extend(["", f"Of {len(clocks)} completed native continuations, {len(affected)} shared a hydraulic "
+                     "restart carrying timing observations from another execution. Every completed cost in "
+                     "these products uses the original measured intervals of its own policy followed by its measured "
+                     "recession intervals. Both gauges and the accepted step counts must agree for every joined "
+                     "interval. The original restart and timing receipts retain their source identities. "
+                     "[Raw and corrected times by execution](../native_results/timing_provenance.csv)"])
     policy_text, policy_sources = policy_report(source=source, output=output)
     text.extend(["", "## Dense and tiled execution", "", *policy_text])
     histories = directory / "native_step_history/parity.csv"

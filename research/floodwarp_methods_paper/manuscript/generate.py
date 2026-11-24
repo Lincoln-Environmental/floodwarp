@@ -308,6 +308,23 @@ def native_operational_balances(*, study, cells):
     ])
 
 
+def native_timing_correction(*, study):
+    file = study / "fidelity/native_results/timing_provenance.csv"
+    if not file.exists():
+        return ""
+    rows = [r for r in csv_read(file=file) if r["cohort"] == "complete-native-metre"]
+    changed = [r for r in rows if int(r["changed_timing_intervals"]) > 0]
+    if not changed:
+        return ""
+    cells = sum(int(r["initial_intervals"]) for r in rows)
+    return (f"\nAcross {len(rows)} completed native storm configurations, {len(changed)} restart records "
+            f"inherited initial-window timings from a different execution of the same hydraulics. "
+            f"The revised costs use each configuration's own measured initial and recession intervals. "
+            f"Both gauges and accepted step counts agreed at all {cells:,} initial intervals checked. "
+            "All operational costs, budget decisions and advisor inputs use this attribution. "
+            "[Individual timing corrections and run identities](../fidelity/native_results/timing_provenance.csv)\n")
+
+
 def native_budget_evidence(*, study, case, tolerance):
     folder = study / "fidelity/native_results"
     file = folder / "least_cost_fidelity.csv"
@@ -664,6 +681,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 )
                 correction += repaired_budgets(directory=repaired.parent)
                 correction += widespread_plain(study=study)
+                correction += native_timing_correction(study=study)
                 correction += native_budget_evidence(study=study, case="plain-709-spatial-1000x1000", tolerance=5)
                 correction += native_operational_balances(study=study, cells=1024**2)
                 correction += native_advisor_findings(study=study)

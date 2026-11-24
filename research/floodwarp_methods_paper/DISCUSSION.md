@@ -76,6 +76,8 @@ The two decision tables retain the event endpoint, output cadence and reference 
 
 Under intense rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 4.331 and 6.806 m³/s. They exported 28,772 and 109,391 m³ through the common 32-hour endpoint. Under moderate rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 0.894 and 0.915 m³/s. They exported 24,912 and 38,983 m³ through the common 40-hour endpoint. Both gauges passed the recession criterion. These CPU controls measure formulation disagreement. [Six-hour rainfall and complete recession accounts](fidelity/strong_storms/completed.csv)
 
+Across 52 completed native storm configurations, 12 restart records inherited initial-window timings from a different execution of the same hydraulics. The revised costs use each configuration's own measured initial and recession intervals. Both gauges and accepted step counts agreed at all 5,760 initial intervals checked. All operational costs, budget decisions and advisor inputs use this attribution. [Individual timing corrections and run identities](fidelity/native_results/timing_provenance.csv)
+
 ## Fixed-area plain and the hydraulic objective
 
 The following configurations had the lowest measured hydraulic cost at a 5% tolerance. The error bound adds the measured reference sensitivity to the absolute candidate error.

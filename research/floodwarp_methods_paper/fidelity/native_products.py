@@ -275,7 +275,7 @@ def grouped(*, directory, records, target, expected):
 
     with patch.object(recession, "candidates", native_matrix.all_items):
         joined = extended_analysis.attach(
-            directory=directory, groups=groups, target=target
+            directory=directory, groups=groups, target=target, canonical_native_cost=True
         )
     result = {}
     for (cohort, case, _), items in joined.items():
@@ -420,6 +420,12 @@ def run(*, directory, require_complete):
     )
     verification = native_archive.observations(directory=directory, records=records, groups=groups)
     metrics.csv_write(file=target / "verified_archives.csv", rows=verification)
+    timing_sources = [dict(case=case, id=item["id"], parent_id=item["parent_id"], cohort=cohort,
+                           method=item["s"]["method"], dx_m=item["s"]["dx"], end_h=item["s"]["hours"],
+                           corrected_hydraulic_s=item["d"]["hydraulic_s"], **item["d"]["native_timing_provenance"])
+                      for (cohort, case, _), items in groups.items() for item in items
+                      if "native_timing_provenance" in item["d"]]
+    metrics.csv_write(file=target / "timing_provenance.csv", rows=timing_sources)
     final_parity = parity.compare(directory=directory,groups=groups,target=target)
     complete = [
         describe(item=i, settings=settings, status=key[0])

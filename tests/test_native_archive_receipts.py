@@ -59,3 +59,23 @@ def test_saved_recession_cfl_matches_archived_face_bound():
     assert row["gravity_wave_ms"] > 1 and row["axis_velocity_ms"] < 1e-5
     assert abs(row["recorded_face_bound_s"] - row["cell_signal_bound_s"]) < 1e-8
     assert row["next_predictor_s"] == pytest.approx(.95 * row["recorded_face_bound_s"])
+
+
+def test_native_timing_joins_original_policy_intervals_to_the_measured_tail():
+    from research.floodwarp_methods_paper.fidelity.extended_analysis import native_intervals
+
+    first = dict(t_s=60, outlet_m3s=0.1, section_m3s=0.2, steps=10, hydraulic_s=15.0)
+    primary = dict(frames=[first], hydraulic_s=15.0)
+    other = dict(first, hydraulic_s=3.0)
+    tail = dict(other, t_s=120, hydraulic_s=4.0)
+    horizon = dict(frames=[other, tail], hydraulic_s=7.0)
+    frames, elapsed, detail = native_intervals(primary=primary, horizon=horizon)
+    assert elapsed == 19 and [r["hydraulic_s"] for r in frames] == [15, 4]
+    assert detail["changed_timing_intervals"] == 1 and detail["raw_horizon_hydraulic_s"] == 7
+    assert horizon["frames"][0]["hydraulic_s"] == 3
+    for field in ("section_m3s", "outlet_m3s", "steps", "t_s"):
+        invalid = dict(horizon, frames=[dict(other, **{field: 0}), tail])
+        with pytest.raises(ValueError, match="accepted"):
+            native_intervals(primary=primary, horizon=invalid)
+    with pytest.raises(ValueError, match="timing total"):
+        native_intervals(primary=primary, horizon=dict(horizon, hydraulic_s=1))
