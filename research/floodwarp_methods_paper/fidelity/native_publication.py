@@ -7,7 +7,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from research.floodwarp_methods_paper import metrics, runner
-from research.floodwarp_methods_paper.fidelity import native_control_report
+from research.floodwarp_methods_paper.fidelity import native_control_report, recession_cfl
 from research.floodwarp_methods_paper.fidelity.assessment import numerical_identity
 from research.floodwarp_methods_paper.fidelity.figures import save
 
@@ -345,6 +345,21 @@ def run(*, directory):
                      "where available. End-to-end timing includes setup and recorded continuation work.",
                      "", "[Timing identities, quartiles and range](../native_results/timing_distribution.csv)"])
         policy_sources = [*policy_sources,distribution]
+    for evidence in sorted((directory / "wave_clock").glob("*/*.npz")):
+        r = recession_cfl.publish(directory=directory, evidence=evidence)
+        receipt = evidence.with_suffix(".json")
+        endpoint = directory / "endpoint_fields" / evidence.parent.name / evidence.name
+        policy_sources.extend((evidence, receipt, endpoint, Path(recession_cfl.__file__)))
+        text.extend(["", "### Characteristic-wave timestep during recession", "",
+                     f"At {r['end_s']/3600:g} h in {r['case']}, the fastest cell-centred signal lay "
+                     f"at domain coordinates ({r['domain_x_m']:g}, {r['domain_y_m']:g}) m. "
+                     f"The local depth was {r['depth_m']:.4f} m, the gravity-wave speed {r['gravity_wave_ms']:.4f} m/s "
+                     f"and the largest axial flow velocity {r['axis_velocity_ms']:.2g} m/s. "
+                     f"The cell estimate implied a {r['cell_signal_bound_s']:.8f} s CFL bound. "
+                     f"The hydraulic kernel recorded {r['recorded_face_bound_s']:.8f} s across reconstructed faces "
+                     f"and a {r['next_predictor_s']:.8f} s proposal for the next step. "
+                     "The cell location and the global face minimum are independent measurements at one checkpoint. "
+                     f"[Checkpoint, field fingerprints and estimates](../{receipt.relative_to(directory).as_posix()})"])
     settings_file = directory / "application_settings.json"
     settings = json.loads(settings_file.read_text())
     terrain_text, terrain_sources = native_control_report.run(

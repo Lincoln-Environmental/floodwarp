@@ -46,3 +46,16 @@ def test_frozen_horizon_detects_changed_gauge_with_same_final_storage(tmp_path):
     assert native_archive.horizon_evidence(root=tmp_path, ident=ident, parent=parent, end_s=end) == expected
     with pytest.raises(ValueError, match="wrong identity"):
         native_archive.horizon_evidence(root=tmp_path, ident=ident, parent="other", end_s=end)
+
+
+def test_saved_recession_cfl_matches_archived_face_bound():
+    from pathlib import Path
+    from research.floodwarp_methods_paper.fidelity import recession_cfl
+
+    directory = Path(recession_cfl.__file__).parent
+    ident = "42545c16666c1c94109b354a"
+    evidence = directory / "wave_clock" / ident / "72000.npz"
+    row = recession_cfl.compare(evidence=evidence, endpoint=directory / "endpoint_fields" / ident / evidence.name)
+    assert row["gravity_wave_ms"] > 1 and row["axis_velocity_ms"] < 1e-5
+    assert abs(row["recorded_face_bound_s"] - row["cell_signal_bound_s"]) < 1e-8
+    assert row["next_predictor_s"] == pytest.approx(.95 * row["recorded_face_bound_s"])
