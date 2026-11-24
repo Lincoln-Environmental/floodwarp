@@ -470,6 +470,23 @@ def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
         orton_transfer.read_complete(folder=folder, identity=identity)
 
 
+def test_cpu_cuda_comparison_uses_each_accepted_transport_interval_and_actual_rain_window():
+    from research.floodwarp_methods_paper.fidelity import device_controls
+
+    cpu = [dict(t_s=2, steps=4, section_m3s=2., outlet_m3s=1.), dict(t_s=5, steps=5, section_m3s=3., outlet_m3s=2.)]
+    gpu = [dict(cpu[0], outlet_m3s=2.), dict(cpu[1], section_m3s=1., steps=7)]
+    measured = device_controls.interval_differences(cpu=cpu, gpu=gpu)
+    assert measured["intervals_with_different_step_count"] == 1 and measured["outlet_net_difference_m3"] == 2
+    assert measured["section_net_difference_m3"] == -6 and measured["section_max_abs_difference_m3s"] == 2.
+    short = dict(rain_times_s=[0, 2, 5], rain_rates_ms=[1, 0, 0], roughness=.03)
+    long = dict(short, rain_times_s=[0, 2, 10])
+    device_controls.same_forcing(cpu=long, gpu=short, end=5)
+    with pytest.raises(ValueError, match="Different rainfall"):
+        device_controls.same_forcing(cpu=long, gpu=short, end=6)
+    with pytest.raises(ValueError, match="Different rainfall"):
+        device_controls.same_forcing(cpu=dict(long, rain_rates_ms=[1, 1, 0]), gpu=dict(short, rain_rates_ms=[1, 1, 0]), end=5)
+
+
 def test_budget_reprices_on_admissible_terrain_and_preserves_hydraulic_winner(tmp_path):
     from research.floodwarp_methods_paper import metrics
     from research.floodwarp_methods_paper.fidelity import budgets

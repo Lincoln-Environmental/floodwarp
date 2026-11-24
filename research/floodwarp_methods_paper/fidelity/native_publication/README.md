@@ -88,6 +88,8 @@ For decisions requiring preservation of assessed terrain controls, the same cost
 
 [Admissible cost at tolerance for hydrographs and water accounts](../native_results/least_cost_terrain_fidelity.csv) · [Admissible cost for spatial fields](../native_results/least_cost_terrain_depth_extent.csv) · [Hydraulic error within budget](../native_results/equal_cost_terrain_fidelity.csv) · [Spatial error within budget](../native_results/equal_cost_terrain_depth_extent.csv)
 
+For 2 matched CPU/CUDA storm windows, the largest absolute discharge difference was 9.1e-14 m³/s at the outlet and 1.82e-13 m³/s at the internal section. Accepted step counts differed in 0 of 960 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)
+
 Of 65 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
 
 ## Dense and tiled execution

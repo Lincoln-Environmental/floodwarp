@@ -334,6 +334,18 @@ def run(*, directory):
                      "[Admissible cost for spatial fields](../native_results/least_cost_terrain_depth_extent.csv) · "
                      "[Hydraulic error within budget](../native_results/equal_cost_terrain_fidelity.csv) · "
                      "[Spatial error within budget](../native_results/equal_cost_terrain_depth_extent.csv)"])
+    comparison_file = source / "cpu_cuda_initial_controls.csv"
+    if comparison_file.is_file():
+        devices = metrics.csv_read(file=comparison_file)
+        decision_files.append(comparison_file)
+        if devices:
+            text.extend(["", f"For {len(devices)} matched CPU/CUDA storm windows, the largest absolute "
+                         f"discharge difference was {max(float(r['outlet_max_abs_difference_m3s']) for r in devices):.3g} m³/s "
+                         f"at the outlet and {max(float(r['section_max_abs_difference_m3s']) for r in devices):.3g} m³/s "
+                         f"at the internal section. Accepted step counts differed in "
+                         f"{sum(int(r['intervals_with_different_step_count']) for r in devices)} of "
+                         f"{sum(int(r['intervals']) for r in devices):,} intervals. "
+                         "[Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)"])
     timing_provenance = source / "timing_provenance.csv"
     if timing_provenance.exists():
         clocks = metrics.csv_read(file=timing_provenance)

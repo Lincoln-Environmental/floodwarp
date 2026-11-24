@@ -12,6 +12,7 @@ from research.floodwarp_methods_paper.fidelity import (
     assessment,
     budgets,
     catalogue,
+    device_controls,
     extended_analysis,
     final_depth,
     native_archive,
@@ -440,6 +441,7 @@ def run(*, directory, require_complete):
         records = {key:i for key,i in records.items() if i["solver_source"] == current}
     elif require_complete or len(sources) > 1:
         raise ValueError("No current matched numerical implementation for native qualification")
+    device_controls.collect(directory=directory, records=records, target=target)
     prefix_groups = {}
     for i in records.values():
         spec = i["s"]
