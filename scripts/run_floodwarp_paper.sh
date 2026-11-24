@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--resume | --force] [--dry-run]
 Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
         million-terrain million-pilots million-storms million-auto large-references large-refinements heldout-references million-profiles million-repeats recession-controls execution-policy pareto
-        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-step-history native-timing-repeats native-publication summary strong-storm-controls fv1-temporal-control native-grid-maps native-reach-balances free-plane free-reach outlet-storms outlet-results outlet-timing-repeats advisor-design advisor-cli-check orton-transfer outlet-qualification verify-kernels verify-native all historical-all
+        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-step-history native-timing-repeats native-publication summary strong-storm-controls fv1-temporal-control native-grid-maps native-reach-balances embankment-transport free-plane free-reach outlet-storms outlet-results outlet-timing-repeats advisor-design advisor-cli-check orton-transfer outlet-qualification verify-kernels verify-native all historical-all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
 The native-input-audit stage reconstructs and verifies the incised storm rasters on a clean checkout.
 The outlet-states stage verifies archived field hashes and restores missing workstation checkpoints.
@@ -108,6 +108,9 @@ main() {
     if [[ $stage == outlet-states ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.outlet_states "${selected_options[@]}"
     fi
+    if [[ $stage == embankment-transport ]]; then
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.embankment_transport "${selected_options[@]}"
+    fi
     if [[ $stage == native-grid-maps || $stage == native-reach-balances ]]; then
         for flag in "${!selected_options[@]}"; do
             if [[ ${selected_options[flag]} == --force ]]; then selected_options[flag]=--recompute; fi
@@ -158,6 +161,7 @@ main() {
             if [[ $part == fit ]]; then
                 "$0" native-grid-maps "${selected_options[@]}"
                 "$0" native-reach-balances "${selected_options[@]}"
+                "$0" embankment-transport "${selected_options[@]}"
                 "$0" native-step-history "${selected_options[@]}"
             fi
             "$0" native-timing-repeats "${selected_options[@]}"

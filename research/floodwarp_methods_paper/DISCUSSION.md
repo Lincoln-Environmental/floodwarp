@@ -204,6 +204,30 @@ All grids cover the same 1 km². The comparison across grid spacings includes ch
 
 [Per-configuration observations and physical input identities](fidelity/native_results/measured_windows.csv)
 
+### Flow across the transverse embankment
+
+The embankment crest is centred at x = 875 m. At x = 880 m the table partitions accepted eastward transport into the opening band (northings 380–460 m) and the rest of the face. The bed diagnostic takes the highest elevation between eastings 830 and 910 m on each east–west transect. Its reported shift is the median represented-minus-native crest elevation outside the opening band. Each FV1, Hancock and RK2 profile retains signed volumes, including any reversal.
+
+| Storm | Window | End (h) | Hancock grid (m) | In opening band (m³) | Elsewhere (m³) | Median crest shift elsewhere (cm) |
+|---|---|---:|---:|---:|---:|---:|
+| Intense | Initial | 8 | 1 | 25,457 | 8,043 | +0.00 |
+| Intense | Initial | 8 | 5 | 20,310 | 47,517 | -5.89 |
+| Intense | Initial | 8 | 10 | 20,267 | 45,924 | -5.93 |
+| Moderate | Initial | 8 | 1 | 13,294 | 345 | +0.00 |
+| Moderate | Initial | 8 | 5 | 11,248 | 1,170 | -5.89 |
+| Moderate | Initial | 8 | 10 | 10,887 | 888 | -5.93 |
+| Moderate | Common recession | 40 | 1 | 39,052 | 345 | +0.00 |
+| Moderate | Common recession | 40 | 5 | 35,022 | 1,197 | -5.89 |
+| Moderate | Common recession | 40 | 10 | 34,284 | 917 | -5.93 |
+
+Through hour 8 of the moderate storm, the portion of net eastward transport outside the band was 2.5% on the 1 m grid and 9.4% on the 5 m grid.
+
+Through hour 8 of the intense storm, the portion of net eastward transport outside the band was 24.0% on the 1 m grid and 70.1% on the 5 m grid.
+
+This exploratory fixed-section measurement locates changes in net routing during the storm. The opening band includes adjacent land, and grid refinement changes both the represented crest and the hydraulic solution. [All formulations, crest elevations and accepted face-volume identities](fidelity/native_results/embankment_transport.csv)
+
+[Transverse profiles of crest elevation and transport](supplementary/operational_storms/plain_709_embankment_profiles.pdf). Shading marks the opening band.
+
 ### Where export differences develop
 
 The table gives FV1 minus dense Hancock on either side of the internal gauge. The upstream east face is the gauge and the downstream east face is the outlet. Infiltration and retained storage come from separate cell fields. Each reach closes against its initial water, rain and signed transport on all four sides.

@@ -574,6 +574,8 @@ def run(*, directory, require_complete):
                       rows=native_archive.native_grid_differences(directory=directory, records=records))
     metrics.csv_write(file=target / "regional_water.csv",
                       rows=native_archive.regional_water(directory=directory, completed=complete))
+    metrics.csv_write(file=target / "embankment_transport.csv",
+                      rows=native_archive.embankment_observations(directory=directory, windows=original + complete))
     catalogue.database(target=target)
     counted = {r["case"] for r in complete if r["horizon"] == "complete-native-metre"}
     text = [

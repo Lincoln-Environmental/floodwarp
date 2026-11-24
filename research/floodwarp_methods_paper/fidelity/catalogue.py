@@ -134,6 +134,7 @@ def manifest(*, directory, package):
         "endpoint_fields",
         "storage_tail",
         "reach_balances",
+        "embankment_transport",
         "incised_crest",
         "mean_storms",
         "mean_windows",

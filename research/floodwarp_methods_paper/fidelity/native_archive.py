@@ -137,3 +137,41 @@ def regional_water(*, directory, completed):
         result[ident] = [dict(**event, **r, physical_sha=identity["physical_sha"], receipt_id=path.parent.name)
                          for r in reaches]
     return [row for ident in sorted(result) for row in result[ident]]
+
+
+def embankment_observations(*, directory, windows):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity import embankment_transport
+
+    events = {(r["source_id"], r["horizon"]): r for r in windows}
+    files = sorted((directory / "embankment_transport").glob("*/profile.json"))
+    if not files:
+        return []
+    features = {(r["case"], int(r["dx_m"])): r
+                for r in metrics.csv_read(file=directory / "native_features/observations.csv")}
+    implementation = runner.checksum(path=directory / "embankment_transport.py")
+    rows = {}
+    for path in files:
+        saved = json.loads(path.read_text())
+        identity = saved["identity"]
+        archived = identity["event"]
+        key = (archived["source_id"], archived["horizon"])
+        if key not in events or identity["analysis_sha"] != implementation:
+            continue
+        source = events[key]
+        dx = int(archived["dx_m"])
+        normalized = {k: str(v) for k, v in source.items()}
+        expected, _, _, _ = embankment_transport.contracts(directory=directory, event=normalized,
+            feature=features[archived["case"], dx], face=identity["face_m"])
+        if (expected != identity or path.parent.name != runner.digest(identity)[:24]
+                or runner.digest(saved["profile"]) != saved["profile_sha"]):
+            raise ValueError("Embankment measurement does not match the verified forecast and terrain")
+        key = (*key, identity["face_m"])
+        if key in rows:
+            raise ValueError("Duplicate fixed-transect measurement")
+        values = embankment_transport.summarize(data=saved["profile"], dx=dx, window=identity["window_m"])
+        west, south, width, height = identity["window_m"]
+        rows[key] = dict(**archived, face_x_m=identity["face_m"], band_south_m=south, band_north_m=south + height,
+                         crest_strip_west_m=west, crest_strip_east_m=west + width, **values,
+                         physical_sha=identity["physical_sha"], receipt_id=path.parent.name)
+    return [rows[k] for k in sorted(rows)]

@@ -78,7 +78,8 @@ def derived_identity(*, root, study, stage):
         study / "manifests/prevalidation_advisor_freeze.json",
     ]
     if stage in ("manuscript", "verify"):
-        dependencies.append(study / "fidelity/native_results/regional_water.csv")
+        dependencies.extend((study / "fidelity/native_results/regional_water.csv",
+                             study / "fidelity/native_results/embankment_transport.csv"))
     if stage == "verify":
         native = study / "fidelity/native_results"
         dependencies.extend((study / "fidelity/catalogue.py", native / "fidelity.sqlite", *sorted(native.glob("*.csv"))))

@@ -412,6 +412,52 @@ def plain_grid_fidelity(*, study, cases):
                       "[Per-configuration observations and physical input identities](../fidelity/native_results/measured_windows.csv)", ""])
 
 
+def plain_embankment(*, study, cases, face_m):
+    file = study / "fidelity/native_results/embankment_transport.csv"
+    if not file.is_file():
+        return ""
+    rows = [r for r in csv_read(file=file) if r["case"] in cases and r["method"] == "hancock_dense"
+            and float(r["factor"]) == 1 and float(r["face_x_m"]) == face_m]
+    if not rows:
+        return ""
+    bounds = {(r["band_south_m"], r["band_north_m"], r["crest_strip_west_m"], r["crest_strip_east_m"]) for r in rows}
+    if len(bounds) != 1:
+        raise ValueError("Embankment comparisons require a fixed physical window")
+    south, north, west, east = bounds.pop()
+    order = sorted((r["case"], float(r["end_h"]), int(r["dx_m"]), r["horizon"], r) for r in rows)
+    lines = ["", "### Flow across the transverse embankment", "",
+             f"The embankment crest is centred at x = 875 m. At x = {face_m:g} m the table partitions accepted "
+             f"eastward transport into the opening band (northings {south}–{north} m) and the rest of the face. "
+             f"The bed diagnostic takes the highest elevation between eastings {west} and {east} m on each "
+             "east–west transect. Its reported shift is the median represented-minus-native crest elevation "
+             "outside the opening band. Each FV1, Hancock and RK2 profile retains signed volumes, including any reversal.", "",
+             "| Storm | Window | End (h) | Hancock grid (m) | In opening band (m³) | Elsewhere (m³) | "
+             "Median crest shift elsewhere (cm) |", "|---|---|---:|---:|---:|---:|---:|"]
+    for case, end, dx, horizon, r in order:
+        stage = "Initial" if horizon == "original_window" else "Common recession"
+        lines.append(f"| {cases[case]} | {stage} | {end:g} | {dx} | {float(r['net_in_band_m3']):,.0f} | "
+                     f"{float(r['net_outside_band_m3']):,.0f} | {float(r['outside_median_crest_shift_cm']):+.2f} |")
+    initial = {(r["case"], int(r["dx_m"])): r for r in rows if r["horizon"] == "original_window"}
+    for case, label in cases.items():
+        if (case, 1) not in initial or (case, 5) not in initial:
+            continue
+        fine, coarse = initial[case, 1], initial[case, 5]
+        outside = [float(r["net_outside_band_m3"]) for r in (fine, coarse)]
+        total = [float(r["net_section_m3"]) for r in (fine, coarse)]
+        if all(t > 0 and 0 <= v <= t for t, v in zip(total, outside, strict=True)):
+            lines.extend(["", f"Through hour {float(fine['end_h']):g} of the {label.lower()} storm, the portion of net "
+                          f"eastward transport outside the band was {100 * outside[0] / total[0]:.1f}% on the 1 m "
+                          f"grid and {100 * outside[1] / total[1]:.1f}% on the 5 m grid."])
+    lines.extend(["", "This exploratory fixed-section measurement locates changes in net routing during the storm. "
+                  "The opening band includes adjacent land, and grid refinement changes both the represented crest and "
+                  "the hydraulic solution. [All formulations, crest elevations and accepted face-volume identities]"
+                  "(../fidelity/native_results/embankment_transport.csv)", ""])
+    figure = "supplementary/operational_storms/plain_709_embankment_profiles.pdf"
+    if (study / figure).is_file():
+        lines.extend([f"[Transverse profiles of crest elevation and transport](../{figure}). Shading marks the opening band.", ""])
+    return "\n".join(lines)
+
+
 def native_reach_contrasts(*, study):
     file = study / "fidelity/native_results/regional_water.csv"
     if not file.exists():
@@ -946,6 +992,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                         )
                 correction += plain_grid_fidelity(study=study, cases={"plain-709-moderate-1000x1000": "Moderate",
                                                                      "plain-709-intense-1000x1000": "Intense"})
+                correction += plain_embankment(study=study, cases={"plain-709-moderate-1000x1000": "Moderate",
+                                                                  "plain-709-intense-1000x1000": "Intense"}, face_m=880)
                 correction += native_reach_contrasts(study=study)
                 correction += native_grid_field_comparison(study=study)
                 correction += native_advisor_findings(study=study)

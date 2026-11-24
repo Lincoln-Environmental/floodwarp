@@ -874,6 +874,61 @@ def plain_extent_panels(*, study, cases, methods, spacings, hours, threshold_cm)
     return files
 
 
+def embankment_profiles(*, study, cases, spacings, face_m, hours):
+    from research.floodwarp_methods_paper import runner
+
+    directory = study / "fidelity"
+    table = directory / "native_results/embankment_transport.csv"
+    if not table.is_file():
+        return
+    records = {}
+    for row in csv_read(file=table):
+        dx = int(row["dx_m"])
+        if (row["case"] in cases and dx in spacings and row["method"] == "hancock_dense"
+                and row["horizon"] == "original_window" and float(row["factor"]) == 1
+                and float(row["face_x_m"]) == face_m and float(row["end_h"]) == hours):
+            records[row["case"], dx] = row
+    if any((case, dx) not in records for case in cases for dx in spacings):
+        return
+    fig, axes = plt.subplots(1, 1 + len(cases), sharex=True, figsize=(8, 3.3), layout="constrained")
+    bounds = set()
+    for dx, (colour, style) in spacings.items():
+        previous = None
+        for col, (case, label) in enumerate(cases.items(), start=1):
+            row = records[case, dx]
+            ident = row["receipt_id"]
+            raw = json.loads((directory / "embankment_transport" / ident / "profile.json").read_text())
+            if runner.digest(raw["identity"])[:24] != ident or runner.digest(raw["profile"]) != raw["profile_sha"]:
+                raise ValueError("Changed archived crest or transport profile")
+            profile = raw["profile"]
+            z = np.asarray(profile["crest_m"])
+            bounds.add((float(row["band_south_m"]), float(row["band_north_m"]), z.size * dx))
+            edges = np.arange(z.size + 1) * dx
+            if previous is None:
+                outside = (edges[1:] <= float(row["band_south_m"])) | (edges[:-1] >= float(row["band_north_m"]))
+                axes[0].stairs(np.where(outside, z, np.nan), edges, baseline=None, color=colour,
+                               linestyle=style, linewidth=1, label=f"{dx} m")
+                previous = z
+            elif not np.array_equal(z, previous):
+                raise ValueError("Storm profiles refer to different represented embankments")
+            ax = axes[col]
+            cumulative = np.r_[0., np.cumsum(profile["accepted_eastward_m3"])] / 1000
+            ax.plot(edges, cumulative, color=colour, linestyle=style, linewidth=1)
+            ax.set_title(label)
+            ax.set_ylabel("Net volume summed from south (10³ m³)")
+    if len(bounds) != 1:
+        raise ValueError("Embankment profiles use different transverse extents")
+    south, north, width = bounds.pop()
+    for ax in axes:
+        ax.axvspan(south, north, color="#99763f", alpha=.14, linewidth=0)
+        ax.set(xlim=(0, width), xlabel="Northing (m)")
+        ax.grid(axis="y", alpha=.18)
+    axes[0].set(title="Crest outside opening band", ylabel="Maximum bed elevation in control strip (m)")
+    axes[0].legend(title="Hydraulic grid", loc="lower right")
+    fig.suptitle(f"Plain embankment and Hancock transport at x = {face_m:g} m through hour {hours:g}")
+    save(fig=fig, folder=study / "supplementary/operational_storms", name="plain_709_embankment_profiles")
+
+
 def from_records(*, study):
     paper_style()
     out = study / "figures"
@@ -898,6 +953,10 @@ def from_records(*, study):
                                            "plain-709-intense-1000x1000": "Intense"},
                         methods={"fv1": "FV1", "hancock_dense": "Hancock", "adaptive": "RK2"},
                         spacings=(1, 5, 10), hours=8, threshold_cm=10)
+    embankment_profiles(study=study, cases={"plain-709-moderate-1000x1000": "Moderate rain",
+                                            "plain-709-intense-1000x1000": "Intense rain"},
+                        spacings={1: ("#0072B2", "-"), 5: ("#D55E00", "--"), 10: ("#333333", ":")},
+                        face_m=880, hours=8)
     orton_transfer(study=study, out=out)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),
