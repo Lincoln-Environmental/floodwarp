@@ -18,12 +18,28 @@ def status(*, directory):
         print(
             f"{key}: {sum(1 for file in folder.glob('*/*.npz') if not file.name.endswith('.tmp.npz'))} completed runs"
         )
-    for item in ("legacy", "expanded", "double"):
-        done = 0
-        for file in (directory / "storm_runs").glob("*/result.json"):
-            if json.loads(file.read_text())["cohort"] == item:
-                done += 1
-        prints.append(f"Additional {item} reference/control forecasts: {done}")
+    counts = Counter(
+        json.loads(file.read_text())["cohort"]
+        for file in (directory / "storm_runs").glob("*/result.json")
+    )
+    for cohort in ("legacy", "expanded", "double"):
+        prints.append(
+            f"Additional {cohort} original-window controls completed: {counts[cohort]}"
+        )
+    incised = json.loads((directory / "incised_settings.json").read_text())
+    cases = list((directory / "incised_crest").glob("*/result.json"))
+    prints.append(
+        f"Incised fixed-bed controls through the original window: {len(cases)}/{len(incised['controls'])}."
+    )
+    for file in sorted(cases, key=modified):
+        result = json.loads(file.read_text())
+        inputs = result["inputs"]
+        spec = inputs["spec"]
+        observed = result["data"]
+        prints.append(
+            f"  {spec['method']} at {spec['dx']:g} m, CFL {0.4 * inputs['factor']:g}: "
+            f"{observed['hours_completed']:g} h simulated, {observed['steps']:,} accepted steps."
+        )
     by_group = Counter()
     primary_cases = json.loads((directory / "operational_settings.json").read_text())[
         "primary_cases"
@@ -74,6 +90,11 @@ def status(*, directory):
         spec = json.loads((file.parent / "spec.json").read_text())
         prints.append(
             f"Latest spatial snapshot: {spec['case']}, {spec['method']} at {spec['dx']:g} m, CFL {spec['cfl']:g}, {int(file.stem) / 3600:g} simulated hours."
+        )
+    failed = list((directory / "verification/failed_reference_attempts").glob("*.json"))
+    if failed:
+        prints.append(
+            f"Archived failed reference attempts excluded from hydraulic statistics: {len(failed)}."
         )
     for file in sorted((directory / "verification").glob("*/passed.json")):
         prints.append(json.loads(file.read_text())["summary"])
