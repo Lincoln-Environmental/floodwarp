@@ -1238,3 +1238,27 @@ def test_spatial_depth_error_uses_each_practical_wet_union_on_matched_support():
     fields = difference(candidate=(dry, dry), reference=(dry, dry), support=10, thresholds=[.05, .10])
     assert fields["wet_union_area_5cm_m2"] == 0
     assert fields["wet_union_depth_rmse_5cm_m"] is None
+
+
+def test_native_paper_budgets_keep_qualified_event_and_unmet_budget(tmp_path):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.tables.generate import add_decision_tables
+
+    base = dict(cohort="complete-native-metre", case="event", representation="area means", station="section",
+                end_h=20, interval_s=60, reference_id="fine", objective="peak_bias_pct", measured_error="",
+                reference_sensitivity="", execution="", runtime_s="", steps="", hydraulic_s_per_step="")
+    feasible = dict(base, tolerance=5, assessable=3, feasible=0, method="", dx="", id="")
+    budget = dict(base, assessable_in_budget=0, budget_dx=10, budget_s=1.5, ranking_status="unassessable",
+                  selected_method="", selected_dx="", selected_id="")
+    for name, rows in (("least_cost", [feasible, dict(feasible, case="unresolved", assessable=0)]),
+                       ("equal_cost", [budget, dict(budget, case="unresolved")])):
+        metrics.csv_write(file=tmp_path / f"{name}_fidelity.csv", rows=rows)
+        metrics.csv_write(file=tmp_path / f"{name}_depth_extent.csv", rows=[])
+    output = {}
+    add_decision_tables(output=output, directory=tmp_path, incised=False)
+    _, cost = output["21_native_cost_at_tolerance"]
+    _, error = output["22_native_error_at_budget"]
+    assert len(cost) == len(error) == 1
+    assert cost[0]["case"] == error[0]["case"] == "event"
+    assert cost[0]["qualified"] == "3" and cost[0]["feasible"] == "0"
+    assert error[0]["qualified_in_budget"] == "0" and error[0]["id"] == ""

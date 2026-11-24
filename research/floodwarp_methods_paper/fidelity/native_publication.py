@@ -310,6 +310,18 @@ def run(*, directory):
             "[Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)",
         ]
     )
+    decision_files = [source / f"{choice}_{kind}.csv" for choice in ("least_cost", "equal_cost")
+                      for kind in ("fidelity", "depth_extent")]
+    text.extend(["", "## Measured budget decisions", "",
+                 "Each decision fixes the event, reference, gauge or spatial support, cadence and physical endpoint. "
+                 "Tolerance compliance includes the measured reference sensitivity. "
+                 "An empty selection records a budget or tolerance for which no qualified choice was measured.", "",
+                 "Lowest hydraulic cost meeting a tolerance "
+                 "[for discharge and water accounts](../native_results/least_cost_fidelity.csv) · "
+                 "[for depth and inundation](../native_results/least_cost_depth_extent.csv). "
+                 "Lowest qualified error within an FV1 runtime budget "
+                 "[for discharge and water accounts](../native_results/equal_cost_fidelity.csv) · "
+                 "[for depth and inundation](../native_results/equal_cost_depth_extent.csv)."])
     policy_text, policy_sources = policy_report(source=source, output=output)
     text.extend(["", "## Dense and tiled execution", "", *policy_text])
     histories = directory / "native_step_history/parity.csv"
@@ -352,6 +364,7 @@ def run(*, directory):
                 source / "recession_depth_pareto.csv",
                 Path(__file__),
                 *policy_sources,
+                *decision_files,
                 *terrain_sources,
                 settings_file,
                 Path(native_control_report.__file__),

@@ -40,6 +40,12 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
+## Measured budget decisions
+
+Each decision fixes the event, reference, gauge or spatial support, cadence and physical endpoint. Tolerance compliance includes the measured reference sensitivity. An empty selection records a budget or tolerance for which no qualified choice was measured.
+
+Lowest hydraulic cost meeting a tolerance [for discharge and water accounts](../native_results/least_cost_fidelity.csv) · [for depth and inundation](../native_results/least_cost_depth_extent.csv). Lowest qualified error within an FV1 runtime budget [for discharge and water accounts](../native_results/equal_cost_fidelity.csv) · [for depth and inundation](../native_results/equal_cost_depth_extent.csv).
+
 ## Dense and tiled execution
 
 [complete-native-metre, 6 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
