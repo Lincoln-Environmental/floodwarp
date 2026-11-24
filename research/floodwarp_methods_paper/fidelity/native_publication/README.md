@@ -55,6 +55,16 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | plain-701-spatial-10240x10240 | 10 | LI | native | 1.0 | 52 | 300 | 10.579 | 0.000 | 0 | 42.69 | 18,644 |
 | plain-701-spatial-10240x10240 | 10 | MUSCL–Euler | dense | 1.0 | 52 | 300 | 10.300 | 0.000 | 0 | 90.75 | 41,095 |
 | plain-701-spatial-10240x10240 | 10 | FV2 RK2 | dense | 1.0 | 52 | 300 | 10.643 | 0.000 | 0 | 159.34 | 42,003 |
+| hill-8500-back-1000x1000 | 10 | FV1 | sparse | 1.0 | 12 | 60 | 8.221 | 16.230 | 132,475 | 2.15 | 28,667 |
+| hill-8500-back-1000x1000 | 10 | Hancock | dense | 1.0 | 12 | 60 | 8.197 | 16.055 | 133,011 | 2.28 | 22,164 |
+| hill-8500-back-1000x1000 | 10 | FV2 RK2 | dense | 1.0 | 12 | 60 | 8.202 | 16.065 | 133,006 | 3.45 | 24,280 |
+| hill-8500-back-1000x1000 | 5 | FV1 | sparse | 1.0 | 12 | 60 | 8.230 | 16.220 | 132,557 | 7.53 | 52,334 |
+| hill-8500-back-1000x1000 | 5 | Hancock | dense | 1.0 | 12 | 60 | 8.238 | 16.136 | 132,504 | 11.06 | 47,817 |
+| hill-8500-back-1000x1000 | 5 | FV2 RK2 | dense | 1.0 | 12 | 60 | 8.237 | 16.138 | 132,498 | 15.68 | 50,031 |
+| hill-8500-back-1000x1000 | 1 | FV1 | sparse | 1.0 | 12 | 60 | 8.238 | 16.126 | 132,627 | 638.53 | 279,440 |
+| hill-8500-back-1000x1000 | 1 | Hancock | dense | 1.0 | 12 | 60 | 8.250 | 16.159 | 131,901 | 1128.88 | 279,837 |
+| hill-8500-back-1000x1000 | 1 | FV2 RK2 | dense | 1.0 | 12 | 60 | 8.250 | 16.159 | 131,900 | 1613.27 | 284,842 |
+| hill-8500-back-1000x1000 | 1 | FV2 RK2 | dense | 0.5 | 12 | 60 | 8.250 | 16.160 | 131,861 | 3174.19 | 562,158 |
 | rolling-704-soil-5120x5120 | 5 | FV1 | sparse | 1.0 | 12 | 300 | 74.948 | 61.208 | 292,147 | 69.96 | 37,349 |
 | rolling-704-soil-5120x5120 | 5 | Hancock | dense | 1.0 | 12 | 300 | 63.865 | 25.644 | 130,400 | 170.13 | 48,422 |
 | rolling-704-soil-5120x5120 | 5 | Hancock | tiles | 1.0 | 12 | 300 | 63.865 | 25.644 | 130,400 | 140.04 | 48,422 |
@@ -64,7 +74,7 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | fan-705-spatial-5120x5120 | 5 | Hancock | tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.62 | 35,833 |
 | fan-705-spatial-5120x5120 | 5 | Hancock | auto → tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.60 | 35,833 |
 
-40 of 486 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
+64 of 567 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
@@ -74,7 +84,7 @@ Each decision fixes the event, reference, gauge or spatial support, cadence and 
 
 Lowest hydraulic cost meeting a tolerance [for discharge and water accounts](../native_results/least_cost_fidelity.csv) · [for depth and inundation](../native_results/least_cost_depth_extent.csv). Lowest qualified error within an FV1 runtime budget [for discharge and water accounts](../native_results/equal_cost_fidelity.csv) · [for depth and inundation](../native_results/equal_cost_depth_extent.csv).
 
-Of 55 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
+Of 65 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
 
 ## Dense and tiled execution
 
@@ -101,7 +111,7 @@ Each upper-panel point represents a measured forecast window. Each lower-panel p
 
 The first ratio measures the cost of selecting a schedule using the two explicit runs. The second compares the measured automatic run with its selected explicit counterpart and includes timing variability. Each cost uses its available hydraulic timing median. [Run identities, sample sizes and timing ranges](execution_choice_cost.csv)
 
-0 of 55 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
+0 of 65 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
 
 [Timing identities, quartiles and range](../native_results/timing_distribution.csv)
 

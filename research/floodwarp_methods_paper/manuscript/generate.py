@@ -277,32 +277,47 @@ def native_operational_balances(*, study, minimum_cells):
              for r in csv_read(file=folder / "timing_distribution.csv")
              if r["horizon"] == "completed recession"
              for ident in r["run_ids"].split()}
+    verified = {(r["fv1_id"], r["dense_id"], r["tiled_id"]) for r in csv_read(file=pairs)
+                if r["cohort"] == "complete-native-metre"}
+    groups = defaultdict(dict)
+    for r in completed.values():
+        if int(r["cells"]) >= minimum_cells and float(r["factor"]) == 1:
+            key = r["case"], r["native_sha"], int(r["dx_m"]), float(r["interval_s"]), float(r["end_h"]), r["hardware"]
+            if r["method"] in groups[key]:
+                raise ValueError("Duplicate primary method in matched native costs")
+            groups[key][r["method"]] = r
     rows = []
-    for p in csv_read(file=pairs):
-        ids = [p[k] for k in ("fv1_id", "dense_id", "tiled_id")]
-        if (p["cohort"] != "complete-native-metre" or int(p["cells"]) < minimum_cells
-                or not all(key in completed for key in ids)):
+    for (case, _, dx, cadence, end_h, _), methods in sorted(groups.items()):
+        fv = methods.get("fv1")
+        options = [methods[m] for m in ("hancock_dense", "hancock_adaptive") if m in methods]
+        if fv is None or not options:
             continue
-        fv, h, tiled = (completed[key] for key in ids)
+        if len(options) == 2 and (fv["source_id"], options[0]["source_id"], options[1]["source_id"]) not in verified:
+            raise ValueError("Native costs lack hydraulic parity for the compared Hancock executions")
+        best = min(times[r["source_id"]] for r in options)
+        winners = [r for r in options if times[r["source_id"]] == best]
+        h = winners[0]
+        policy = " / ".join(r["execution_mode"] for r in winners)
+        if len(options) == 1:
+            policy += " only measured"
+        cells = int(fv["cells"])
         delta_export = float(fv["net_outlet_m3"]) - float(h["net_outlet_m3"])
         delta_soil = float(fv["infiltration_m3"]) - float(h["infiltration_m3"])
-        best = min(times[h["source_id"]], times[tiled["source_id"]])
         ratio = best / times[fv["source_id"]]
-        area_km2 = int(p["cells"]) * float(p["dx_m"]) ** 2 / 1e6
-        rows.append(f"| {p['case']} | {int(p['cells']):,} | {area_km2:.3f} | {p['dx_m']} | {float(p['end_h']):g} | {float(h['interval_s']):g} | "
+        rows.append(f"| {case} | {cells:,} | {cells * dx**2 / 1e6:.3f} | {dx} | {end_h:g} | {cadence:g} | "
                     f"{float(fv['outlet_peak_m3s']):.5g} | {float(h['outlet_peak_m3s']):.5g} | "
-                    f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {ratio:.3f} |")
+                    f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {policy} | {ratio:.3f} |")
     if not rows:
         return ""
     return "\n" + "\n".join([
         f"## Complete storms on native-metre terrain at {minimum_cells:,} cells and above", "",
         "Each row compares solvers on the same event and physical footprint. Domain area varies between rows. "
         "Peaks are interval means of accepted outlet transport. The volume columns give FV1 minus Hancock. "
-        "Costs use the faster of the two verified explicit Hancock policies through the common recession endpoint "
+        "Costs use the fastest measured explicit Hancock policy through the common recession endpoint "
         "and the median hydraulic time where repeats exist.", "",
         "| Storm | Cells | Area (km²) | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | "
-        "Δ net export (m³) | Δ infiltration (m³) | Hancock / FV1 time |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|", *rows, "",
+        "Δ net export (m³) | Δ infiltration (m³) | Measured Hancock policy | Hancock / FV1 time |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|", *rows, "",
         "The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions "
         "use the independently screened reference for each observable. "
         "[Water budgets and internal gauges](../fidelity/native_results/measured_windows.csv) · "
@@ -327,54 +342,72 @@ def native_timing_correction(*, study):
             "[Individual timing corrections and run identities](../fidelity/native_results/timing_provenance.csv)\n")
 
 
-def native_budget_evidence(*, study, case, tolerance):
+def native_budget_evidence(*, study, tolerance):
     folder = study / "fidelity/native_results"
     file = folder / "least_cost_fidelity.csv"
     if not file.is_file():
         return ""
-    labels = {("section", "peak_bias_pct"): "internal peak discharge",
-              ("section", "shape_tv_pct"): "internal hydrograph shape",
-              ("outlet", "width80_bias_pct"): "central 80% outlet duration",
-              ("outlet", "infiltration_bias_pct"): "cumulative catchment infiltration"}
-    choices = [r for r in csv_read(file=file)
-               if r["case"] == case and r["cohort"] == "complete-native-metre"
-               and float(r["tolerance"]) == tolerance and r["id"]
-               and (r["station"], r["objective"]) in labels]
-    if not choices:
-        return ""
-    text = ["", "## Fixed-area plain and the hydraulic objective", "",
-            f"The following configurations had the lowest measured hydraulic cost at a {tolerance:g}% tolerance. "
-            "The error bound adds the measured reference sensitivity to the absolute candidate error.", "",
-            "| Objective | Grid (m) | Method | End (h) | Error bound (%) | GPU hydraulic time (s) |",
-            "|---|---:|---|---:|---:|---:|"]
-    for r in choices:
-        text.append(f"| {labels[r['station'], r['objective']]} | {r['dx']} | {r['method']} | "
-                    f"{float(r['end_h']):g} | {float(r['conservative_error']):.2f} | {float(r['runtime_s']):.3f} |")
     checks = [r for r in csv_read(file=folder / "reference_checks.csv")
-              if r["case"] == case and r["cohort"] == "complete-native-metre" and r["station"] == "outlet"
-              and r["metric"] == "peak_bias_pct" and r["space"] and r["cross"] and r["time"]]
-    for r in checks:
-        outcome = "passed" if r["qualified"] == "True" else "exceeded"
-        text.extend(["", f"For outlet peak magnitude, RK2 spatial refinement changed the estimate by "
-                     f"{float(r['space']):.2f}%, compared with {float(r['cross']):.2f}% across fine-grid formulations "
-                     f"and {float(r['time']):.3f}% after halving CFL. The reference {outcome} the "
-                     f"{float(r['criterion']):g}% sensitivity criterion."])
+              if r["cohort"] == "complete-native-metre" and r["station"] == "outlet"
+              and r["metric"] == "peak_bias_pct" and all(r[k] for k in ("space_id", "cross_id", "time_id"))]
+    references = {(r["case"], r["reference_id"]) for r in checks}
+    if not references:
+        return ""
+    scopes = (("outlet", "peak_bias_pct"), ("outlet", "shape_tv_pct"), ("outlet", "net_export_bias_pct"),
+              ("outlet", "infiltration_bias_pct"), ("outlet", "width80_bias_pct"),
+              ("section", "peak_bias_pct"), ("section", "shape_tv_pct"))
+    labels = ("Outlet peak", "Outlet shape", "Net export", "Infiltration", "Outlet width", "Internal peak", "Internal shape")
+    groups = defaultdict(dict)
+    for r in csv_read(file=file):
+        scope = r["station"], r["objective"]
+        if (r["cohort"] != "complete-native-metre" or (r["case"], r["reference_id"]) not in references
+                or float(r["tolerance"]) != tolerance or scope not in scopes):
+            continue
+        key = r["case"], float(r["end_h"]), float(r["interval_s"]), r["reference_id"]
+        values = groups[key].setdefault(scope, [])
+        if not r["id"]:
+            values.append("Outside tolerance" if int(r["assessable"]) else "Unresolved")
+        else:
+            method = {"fv1": "FV1", "adaptive": "RK2", "hancock_auto": "Hancock auto",
+                      "hancock_dense": "Hancock dense", "hancock_adaptive": "Hancock tiles"}.get(r["method"], r["method"])
+            values.append(f"{method} {r['dx']} m ({float(r['runtime_s']):.3g} s)")
+    text = ["", "## Fixed-area storms and the hydraulic objective", "",
+            f"The table gives the cheapest measured configuration at a {tolerance:g}% tolerance on each "
+            "observable. Compliance includes the measured reference sensitivity. Each row fixes the storm, "
+            "reference, reporting interval and recession endpoint. Shape measures redistribution of normalised "
+            "discharge volume, and width measures the central 80% of that volume.", "",
+            "| Storm | End (h) | Interval (s) | " + " | ".join(labels) + " |",
+            "|---|---:|---:|" + "---|" * len(labels)]
+    for (case, hours, cadence, _), decisions in sorted(groups.items()):
+        text.append(f"| {case} | {hours:g} | {cadence:g} | "
+                    + " | ".join(" / ".join(decisions.get(scope, ["Unresolved"])) for scope in scopes) + " |")
+    text.extend(["", "Unresolved marks observations without an eligible hydraulic reference. Outside tolerance "
+                 "marks a qualified comparison in which every measured candidate exceeds the error bound.", "",
+                 "| Storm | RK2 spatial peak difference (%) | Fine formulation difference (%) | Half-CFL difference (%) | Peak reference |",
+                 "|---|---:|---:|---:|---|"])
+    for r in sorted(checks, key=case_name):
+        values = [fmt(r[k]) for k in ("space", "cross", "time")]
+        outcome = "Qualified" if r["qualified"] == "True" else "Unresolved"
+        text.append(f"| {r['case']} | " + " | ".join(values) + f" | {outcome} |")
     for r in csv_read(file=folder / "recession_depth.csv"):
-        if r["case"] != case or r["cohort"] != "complete-native-metre" or r["id"] != r["reference_id"]:
+        if (r["cohort"] != "complete-native-metre" or r["id"] != r["reference_id"]
+                or (r["case"], r["reference_id"]) not in references):
             continue
         support = float(r["support_m"])
         area_final = float(r["reference_wet_area_5cm_m2"])
         area_max = float(r["maximum_reference_wet_area_10cm_m2"])
-        text.extend(["", f"On the common {support:g} m assessment grid, the numerical reference retained "
+        text.extend(["", f"On the {support:g} m assessment grid for {r['case']}, the fine reference retained "
                      f"{area_final / support**2:g} cells ({area_final:g} m²) at or above 5 cm at the endpoint. "
-                     f"The area-averaged cell maxima reached 10 cm on {area_max / support**2:g} cells "
-                     f"({area_max:g} m²). Extent scores describe these small footprints. "
-                     "[Depth, assessment support and wet areas](../fidelity/native_results/recession_depth.csv)"])
-    text.extend(["", "Timing repeat counts and spread are reported for each policy. "
-                 "[Cost at a stated tolerance](../tables/21_native_cost_at_tolerance.md) · "
+                     f"The area-averaged cell maxima reached 10 cm on {area_max / support**2:g} cells ({area_max:g} m²)."])
+    text.extend(["", "[Cost and error bounds at a stated tolerance](../tables/21_native_cost_at_tolerance.md) · "
                  "[Error within an FV1 runtime budget](../tables/22_native_error_at_budget.md) · "
-                 "[Independent timing observations](../fidelity/native_results/timing_distribution.csv)", ""])
+                 "[Timing repeats and spread](../fidelity/native_results/timing_distribution.csv) · "
+                 "[Depth and wet-area support](../fidelity/native_results/recession_depth.csv)", ""])
     return "\n".join(text)
+
+
+def case_name(row):
+    return row["case"]
 
 
 def widespread_plain(*, study):
@@ -695,7 +728,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 correction += repaired_budgets(directory=repaired.parent)
                 correction += widespread_plain(study=study)
                 correction += native_timing_correction(study=study)
-                correction += native_budget_evidence(study=study, case="plain-709-spatial-1000x1000", tolerance=5)
+                correction += native_budget_evidence(study=study, tolerance=5)
                 correction += native_operational_balances(study=study, minimum_cells=250_000)
                 correction += native_advisor_findings(study=study)
         transfer = study / "fidelity/orton_transfer/transfer.csv"

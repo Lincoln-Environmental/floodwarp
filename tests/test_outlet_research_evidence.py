@@ -470,6 +470,32 @@ def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
         orton_transfer.read_complete(folder=folder, identity=identity)
 
 
+def test_manuscript_reports_single_measured_hancock_policy_and_checks_dual_policy_parity(tmp_path):
+    from research.floodwarp_methods_paper import metrics, runner
+    from research.floodwarp_methods_paper.manuscript.generate import native_operational_balances
+
+    directory = tmp_path / "fidelity/native_results"
+    runner.write_json(path=tmp_path / "fidelity/outlet_results/sources.json", data={"solver": "repaired"})
+    base = dict(case="hill", native_sha="bed", dx_m=1, interval_s=60, end_h=12, hardware="test",
+                cells=1000000, factor=1, solver_source="repaired", horizon="complete-native-metre",
+                net_outlet_m3=1300, infiltration_m3=100, outlet_peak_m3s=10)
+    dense = dict(base, method="hancock_dense", source_id="h", execution_mode="dense")
+    fv1 = dict(base, method="fv1", source_id="f", execution_mode="sparse")
+    metrics.csv_write(file=directory / "measured_windows.csv", rows=[dense, fv1])
+    metrics.csv_write(file=directory / "policy_cost_events.csv", rows=[])
+    metrics.csv_write(file=directory / "timing_distribution.csv", rows=[
+        dict(horizon="completed recession", hydraulic_median_s=t, run_ids=ident)
+        for ident, t in (("h", 1.5), ("f", 1), ("t", 1.1))])
+    assert "| dense only measured | 1.500 |" in native_operational_balances(study=tmp_path, minimum_cells=1000000)
+    tiled = dict(base, method="hancock_adaptive", source_id="t", execution_mode="tiles")
+    metrics.csv_write(file=directory / "measured_windows.csv", rows=[dense, fv1, tiled])
+    with pytest.raises(ValueError, match="lack hydraulic parity"):
+        native_operational_balances(study=tmp_path, minimum_cells=1000000)
+    metrics.csv_write(file=directory / "policy_cost_events.csv", rows=[
+        dict(fv1_id="f", dense_id="h", tiled_id="t", cohort="complete-native-metre")])
+    assert "| tiles | 1.100 |" in native_operational_balances(study=tmp_path, minimum_cells=1000000)
+
+
 def test_publication_inventory_requires_incised_decisions_and_measured_orton_products(tmp_path):
     from research.floodwarp_methods_paper.analysis import verify_publication_inventory
 

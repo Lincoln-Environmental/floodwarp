@@ -134,42 +134,48 @@ The two decision tables retain the event endpoint, output cadence and reference 
 
 Under intense rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 4.331 and 6.806 m³/s. They exported 28,772 and 109,391 m³ through the common 32-hour endpoint. Under moderate rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 0.894 and 0.915 m³/s. They exported 24,912 and 38,983 m³ through the common 40-hour endpoint. Both gauges passed the recession criterion. These CPU controls measure formulation disagreement. [Six-hour rainfall and complete recession accounts](../fidelity/strong_storms/completed.csv)
 
-Across 55 completed native storm configurations, 13 restart records inherited initial-window timings from a different execution of the same hydraulics. The revised costs use each configuration's own measured initial and recession intervals. Both gauges and accepted step counts agreed at all 6,048 initial intervals checked. All operational costs, budget decisions and advisor inputs use this attribution. [Individual timing corrections and run identities](../fidelity/native_results/timing_provenance.csv)
+Across 65 completed native storm configurations, 13 restart records inherited initial-window timings from a different execution of the same hydraulics. The revised costs use each configuration's own measured initial and recession intervals. Both gauges and accepted step counts agreed at all 10,848 initial intervals checked. All operational costs, budget decisions and advisor inputs use this attribution. [Individual timing corrections and run identities](../fidelity/native_results/timing_provenance.csv)
 
-## Fixed-area plain and the hydraulic objective
+## Fixed-area storms and the hydraulic objective
 
-The following configurations had the lowest measured hydraulic cost at a 5% tolerance. The error bound adds the measured reference sensitivity to the absolute candidate error.
+The table gives the cheapest measured configuration at a 5% tolerance on each observable. Compliance includes the measured reference sensitivity. Each row fixes the storm, reference, reporting interval and recession endpoint. Shape measures redistribution of normalised discharge volume, and width measures the central 80% of that volume.
 
-| Objective | Grid (m) | Method | End (h) | Error bound (%) | GPU hydraulic time (s) |
-|---|---:|---|---:|---:|---:|
-| central 80% outlet duration | 10 | hancock_auto | 20 | 1.94 | 2.842 |
-| cumulative catchment infiltration | 10 | fv1 | 20 | 3.08 | 2.294 |
-| internal peak discharge | 10 | hancock_auto | 20 | 2.78 | 2.842 |
-| internal hydrograph shape | 10 | hancock_auto | 20 | 0.63 | 2.842 |
+| Storm | End (h) | Interval (s) | Outlet peak | Outlet shape | Net export | Infiltration | Outlet width | Internal peak | Internal shape |
+|---|---:|---:|---|---|---|---|---|---|---|
+| hill-8500-back-1000x1000 | 12 | 60 | FV1 10 m (2.15 s) | Unresolved | FV1 10 m (2.15 s) | Outside tolerance | Unresolved | FV1 10 m (2.15 s) | Unresolved |
+| plain-709-spatial-1000x1000 | 20 | 300 | Unresolved | Unresolved | Unresolved | FV1 10 m (2.29 s) | Hancock auto 10 m (2.84 s) | Hancock auto 10 m (2.84 s) | Hancock auto 10 m (2.84 s) |
 
-For outlet peak magnitude, RK2 spatial refinement changed the estimate by 14.78%, compared with 0.14% across fine-grid formulations and 0.017% after halving CFL. The reference exceeded the 5% sensitivity criterion.
+Unresolved marks observations without an eligible hydraulic reference. Outside tolerance marks a qualified comparison in which every measured candidate exceeds the error bound.
 
-On the common 10 m assessment grid, the numerical reference retained 7 cells (700 m²) at or above 5 cm at the endpoint. The area-averaged cell maxima reached 10 cm on 2 cells (200 m²). Extent scores describe these small footprints. [Depth, assessment support and wet areas](../fidelity/native_results/recession_depth.csv)
+| Storm | RK2 spatial peak difference (%) | Fine formulation difference (%) | Half-CFL difference (%) | Peak reference |
+|---|---:|---:|---:|---|
+| hill-8500-back-1000x1000 | 0.1293 | 0.0006244 | 0.003383 | Qualified |
+| plain-709-spatial-1000x1000 | 14.78 | 0.1426 | 0.01738 | Unresolved |
 
-Timing repeat counts and spread are reported for each policy. [Cost at a stated tolerance](../tables/21_native_cost_at_tolerance.md) · [Error within an FV1 runtime budget](../tables/22_native_error_at_budget.md) · [Independent timing observations](../fidelity/native_results/timing_distribution.csv)
+On the 10 m assessment grid for hill-8500-back-1000x1000, the fine reference retained 0 cells (0 m²) at or above 5 cm at the endpoint. The area-averaged cell maxima reached 10 cm on 0 cells (0 m²).
+
+On the 10 m assessment grid for plain-709-spatial-1000x1000, the fine reference retained 7 cells (700 m²) at or above 5 cm at the endpoint. The area-averaged cell maxima reached 10 cm on 2 cells (200 m²).
+
+[Cost and error bounds at a stated tolerance](../tables/21_native_cost_at_tolerance.md) · [Error within an FV1 runtime budget](../tables/22_native_error_at_budget.md) · [Timing repeats and spread](../fidelity/native_results/timing_distribution.csv) · [Depth and wet-area support](../fidelity/native_results/recession_depth.csv)
 
 ## Complete storms on native-metre terrain at 250,000 cells and above
 
-Each row compares solvers on the same event and physical footprint. Domain area varies between rows. Peaks are interval means of accepted outlet transport. The volume columns give FV1 minus Hancock. Costs use the faster of the two verified explicit Hancock policies through the common recession endpoint and the median hydraulic time where repeats exist.
+Each row compares solvers on the same event and physical footprint. Domain area varies between rows. Peaks are interval means of accepted outlet transport. The volume columns give FV1 minus Hancock. Costs use the fastest measured explicit Hancock policy through the common recession endpoint and the median hydraulic time where repeats exist.
 
-| Storm | Cells | Area (km²) | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | Δ net export (m³) | Δ infiltration (m³) | Hancock / FV1 time |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| coastal-703-moderate-10240x10240 | 1,048,576 | 104.858 | 10 | 32 | 300 | 131.72 | 112.55 | +870,045 | -835,214 | 1.752 |
-| fan-705-spatial-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 10.59 | 10.125 | -3,662 | +2,883 | 1.245 |
-| fan-711-spatial-10000x5000 | 500,000 | 50.000 | 10 | 16 | 300 | 15.22 | 15.825 | -28,081 | +25,783 | 1.067 |
-| floodplain-702-moderate-10240x10240 | 1,048,576 | 104.858 | 10 | 28 | 300 | 141.05 | 123.69 | +1,123,372 | -1,137,291 | 1.954 |
-| hill-706-back-10240x10240 | 1,048,576 | 104.858 | 10 | 16 | 300 | 1174.7 | 1251.6 | +128,872 | -130,907 | 1.477 |
-| plain-701-spatial-10240x10240 | 1,048,576 | 104.858 | 10 | 52 | 300 | 0 | 0 | +0 | +0 | 0.943 |
-| plain-709-spatial-1000x1000 | 1,000,000 | 1.000 | 1 | 20 | 300 | 0.015501 | 0.035363 | -256 | +230 | 1.223 |
-| plain-710-spatial-5000x5000 | 250,000 | 25.000 | 10 | 60 | 300 | 0 | 0 | +0 | -0 | 0.878 |
-| plain-712-spatial-20480x10240 | 2,097,152 | 209.715 | 10 | 40 | 300 | 0 | 0 | +0 | +0 | 1.094 |
-| rolling-704-soil-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 61.208 | 25.644 | +161,747 | -161,747 | 2.002 |
-| rolling-713-moderate-20480x10240 | 2,097,152 | 209.715 | 10 | 24 | 300 | 464.91 | 330.56 | +1,070,101 | -1,073,309 | 2.263 |
+| Storm | Cells | Area (km²) | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | Δ net export (m³) | Δ infiltration (m³) | Measured Hancock policy | Hancock / FV1 time |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|
+| coastal-703-moderate-10240x10240 | 1,048,576 | 104.858 | 10 | 32 | 300 | 131.72 | 112.55 | +870,045 | -835,214 | tiles | 1.752 |
+| fan-705-spatial-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 10.59 | 10.125 | -3,662 | +2,883 | tiles | 1.245 |
+| fan-711-spatial-10000x5000 | 500,000 | 50.000 | 10 | 16 | 300 | 15.22 | 15.825 | -28,081 | +25,783 | tiles | 1.067 |
+| floodplain-702-moderate-10240x10240 | 1,048,576 | 104.858 | 10 | 28 | 300 | 141.05 | 123.69 | +1,123,372 | -1,137,291 | tiles | 1.954 |
+| hill-706-back-10240x10240 | 1,048,576 | 104.858 | 10 | 16 | 300 | 1174.7 | 1251.6 | +128,872 | -130,907 | tiles | 1.477 |
+| hill-8500-back-1000x1000 | 1,000,000 | 1.000 | 1 | 12 | 60 | 16.126 | 16.159 | +726 | -726 | dense only measured | 1.768 |
+| plain-701-spatial-10240x10240 | 1,048,576 | 104.858 | 10 | 52 | 300 | 0 | 0 | +0 | +0 | tiles | 0.943 |
+| plain-709-spatial-1000x1000 | 1,000,000 | 1.000 | 1 | 20 | 300 | 0.015501 | 0.035363 | -256 | +230 | tiles | 1.223 |
+| plain-710-spatial-5000x5000 | 250,000 | 25.000 | 10 | 60 | 300 | 0 | 0 | +0 | -0 | tiles | 0.878 |
+| plain-712-spatial-20480x10240 | 2,097,152 | 209.715 | 10 | 40 | 300 | 0 | 0 | +0 | +0 | tiles | 1.094 |
+| rolling-704-soil-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 61.208 | 25.644 | +161,747 | -161,747 | tiles | 2.002 |
+| rolling-713-moderate-20480x10240 | 2,097,152 | 209.715 | 10 | 24 | 300 | 464.91 | 330.56 | +1,070,101 | -1,073,309 | tiles | 2.263 |
 
 The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions use the independently screened reference for each observable. [Water budgets and internal gauges](../fidelity/native_results/measured_windows.csv) · [Policy-specific observations and reference eligibility](../fidelity/native_publication/README.md)
 
