@@ -29,6 +29,48 @@ def discharge_volumes(*, solver, gauges):
     return field[positions.astype(int)].sum(axis=1)
 
 
+def observation_checksums(*, folder, hours, checkpoint_h):
+    paths = [folder / "inputs.json"]
+    paths.extend(folder / f"hour_{h}.json" for h in range(checkpoint_h, hours + 1, checkpoint_h))
+    return {p.name: runner.checksum(p) for p in paths}
+
+
+def read_complete(*, folder, identity):
+    result = folder / "complete.json"
+    entry = json.loads(result.read_text())
+    if (entry["id"], entry["dx_m"], entry["method"]) != (
+        runner.digest(identity)[:24], identity["dx"], identity["method"]
+    ) or json.loads((folder / "inputs.json").read_text())["identity"] != identity:
+        raise ValueError("Transfer result differs from source and physical contract")
+    actual = observation_checksums(folder=folder, hours=entry["duration_h"],
+                                   checkpoint_h=identity["settings"]["checkpoint_h"])
+    if runner.digest(actual) != entry["observation_sha256"]:
+        raise ValueError("Changed transfer observations or input manifest")
+    for receipt in folder.glob("attempt_*/completed.json"):
+        saved = json.loads(receipt.read_text())
+        if saved["summary_sha256"] != runner.checksum(result):
+            raise ValueError("Changed completed transfer summary")
+    return entry
+
+
+def verify_index(*, directory):
+    table = directory / "transfer.csv"
+    if not table.exists():
+        return 0
+    seen = set()
+    for row in metrics.csv_read(file=table):
+        ident = row["id"]
+        if ident in seen:
+            raise ValueError("Duplicate forecast in transfer index")
+        folder = directory / ident
+        identity = json.loads((folder / "inputs.json").read_text())["identity"]
+        entry = read_complete(folder=folder, identity=identity)
+        if row != {key: str(value) if value is not None else "" for key, value in entry.items()}:
+            raise ValueError("Transfer index differs from completed forecast " + ident)
+        seen.add(ident)
+    return len(seen)
+
+
 def simulate(
     *, directory, settings, state, data, geometry, forcing, dx, method, identity
 ):
@@ -38,7 +80,7 @@ def simulate(
     cache.mkdir(parents=True, exist_ok=True)
     result = dest / "complete.json"
     if result.exists():
-        return json.loads(result.read_text())
+        return read_complete(folder=dest, identity=identity)
     names = {
         "fv1": ("contact_hll", "sparse"),
         "hancock": ("fv2_adaptive", "tiles"),
@@ -203,6 +245,9 @@ def simulate(
     for cm in settings["thresholds_cm"]:
         answer[f"final_area_{cm}cm_m2"] = int((h > cm / 100).sum()) * dx**2
         answer[f"maximum_area_{cm}cm_m2"] = int((maximum > cm / 100).sum()) * dx**2
+    answer["observation_sha256"] = runner.digest(observation_checksums(
+        folder=dest, hours=forcing["duration_h"], checkpoint_h=settings["checkpoint_h"],
+    ))
     recession.atomic_json(path=result, payload=answer)
     return answer
 
@@ -259,6 +304,7 @@ def run(*, directory, settings, arguments):
     release = directory.parents[2] / settings["release"]
     identity = dict(
         source=runner.checksum(Path(__file__)),
+        forcing_reader=runner.checksum(directory.parents[2] / "examples/orton_bradley/run_model.py"),
         inputs=runner.checksum(release / "inputs/manifest.json"),
         dem=runner.checksum(release / "outputs/orton_bradley_dem_5m.tif"),
         settings=settings,
@@ -311,13 +357,11 @@ def run(*, directory, settings, arguments):
         rows = []
         for grid in settings["grids_m"]:
             for candidate in settings["methods"]:
-                key = runner.digest(dict(identity, dx=grid, method=candidate))[:24]
+                contract = dict(identity, dx=grid, method=candidate)
+                key = runner.digest(contract)[:24]
                 result = root / key / "complete.json"
                 if result.exists():
-                    entry = json.loads(result.read_text())
-                    if (entry["id"], entry["dx_m"], entry["method"]) != (key, grid, candidate):
-                        raise ValueError("Transfer summary differs from source and physical contract")
-                    rows.append(entry)
+                    rows.append(read_complete(folder=result.parent, identity=contract))
         metrics.csv_write(file=root / "transfer.csv", rows=rows)
         orton_controls.compare(release=release, destination=root, settings=settings, rows=rows)
 

@@ -363,6 +363,30 @@ def test_transfer_preserves_failed_and_resumed_wall_timings(tmp_path):
     assert json.loads(completed.read_text())["uninterrupted_from_start"] is False
 
 
+def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
+    from research.floodwarp_methods_paper import metrics, runner
+    from research.floodwarp_methods_paper.fidelity import orton_transfer
+
+    identity = dict(dx=10, method="rk2", settings={"checkpoint_h": 4})
+    ident = runner.digest(identity)[:24]
+    folder = tmp_path / ident
+    runner.write_json(path=folder / "inputs.json", data={"identity": identity})
+    window = folder / "hour_4.json"
+    runner.write_json(path=window, data={"gauge_m3s": [5., 3.]})
+    fields = orton_transfer.observation_checksums(folder=folder, hours=4, checkpoint_h=4)
+    entry = dict(id=ident, dx_m=10, method="rk2", duration_h=4, observation_sha256=runner.digest(fields))
+    runner.write_json(path=folder / "complete.json", data=entry)
+    assert orton_transfer.read_complete(folder=folder, identity=identity) == entry
+    metrics.csv_write(file=tmp_path / "transfer.csv", rows=[entry])
+    assert orton_transfer.verify_index(directory=tmp_path) == 1
+    metrics.csv_write(file=tmp_path / "transfer.csv", rows=[dict(entry, dx_m=20)])
+    with pytest.raises(ValueError, match="index differs"):
+        orton_transfer.verify_index(directory=tmp_path)
+    runner.write_json(path=window, data={"gauge_m3s": [5., 2.]})
+    with pytest.raises(ValueError, match="Changed transfer observations"):
+        orton_transfer.read_complete(folder=folder, identity=identity)
+
+
 def test_publication_inventory_requires_incised_decisions_and_measured_orton_products(tmp_path):
     from research.floodwarp_methods_paper.analysis import verify_publication_inventory
 

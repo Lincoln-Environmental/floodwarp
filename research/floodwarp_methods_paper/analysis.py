@@ -190,6 +190,8 @@ def verify(*, study, config):
                     "Published table differs from source evidence " + item.name
                 )
     table_count, figure_count = verify_publication_inventory(study=study, rendered=rendered)
+    from research.floodwarp_methods_paper.fidelity.orton_transfer import verify_index
+
     return dict(
         completed=counts,
         analytical=gates,
@@ -198,6 +200,7 @@ def verify(*, study, config):
         exact_scheduler_pairs=parity,
         main_tables=table_count,
         main_figures=figure_count,
+        verified_real_terrain_transfers=verify_index(directory=study / "fidelity/orton_transfer"),
     )
 
 
