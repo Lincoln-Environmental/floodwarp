@@ -16,6 +16,7 @@ from research.floodwarp_methods_paper.fidelity import (
     extended_analysis,
     endpoints,
     final_depth,
+    fv1_clock_report,
     native_archive,
     native_matrix,
     native_policies,
@@ -568,6 +569,7 @@ def run(*, directory, require_complete):
         if not groups
         else [i for items in primary.values() for i in items],
     )
+    fv1_clock_report.report(directory=directory, output=target, write_table=True)
     catalogue.database(target=target)
     counted = {r["case"] for r in complete if r["horizon"] == "complete-native-metre"}
     text = [

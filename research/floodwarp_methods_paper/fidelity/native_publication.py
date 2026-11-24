@@ -7,7 +7,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from research.floodwarp_methods_paper import metrics, runner
-from research.floodwarp_methods_paper.fidelity import native_control_report, recession_cfl
+from research.floodwarp_methods_paper.fidelity import fv1_clock_report, native_control_report, recession_cfl
 from research.floodwarp_methods_paper.fidelity.assessment import numerical_identity
 from research.floodwarp_methods_paper.fidelity.figures import save
 
@@ -356,6 +356,9 @@ def run(*, directory):
                  "storage upstream and downstream at the identical forecast time. The two volumes must sum to the "
                  "independently recorded domain storage. Map-error and IoU comparisons use common spatial support. "
                  "[Threshold areas and storage](../native_results/measured_windows.csv)"])
+    temporal_text, temporal_sources = fv1_clock_report.report(directory=directory, output=source, write_table=False)
+    text.extend(temporal_text)
+    decision_files.extend([*temporal_sources, Path(fv1_clock_report.__file__)])
     timing_provenance = source / "timing_provenance.csv"
     if timing_provenance.exists():
         clocks = metrics.csv_read(file=timing_provenance)

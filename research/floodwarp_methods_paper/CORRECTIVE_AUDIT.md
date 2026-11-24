@@ -1,5 +1,7 @@
 # Corrective numerical and GPU audit
 
+The steep FREE-outlet investigation compares audited revision `0afdd684d2d1` with repair `46afa3f280a5`. The original and extended 104.86 km² incised forecasts, observable-specific reference checks and measured costs are in [Repaired FREE outlet](#repaired-free-outlet). The earlier operational timings and advisor scores below describe their archived implementations. [Current native-grid qualification](fidelity/native_publication/README.md)
+
 The starting development revision was `360b3a37b5389128e7d4146eee00b1c3ca1a66ee`. All numerical forecasts use FP64. Configuration, implementation, device, input hashes, immutable attempts and output hashes identify every measurement. The historical 96-cell controls and original validation archives retain their own identities.
 
 ## Defects and changes
@@ -364,6 +366,10 @@ Catchment-mean rainfall divides the integrated six-hour rainfall volume by the w
 | rolling-713-moderate-20480x10240 | 10 | 24 | 17,301,504 | 82.50 | 3,208 | 0 | 20,600 | 0 | 0 | 0 |
 
 The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions use the independently screened reference for each observable. [Water budgets and internal gauges](fidelity/native_results/measured_windows.csv) · [Policy-specific observations and reference eligibility](fidelity/native_publication/README.md)
+
+On plain-709-moderate-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.160% and net export by +14.8 m³ through 40 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](fidelity/native_results/fv1_temporal_sensitivity.csv)
+
+On plain-709-intense-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.175% and net export by -14.9 m³ through 32 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](fidelity/native_results/fv1_temporal_sensitivity.csv)
 
 ## Practical grid selection on native terrain
 

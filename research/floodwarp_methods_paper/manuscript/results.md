@@ -214,6 +214,10 @@ Catchment-mean rainfall divides the integrated six-hour rainfall volume by the w
 
 The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions use the independently screened reference for each observable. [Water budgets and internal gauges](../fidelity/native_results/measured_windows.csv) · [Policy-specific observations and reference eligibility](../fidelity/native_publication/README.md)
 
+On plain-709-moderate-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.160% and net export by +14.8 m³ through 40 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](../fidelity/native_results/fv1_temporal_sensitivity.csv)
+
+On plain-709-intense-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.175% and net export by -14.9 m³ through 32 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](../fidelity/native_results/fv1_temporal_sensitivity.csv)
+
 ## Practical grid selection on native terrain
 
 The validation design includes 2 independent terrains with an admissible 5 and 10 m pair and all scheduled depth reference controls (hill-8200, rolling-8105). Completed runs currently qualify 0 terrain pairs for depth. [Design and measured eligibility by observable](../fidelity/advisor_design/paired.json)

@@ -94,6 +94,17 @@ For 1 matched CPU/CUDA settled recession windows ending at 40 h, the largest abs
 
 The measured-windows table includes endpoint inundated areas at 5 and 10 cm on each solver's own model grid. Each area sums the archived subcell wet fractions over the observation grid. Where the internal gauge lies on an observation cell face, the same table reports storage upstream and downstream at the identical forecast time. The two volumes must sum to the independently recorded domain storage. Map-error and IoU comparisons use common spatial support. [Threshold areas and storage](../native_results/measured_windows.csv)
 
+### FV1 sensitivity to the accepted timestep
+
+The same 1 km² plain, 10 m represented bed, initial state and six-hour rainfall were run on CPU at two CFL values. Changes below give the reduced-CFL result minus the ordinary result. Each endpoint passed the two-hour recession checks at both gauges.
+
+| Storm | End (h) | CFL | Accepted steps | Reduced-CFL steps | Peak change (%) | Peak interval shift (s) | Export change (m³) |
+|---|---:|---|---:|---:|---:|---:|---:|
+| plain-709-intense-1000x1000 | 32 | 0.4 → 0.2 | 90,945 | 180,966 | +0.1754 | +0 | -14.93 |
+| plain-709-moderate-1000x1000 | 40 | 0.4 → 0.2 | 96,300 | 191,445 | +0.1602 | -60 | +14.81 |
+
+The observed sensitivity applies to these 10 m runs. FV1 temporal sensitivity at 1 m requires a separate refinement at that spacing. [Water accounts, width, shape, timing and paired run identities](../native_results/fv1_temporal_sensitivity.csv)
+
 Of 65 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
 
 ## Dense and tiled execution

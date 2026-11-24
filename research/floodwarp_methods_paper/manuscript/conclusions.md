@@ -6,6 +6,8 @@ Across the original fixed windows of 48 small-domain storms, the faster qualifie
 
 Across the 8 primary million-cell events, the faster measured explicit Hancock policy took a median of 1.69 times the FV1 runtime over the original observation windows. The accepted-step ratios ranged from 1.06 to 1.62, and the corresponding mean cost per accepted step ranged from 1.02 to 1.61 times FV1. These factors multiply within each event. The normal timestep policy therefore matters even where tile scheduling removes most of the dry-domain arithmetic. [Per-event costs](../tables/11_execution.md)
 
-The frozen advisor made a qualified feasible selection in 17.54% of held-out decisions with a measured feasible option. It abstained on 134 of 150 decisions. Terrain loss and reference uncertainty limit recommendations for specific sites and observables. [Held-out comparisons](../tables/10_advisor.md)
+The historical frozen advisor made a qualified feasible selection in 17.54% of held-out decisions with a measured feasible option. It abstained on 134 of 150 decisions. Terrain loss and reference uncertainty limit recommendations for specific sites and observables. [Held-out comparisons](../tables/10_advisor.md)
+
+The native-grid advisor uses whole-terrain held-out tests. Its independent validation is pending. [Independent evaluation and available evidence](../fidelity/native_publication/README.md#held-out-solver-advisor-evaluation)
 
 Retain adaptive Hancock as the development default. Keep explicit execution overrides and select FV1 when the measured error is acceptable for the intended observable. [Results](results.md) · [Discussion](discussion.md)

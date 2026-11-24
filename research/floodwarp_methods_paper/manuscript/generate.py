@@ -798,6 +798,18 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 correction += native_timing_correction(study=study)
                 correction += native_budget_evidence(study=study, tolerance=5)
                 correction += native_operational_balances(study=study, minimum_cells=250_000)
+                temporal = study / "fidelity/native_results/fv1_temporal_sensitivity.csv"
+                if temporal.is_file():
+                    for row in csv_read(file=temporal):
+                        correction += (
+                            f"\nOn {row['case']} at {row['dx_m']} m, reducing FV1 CFL from "
+                            f"{float(row['normal_cfl']):g} to {float(row['reduced_cfl']):g} changed the "
+                            f"one-minute outlet peak by {float(row['pct_change_peak_m3s']):+.3f}% "
+                            f"and net export by {float(row['change_net_export_m3']):+,.1f} m³ through "
+                            f"{float(row['end_h']):g} h. CPU runs used the same initial fields and forcing. "
+                            "[Time refinement, both gauge records and water accounts]"
+                            "(../fidelity/native_results/fv1_temporal_sensitivity.csv)\n"
+                        )
                 correction += native_advisor_findings(study=study)
         transfer = study / "fidelity/orton_transfer/transfer.csv"
         if transfer.exists():
@@ -819,6 +831,19 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         result += correction
         discussion += correction
         audit += correction.replace("](../", "](")
+    revisions_file = study / "fidelity/outlet_results/revision_evidence.json"
+    if revisions_file.is_file():
+        import json
+
+        revisions = json.loads(revisions_file.read_text())["revisions"]
+        lead = (f"The steep FREE-outlet investigation compares audited revision "
+                f"`{revisions['audit']['commit'][:12]}` with repair `{revisions['repair']['commit'][:12]}`. "
+                "The original and extended 104.86 km² incised forecasts, observable-specific reference "
+                "checks and measured costs are in [Repaired FREE outlet](#repaired-free-outlet). "
+                "The earlier operational timings and advisor scores below describe their archived implementations. "
+                "[Current native-grid qualification](fidelity/native_publication/README.md)")
+        heading, body = audit.split("\n", 1)
+        audit = heading + "\n\n" + lead + "\n" + body
     (study / "CORRECTIVE_AUDIT.md").write_text(audit)
     manuscript = study / "manuscript"
     (manuscript / "results.md").write_text(result)
@@ -835,7 +860,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         f"{median(fastest):.3f} times the FV1 runtime. "
         f"Tiled execution alone had median {median(ratios):.3f}×.",
         paper.operational_discussion(study=study),
-        f"The frozen advisor made a qualified feasible selection in {fmt(a['feasible_coverage_pct'])}% "
+        f"The historical frozen advisor made a qualified feasible selection in {fmt(a['feasible_coverage_pct'])}% "
         f"of held-out decisions with a measured feasible option. It abstained on {a['abstentions']} of "
         f"{a['decisions']} decisions. Terrain loss and reference uncertainty limit recommendations for "
         "specific sites and observables. [Held-out comparisons](../tables/10_advisor.md)",
@@ -843,6 +868,12 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         "select FV1 when the measured error is acceptable for the intended observable. "
         "[Results](results.md) · [Discussion](discussion.md)",
     ]
+    if (study / "fidelity/advisor_design/paired.json").exists():
+        conclusions.insert(-1, "The native-grid advisor uses whole-terrain held-out tests. "
+                           + ("The frozen evaluation is available."
+                              if (study / "fidelity/native_advisor/heldout_evaluation.json").exists()
+                              else "Its independent validation is pending.")
+                           + " [Independent evaluation and available evidence](../fidelity/native_publication/README.md#held-out-solver-advisor-evaluation)")
     if paragraph:
         conclusions.insert(1, paragraph + " " + link)
     (manuscript / "conclusions.md").write_text(
