@@ -1062,12 +1062,13 @@ def test_native_advisor_freezes_before_scoring_held_out_groups(tmp_path, monkeyp
                 for dx in (5,10):
                     for m,work in (("fv1",1),("hancock_dense",2)):
                         f=dict(mean_slope=.01+i*.001,resolution=dx,cells=(1000//dx)**2,area_m2=1e6,
-                               rain_mm=50.,forecast_duration_h=8.)
+                               rain_mm=50.,forecast_duration_h=8.,critical_connection_lost=False)
                         goals=native_advisor.tolerances(pct=10,depth_m=.01)
                         errors={o:.001*work for o in goals}
                         data.append(dict(terrain_id=group,case=group,landform="plain",storm="moderate",split=part,
                                          run_id=f"{group}-{dx}-{m}",method=m,features=f,hardware="test GPU",
-                                         native_sha=group,end_h=8,interval_s=60,
+                                         native_sha=group,end_h=8,interval_s=60,reference_id=group+"-fine",
+                                         spatial_reference_id=group+"-fine",spatial_support_m=10,
                                          runtime_s=float(work),memory_mib=4.,wet_fraction=.1,sampled_regime=None,
                                          errors=errors,qualified=dict.fromkeys(goals,True)))
         return data

@@ -660,11 +660,26 @@ def test_lost_connection_cannot_supply_development_hydraulic_error():
     assert row["errors"] == {"peak_discharge": 0.1}
 
 
+def test_unassessed_native_control_cannot_supply_training_validation_or_public_advice():
+    from floodwarp.solver_advisor.model import recommend, terrain_control_status
+
+    f = dict(critical_connection_lost=None, resolution=5)
+    row = dict(features=f, errors={"depth": .002}, qualified={"depth": True}, runtime_s=4, terrain_id="plain")
+    filtered, = native_advisor.admissible_training(rows=[row])
+    assert filtered["errors"]["depth"] is None and filtered["runtime_s"] == 4
+    assert native_advisor.support(rows=[row], objectives=["depth"], minimum=1) == {"depth": []}
+    model = dict(native_objective_spacings={"depth": [5]}, tolerances={"depth": .01}, revision="test", hardware="GPU")
+    choice = recommend(model=model, features=f, objective="depth")
+    assert choice["status"] == "insufficient_evidence" and choice["terrain_control_status"] == "unassessed"
+    assert terrain_control_status(features=dict(f, maximum_barrier_lowering_m=.1, barrier_lowering_m=.2),
+                                 objective="depth") == "refine terrain"
+
+
 def test_joint_oracle_excludes_unqualified_numeric_error():
     from research.floodwarp_methods_paper.fidelity.paired_advisor import evaluate_pairs
 
     records = [dict(case="event", terrain_id="terrain", native_sha="inputs", end_h=16,
-                    method="fv1", run_id=str(dx), features=dict(resolution=dx),
+                    method="fv1", run_id=str(dx), features=dict(resolution=dx, critical_connection_lost=False),
                     interval_s=cadence, spatial_reference_id="rk2-1m", spatial_support_m=10,
                     errors={"depth": 0.001}, qualified={"depth": dx == 5},
                     runtime_s=cost) for dx, cadence, cost in ((10, "60", 10), (5, "60.0", 20))]

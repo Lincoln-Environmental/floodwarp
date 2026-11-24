@@ -4,7 +4,7 @@ from collections import defaultdict
 import json
 from pathlib import Path
 
-from floodwarp.solver_advisor.model import terrain_requires_refinement
+from floodwarp.solver_advisor.model import terrain_control_status
 from research.floodwarp_methods_paper import metrics, runner
 from research.floodwarp_methods_paper.fidelity import native_advisor, native_matrix
 from research.floodwarp_methods_paper.plan import read_config
@@ -35,14 +35,8 @@ def inventory(
                 }
                 required = {(candidate, method, 1.0) for method in methods}
                 for objective in objectives:
-                    feature = features.get((case, candidate))
-                    admissible = (
-                        feature is not None
-                        and feature["critical_connection_lost"] is not None
-                        and not terrain_requires_refinement(
-                            features=feature, objective=objective
-                        )
-                    )
+                    feature = features.get((case, candidate), {})
+                    admissible = terrain_control_status(features=feature, objective=objective) == "admissible"
                     measured_methods = {
                         r["method"]
                         for r in measured.get((case, candidate), [])

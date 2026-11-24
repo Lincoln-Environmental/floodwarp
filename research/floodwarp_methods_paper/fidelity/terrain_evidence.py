@@ -2,7 +2,7 @@
 
 import json
 
-from floodwarp.solver_advisor.model import terrain_requires_refinement
+from floodwarp.solver_advisor.model import terrain_control_status
 from research.floodwarp_methods_paper import metrics, runner
 
 
@@ -60,12 +60,7 @@ def assess(*, rows, controls):
         record = controls.get(row["experiment_id"], {})
         features = record.get("features", {})
         connection = features.get("critical_connection_lost")
-        if connection is None:
-            disposition = "unassessed"
-        elif terrain_requires_refinement(features=features, objective=goal):
-            disposition = "refine terrain"
-        else:
-            disposition = "admissible"
+        disposition = terrain_control_status(features=features, objective=goal)
         screened.append(dict(row, hydraulic_eligible=row["eligible"], terrain_disposition=disposition,
                              eligible=row["eligible"] and disposition == "admissible"))
         audit.append(dict(case=row["case"], dx_m=row["dx"], experiment_id=row["experiment_id"],

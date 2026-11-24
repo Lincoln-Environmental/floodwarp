@@ -145,10 +145,7 @@ def run(*, directory, terrains, grids, objective, model_path=None):
                     np.testing.assert_allclose(
                         control[k], obs["control"][k], atol=1e-12, rtol=0
                     )
-                if (rec["status"], rec["method"]) != (
-                    offline["status"],
-                    offline["method"],
-                ):
+                if any(rec[key] != offline[key] for key in ("status", "method", "terrain_control_status")):
                     raise AssertionError(
                         f"Public and offline decisions differ at {name} {dx} m"
                     )
@@ -157,6 +154,7 @@ def run(*, directory, terrains, grids, objective, model_path=None):
                         terrain_id=name,
                         dx_m=dx,
                         lost=loss,
+                        terrain_control_status=rec["terrain_control_status"],
                         status=rec["status"],
                         method=rec["method"],
                         max_lowering_m=control["max_local_barrier_lowering_m"],

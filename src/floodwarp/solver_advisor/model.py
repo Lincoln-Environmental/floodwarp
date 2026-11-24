@@ -219,6 +219,14 @@ def terrain_requires_refinement(*, features, objective):
     )
 
 
+def terrain_control_status(*, features, objective):
+    if terrain_requires_refinement(features=features, objective=objective):
+        return "refine terrain"
+    if features.get("critical_connection_lost") is None:
+        return "unassessed"
+    return "admissible"
+
+
 def recommend(
     *,
     model,
@@ -274,11 +282,16 @@ def recommend(
     )
     if objective == "inundation" and "inundation_target" in model:
         result["target"] = model["inundation_target"]
-    if terrain_requires_refinement(features=features, objective=objective):
+    control_status = terrain_control_status(features=features, objective=objective)
+    result["terrain_control_status"] = control_status
+    if control_status == "refine terrain":
         result.update(
             status="refine_terrain",
             reason="The represented DEM loses a required hydraulic connection or exceeds the specified barrier tolerance.",
         )
+        return result
+    if control_status == "unassessed" and "native_objective_spacings" in model and objective != "runtime":
+        result["reason"] = "Native-terrain hydraulic advice requires an assessed control. Supply the opening or barrier geometry."
         return result
     if ("native_objective_spacings" in model and objective != "runtime"
         and features["resolution"] not in model["native_objective_spacings"].get(objective, ())):

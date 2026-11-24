@@ -5,7 +5,7 @@ from math import isfinite
 
 from floodwarp.solver_advisor.model import (
     choose_resolution,
-    terrain_requires_refinement,
+    terrain_control_status,
 )
 
 
@@ -21,8 +21,8 @@ def qualified_reference(*, observations, objective):
     for row in observations:
         if not row["qualified"][objective]:
             continue
-        reference = row["spatial_reference_id"] if spatial else row["reference_id"]
-        support = row["spatial_support_m"] if spatial else None
+        reference = row.get("spatial_reference_id" if spatial else "reference_id")
+        support = row.get("spatial_support_m") if spatial else None
         if not reference or (spatial and (support is None or not isfinite(support) or support <= 0)):
             raise ValueError("Qualified paired-grid error lacks its reference or spatial support")
         scopes.add((reference, support))
@@ -63,9 +63,7 @@ def evaluate_pairs(*, model, rows, trials, spacings):
             for r in measured.values()
             if r["qualified"][objective] and r["errors"][objective] is not None
             and r["errors"][objective] <= tol
-            and not terrain_requires_refinement(
-                features=r["features"], objective=objective
-            )
+            and terrain_control_status(features=r["features"], objective=objective) == "admissible"
         ]
         optimal = min(available, key=observed_cost) if available else None
         for requested in spacings:
@@ -96,7 +94,8 @@ def evaluate_pairs(*, model, rows, trials, spacings):
                 prediction = {}
             actual = measured.get((grid, method))
             measured_error = actual["errors"][objective] if actual and actual["qualified"][objective] else None
-            feasible = actual in available if measured_error is not None else None
+            control = terrain_control_status(features=actual["features"], objective=objective) if actual else None
+            feasible = actual in available if measured_error is not None and control != "unassessed" else None
             regret = (
                 actual["runtime_s"] / optimal["runtime_s"] - 1
                 if feasible and optimal
@@ -124,7 +123,8 @@ def evaluate_pairs(*, model, rows, trials, spacings):
                     else None,
                     cheaper_option=regret > 1.0e-12 if regret is not None else None,
                     selected_run=actual["run_id"] if actual else None,
-                    terrain_admissible=not terrain_requires_refinement(features=actual["features"], objective=objective)
+                    terrain_control_status=control if actual else original.get("terrain_control_status"),
+                    terrain_admissible=(None if control == "unassessed" else control == "admissible")
                     if actual else original["terrain_admissible"],
                     observed_error=measured_error,
                     observed_runtime_s=actual["runtime_s"] if actual else None,

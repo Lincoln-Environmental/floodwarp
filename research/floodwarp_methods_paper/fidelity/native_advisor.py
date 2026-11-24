@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 from floodwarp.solver_advisor.fidelity import METRICS
-from floodwarp.solver_advisor.model import recommend, scales
+from floodwarp.solver_advisor.model import recommend, scales, terrain_control_status
 from research.floodwarp_methods_paper import advisor, metrics, runner
 from research.floodwarp_methods_paper.fidelity import native_matrix, phase_cost, terrain_evidence
 from research.floodwarp_methods_paper.plan import read_config
@@ -161,12 +161,10 @@ def sample_rows(*, directory, partitions, require_full, config, design):
 
 
 def support(*, rows, objectives, minimum):
-    from floodwarp.solver_advisor.model import terrain_requires_refinement
-
     independent = defaultdict(set)
     for row in rows:
         for objective in objectives:
-            if row["qualified"][objective] and not terrain_requires_refinement(features=row["features"], objective=objective):
+            if row["qualified"][objective] and terrain_control_status(features=row["features"], objective=objective) == "admissible":
                 independent[objective, row["features"]["resolution"]].add(
                     row["terrain_id"]
                 )
@@ -182,13 +180,11 @@ def support(*, rows, objectives, minimum):
 
 def admissible_training(*, rows):
     """Keep measured costs while excluding numerical-error labels from lost controls."""
-    from floodwarp.solver_advisor.model import terrain_requires_refinement
-
     training = []
     for row in rows:
         errors = {
             objective: None
-            if terrain_requires_refinement(features=row["features"], objective=objective)
+            if terrain_control_status(features=row["features"], objective=objective) != "admissible"
             else value for objective, value in row["errors"].items()
         }
         qualified = {objective: row["qualified"][objective] and value is not None

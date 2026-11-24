@@ -205,7 +205,7 @@ def samples(
 
 
 def assess(*, model, rows, rules):
-    from floodwarp.solver_advisor.model import terrain_requires_refinement
+    from floodwarp.solver_advisor.model import terrain_control_status
 
     groups = defaultdict(list)
     for r in rows:
@@ -215,7 +215,10 @@ def assess(*, model, rows, rules):
         for objective, tol in model["tolerances"].items():
             actual = {r["method"]: r for r in group if r["qualified"][objective]}
             terrain = group[0]["features"]
-            admissible = not terrain_requires_refinement(features=terrain, objective=objective)
+            control_status = terrain_control_status(features=terrain, objective=objective)
+            admissible = control_status != "refine terrain"
+            if "native_objective_spacings" in model and control_status == "unassessed":
+                admissible = None
             affordable = [
                 r
                 for r in actual.values()
@@ -251,7 +254,7 @@ def assess(*, model, rows, rules):
                 choice = actual.get(method)
                 feasible = (
                     None
-                    if choice is None
+                    if choice is None or admissible is None
                     else admissible and choice["errors"][objective] <= tol
                 )
                 regret = (
@@ -272,6 +275,7 @@ def assess(*, model, rows, rules):
                         wet_fraction=group[0].get("wet_fraction"),
                         mean_slope=terrain["mean_slope"],
                         terrain_admissible=admissible,
+                        terrain_control_status=control_status,
                         objective=objective,
                         tolerance=tol,
                         rule=rule,
