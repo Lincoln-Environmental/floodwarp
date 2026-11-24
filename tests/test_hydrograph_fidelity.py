@@ -1221,3 +1221,20 @@ def test_open_face_reconstruction_distinguishes_mask_edges_and_corner_walls():
     np.testing.assert_array_equal(sx[:-1,-2],0.)
     np.testing.assert_array_equal(sx[:,-1],0.)
     np.testing.assert_array_equal(sy[-1,-2],0.)
+
+
+def test_spatial_depth_error_uses_each_practical_wet_union_on_matched_support():
+    from research.floodwarp_methods_paper.fidelity.final_depth import difference
+
+    candidate = np.array([[.010, .050, .120, .001]])
+    reference = np.array([[.011, .040, .090, .150]])
+    fields = difference(candidate=(candidate, candidate), reference=(reference, reference),
+                        support=10, thresholds=[.01, .05, .10])
+    assert fields["wet_union_area_5cm_m2"] == 300
+    assert fields["wet_union_area_10cm_m2"] == 200
+    assert fields["wet_union_depth_rmse_5cm_m"] == pytest.approx(np.sqrt((.01**2 + .03**2 + .149**2) / 3))
+    assert fields["wet_union_depth_rmse_10cm_m"] == pytest.approx(np.sqrt((.03**2 + .149**2) / 2))
+    dry = np.zeros_like(candidate)
+    fields = difference(candidate=(dry, dry), reference=(dry, dry), support=10, thresholds=[.05, .10])
+    assert fields["wet_union_area_5cm_m2"] == 0
+    assert fields["wet_union_depth_rmse_5cm_m"] is None

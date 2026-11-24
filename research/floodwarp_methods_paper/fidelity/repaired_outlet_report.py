@@ -313,6 +313,9 @@ def run(*, directory):
             "",
             "Depth and inundation costs run from the initial state to each snapshot. "
             "The 8 h comparison uses only the first eight hours of measured hydraulic execution. "
+            "Wet-union depth RMSE at 5 and 10 cm uses cells where either field reaches the indicated depth. "
+            "An empty union gives an undefined RMSE. Cost decisions require spatial, temporal and "
+            "cross-formulation support for that same threshold. [Observable-specific controls](spatial_reference_checks.csv) · "
             "[Least cost by spatial tolerance](least_cost_depth_extent.csv) · "
             "[Smallest spatial error at each FV1 budget](equal_cost_depth_extent.csv) · "
             "[Independent timing windows](spatial_timing_windows.csv)",

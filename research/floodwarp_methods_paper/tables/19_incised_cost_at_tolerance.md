@@ -56,6 +56,8 @@
 | maximum_extent_error_5cm | fraction | domain | 8 | 900 | 4769d66d3b8b3f6036e32478 | 0.1 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
 | maximum_extent_error_5cm | fraction | domain | 8 | 900 | 4769d66d3b8b3f6036e32478 | 0.2 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
 | wet_depth_rmse_m | m | domain | 8 | 900 | 4769d66d3b8b3f6036e32478 | 0.01 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
+| wet_union_depth_rmse_10cm_m | m | domain | 8 | 900 | 4769d66d3b8b3f6036e32478 | 0.01 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
+| wet_union_depth_rmse_5cm_m | m | domain | 8 | 900 | 4769d66d3b8b3f6036e32478 | 0.01 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
 | depth_rmse_m | m | domain | 16 | 900 | 4769d66d3b8b3f6036e32478 | 0.01 | 3 | 3 | fv1 | 10 | 2c58ab9502fa9491c415fcf6 | sparse | 0.0002179 | 0 | 38.36 | 48782 | 0.0007864 |
 | extent_error_10cm | fraction | domain | 16 | 900 | 4769d66d3b8b3f6036e32478 | 0.05 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
 | extent_error_10cm | fraction | domain | 16 | 900 | 4769d66d3b8b3f6036e32478 | 0.1 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
@@ -71,3 +73,5 @@
 | maximum_extent_error_5cm | fraction | domain | 16 | 900 | 4769d66d3b8b3f6036e32478 | 0.1 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
 | maximum_extent_error_5cm | fraction | domain | 16 | 900 | 4769d66d3b8b3f6036e32478 | 0.2 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
 | wet_depth_rmse_m | m | domain | 16 | 900 | 4769d66d3b8b3f6036e32478 | 0.01 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
+| wet_union_depth_rmse_10cm_m | m | domain | 16 | 900 | 4769d66d3b8b3f6036e32478 | 0.01 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
+| wet_union_depth_rmse_5cm_m | m | domain | 16 | 900 | 4769d66d3b8b3f6036e32478 | 0.01 | 0 | 0 | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |

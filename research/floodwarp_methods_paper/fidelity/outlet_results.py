@@ -278,6 +278,8 @@ def spatial_qualification(*, peers, states, hour, thresholds, settings):
             maximum_depth_rmse_m=settings["maximum_depth_m"],
         )
         for threshold in thresholds:
+            if threshold >= 0.05:
+                limits[f"wet_union_depth_rmse_{round(100 * threshold)}cm_m"] = depth_limit
             for prefix in ("", "maximum_"):
                 limits[f"{prefix}extent_error_{round(100 * threshold)}cm"] = settings[
                     "extent_error"

@@ -58,7 +58,12 @@ def difference(*, candidate, reference, support, thresholds):
     for t in thresholds:
         cm = round(100 * t)
         wa, wb = h >= t, hr >= t
-        union = np.count_nonzero(wa | wb)
+        either_wet = wa | wb
+        union = np.count_nonzero(either_wet)
+        out[f"wet_union_area_{cm}cm_m2"] = int(union) * support**2
+        out[f"wet_union_depth_rmse_{cm}cm_m"] = (
+            float(np.sqrt(np.mean(diff[either_wet] ** 2))) if union else None
+        )
         overlap = np.count_nonzero(wa & wb)
         out[f"iou_{cm}cm"] = overlap / union if union else None
         out[f"extent_error_{cm}cm"] = 1 - overlap / union if union else None
@@ -143,6 +148,7 @@ def process(*, groups, directory, target, settings):
             cm = round(100 * t)
             limits[f"extent_error_{cm}cm"] = settings["extent_error"]
             if cm >= 5:
+                limits[f"wet_union_depth_rmse_{cm}cm_m"] = depth_limit
                 limits[f"maximum_extent_error_{cm}cm"] = settings["extent_error"]
         for item in items:
             if item["factor"] != 1:
@@ -221,6 +227,7 @@ def process(*, groups, directory, target, settings):
         "depth_rmse_m",
         "wet_depth_rmse_m",
         "maximum_depth_rmse_m",
+        *(f"wet_union_depth_rmse_{round(100 * t)}cm_m" for t in targets if t >= 0.05),
         *(f"extent_error_{round(100 * t)}cm" for t in targets),
         *(f"maximum_extent_error_{round(100 * t)}cm" for t in targets if t >= 0.05),
     )
