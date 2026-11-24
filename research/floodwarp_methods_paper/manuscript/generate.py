@@ -978,18 +978,19 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 correction += native_timing_correction(study=study)
                 correction += native_budget_evidence(study=study, tolerance=5)
                 correction += native_operational_balances(study=study, minimum_cells=250_000)
-                temporal = study / "fidelity/native_results/fv1_temporal_sensitivity.csv"
-                if temporal.is_file():
-                    for row in csv_read(file=temporal):
-                        correction += (
-                            f"\nOn {row['case']} at {row['dx_m']} m, reducing FV1 CFL from "
-                            f"{float(row['normal_cfl']):g} to {float(row['reduced_cfl']):g} changed the "
-                            f"one-minute outlet peak by {float(row['pct_change_peak_m3s']):+.3f}% "
-                            f"and net export by {float(row['change_net_export_m3']):+,.1f} m³ through "
-                            f"{float(row['end_h']):g} h. CPU runs used the same initial fields and forcing. "
-                            "[Time refinement, both gauge records and water accounts]"
-                            "(../fidelity/native_results/fv1_temporal_sensitivity.csv)\n"
-                        )
+                for name, label in (("fv1", "FV1"), ("hancock", "Hancock")):
+                    temporal = study / f"fidelity/native_results/{name}_temporal_sensitivity.csv"
+                    if temporal.is_file():
+                        for row in csv_read(file=temporal):
+                            correction += (
+                                f"\nOn {row['case']} at {row['dx_m']} m, reducing {label} CFL from "
+                                f"{float(row['normal_cfl']):g} to {float(row['reduced_cfl']):g} changed the "
+                                f"one-minute outlet peak by {float(row['pct_change_peak_m3s']):+.3f}% "
+                                f"and net export by {float(row['change_net_export_m3']):+,.1f} m³ through "
+                                f"{float(row['end_h']):g} h. CPU runs used the same initial fields and forcing. "
+                                "[Time refinement, both gauge records and water accounts]"
+                                f"(../fidelity/native_results/{temporal.name})\n"
+                            )
                 correction += plain_grid_fidelity(study=study, cases={"plain-709-moderate-1000x1000": "Moderate",
                                                                      "plain-709-intense-1000x1000": "Intense"})
                 correction += plain_embankment(study=study, cases={"plain-709-moderate-1000x1000": "Moderate",

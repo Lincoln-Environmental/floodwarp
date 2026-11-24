@@ -189,6 +189,10 @@ On plain-709-moderate-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 change
 
 On plain-709-intense-1000x1000 at 10 m, reducing FV1 CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.175% and net export by -14.9 m³ through 32 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](../fidelity/native_results/fv1_temporal_sensitivity.csv)
 
+On plain-709-moderate-1000x1000 at 10 m, reducing Hancock CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.109% and net export by +37.3 m³ through 40 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](../fidelity/native_results/hancock_temporal_sensitivity.csv)
+
+On plain-709-intense-1000x1000 at 10 m, reducing Hancock CFL from 0.4 to 0.2 changed the one-minute outlet peak by +0.285% and net export by +93.1 m³ through 32 h. CPU runs used the same initial fields and forcing. [Time refinement, both gauge records and water accounts](../fidelity/native_results/hancock_temporal_sensitivity.csv)
+
 ### Hydraulic grid and formulation on the same plain
 
 All grids cover the same 1 km². The comparison across grid spacings includes changes to both the represented bed and the hydraulic discretisation. The FV1 and Hancock columns at 1 m use identical terrain and forcing. Initial-window peaks are the largest recorded through hour eight. Rain stops at hour six, and a later crest can exceed the initial-window peak.

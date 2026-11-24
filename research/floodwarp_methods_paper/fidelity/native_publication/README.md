@@ -117,6 +117,17 @@ The same 1 km² plain, 10 m represented bed, initial state and six-hour rainfall
 
 The observed sensitivity applies to these 10 m runs. FV1 temporal sensitivity at 1 m requires a separate refinement at that spacing. [Water accounts, width, shape, timing and paired run identities](../native_results/fv1_temporal_sensitivity.csv)
 
+### Hancock sensitivity to the accepted timestep
+
+The same 1 km² plain, 10 m represented bed, initial state and six-hour rainfall were run on CPU at two CFL values. Changes below give the reduced-CFL result minus the ordinary result. Each endpoint passed the two-hour recession checks at both gauges.
+
+| Storm | End (h) | CFL | Accepted steps | Reduced-CFL steps | Peak change (%) | Peak interval shift (s) | Export change (m³) |
+|---|---:|---|---:|---:|---:|---:|---:|
+| plain-709-intense-1000x1000 | 32 | 0.4 → 0.2 | 87,495 | 174,004 | +0.2847 | +0 | +93.06 |
+| plain-709-moderate-1000x1000 | 40 | 0.4 → 0.2 | 99,238 | 197,173 | +0.1086 | +0 | +37.35 |
+
+The observed sensitivity applies to these 10 m runs. Hancock temporal sensitivity at 1 m requires a separate refinement at that spacing. [Water accounts, width, shape, timing and paired run identities](../native_results/hancock_temporal_sensitivity.csv)
+
 Of 75 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
 
 ## Dense and tiled execution

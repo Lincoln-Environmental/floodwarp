@@ -1,4 +1,4 @@
-"""Test FV1's own temporal sensitivity on the archived widespread-rain CPU controls."""
+"""Test each formulation's own temporal sensitivity on the archived widespread-rain CPU controls."""
 
 import fnmatch
 import getopt
@@ -11,6 +11,14 @@ import numpy as np
 from research.floodwarp_methods_paper import metrics, runner
 from research.floodwarp_methods_paper.fidelity import device_controls, recession, strong_storms
 from research.floodwarp_methods_paper.plan import read_config
+
+
+def method_settings(*, method):
+    if method == "fv1":
+        return "fv1", "FV1", "fv1"
+    if method == "hancock_dense":
+        return "hancock", "Hancock", "fv1_hancock"
+    raise ValueError(f"Unsupported temporal control method {method}")
 
 
 def observe(*, forecast, stopping):
@@ -30,6 +38,8 @@ def observe(*, forecast, stopping):
 
 
 def run_control(*, directory, control, settings, config, design, stopping, factor):
+    method = control["method"]
+    slug, label, solver = method_settings(method=method)
     root = directory / "strong_storms"
     identity = json.loads((root / control["id"] / "inputs.json").read_text())["identity"]
     peers = [strong_storms.forecast(directory=directory, spec=dict(identity["spec"], factor=value),
@@ -41,11 +51,11 @@ def run_control(*, directory, control, settings, config, design, stopping, facto
     if (runner.digest(identity)[:24] != control["id"] or identity["numerical"] != manifests[0]["identity"]["numerical"]
             or archived["physical_fields"] != manifests[0]["physical_fields"]
             or archived["forcing"] != manifests[0]["forcing"] or identity["spec"] != normal["spec"]):
-        raise ValueError("Archived FV1 baseline differs in solver, physical inputs or numerical settings")
+        raise ValueError(f"Archived {label} baseline differs in solver, physical inputs or numerical settings")
     base, other = [r["forcing"]["numerical"] for r in manifests]
-    if (base["solver_method"] != "fv1" or other != dict(base, cfl=base["cfl"] * factor)
+    if (base["solver_method"] != solver or other != dict(base, cfl=base["cfl"] * factor)
             or manifests[0]["physical_fields"] != manifests[1]["physical_fields"]):
-        raise ValueError("FV1 temporal control must change only the CFL factor")
+        raise ValueError(f"{label} temporal control must change only the CFL factor")
     earliest = float(control["end_h"])
     observations = []
     for hour in range(settings["first_check_h"], stopping["forcing_hours"] + 1, stopping["checkpoint_hours"]):
@@ -72,15 +82,15 @@ def run_control(*, directory, control, settings, config, design, stopping, facto
         device_controls.same_forcing(cpu=manifests[0]["forcing"], gpu=manifests[1]["forcing"], end=end)
         measurements = [observe(forecast=peer, stopping=stopping) for peer in views]
         for p, values in zip(peers, measurements, strict=True):
-            observations.append(dict(case=control["case"], dx_m=control["dx_m"], method="fv1", device=settings["device"],
+            observations.append(dict(case=control["case"], dx_m=control["dx_m"], method=method, device=settings["device"],
                                      factor=p["spec"]["factor"], interval_s=p["spec"]["interval"], **values))
-        print(control["case"], hour, "h", "FV1 peak at normal and reduced CFL",
+        print(control["case"], hour, "h", f"{label} peak at normal and reduced CFL",
               *(m["peak_m3s"] for m in measurements), flush=True)
         if hour >= earliest and all(m["both_stations_passed"] for m in measurements):
             break
     else:
-        raise ValueError("FV1 temporal comparison needs a longer common recession")
-    output = directory / "fv1_temporal"
+        raise ValueError(f"{label} temporal comparison needs a longer common recession")
+    output = directory / f"{slug}_temporal"
     source = dict(historical_normal=control["id"], normal=normal["folder"].name, reduced=reduced["folder"].name,
                   normal_cfl=base["cfl"], reduced_cfl=other["cfl"], end_s=end,
                   implementation=runner.checksum(Path(__file__)),
@@ -94,16 +104,18 @@ def run_control(*, directory, control, settings, config, design, stopping, facto
 def run(*, directory, arguments, factor):
     flags, extra = getopt.getopt(arguments, "", ["dry-run", "resume", "case=", "method=", "dx="])
     if extra:
-        raise ValueError(f"Unexpected FV1 temporal control arguments {extra}")
+        raise ValueError(f"Unexpected temporal control arguments {extra}")
     options = dict(flags)
+    method = options.get("--method", "fv1")
+    _, label, _ = method_settings(method=method)
     settings = json.loads((directory / "strong_storm_settings.json").read_text())
     controls = [r for r in metrics.csv_read(file=directory / "strong_storms/completed.csv")
-                if fnmatch.fnmatchcase(r["case"], options.get("--case", "*")) and r["method"] == "fv1"
-                and options.get("--method", "fv1") == "fv1" and float(options.get("--dx", r["dx_m"])) == float(r["dx_m"])]
+                if fnmatch.fnmatchcase(r["case"], options.get("--case", "*")) and r["method"] == method
+                and float(options.get("--dx", r["dx_m"])) == float(r["dx_m"])]
     if not controls:
-        raise ValueError("No matching archived widespread-rain FV1 temporal controls")
+        raise ValueError(f"No matching archived widespread-rain {label} temporal controls")
     for r in controls:
-        print(r["case"], r["dx_m"], "m", r["device"], "FV1 CFL factor", factor,
+        print(r["case"], r["dx_m"], "m", r["device"], f"{label} CFL factor", factor,
               "paired with", r["id"], "through at least", r["end_h"], "h", flush=True)
     if "--dry-run" in options:
         return

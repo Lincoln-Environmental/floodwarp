@@ -569,7 +569,8 @@ def run(*, directory, require_complete):
         if not groups
         else [i for items in primary.values() for i in items],
     )
-    fv1_clock_report.report(directory=directory, output=target, write_table=True)
+    for method in ("fv1", "hancock_dense"):
+        fv1_clock_report.report(directory=directory, output=target, write_table=True, method=method)
     metrics.csv_write(file=target / "native_grid_field_differences.csv",
                       rows=native_archive.native_grid_differences(directory=directory, records=records))
     metrics.csv_write(file=target / "regional_water.csv",

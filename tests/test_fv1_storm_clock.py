@@ -40,3 +40,15 @@ def test_signed_time_refinement_on_a_common_settled_comparison():
     second["both_stations_passed"] = "False"
     with pytest.raises(ValueError, match="Unsettled"):
         fv1_clock_report.end_comparison(observations=rows, source=contract)
+
+
+def test_hancock_clock_selects_hancock_and_never_pairs_with_fv1():
+    assert fv1_clock.method_settings(method="hancock_dense") == ("hancock", "Hancock", "fv1_hancock")
+    with pytest.raises(ValueError, match="Unsupported"):
+        fv1_clock.method_settings(method="li")
+    first = dict(id="normal", case="plain", dx_m="10", device="cpu", end_s="100", interval_s="20",
+                 method="hancock_dense", both_stations_passed="True")
+    second = dict(first, id="reduced", method="fv1")
+    contract = dict(normal="normal", reduced="reduced", end_s=100, normal_cfl=.4, reduced_cfl=.2)
+    with pytest.raises(ValueError, match="method"):
+        fv1_clock_report.end_comparison(observations=[first, second], source=contract)

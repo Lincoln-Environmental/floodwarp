@@ -364,9 +364,11 @@ def run(*, directory):
                  "storage upstream and downstream at the identical forecast time. The two volumes must sum to the "
                  "independently recorded domain storage. Map-error and IoU comparisons use common spatial support. "
                  "[Threshold areas and storage](../native_results/measured_windows.csv)"])
-    temporal_text, temporal_sources = fv1_clock_report.report(directory=directory, output=source, write_table=False)
-    text.extend(temporal_text)
-    decision_files.extend([*temporal_sources, Path(fv1_clock_report.__file__)])
+    for method in ("fv1", "hancock_dense"):
+        temporal_text, temporal_sources = fv1_clock_report.report(directory=directory, output=source, write_table=False, method=method)
+        text.extend(temporal_text)
+        decision_files.extend(temporal_sources)
+    decision_files.append(Path(fv1_clock_report.__file__))
     timing_provenance = source / "timing_provenance.csv"
     if timing_provenance.exists():
         clocks = metrics.csv_read(file=timing_provenance)
