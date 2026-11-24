@@ -42,6 +42,23 @@ def marginal_budget_options(*, rows, relative_gap):
     return selected
 
 
+def comparison_scopes(*, target, frontier, kind):
+    observations = metrics.csv_read(file=target / (frontier + ".csv"))
+    source = target / f"terrain_screen_{kind}.csv"
+    for r in observations:
+        if r["cohort"] == "complete-native-metre":
+            yield "hydraulic comparison", r
+    if source.is_file():
+        terrain = {(r["experiment_id"], r["station"], r["objective"]): r["disposition"]
+                   for r in metrics.csv_read(file=source)}
+        for r in observations:
+            if r["cohort"] == "complete-native-metre":
+                key = r["experiment_id"], r["station"], r["objective"]
+                if key not in terrain:
+                    raise ValueError("Missing terrain assessment in the timing opportunity inventory")
+                yield "preserve assessed controls", dict(r, eligible=str(r["eligible"] == "True" and terrain[key] == "admissible"))
+
+
 def candidates(*, target, tolerances, relative_gap):
     selected = defaultdict(set)
     for row in metrics.csv_read(file=target / "policy_cost_events.csv"):
@@ -59,15 +76,13 @@ def candidates(*, target, tolerances, relative_gap):
         selected[row["case"], float(row["end_h"])].update(
             close_options(points=costs, relative_gap=relative_gap)
         )
-    for filename in ("hydrograph_pareto", "recession_depth_pareto"):
+    for filename, kind in (("hydrograph_pareto", "fidelity"), ("recession_depth_pareto", "depth_extent")):
         groups = defaultdict(dict)
         budget_groups = defaultdict(list)
-        for row in metrics.csv_read(file=target / (filename + ".csv")):
-            if row["cohort"] != "complete-native-metre":
-                continue
+        for scope, row in comparison_scopes(target=target, frontier=filename, kind=kind):
             objective = row["objective"]
             key = (row["case"], float(row["end_h"]), row["representation"], row["station"],
-                   float(row["interval_s"]), row["reference_id"], row["cap"], objective)
+                   float(row["interval_s"]), row["reference_id"], row["cap"], objective, scope)
             budget_groups[key].append(row)
             if row["eligible"] != "True":
                 continue

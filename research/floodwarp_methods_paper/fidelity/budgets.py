@@ -8,7 +8,7 @@ def conservative_error(*, value, sensitivity):
     return abs(float(value)) + float(sensitivity)
 
 
-def feasible_cost(*, rows, target, tolerances, spacings, name="fidelity"):
+def feasible_cost(*, rows, target, tolerances, spacings, name="fidelity", file_prefix=""):
     groups = defaultdict(list)
     fields = (
         "cohort",
@@ -30,6 +30,11 @@ def feasible_cost(*, rows, target, tolerances, spacings, name="fidelity"):
     budgets = []
     for key, points in groups.items():
         meta = dict(zip(fields, key, strict=True))
+        if "terrain_disposition" in points[0]:
+            assessable = [r for r in points if r["hydraulic_eligible"]]
+            meta.update(hydraulically_assessable=len(assessable),
+                        terrain_requires_refinement=sum(r["terrain_disposition"] == "refine terrain" for r in assessable),
+                        terrain_unassessed=sum(r["terrain_disposition"] == "unassessed" for r in assessable))
         valid = []
         for r in points:
             if r.get("eligible") is not True:
@@ -107,5 +112,15 @@ def feasible_cost(*, rows, target, tolerances, spacings, name="fidelity"):
                         hydraulic_s_per_step=r["runtime_s"]/r["steps"] if r and r.get("steps") else None,
                     )
                 )
-    metrics.csv_write(file=target / f"least_cost_{name}.csv", rows=decisions)
-    metrics.csv_write(file=target / f"equal_cost_{name}.csv", rows=budgets)
+    metrics.csv_write(file=target / f"least_cost_{file_prefix}{name}.csv", rows=decisions)
+    metrics.csv_write(file=target / f"equal_cost_{file_prefix}{name}.csv", rows=budgets)
+
+
+def native_cost(*, rows, target, tolerances, spacings, name, controls):
+    from research.floodwarp_methods_paper.fidelity import terrain_evidence
+
+    options = dict(target=target, tolerances=tolerances, spacings=spacings, name=name)
+    feasible_cost(rows=rows, **options)
+    screened, audit = terrain_evidence.assess(rows=rows, controls=controls)
+    metrics.csv_write(file=target / f"terrain_screen_{name}.csv", rows=audit)
+    feasible_cost(rows=screened, file_prefix="terrain_", **options)

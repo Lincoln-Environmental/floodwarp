@@ -352,7 +352,15 @@ def native_choice_table(*, file, references, objectives):
         key = (r["case"], float(r["end_h"]), float(r["interval_s"]), r["reference_id"], r["representation"], r["cap"])
         values = groups[key].setdefault(scope, [])
         if not r["id"]:
-            values.append("Outside tolerance" if int(r["assessable"]) else "Unresolved")
+            if int(r["assessable"]):
+                status = "Outside tolerance"
+            elif int(r.get("terrain_unassessed") or 0):
+                status = "No assessed admissible grid"
+            elif int(r.get("terrain_requires_refinement") or 0):
+                status = "Refine terrain"
+            else:
+                status = "Unresolved"
+            values.append(status)
         else:
             method = {"fv1": "FV1", "adaptive": "RK2", "hancock_auto": "Hancock auto",
                       "hancock_dense": "Hancock dense", "hancock_adaptive": "Hancock tiles"}.get(r["method"], r["method"])
@@ -367,7 +375,7 @@ def native_choice_table(*, file, references, objectives):
 
 def native_budget_evidence(*, study, tolerance):
     folder = study / "fidelity/native_results"
-    file = folder / "least_cost_fidelity.csv"
+    file = folder / "least_cost_terrain_fidelity.csv"
     if not file.is_file():
         return ""
     checks = [r for r in csv_read(file=folder / "reference_checks.csv")
@@ -382,12 +390,12 @@ def native_budget_evidence(*, study, tolerance):
     labels = ("Outlet peak", "Outlet shape", "Net export", "Infiltration", "Outlet width", "Internal peak", "Internal shape")
     hydraulic = {scope: (label, tolerance) for scope, label in zip(scopes, labels, strict=True)}
     text = ["", "## Fixed-area storms and the hydraulic objective", "",
-            f"The table gives the cheapest measured configuration at a {tolerance:g}% tolerance on each "
+            f"The table gives the cheapest terrain-admissible measured configuration at a {tolerance:g}% tolerance on each "
             "observable. Compliance includes the measured reference sensitivity. Each row fixes the storm, "
             "reference, reporting interval and recession endpoint. Shape measures redistribution of normalised "
             "discharge volume, and width measures the central 80% of that volume.", "",
             *native_choice_table(file=file, references=references, objectives=hydraulic)]
-    spatial_file = folder / "least_cost_depth_extent.csv"
+    spatial_file = folder / "least_cost_terrain_depth_extent.csv"
     if spatial_file.is_file():
         import json
 
@@ -403,13 +411,32 @@ def native_budget_evidence(*, study, tolerance):
                      f"cellwise maximum-depth map and a {tolerance:g}% tolerance on one minus inundation IoU.", "",
                      *native_choice_table(file=spatial_file, references=references, objectives=spatial)])
     text.extend(["", "Unresolved marks observations without an eligible hydraulic reference. Outside tolerance "
-                 "marks a qualified comparison in which every measured candidate exceeds the error bound.", "",
+                 "marks a qualified comparison in which every terrain-admissible candidate exceeds the error bound. "
+                 "Refine terrain marks a hydraulically assessable comparison where each candidate grid failed "
+                 "the pre-run terrain check. The accompanying tables retain the hydraulic-only and terrain-admissible decisions.", "",
                  "| Storm | RK2 spatial peak difference (%) | Fine formulation difference (%) | Half-CFL difference (%) | Peak reference |",
                  "|---|---:|---:|---:|---|"])
     for r in sorted(checks, key=case_name):
         values = [fmt(r[k]) for k in ("space", "cross", "time")]
         outcome = "Qualified" if r["qualified"] == "True" else "Unresolved"
         text.append(f"| {r['case']} | " + " | ".join(values) + f" | {outcome} |")
+    screen = folder / "terrain_screen_fidelity.csv"
+    if screen.is_file():
+        import json
+
+        controls = {(r["case"], int(r["dx_m"])): r for r in csv_read(file=screen)
+                    if (r["case"], r["reference_id"]) in references and r["hydraulic_eligible"] == "True"
+                    and r["critical_connection_lost"] == "True"}
+        probe = json.loads((study / "fidelity/native_feature_settings.json").read_text())
+        if controls:
+            text.extend(["", f"The static connection test uses an {probe['control_window_m']} m square "
+                         f"around the prescribed opening and a water level {100 * probe['spill_head_m']:g} cm above "
+                         "the native spill elevation. These grids lose the connection even where a hydraulic observable "
+                         "meets tolerance.", "", "| Storm | Grid (m) | Maximum local barrier lowering (cm) |",
+                         "|---|---:|---:|"])
+            for (case, spacing), row in sorted(controls.items()):
+                text.append(f"| {case} | {spacing} | {100 * float(row['barrier_lowering_m']):.2f} |")
+            text.extend(["", "[Control maps and spill-height sensitivity](../fidelity/native_publication/control_stage_sensitivity.csv)"])
     for r in csv_read(file=folder / "recession_depth.csv"):
         if (r["cohort"] != "complete-native-metre" or r["id"] != r["reference_id"]
                 or (r["case"], r["reference_id"]) not in references):

@@ -80,26 +80,35 @@ Across 65 completed native storm configurations, 13 restart records inherited in
 
 ## Fixed-area storms and the hydraulic objective
 
-The table gives the cheapest measured configuration at a 5% tolerance on each observable. Compliance includes the measured reference sensitivity. Each row fixes the storm, reference, reporting interval and recession endpoint. Shape measures redistribution of normalised discharge volume, and width measures the central 80% of that volume.
+The table gives the cheapest terrain-admissible measured configuration at a 5% tolerance on each observable. Compliance includes the measured reference sensitivity. Each row fixes the storm, reference, reporting interval and recession endpoint. Shape measures redistribution of normalised discharge volume, and width measures the central 80% of that volume.
 
 | Storm | End (h) | Interval (s) | Outlet peak | Outlet shape | Net export | Infiltration | Outlet width | Internal peak | Internal shape |
 |---|---:|---:|---|---|---|---|---|---|---|
 | hill-8500-back-1000x1000 | 12 | 60 | FV1 10 m (2.15 s) | Unresolved | FV1 10 m (2.15 s) | Outside tolerance | Unresolved | FV1 10 m (2.15 s) | Unresolved |
-| plain-709-spatial-1000x1000 | 20 | 300 | Unresolved | Unresolved | Unresolved | FV1 10 m (2.29 s) | Hancock auto 10 m (2.84 s) | Hancock auto 10 m (2.84 s) | Hancock auto 10 m (2.84 s) |
+| plain-709-spatial-1000x1000 | 20 | 300 | Unresolved | Unresolved | Unresolved | Refine terrain | Refine terrain | Refine terrain | Refine terrain |
 
 Depth decisions use an RMSE tolerance of 1 cm. Maximum extent uses the cellwise maximum-depth map and a 5% tolerance on one minus inundation IoU.
 
 | Storm | End (h) | Interval (s) | Final depth | Maximum-depth map | Depth on 5 cm wet union | Depth on 10 cm wet union | Maximum 5 cm extent | Maximum 10 cm extent |
 |---|---:|---:|---|---|---|---|---|---|
 | hill-8500-back-1000x1000 | 12 | 60 | FV1 10 m (2.15 s) | Hancock dense 10 m (2.28 s) | Unresolved | Unresolved | Unresolved | Unresolved |
-| plain-709-spatial-1000x1000 | 20 | 300 | FV1 10 m (2.29 s) | FV1 10 m (2.29 s) | Unresolved | Unresolved | Unresolved | Hancock auto 5 m (10.5 s) |
+| plain-709-spatial-1000x1000 | 20 | 300 | Refine terrain | Refine terrain | Unresolved | Unresolved | Unresolved | Refine terrain |
 
-Unresolved marks observations without an eligible hydraulic reference. Outside tolerance marks a qualified comparison in which every measured candidate exceeds the error bound.
+Unresolved marks observations without an eligible hydraulic reference. Outside tolerance marks a qualified comparison in which every terrain-admissible candidate exceeds the error bound. Refine terrain marks a hydraulically assessable comparison where each candidate grid failed the pre-run terrain check. The accompanying tables retain the hydraulic-only and terrain-admissible decisions.
 
 | Storm | RK2 spatial peak difference (%) | Fine formulation difference (%) | Half-CFL difference (%) | Peak reference |
 |---|---:|---:|---:|---|
 | hill-8500-back-1000x1000 | 0.1293 | 0.0006244 | 0.003383 | Qualified |
 | plain-709-spatial-1000x1000 | 14.78 | 0.1426 | 0.01738 | Unresolved |
+
+The static connection test uses an 80 m square around the prescribed opening and a water level 1 cm above the native spill elevation. These grids lose the connection even where a hydraulic observable meets tolerance.
+
+| Storm | Grid (m) | Maximum local barrier lowering (cm) |
+|---|---:|---:|
+| plain-709-spatial-1000x1000 | 5 | 18.04 |
+| plain-709-spatial-1000x1000 | 10 | 21.07 |
+
+[Control maps and spill-height sensitivity](fidelity/native_publication/control_stage_sensitivity.csv)
 
 On the 10 m assessment grid for hill-8500-back-1000x1000, the fine reference retained 0 cells (0 m²) at or above 5 cm at the endpoint. The area-averaged cell maxima reached 10 cm on 0 cells (0 m²).
 

@@ -23,6 +23,7 @@ from research.floodwarp_methods_paper.fidelity import (
     recession_figures,
     repeat_costs,
     statistics,
+    terrain_evidence,
 )
 from research.floodwarp_methods_paper.plan import read_config
 from research.floodwarp_methods_paper.terrain.generators.generate import parameters
@@ -493,8 +494,9 @@ def run(*, directory, require_complete):
     metrics.csv_write(file=target / "reference_checks.csv", rows=checks)
     front = statistics.frontiers(rows=rows, objectives=tuple(hydro["reference_limits"]))
     metrics.csv_write(file=target / "hydrograph_pareto.csv", rows=front)
-    budgets.feasible_cost(
-        rows=front,
+    controls = terrain_evidence.forecast_controls(directory=directory, rows=complete)
+    budgets.native_cost(
+        rows=front, name="fidelity", controls=controls,
         target=target,
         tolerances=application["tolerances_pct"],
         spacings=application["fv1_budget_grids_m"],
@@ -503,7 +505,7 @@ def run(*, directory, require_complete):
         groups=primary,
         directory=directory,
         target=target,
-        settings=application["endpoint_depth"],
+        settings=application["endpoint_depth"], terrain_controls=controls,
     )
     event_figures(directory=directory, groups={**prefix_groups, **groups}, target=target)
     plot_curves(

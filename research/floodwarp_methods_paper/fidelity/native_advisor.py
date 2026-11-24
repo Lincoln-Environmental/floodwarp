@@ -9,7 +9,7 @@ import sys
 from floodwarp.solver_advisor.fidelity import METRICS
 from floodwarp.solver_advisor.model import recommend, scales
 from research.floodwarp_methods_paper import advisor, metrics, runner
-from research.floodwarp_methods_paper.fidelity import native_matrix, phase_cost
+from research.floodwarp_methods_paper.fidelity import native_matrix, phase_cost, terrain_evidence
 from research.floodwarp_methods_paper.plan import read_config
 from research.floodwarp_methods_paper.qualification import advisor_data, decisions
 
@@ -100,30 +100,7 @@ def sample_rows(*, directory, partitions, require_full, config, design):
         s = plans[key]
         case, dx, method = key
         feature = features[case, dx]
-        fpath = (
-            directory
-            / "native_features"
-            / case
-            / f"{dx}m"
-            / feature["identity"]
-            / "pre_run.json"
-        )
-        f = json.loads(fpath.read_text())
-        if runner.digest(f["identity"])[:24] != feature["identity"]:
-            raise ValueError("Altered pre-run descriptor identity")
-        physical = json.loads(
-            (
-                directory
-                / "native_terrain"
-                / case
-                / f["identity"]["physical"]
-                / "inputs.json"
-            ).read_text()
-        )
-        if runner.digest(physical["native_sha256"]) != row["native_sha"]:
-            raise ValueError(
-                "Pre-run descriptors do not match the forecast's physical fields"
-            )
+        f = terrain_evidence.measured_features(directory=directory, index_row=feature, native_sha=row["native_sha"])
         ident = row["source_id"]
         budget = diagnostics[ident]
         obs = hyd[ident]
@@ -321,7 +298,7 @@ def model_sources():
 
     return {
         m.__name__: runner.checksum(Path(m.__file__))
-        for m in (advisor, advisor_data, decisions, model, sys.modules[__name__])
+        for m in (advisor, advisor_data, decisions, model, terrain_evidence, sys.modules[__name__])
     }
 
 

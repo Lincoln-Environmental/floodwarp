@@ -96,7 +96,7 @@ def difference(*, candidate, reference, support, thresholds):
     return out
 
 
-def process(*, groups, directory, target, settings):
+def process(*, groups, directory, target, settings, terrain_controls=None):
     result = []
     targets = settings["thresholds_m"]
     support_map = json.loads((directory / "spatial_settings.json").read_text())[
@@ -242,6 +242,10 @@ def process(*, groups, directory, target, settings):
         key: [admission["depth_tolerance_m"]] if "depth" in key
         else [pct / 100 for pct in application["tolerances_pct"]] for key in objectives
     }
-    budgets.feasible_cost(rows=frontier, target=target, tolerances=spatial_tolerances,
-                          spacings=application["fv1_budget_grids_m"], name="depth_extent")
+    options = dict(rows=frontier, target=target, tolerances=spatial_tolerances,
+                   spacings=application["fv1_budget_grids_m"], name="depth_extent")
+    if terrain_controls is None:
+        budgets.feasible_cost(**options)
+    else:
+        budgets.native_cost(controls=terrain_controls, **options)
     return result

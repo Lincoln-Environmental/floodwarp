@@ -322,6 +322,18 @@ def run(*, directory):
                  "Lowest qualified error within an FV1 runtime budget "
                  "[for discharge and water accounts](../native_results/equal_cost_fidelity.csv) · "
                  "[for depth and inundation](../native_results/equal_cost_depth_extent.csv)."])
+    terrain_files = [source / f"{choice}_terrain_{kind}.csv" for choice in ("least_cost", "equal_cost")
+                     for kind in ("fidelity", "depth_extent")]
+    if all(path.is_file() for path in terrain_files):
+        decision_files.extend(terrain_files)
+        decision_files.extend(source / f"terrain_screen_{kind}.csv" for kind in ("fidelity", "depth_extent"))
+        text.extend(["", "For decisions requiring preservation of assessed terrain controls, the same cost and "
+                     "error comparisons apply the public advisor's terrain check to every candidate grid. "
+                     "An unassessed connection is ineligible. The FV1 runtime remains a measured computational budget.",
+                     "", "[Admissible cost at tolerance for hydrographs and water accounts](../native_results/least_cost_terrain_fidelity.csv) · "
+                     "[Admissible cost for spatial fields](../native_results/least_cost_terrain_depth_extent.csv) · "
+                     "[Hydraulic error within budget](../native_results/equal_cost_terrain_fidelity.csv) · "
+                     "[Spatial error within budget](../native_results/equal_cost_terrain_depth_extent.csv)"])
     timing_provenance = source / "timing_provenance.csv"
     if timing_provenance.exists():
         clocks = metrics.csv_read(file=timing_provenance)

@@ -470,6 +470,44 @@ def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
         orton_transfer.read_complete(folder=folder, identity=identity)
 
 
+def test_budget_reprices_on_admissible_terrain_and_preserves_hydraulic_winner(tmp_path):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity import budgets
+
+    point = dict(case="plain", cohort="complete-native-metre", reference_id="fine", station="outlet",
+                 end_h=20, interval_s=60, representation="native", cap=0, objective="peak_bias_pct",
+                 eligible=True, reference_sensitivity=1., execution_mode="dense", steps=10)
+    rows = [dict(point, dx=10, method="fv1", experiment_id="cheap", absolute_error=1., runtime_s=2.),
+            dict(point, dx=5, method="hancock_dense", experiment_id="fine", absolute_error=2., runtime_s=4.),
+            dict(point, dx=5, method="fv1", experiment_id="unknown", absolute_error=1., runtime_s=3.)]
+    states = {"cheap": dict(identity="coarse", features=dict(critical_connection_lost=True)),
+              "fine": dict(identity="finer", features=dict(critical_connection_lost=False))}
+    budgets.native_cost(rows=rows, target=tmp_path, tolerances=[5], spacings=[5, 10], name="fidelity", controls=states)
+    original, = metrics.csv_read(file=tmp_path / "least_cost_fidelity.csv")
+    screened, = metrics.csv_read(file=tmp_path / "least_cost_terrain_fidelity.csv")
+    assert original["id"] == "cheap" and screened["id"] == "fine"
+    assert (screened["terrain_requires_refinement"], screened["terrain_unassessed"]) == ("1", "1")
+    assert screened["conservative_error"] == "3.0"
+    equal = metrics.csv_read(file=tmp_path / "equal_cost_terrain_fidelity.csv")
+    assert len(equal) == 2 and all(r["selected_id"] == "" for r in equal)
+    audit = metrics.csv_read(file=tmp_path / "terrain_screen_fidelity.csv")
+    assert [r["disposition"] for r in audit] == ["refine terrain", "admissible", "unassessed"]
+
+
+def test_native_budget_terrain_sources_agree_between_gauges_and_spatial_fields():
+    from pathlib import Path
+    from research.floodwarp_methods_paper import metrics
+
+    root = Path(__file__).resolve().parents[1] / "research/floodwarp_methods_paper/fidelity/native_results"
+    gauges = {r["experiment_id"]: r for r in metrics.csv_read(file=root / "terrain_screen_fidelity.csv")}
+    fields = metrics.csv_read(file=root / "terrain_screen_depth_extent.csv")
+    assert fields
+    for r in fields:
+        wave = gauges[r["experiment_id"]]
+        assert r["descriptor_id"] == wave["descriptor_id"]
+        assert r["critical_connection_lost"] == wave["critical_connection_lost"]
+
+
 def test_manuscript_budget_decisions_keep_depth_and_extent_thresholds_in_their_own_units(tmp_path):
     from research.floodwarp_methods_paper import metrics
     from research.floodwarp_methods_paper.manuscript.generate import native_choice_table

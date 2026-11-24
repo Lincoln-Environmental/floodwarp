@@ -135,8 +135,12 @@ def add_decision_tables(*, output, directory, incised):
     for decision_type, title in (("least_cost", "Lowest measured hydraulic cost meeting the stated tolerance"),
                                 ("equal_cost", "Lowest qualified measured error within an FV1 runtime budget")):
         decisions = []
-        for kind in ("fidelity", "depth_extent"):
-            candidates = csv_read(file=directory / f"{decision_type}_{kind}.csv")
+        sources = [("", kind) for kind in ("fidelity", "depth_extent")]
+        if not incised:
+            sources.extend(("terrain_", kind) for kind in ("fidelity", "depth_extent")
+                           if (directory / f"{decision_type}_terrain_{kind}.csv").is_file())
+        for prefix, kind in sources:
+            candidates = csv_read(file=directory / f"{decision_type}_{prefix}{kind}.csv")
             qualified = set()
             if not incised:
                 opportunities = csv_read(file=directory / f"least_cost_{kind}.csv")
@@ -160,7 +164,10 @@ def add_decision_tables(*, output, directory, incised):
                 if not incised:
                     field = fields.get(context["id"], {}) if kind == "depth_extent" else {}
                     support = spatial_table_support(field=field, objective=metric)
-                    scope.update(common_support_m=support.get("common_support_m"),
+                    scope.update(terrain_requirement="Preserve assessed controls" if prefix else "Hydraulic comparison",
+                                 terrain_requires_refinement=row.get("terrain_requires_refinement"),
+                                 terrain_unassessed=row.get("terrain_unassessed"),
+                                 common_support_m=support.get("common_support_m"),
                                  reference_wet_cells=support.get("reference_wet_cells"),
                                  wet_union_cells=support.get("wet_union_cells"))
                 decisions.append(dict(**scope, objective=metric, unit="m" if kind == "depth_extent" and "depth" in metric

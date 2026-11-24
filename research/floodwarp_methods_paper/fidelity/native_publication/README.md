@@ -84,6 +84,10 @@ Each decision fixes the event, reference, gauge or spatial support, cadence and 
 
 Lowest hydraulic cost meeting a tolerance [for discharge and water accounts](../native_results/least_cost_fidelity.csv) · [for depth and inundation](../native_results/least_cost_depth_extent.csv). Lowest qualified error within an FV1 runtime budget [for discharge and water accounts](../native_results/equal_cost_fidelity.csv) · [for depth and inundation](../native_results/equal_cost_depth_extent.csv).
 
+For decisions requiring preservation of assessed terrain controls, the same cost and error comparisons apply the public advisor's terrain check to every candidate grid. An unassessed connection is ineligible. The FV1 runtime remains a measured computational budget.
+
+[Admissible cost at tolerance for hydrographs and water accounts](../native_results/least_cost_terrain_fidelity.csv) · [Admissible cost for spatial fields](../native_results/least_cost_terrain_depth_extent.csv) · [Hydraulic error within budget](../native_results/equal_cost_terrain_fidelity.csv) · [Spatial error within budget](../native_results/equal_cost_terrain_depth_extent.csv)
+
 Of 65 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
 
 ## Dense and tiled execution
