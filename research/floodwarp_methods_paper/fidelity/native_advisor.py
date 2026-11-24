@@ -434,7 +434,15 @@ def validate(*, directory, settings, config, design):
             frozen_model=pointer,
             heldout_ids=[r["run_id"] for r in held],
             final_independent_terrain_ids=settings["new_final_terrain_ids"],
+            files={
+                name: runner.checksum(output / name)
+                for name in ("summary.csv", "strata.csv", "decisions.csv", "candidate_predictions.csv")
+            },
         ),
+    )
+    runner.write_json(
+        path=directory / "native_advisor/heldout_evaluation.json",
+        data=dict(path=str(output.relative_to(directory)), sha256=runner.checksum(output / "sources.json")),
     )
     return output
 

@@ -1061,6 +1061,16 @@ def test_native_advisor_freezes_before_scoring_held_out_groups(tmp_path, monkeyp
     test=native_advisor.validate(**args)
     assert accessed[-1]==("test",)
     assert all((test/name).is_file() for name in ("decisions.csv","strata.csv","candidate_predictions.csv"))
+    from research.floodwarp_methods_paper.fidelity.native_publication import advisor_report
+
+    publication = directory / "native_publication"
+    report, sources = advisor_report(directory=directory, output=publication)
+    assert any("Measured oracle" in line for line in report)
+    assert test / "strata.csv" in sources
+    assert all((publication / ("heldout_advisor." + ext)).is_file() for ext in ("pdf", "svg", "png"))
+    (test / "summary.csv").write_text("changed")
+    with pytest.raises(ValueError, match="summary.csv"):
+        advisor_report(directory=directory, output=publication)
     assert json.loads(path.read_text()) == frozen
     path.write_text("{}")
     with pytest.raises(ValueError,match="checksum"):

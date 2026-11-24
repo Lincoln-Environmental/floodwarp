@@ -14,3 +14,7 @@ All positions share the same native metre grid origin. Each 10 m elevation avera
 0 of 36 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
+
+## Held-out Solver Advisor evaluation
+
+The held-out native-terrain evaluation is pending.

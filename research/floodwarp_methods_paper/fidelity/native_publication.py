@@ -1,6 +1,7 @@
 """Render measured practical comparisons from archived CSV files without running hydraulics."""
 
 from collections import defaultdict
+import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -103,6 +104,61 @@ def measured_fronts(*, directory, output):
     return counts
 
 
+def advisor_report(*, directory, output):
+    pointer = directory / "native_advisor/heldout_evaluation.json"
+    if not pointer.is_file():
+        return ["The held-out native-terrain evaluation is pending."], []
+    active = json.loads(pointer.read_text())
+    archive = directory / active["path"]
+    receipt = archive / "sources.json"
+    if runner.checksum(receipt) != active["sha256"]:
+        raise ValueError("Held-out evaluation receipt checksum changed")
+    evidence = json.loads(receipt.read_text())
+    frozen = directory / "native_advisor/frozen_model.json"
+    model = json.loads(frozen.read_text())
+    if model != evidence["frozen_model"] or runner.checksum(directory / model["path"]) != model["sha256"]:
+        raise ValueError("Held-out evaluation does not match the frozen model")
+    sources = [pointer, receipt, frozen, directory / model["path"]]
+    for name, checksum in evidence["files"].items():
+        path = archive / name
+        if runner.checksum(path) != checksum:
+            raise ValueError(f"Changed held-out evidence in {name}")
+        sources.append(path)
+    rows = metrics.csv_read(file=archive / "summary.csv")
+    label = {"advisor": "Advisor", "slope": "Slope only", "fv1": "FV1",
+             "hancock_dense": "Dense Hancock", "oracle": "Measured oracle"}
+    panels = (
+        ("feasible_coverage_pct", "Feasible opportunities covered (%)"),
+        ("abstention_pct", "Abstentions / decisions (%)"),
+        ("false_feasible_per_decision_pct", "False feasible / decisions (%)"),
+        ("median_regret_pct", "Median assessed runtime regret (%)"),
+    )
+    fig, axes = plt.subplots(2, 2, figsize=(8, 5.5), layout="constrained")
+    for ax, (metric, title) in zip(axes.flat, panels, strict=True):
+        for rule, name in label.items():
+            series = sorted((float(r["percentage_scenario"]), float(r[metric]))
+                            for r in rows if r["rule"] == rule and r[metric] != "")
+            if series:
+                ax.plot(*zip(*series), marker="o", label=name)
+        ax.set(xlabel="Hydrograph / extent tolerance scenario (%)", ylabel=title,
+               xticks=sorted({float(r["percentage_scenario"]) for r in rows}))
+    handles, names = axes[0, 1].get_legend_handles_labels()
+    if handles:
+        fig.legend(handles, names, loc="outside upper center", ncol=3)
+    save(fig=fig, folder=output, name="heldout_advisor")
+    table = ["| Scenario (%) | Rule | Decisions | Feasible opportunities | Successful selections | False feasible | Abstained |",
+             "|---:|---|---:|---:|---:|---:|---:|"]
+    for r in rows:
+        table.append(f"| {r['percentage_scenario']} | {label[r['rule']]} | {r['decisions']} | "
+                     f"{r['empirical_feasible_opportunities']} | {r['successful_selections']} | "
+                     f"{r['false_feasible']} | {r['abstentions']} |")
+    relative = "../" + archive.relative_to(directory).as_posix()
+    return [*table, "", "Depth tolerances are fixed across the percentage scenarios. "
+            "Runtime regret requires an assessable selection and a measured feasible alternative.",
+            "", f"[Validation figure](heldout_advisor.pdf) · [All decisions]({relative}/decisions.csv) · "
+            f"[Independent final terrain and subgroup results]({relative}/strata.csv)"], sources
+
+
 def run(*, directory):
     study = directory.parent
     source = directory / "native_results"
@@ -140,6 +196,8 @@ def run(*, directory):
             "[Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)",
         ]
     )
+    advisor_text, advisor_sources = advisor_report(directory=directory, output=output)
+    text.extend(["", "## Held-out Solver Advisor evaluation", "", *advisor_text])
     (output / "README.md").write_text("\n".join(text) + "\n")
     runner.write_json(
         path=output / "sources.json",
@@ -150,6 +208,7 @@ def run(*, directory):
                 source / "hydrograph_pareto.csv",
                 source / "recession_depth_pareto.csv",
                 Path(__file__),
+                *advisor_sources,
             )
         },
     )

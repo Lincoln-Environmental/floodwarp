@@ -93,6 +93,8 @@ def manifest(*, directory, package):
         "native_matrix",
         "native_terrain",
         "native_features",
+        "native_publication",
+        "native_advisor",
         "native_results",
         "native_cpu_control",
         "native_outlet",
