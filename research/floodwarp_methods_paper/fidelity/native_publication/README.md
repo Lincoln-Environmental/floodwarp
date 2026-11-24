@@ -16,6 +16,10 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | floodplain-702-moderate-10240x10240 | 10 | Hancock | dense | 1.0 | 28 | 300 | 111.792 | 123.695 | 4,695,050 | 302.68 | 79,979 |
 | floodplain-702-moderate-10240x10240 | 10 | Hancock | tiles | 1.0 | 28 | 300 | 111.792 | 123.695 | 4,695,050 | 270.09 | 79,979 |
 | floodplain-702-moderate-10240x10240 | 10 | Hancock | auto → dense | 1.0 | 28 | 300 | 111.792 | 123.695 | 4,695,050 | 298.86 | 79,979 |
+| hill-706-back-10240x10240 | 10 | FV1 | sparse | 1.0 | 16 | 300 | 698.384 | 1174.700 | 13,384,371 | 130.11 | 63,168 |
+| hill-706-back-10240x10240 | 10 | Hancock | dense | 1.0 | 16 | 300 | 729.513 | 1251.557 | 13,255,499 | 206.77 | 52,330 |
+| hill-706-back-10240x10240 | 10 | Hancock | tiles | 1.0 | 16 | 300 | 729.513 | 1251.557 | 13,255,499 | 192.20 | 52,330 |
+| hill-706-back-10240x10240 | 10 | Hancock | auto → dense | 1.0 | 16 | 300 | 729.513 | 1251.557 | 13,255,499 | 202.95 | 52,330 |
 | plain-701-spatial-10240x10240 | 10 | FV1 | sparse | 1.0 | 52 | 300 | 11.935 | 0.000 | 0 | 35.74 | 48,849 |
 | plain-701-spatial-10240x10240 | 10 | Hancock | dense | 1.0 | 52 | 300 | 10.643 | 0.000 | 0 | 83.41 | 41,769 |
 | plain-701-spatial-10240x10240 | 10 | Hancock | tiles | 1.0 | 52 | 300 | 10.643 | 0.000 | 0 | 33.69 | 41,769 |
@@ -32,20 +36,20 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | fan-705-spatial-5120x5120 | 5 | Hancock | tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.62 | 35,833 |
 | fan-705-spatial-5120x5120 | 5 | Hancock | auto → tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.60 | 35,833 |
 
-0 of 207 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
+0 of 243 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
 ## Dense and tiled execution
 
-[complete-native-metre, 5 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
-[original-window, 5 matched grid/event comparisons](policy_cost_original_window.pdf)
+[complete-native-metre, 6 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
+[original-window, 6 matched grid/event comparisons](policy_cost_original_window.pdf)
 
 Each upper-panel point represents a measured forecast window. Each lower-panel point represents a recorded timing interval (minutes: 15). Footprints are sampled at interval end. A ratio below one favours tiles. The same trajectory can contribute to both the initial window and the matched recession products.
 
 [Policy run identities and timings](../native_results/policy_cost_events.csv) · [Individual timing intervals](../native_results/policy_cost_windows.csv)
 
-0 of 23 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
+0 of 27 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
 
 [Timing identities, quartiles and range](../native_results/timing_distribution.csv)
 
