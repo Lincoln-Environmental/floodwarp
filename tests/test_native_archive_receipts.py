@@ -147,3 +147,22 @@ def test_native_map_shared_recession_requires_both_parents_at_same_time(tmp_path
     (groups / "group_new.json").write_text(json.dumps(dict(group, end_s=86400)))
     with pytest.raises(ValueError, match="Ambiguous"):
         common_end(directory=tmp_path, case="plain", parents={"h", "r"})
+
+
+def test_independent_fp64_storage_reductions_must_both_replay_exactly():
+    from pathlib import Path
+    import numpy as np
+
+    from research.floodwarp_methods_paper.fidelity import storage_reductions
+
+    directory = Path(__file__).resolve().parents[1] / "research/floodwarp_methods_paper/fidelity"
+    ident = "6c01f70b7847c7e3f0cb48dc"
+    with np.load(directory / "endpoint_fields" / ident / "144000.npz", allow_pickle=False) as fields:
+        receipt = json.loads(fields["receipt"].item())
+    with gzip.open(directory / "extended_runs" / ident / "horizons/144000.json.gz", "rt") as stream:
+        series = json.load(stream)
+    measured = storage_reductions.verify(directory=directory, receipt=receipt, series=series)
+    assert measured == np.spacing(series["storage_m3"])
+    changed = dict(series, storage_m3=np.nextafter(series["storage_m3"], -np.inf))
+    with pytest.raises(ValueError, match="exactly"):
+        storage_reductions.verify(directory=directory, receipt=receipt, series=changed)

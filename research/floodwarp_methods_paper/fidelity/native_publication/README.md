@@ -90,7 +90,9 @@ For decisions requiring preservation of assessed terrain controls, the same cost
 
 For 2 matched CPU/CUDA initial storm windows ending at 8 h, the largest absolute discharge difference was 9.1e-14 m³/s at the outlet and 1.82e-13 m³/s at the internal section. Accepted step counts differed in 0 of 960 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)
 
-For 1 matched CPU/CUDA settled recession windows ending at 40 h, the largest absolute discharge difference was 3.03e-13 m³/s at the outlet and 2.43e-13 m³/s at the internal section. Accepted step counts differed in 0 of 2,400 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_recession_controls.csv)
+In 1 matched recession record(s), summing the saved depth field and summing active cells for the hydraulic diagnostic differed by up to 1.42e-14 m³. Both FP64 totals were reproduced exactly from the authenticated checkpoint arrays.
+
+For 2 matched CPU/CUDA settled recession windows ending at 40 h, the largest absolute discharge difference was 3.64e-13 m³/s at the outlet and 2.43e-13 m³/s at the internal section. Accepted step counts differed in 0 of 4,800 intervals. [Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_recession_controls.csv)
 
 The measured-windows table includes endpoint inundated areas at 5 and 10 cm on each solver's own model grid. Each area sums the archived subcell wet fractions over the observation grid. Where the internal gauge lies on an observation cell face, the same table reports storage upstream and downstream at the identical forecast time. The two volumes must sum to the independently recorded domain storage. Map-error and IoU comparisons use common spatial support. [Threshold areas and storage](../native_results/measured_windows.csv)
 

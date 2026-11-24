@@ -340,6 +340,14 @@ def run(*, directory):
             continue
         devices = metrics.csv_read(file=comparison_file)
         decision_files.append(comparison_file)
+        replayed = [r for r in devices if float(r.get("checkpoint_storage_minus_diagnostic_m3") or 0)]
+        if replayed:
+            decision_files.append(directory / "storage_reductions.py")
+            decision_files.extend(directory / "checkpoint_storage" / r["gpu_id"] / (r["end_s"] + ".npz") for r in replayed)
+            largest = max(abs(float(r["checkpoint_storage_minus_diagnostic_m3"])) for r in replayed)
+            text.extend(["", f"In {len(replayed)} matched recession record(s), summing the saved depth field and "
+                         f"summing active cells for the hydraulic diagnostic differed by up to {largest:.3g} m³. "
+                         "Both FP64 totals were reproduced exactly from the authenticated checkpoint arrays."])
         if devices:
             endpoints_h = sorted({float(r["end_s"])/3600 for r in devices})
             hours = ", ".join(f"{hour:g}" for hour in endpoints_h)

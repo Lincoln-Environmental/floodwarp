@@ -6,6 +6,7 @@ import json
 import numpy as np
 
 from research.floodwarp_methods_paper import runner
+from research.floodwarp_methods_paper.fidelity import storage_reductions
 
 
 def common_end(*, directory, case, parents):
@@ -34,8 +35,9 @@ def observations(*, directory, parents, end_s):
         if (receipt["id"] != ident or receipt["end_s"] != end_s or horizon["id"] != ident
                 or horizon["end_s"] != end_s or horizon["parent_id"] != parent
                 or horizon["spec"] != parents[parent]["s"] or horizon["cohort"] != "native-metre"
-                or not horizon["settled"] or receipt["storage_m3"] != horizon["storage_m3"]):
+                or not horizon["settled"]):
             raise ValueError("Native map endpoint and settled hydraulic horizon disagree")
+        storage_reductions.verify(directory=directory, receipt=receipt, series=horizon)
         if parent in result:
             raise ValueError("Multiple recession trajectories for the same native map")
         result[parent] = dict(series_id=ident, endpoint_sha256=runner.checksum(p),

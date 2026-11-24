@@ -5,6 +5,7 @@ import json
 import numpy as np
 
 from research.floodwarp_methods_paper import metrics, runner
+from research.floodwarp_methods_paper.fidelity import storage_reductions
 
 
 def interval_differences(*, cpu, gpu):
@@ -75,9 +76,10 @@ def matched_recession(*, directory, control, item, folder, manifest):
         same_forcing(cpu=manifest["forcing"], gpu=series["forcing"], end=end)
         frames, final, files = cpu_recession(folder=folder, end=end, numerical=item["d"]["numerical"])
         intervals = interval_differences(cpu=frames, gpu=series["frames"])
-        differences = {}
+        differences = dict(checkpoint_storage_minus_diagnostic_m3=storage_reductions.verify(
+            directory=directory, receipt=receipt, series=series))
         for name, field in (("rain", "rain_m3"), ("infiltration", "infiltration_m3"), ("storage_m3", "storage_m3")):
-            if receipt[field] != series[field]:
+            if field != "storage_m3" and receipt[field] != series[field]:
                 raise ValueError("GPU endpoint and storm series have different water accounts")
             differences[field.replace("_m3", "_difference_m3")] = series[field] - final["budget"][name]
         records.append(dict(case=control["case"], method=control["method"], dx_m=control["dx_m"],
