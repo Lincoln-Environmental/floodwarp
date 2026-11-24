@@ -86,6 +86,9 @@ def derived_identity(*, root, study, stage):
                 "small_storms/paired_differences.csv",
                 "small_storms/joint_depth_hydrograph.csv",
                 "NATIVE_RECESSIONS.md",
+                "DEM_CORRECTION.md",
+                "native_results/README.md",
+                "native_results/measured_windows.csv",
             )
         )
     for name in (

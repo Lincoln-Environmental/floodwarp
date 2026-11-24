@@ -73,10 +73,21 @@ def run(*, directory):
     native = directory / "mean_storms/terrain.json"
     if native.is_file():
         bundle = json.loads(native.read_text())
-        text.extend([
-            f"Whole-catchment comparisons start at time zero from {bundle['native_cells']:,} native metre cells. Bed elevation, initial water depth, initial x momentum, rainfall multiplier and infiltration capacity each have an independent native checksum. Each coarser input is its aligned block mean. At the prescribed initial condition, channel water deeper than {100*bundle['inputs']['moving_channel_min_depth_m']:g} cm flows at 0.12 m/s. Shallower margins retain their water and start at rest. All methods use this same physical state. A continuation must match the new inputs and its hydraulic checkpoint identity. [Native input identities and block checks](mean_storms/terrain.json)",
-            "",
-        ])
+        text.extend(
+            [
+                f"Whole-catchment comparisons start at time zero from {bundle['native_cells']:,} native metre cells. Bed elevation, initial water depth, initial x momentum, rainfall multiplier and infiltration capacity each have an independent native checksum. Each coarser input is its aligned block mean. At the prescribed initial condition, channel water deeper than {100 * bundle['inputs']['moving_channel_min_depth_m']:g} cm flows at 0.12 m/s. Shallower margins retain their water and start at rest. All methods use this same physical state. A continuation must match the new inputs and its hydraulic checkpoint identity. [Native input identities and block checks](mean_storms/terrain.json)",
+                "",
+            ]
+        )
+    check = directory / "mean_storms/grid_audit.csv"
+    if check.is_file():
+        bed = next(r for r in metrics.csv_read(check) if r["field"] == "bed")
+        text.extend(
+            [
+                f"Read-back of the solver input rasters found different elevations among the four 5 m children in {int(bed['parents_with_different_children']):,} of {int(bed['parent_cells']):,} parent footprints. Every 10 m elevation equalled the four-child mean exactly. [Input raster read-back](mean_storms/grid_audit.csv)",
+                "",
+            ]
+        )
     full = directory / "mean_storms/complete_events.csv"
     if full.is_file():
         text.extend(

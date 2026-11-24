@@ -1,12 +1,14 @@
 # Flood-wave magnitude, propagation and spreading
 
-Run `./scripts/run_hydrograph_fidelity.sh all` in the pinned FloodWarp checkout. The manual master script also exposes `hydrograph-fidelity` and `fidelity-figures`. The former runs the channel, storm-control, orientation and analysis stages. The latter rebuilds figures entirely from disk. Individual stages accept `--dry-run` and completed numerical cases resume by source, hardware and input identity. `analyse` reads archived measurements, rebuilds the objective-specific advisor supplement, database, report, figures and manuscript. The previous paper's absolute errors and frozen advisor training records retain their original definitions.
+Run `./scripts/run_hydrograph_fidelity.sh all` in the pinned FloodWarp checkout. The manual master script also exposes `hydrograph-fidelity` and `fidelity-figures`. The former runs the exact pulse controls, area-averaged terrain and storms, then rebuilds and verifies the native comparison products. The original experimental sequence is explicitly available as `historical-all`. The latter rebuilds figures entirely from disk. Individual stages accept `--dry-run` and completed numerical cases resume by source, hardware and input identity. `analyse` reads archived measurements, rebuilds the objective-specific advisor supplement, database, report, figures and manuscript. The previous paper's absolute errors and frozen advisor training records retain their original definitions.
 
 [Measured work to date](WORK_TO_DATE.md) (regenerate with `./scripts/run_hydrograph_fidelity.sh summary`) · [Full analysis](REPORT.md) · [Tables and SQLite database](results) · [Figures](figures) · [Screening configuration](design.json)
 
 ## Corrected terrain resolution comparisons
 
 Generate the 5 m DEM by averaging 25 native 1 m elevations, then generate the 10 m DEM by averaging its four 5 m cells. `area-mean-storms` starts each forecast at time zero with these DEMs. It also averages the native initial depth, momentum, rain footprint and infiltration independently. Initial moving channel water is 0.12 m/s where the native depth exceeds 1 cm. Shallow channel margins start at rest. Only same-input, same-grid checkpoints can resume these runs. The `area-mean-terrain` stage checks control-window connectivity and writes georeferenced maps at all three spacings. Earlier centre-sampled DEMs and repeated-parent beds retain their original experimental identities. The repeated-parent results describe staircase sensitivity and are excluded from practical grid recommendations. [Incised DEM correction and measured controls](DEM_CORRECTION.md)
+
+The operational matrix accepts individual cases, methods and grid spacings, for example `./scripts/run_floodwarp_paper.sh native-storms --case 'plain-709*' --dx 5 --method fv1 --dry-run`. The 1,000 × 1,000 m experiment compares identical terrain footprints at 1, 5 and 10 m. `native-products` only reads recorded results. `verify-native` also requires all scheduled physical domains to have a common recession endpoint. [Measured original and completed windows](native_results/README.md)
 
 ## Which hydrograph is the reference?
 

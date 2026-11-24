@@ -66,6 +66,17 @@ def difference(*, candidate, reference, support, thresholds):
             int(wa.sum()) - int(wb.sum())
         )
         out[f"reference_wet_area_{cm}cm_m2"] = support**2 * int(wb.sum())
+        if cm >= 5:
+            a, b = maximum >= t, mr >= t
+            union_max = np.count_nonzero(a | b)
+            intersection_max = np.count_nonzero(a & b)
+            out[f"maximum_extent_error_{cm}cm"] = (
+                1 - intersection_max / union_max if union_max else None
+            )
+            out[f"maximum_reference_wet_area_{cm}cm_m2"] = support**2 * int(b.sum())
+            out[f"maximum_wet_area_difference_{cm}cm_m2"] = support**2 * (
+                int(a.sum()) - int(b.sum())
+            )
         reach = []
         for mask in (wa, wb):
             components, count = label(mask)
@@ -127,7 +138,10 @@ def process(*, groups, directory, target, settings):
             maximum_depth_rmse_m=settings["maximum_depth_m"],
         )
         for t in targets:
-            limits[f"extent_error_{round(100 * t)}cm"] = settings["extent_error"]
+            cm = round(100 * t)
+            limits[f"extent_error_{cm}cm"] = settings["extent_error"]
+            if cm >= 5:
+                limits[f"maximum_extent_error_{cm}cm"] = settings["extent_error"]
         for item in items:
             if item["factor"] != 1:
                 continue
@@ -164,7 +178,7 @@ def process(*, groups, directory, target, settings):
                     and d[k] is not None
                     and item["s"]["dx"] > ref["s"]["dx"]
                 )
-                if k.startswith("extent_error"):
+                if "extent_error_" in k:
                     eligible = (
                         eligible
                         and d[k.replace("extent_error", "reference_wet_area") + "_m2"]
@@ -205,6 +219,7 @@ def process(*, groups, directory, target, settings):
         "wet_depth_rmse_m",
         "maximum_depth_rmse_m",
         *(f"extent_error_{round(100 * t)}cm" for t in targets),
+        *(f"maximum_extent_error_{round(100 * t)}cm" for t in targets if t >= 0.05),
     )
     frontier = frontiers(rows=measured, objectives=objectives)
     metrics.csv_write(file=target / "recession_depth_pareto.csv", rows=frontier)

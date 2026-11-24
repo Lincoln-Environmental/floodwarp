@@ -25,6 +25,9 @@ run_stage() {
         incised-reference) module=incised_crest ;;
         area-mean-storms) module=mean_storms ;;
         area-mean-terrain) module=mean_windows ;;
+        native-input-audit) module=native_audit ;;
+        native-storms) module=native_matrix ;;
+        native-products|verify-native) module=native_products; extra=("$1") ;;
         incised-plane) module=incised_plane ;;
         incised-reach) module=incised_reach ;;
         incised-checkpoints) module=incised_checkpoint_audit ;;
@@ -44,8 +47,12 @@ run_stage() {
 }
 main() {
     local stage=${1:-help} dry=false module
+    if [[ $stage == native-storms ]]; then
+        shift
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_matrix "$@"
+    fi
     if [[ $stage == help || $stage == --help ]]; then
-        echo "Usage: $0 {all|status|summary|verify-kernels|pulses|pulse-recession|sharp-pulses|sharp-reference|pulse-reference|pulse-figures|operational-preview|operational-pairs|native-horizons|storage-tail|storage-tail-report|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|incised-reference|incised-storage|area-mean-storms|area-mean-terrain|incised-plane|incised-reach|incised-checkpoints|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
+        echo "Usage: $0 {all|status|summary|verify-kernels|pulses|pulse-recession|sharp-pulses|sharp-reference|pulse-reference|pulse-figures|operational-preview|operational-pairs|native-horizons|storage-tail|storage-tail-report|native-review|endpoint-fields|orientation|storm-controls|rolling-reference|incised-reference|incised-storage|area-mean-storms|area-mean-terrain|native-input-audit|native-storms|native-products|verify-native|historical-all|incised-plane|incised-reach|incised-checkpoints|recession|policy-recession|bed-recession|small-review|analyse|figures|verify} [--dry-run]"
         return
     fi
     shift
@@ -53,6 +60,8 @@ main() {
         case "$option" in --dry-run) dry=true ;; --resume) ;; *) echo "Unsupported option: $option" >&2; return 2 ;; esac
     done
     if [[ $stage == all ]]; then
+        for item in verify-kernels pulses pulse-recession sharp-pulses pulse-reference orientation area-mean-terrain area-mean-storms native-input-audit native-storms native-products verify-native; do run_stage "$item"; done
+    elif [[ $stage == historical-all ]]; then
         for item in verify-kernels pulses pulse-recession sharp-pulses pulse-reference operational-preview native-review orientation storm-controls storage-tail storage-tail-report operational-pairs native-horizons rolling-reference area-mean-terrain area-mean-storms incised-plane incised-reach recession small-review policy-recession bed-recession endpoint-fields analyse verify; do run_stage "$item"; done
     else
         run_stage "$stage"

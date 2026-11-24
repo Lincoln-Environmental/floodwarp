@@ -98,3 +98,21 @@ def test_advisor_empirical_feasibility_and_unsupported_scale():
         ]
         == "insufficient_evidence"
     )
+
+
+def test_practical_inundation_abstains_without_independent_threshold_evidence():
+    model = dict(
+        hardware="test",
+        revision="test",
+        tolerances={"inundation": 0.05},
+        inundation_target="final 1 cm depth IoU",
+        training=[],
+    )
+    features = dict(resolution=5)
+    for name in ("inundation_extent", "maximum_inundation_10cm"):
+        decision = recommend(
+            model=model, features=features, objective=name, tolerance=0.1
+        )
+        assert decision["status"] == "insufficient_evidence"
+        assert "independent validation" in decision["reason"]
+        assert decision["objective"] != "inundation"

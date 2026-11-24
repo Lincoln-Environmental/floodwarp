@@ -60,4 +60,6 @@ Masks use the union across the three compared states at hour eight. A threshold 
 
 Whole-catchment comparisons start at time zero from 104,857,600 native metre cells. Bed elevation, initial water depth, initial x momentum, rainfall multiplier and infiltration capacity each have an independent native checksum. Each coarser input is its aligned block mean. At the prescribed initial condition, channel water deeper than 1 cm flows at 0.12 m/s. Shallower margins retain their water and start at rest. All methods use this same physical state. A continuation must match the new inputs and its hydraulic checkpoint identity. [Native input identities and block checks](mean_storms/terrain.json)
 
+Read-back of the solver input rasters found different elevations among the four 5 m children in 1,048,576 of 1,048,576 parent footprints. Every 10 m elevation equalled the four-child mean exactly. [Input raster read-back](mean_storms/grid_audit.csv)
+
 The corrected whole-event comparison is pending. The original eight-hour staircase result cannot supply it.

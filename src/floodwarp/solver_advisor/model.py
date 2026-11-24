@@ -208,16 +208,23 @@ def recommend(
         "flood_arrival_time": "spatial_arrival",
         "transient_velocity": "transient_momentum",
         "maximum_flood_depth": "maximum_depth",
-        "inundation_extent": "inundation",
+        "inundation_extent": "final_inundation_5cm",
+        "thin_film_extent_1cm": "inundation",
         "outlet_discharge": "discharge",
         "computational_runtime": "runtime",
     }.get(objective, objective)
     if objective in METRICS and "fidelity_validation" not in model:
         model = with_evidence(model=model)
-    if objective not in (*model["tolerances"], "runtime"):
+    practical_extent = objective in (
+        "final_inundation_5cm",
+        "final_inundation_10cm",
+        "maximum_inundation_5cm",
+        "maximum_inundation_10cm",
+    )
+    if objective not in (*model["tolerances"], "runtime") and not practical_extent:
         raise ValueError("Unknown hydraulic objective")
     if tolerance is None and objective != "runtime":
-        tolerance = model["tolerances"][objective]
+        tolerance = model["tolerances"].get(objective)
     if tolerance is not None and (not np.isfinite(tolerance) or tolerance < 0):
         raise ValueError("Tolerance must be finite and nonnegative")
     result = dict(
@@ -231,6 +238,8 @@ def recommend(
         warnings=[],
         source_revision=model["revision"],
     )
+    if objective == "inundation" and "inundation_target" in model:
+        result["target"] = model["inundation_target"]
     if (
         features.get("critical_connection_lost")
         or (
@@ -240,11 +249,30 @@ def recommend(
         )
         or features.get("lost_channel_fraction", 0) > 0
         and objective
-        in ("inundation", "discharge", "peak_timing", "peak_discharge", *METRICS)
+        in (
+            "inundation",
+            "discharge",
+            "peak_timing",
+            "peak_discharge",
+            *METRICS,
+            "final_inundation_5cm",
+            "final_inundation_10cm",
+            "maximum_inundation_5cm",
+            "maximum_inundation_10cm",
+        )
     ):
         result.update(
             status="refine_terrain",
             reason="The represented DEM loses a required hydraulic connection or exceeds the specified barrier tolerance.",
+        )
+        return result
+    if practical_extent and (
+        tolerance is None
+        or features["resolution"]
+        not in model.get("extent_validation", {}).get(objective, [])
+    ):
+        result["reason"] = (
+            "This practical inundation threshold and endpoint lack independent validation at the requested spacing."
         )
         return result
     if objective in METRICS and features["resolution"] not in model[
@@ -449,6 +477,8 @@ def recommend_dem(
     folder = Path(output)
     folder.mkdir(exist_ok=True, parents=True)
     results = []
+    if objective == "inundation":
+        objective = "final_inundation_5cm"
     grids = list(dict.fromkeys((resolution, *(compare_resolutions or ()))))
     for dx in grids:
         stats = analyse_dem(
@@ -482,9 +512,26 @@ def recommend_dem(
                 f"{100 * change['channel_loss_fraction']:.1f}% of native channel pixels lack a nearby model-grid drainage path. Compare a finer DEM."
             )
         results.append(rec)
-    feasible = [r for r in results if r["status"] == "recommended"]
-    best = min(feasible, key=forecast_time) if feasible else results[0]
     requested = results[0]
+    supported = model.get("native_cross_grid_validation", {}).get(
+        requested["objective"], []
+    )
+    feasible = [
+        r
+        for r in results
+        if r["status"] == "recommended"
+        and (
+            r is requested
+            or any(
+                resolution in pair and r["resolution_m"] in pair for pair in supported
+            )
+        )
+    ]
+    best = min(feasible, key=forecast_time) if feasible else requested
+    if len(results) > 1 and not supported:
+        requested["warnings"].append(
+            "A practical resolution change requires independent native-metre cross-grid validation for this objective."
+        )
     out = dict(
         selected=best,
         comparisons=results,

@@ -197,6 +197,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
             "The incised fixed-bed refinement created artificial treads that substantially altered runoff. "
             "These historical experiments do not establish accuracy at a practical resolution using an area-averaged DEM. "
             "The corrected series averages 25 native 1 m elevations per 5 m cell, then four 5 m elevations per 10 m cell. "
+            "Initial water, momentum, rainfall footprint and infiltration also come from the native metre source. All practical runs start at time zero or resume their own verified checkpoint. "
+            "[Native-input storm windows, budgets and reference qualification](../fidelity/native_results/README.md) "
             "Report practical extent separately at 5 and 10 cm. Historical 1 cm extent is a shallow-water diagnostic. "
             "[DEM construction, numerical controls and corrected outcomes](../fidelity/DEM_CORRECTION.md)\n"
         )
