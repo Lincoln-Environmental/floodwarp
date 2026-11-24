@@ -409,7 +409,6 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
     outlet_observables.qualify(
         directory=directory, destination=dest, experiments=experiments
     )
-    catalogue.database(target=dest)
     runner.write_json(
         path=dest / "sources.json",
         data=dict(solver=current, driver=driver, end_s=end, storms=sources),
@@ -438,6 +437,7 @@ if __name__ == "__main__":
         thresholds=thresholds,
     )
     repaired_outlet_report.run(directory=directory)
+    catalogue.database(target=destination)
     for endpoint in sorted(
         {
             int(p.stem.split("_")[1])
@@ -453,3 +453,4 @@ if __name__ == "__main__":
                 extent_hour=extent_hour,
                 thresholds=thresholds,
             )
+            catalogue.database(target=destination / f"end_{endpoint}")

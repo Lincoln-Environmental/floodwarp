@@ -1,9 +1,17 @@
 """Generate the boundary repair evidence from accepted transport and immutable storm receipts."""
 
 import json
+import math
 from pathlib import Path
 
 from research.floodwarp_methods_paper import metrics, runner
+
+
+def split_sheet_bias(*, settings, dt):
+    """At a uniform-sheet fixed point, consecutive drag half steps give one full step."""
+    acceleration = settings["gravity"] * settings["grade"]
+    normal_speed = settings["depth_m"]**(2/3) * math.sqrt(settings["grade"]) / settings["manning"]
+    return 100 * (math.hypot(1, acceleration * dt / (2 * normal_speed)) - 1)
 
 
 def run(*, directory):
@@ -22,6 +30,16 @@ def run(*, directory):
     ]
     sheet = metrics.csv_read(file=current / "discharge.csv")
     old = metrics.csv_read(file=plane / "discharge.csv")
+    parameters = json.loads((current/"identity.json").read_text())["settings"]
+    split_checks=[]
+    for row in sheet:
+        if row["method"]!="fv1" and float(row["start_s"]) == 30:
+            prediction=split_sheet_bias(settings=parameters,dt=float(row["maximum_dt_s"]))
+            split_checks.append(dict(method=row["method"],dx_m=row["dx_m"],dt_s=row["maximum_dt_s"],face=row["face"],
+                                     extension_m=row["downstream_extension_m"],measured_bias_pct=float(row["discharge_bias_pct"]),
+                                     split_bias_pct=prediction,unexplained_percentage_points=float(row["discharge_bias_pct"])-prediction))
+    metrics.csv_write(file=source/"uniform_sheet_source_balance.csv",rows=split_checks)
+    mismatch=max(abs(r["unexplained_percentage_points"]) for r in split_checks)
     text = [
         "# FREE outlet qualification",
         "",
@@ -63,7 +81,12 @@ def run(*, directory):
         "This left a half-cell bed discontinuity at the last internal face and suppressed the surface-gradient momentum source. "
         "Hancock and RK2 now extrapolate the bed and surface increments from the wet interior at an explicitly open face, "
         "with zero normal velocity gradient and the existing dry and positivity checks. The residual uniform-sheet error "
-        "decreases by a factor of four when the timestep cap halves, consistent with the time discretisation of the source balance. "
+        "is predicted by the discrete source balance. Let U be the exact normal speed, a = gS the bed acceleration, "
+        "and k = a/U² the quadratic drag coefficient. The steady speed v just before acceleration satisfies "
+        "k v(v + aΔt) = a because consecutive drag half steps combine into one full drag step. "
+        "The accepted halfway face speed is v + aΔt/2 = √(U² + (aΔt/2)²). "
+        f"Across both formulations, all measured orientations, the face and the buffered section, this predicts the observed 30–60 s bias "
+        f"to within {mismatch:.2e} percentage points. [Numerical and predicted residual](uniform_sheet_source_balance.csv) "
         "FV1 reconstructs from piecewise-constant cell beds. At this grade, the bed drops 0.07329 m per metre, exceeding the 0.03 m sheet depth even on the finest tested grid. Its hydrostatic cut to the higher cell bed clips the downstream state. At the 0.1 s cap the buffered FV1 deficit drops from 46.84% on 10 m cells to 36.82% on 1 m cells. The extra face deficit falls from 25.66 percentage points to below the displayed precision.",
         "",
         "## Full incised storm",

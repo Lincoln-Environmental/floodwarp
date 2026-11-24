@@ -17,7 +17,7 @@ The exact Manning reference is steady uniform flow on a 7.329% plane. Discharge 
 | fv1 | 10 | 0.1 | -72.4977 | -72.4977 | -46.8352 |
 | fv1 | 10 | 0.05 | -72.4466 | -72.4466 | -46.8188 |
 
-The terminal slope previously vanished when the reconstruction stencil reached the FREE face. This left a half-cell bed discontinuity at the last internal face and suppressed the surface-gradient momentum source. Hancock and RK2 now extrapolate the bed and surface increments from the wet interior at an explicitly open face, with zero normal velocity gradient and the existing dry and positivity checks. The residual uniform-sheet error decreases by a factor of four when the timestep cap halves, consistent with the time discretisation of the source balance. FV1 reconstructs from piecewise-constant cell beds. At this grade, the bed drops 0.07329 m per metre, exceeding the 0.03 m sheet depth even on the finest tested grid. Its hydrostatic cut to the higher cell bed clips the downstream state. At the 0.1 s cap the buffered FV1 deficit drops from 46.84% on 10 m cells to 36.82% on 1 m cells. The extra face deficit falls from 25.66 percentage points to below the displayed precision.
+The terminal slope previously vanished when the reconstruction stencil reached the FREE face. This left a half-cell bed discontinuity at the last internal face and suppressed the surface-gradient momentum source. Hancock and RK2 now extrapolate the bed and surface increments from the wet interior at an explicitly open face, with zero normal velocity gradient and the existing dry and positivity checks. The residual uniform-sheet error is predicted by the discrete source balance. Let U be the exact normal speed, a = gS the bed acceleration, and k = a/U² the quadratic drag coefficient. The steady speed v just before acceleration satisfies k v(v + aΔt) = a because consecutive drag half steps combine into one full drag step. The accepted halfway face speed is v + aΔt/2 = √(U² + (aΔt/2)²). Across both formulations, all measured orientations, the face and the buffered section, this predicts the observed 30–60 s bias to within 6.97e-12 percentage points. [Numerical and predicted residual](uniform_sheet_source_balance.csv) FV1 reconstructs from piecewise-constant cell beds. At this grade, the bed drops 0.07329 m per metre, exceeding the 0.03 m sheet depth even on the finest tested grid. Its hydrostatic cut to the higher cell bed clips the downstream state. At the 0.1 s cap the buffered FV1 deficit drops from 46.84% on 10 m cells to 36.82% on 1 m cells. The extra face deficit falls from 25.66 percentage points to below the displayed precision.
 
 ## Full incised storm
 
@@ -31,8 +31,30 @@ The gauge remains at the eastern edge of the original 104.8576 km² catchment. T
 | adaptive | 10 | 400 | 1.0 | — | 47.660 | 4.800 | 47.495 | 47.590 | 857,182.5 |
 | fv1 | 10 | 400 | 1.0 | — | 48.319 | 5.400 | 48.236 | 48.241 | 910,412.8 |
 | hancock_adaptive | 10 | 400 | 1.0 | — | 47.185 | 4.783 | 47.021 | 47.120 | 869,078.9 |
+| adaptive | 5 | 0 | 1.0 | 48.330 | 48.115 | 4.800 | 47.960 | 48.032 | 822,874.5 |
 | hancock_adaptive | 5 | 0 | 1.0 | 48.286 | 48.019 | 4.800 | 47.849 | 47.934 | 829,026.1 |
 
-7 of 14 trajectories have completed the historical 16-hour comparison. Each hydrograph is an interval average of accepted transport. On these irregular terrains a solver difference alone does not establish accuracy.
+8 of 14 trajectories have completed the historical 16-hour comparison. Each hydrograph is an interval average of accepted transport. On these irregular terrains a solver difference alone does not establish accuracy.
 
-[Water accounts, infiltration inside and outside the rainfall footprint](events.csv) · [Crest and whole-recession last 40 m budgets](last_40m.csv) · [Spatial extent](extent.csv) · [Same-grid wet-union depth differences](depth_disagreement.csv)
+[Water accounts, infiltration inside and outside the rainfall footprint](events.csv) · [Crest and whole-recession last 40 m budgets](last_40m.csv) · [Spatial extent](extent.csv) · [Wet-union depth differences on common spatial support](depth_disagreement.csv) · [Spatial reference qualification](spatial_reference_checks.csv) · [Hydrograph and infiltration reference qualification](reference_checks.csv)
+
+## FV1 minus Hancock on the original catchment
+
+| Grid (m) | Extension (m) | Extra export (m³) | Infiltration difference in rain footprint (m³) | Infiltration difference outside (m³) | Final storage difference (m³) | Unexplained export (m³) |
+|---|---|---:|---:|---:|---:|---:|
+| 10 | 0 | +41,130.9 | +17,863.3 | -59,098.2 | +104.1 | +1.18e-09 |
+| 10 | 400 | +41,333.9 | +17,862.7 | -59,196.6 | +0.0 | +1.27e-09 |
+
+## Hour-eight inundation and maximum extent
+
+| Model | Grid (m) | 5 cm at 8 h (km²) | 10 cm at 8 h (km²) | Ever above 5 cm by 16 h (km²) | Ever above 10 cm by 16 h (km²) |
+|---|---:|---:|---:|---:|---:|
+| adaptive | 10 | 0.0000 | 0.0000 | 1.1875 | 0.0000 |
+| fv1 | 10 | 0.7233 | 0.0143 | 6.1042 | 2.1934 |
+| hancock_adaptive | 10 | 0.0000 | 0.0000 | 1.1838 | 0.0000 |
+| adaptive | 5 | 0.0000 | 0.0000 | 0.5205 | 0.0000 |
+| hancock_adaptive | 5 | 0.0000 | 0.0000 | 0.5195 | 0.0000 |
+
+The spatial comparison thresholds area-averaged depths on the coarser common support. For maxima, it averages the recorded native-cell maxima. The extent table above counts cells at each native hydraulic spacing. The 5 m trajectories quantify formulation and timestep sensitivity. A finer storm reference is required for absolute 5 m accuracy.
+
+[Water-balance decomposition](water_differences.csv) · [Least measured cost by tolerance](least_cost_fidelity.csv) · [Smallest qualified error within the FV1 budget](equal_cost_fidelity.csv)

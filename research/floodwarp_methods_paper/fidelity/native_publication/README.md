@@ -23,6 +23,10 @@ Each upper-panel point represents a measured forecast window. Each lower-panel p
 
 [Policy run identities and timings](../native_results/policy_cost_events.csv) · [Individual timing intervals](../native_results/policy_cost_windows.csv)
 
+0 of 0 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
+
+[Timing identities, quartiles and range](../native_results/timing_distribution.csv)
+
 ## Terrain control elevations and connectivity
 
 A 80 m window surrounds the prescribed opening on each of 24 distinct native beds. Repeated storms on a bed count once. A connection requires a continuous path along shared cell faces from west to east. A single water-surface elevation is prescribed across each window. Its height above the native spill controls which paths are available.
