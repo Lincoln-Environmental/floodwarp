@@ -120,6 +120,8 @@ Run `./scripts/run_floodwarp_paper.sh outlet-qualification --resume` on the refe
 
 `native-storms --dry-run` lists the selected physical cases, grid dimensions, formulations and CFL controls. It also lists the primary run IDs from the current solver build across the wider archive, their common recession endpoints when available, and the number of older-build windows retained. Resume validates the full input and hardware contract before accepting an archived run.
 
+`./scripts/run_floodwarp_paper.sh post-repair-exact` verifies and joins the archived analytical controls from the audited and repaired solvers. It compares exact references, sampled model fields, gauge series and ordered accepted timesteps. The full qualification also builds this comparison after numerical convergence. [Paired numerical results](fidelity/analytical_revision/comparisons.csv)
+
 `advisor-design` checks paired reference and terrain coverage in development, validation and final test. The empirical model requires two independent development neighbours. The additional hill development terrain uses seed 8500, the first seed checked from 8500 upward whose opening and mapped channel path survived area averaging at both 5 and 10 m. Selection used terrain alone, before hydraulic simulation. The measured runtime of a terrain with a lost control remains available. Its hydraulic error is excluded from the advisor's training labels for affected objectives.
 
 `orton-transfer --dry-run` lists source-specific run IDs, dimensions and completed checkpoint windows. For example, `./scripts/run_floodwarp_paper.sh orton-transfer --method hancock --dx 5 --resume` continues just the native Hancock transfer after the synthetic qualification.

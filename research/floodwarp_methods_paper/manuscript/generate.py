@@ -85,6 +85,21 @@ def repaired_budgets(*, directory):
         lines.append(f"The pre-repair and corrected hydraulic sources match commits `{before}` and `{after}`. "
                      f"The corrected FP64 storm measurements used {' and '.join(gpu)}. "
                      "[Source and workstation receipts](../fidelity/outlet_results/revision_evidence.json)")
+    analytical = directory.parent / "analytical_revision/verification.json"
+    if analytical.is_file():
+        from research.floodwarp_methods_paper import runner
+
+        verified = json.loads(analytical.read_text())
+        if runner.checksum(analytical.with_name("comparisons.csv")) != verified["comparisons_sha256"]:
+            raise ValueError("Analytical revision evidence differs from its verification receipt")
+        gates = verified["gates"]
+        lines.append(f"Of {gates['primary_runs']} core exact-solution controls, {verified['identical_primary_field_and_gauge_pairs']} "
+                     f"reproduced the pre-repair sampled fields and gauge transport exactly. "
+                     f"{verified['identical_primary_histories']} retained the same ordered accepted timesteps. "
+                     f"The maximum relative mass-balance residual was {gates['maximum_relative_residual']:.2e} "
+                     f"and the lake-at-rest depth error was {gates['lake_maximum_depth_error_m']:.2e} m. "
+                     "Measuring the actual steep FREE face exposed a defect that these sampled controls did not detect. "
+                     "[Paired exact references, results and run identities](../fidelity/analytical_revision/comparisons.csv)")
     reach = directory / "incised_reach.csv"
     if reach.is_file():
         profiles = {(r["revision"], r["method"], int(r["extension_m"])): float(r["discharge_m3s"])

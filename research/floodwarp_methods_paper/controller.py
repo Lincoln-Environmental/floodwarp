@@ -102,6 +102,8 @@ def derived_identity(*, root, study, stage):
                 "outlet_results/equal_cost_depth_extent.csv",
                 "outlet_results/revision_evidence.json",
                 "outlet_results/independent_timings.csv",
+                "analytical_revision/verification.json",
+                "analytical_revision/comparisons.csv",
                 "native_step_history/parity.csv",
                 "native_publication/sources.json",
                 "native_results/timing_distribution.csv",
@@ -215,6 +217,16 @@ def run(*, root, study, config_path, arguments):
     from research.floodwarp_methods_paper.qualification import stages as large
 
     stage = arguments[0]
+    if stage == "post-repair-exact":
+        from research.floodwarp_methods_paper import analytical_revision
+
+        if set(arguments[1:]) - {"--resume", "--dry-run"}:
+            raise ValueError("The paired analytical report compares both complete revision cohorts")
+        if "--dry-run" in arguments:
+            print("Verify and compare archived analytical, convergence and fixed-timestep controls from both builds")
+        else:
+            analytical_revision.run(study=study, stages=("analytical", "convergence", fixed_dt.STAGE))
+        return
     order = (
         *runner.SIMULATIONS,
         *large.NUMERICAL,
@@ -361,6 +373,15 @@ def run(*, root, study, config_path, arguments):
             print("Analytical qualification", exact_check(study=study), flush=True)
     if stage == "all" and scoped and not matched:
         raise ValueError("No numerical cases matched the requested filters")
+    if stage == "convergence" and not scoped and not opts["dry"]:
+        from research.floodwarp_methods_paper import analytical_revision
+
+        proof = study / "fidelity/outlet_results/revision_evidence.json"
+        available = {r["experiment_id"] for r in evidence.records(study=study, stages=("analytical",))}
+        if proof.is_file() and len(available) == sum(1 for _ in runner.specs(stage="analytical", config=config, root=root)):
+            repair = json.loads(proof.read_text())["revisions"]["repair"]["source_sha256"]
+            if repair["analytical"] == evidence.implementation(study.resolve(), "analytical"):
+                analytical_revision.run(study=study, stages=("analytical", "convergence", fixed_dt.STAGE))
     print("total_experiment_wall_s", round(perf_counter() - started, 3))
 
 

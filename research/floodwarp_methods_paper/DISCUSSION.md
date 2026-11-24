@@ -40,6 +40,8 @@ On the same 10 m incised terrain, the corrected 16-hour Hancock and RK2 peaks we
 
 The pre-repair and corrected hydraulic sources match commits `0afdd684d2d1` and `46afa3f280a5`. The corrected FP64 storm measurements used NVIDIA GeForce RTX 4070 Ti SUPER, 595.99.02, 16376 MiB. [Source and workstation receipts](fidelity/outlet_results/revision_evidence.json)
 
+Of 342 core exact-solution controls, 342 reproduced the pre-repair sampled fields and gauge transport exactly. 342 retained the same ordered accepted timesteps. The maximum relative mass-balance residual was 1.61e-12 and the lake-at-rest depth error was 8.88e-16 m. Measuring the actual steep FREE face exposed a defect that these sampled controls did not detect. [Paired exact references, results and run identities](fidelity/analytical_revision/comparisons.csv)
+
 At the fixed 120 m-wide incised section on the 10 m grid, adding a 100 m downstream buffer changed mean RK2 discharge from 2.46253 to 3.32420 m³/s before the repair and from 3.32413 to 3.32420 m³/s after it. These accepted volumes between 30 and 60 s measure sensitivity to outlet placement. [Fixed-section measurements on the 1, 5 and 10 m grids](fidelity/outlet_results/incised_reach.csv)
 
 At 10 m, FV1 minus Hancock net export was +41,131 m³. The corresponding cumulative infiltration differences were +17,863 m³ inside the rainfall footprint and -59,098 m³ outside. The final storage difference was +104 m³. At hour eight their areas above 5 cm were 0.7233 and 0.0000 km².

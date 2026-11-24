@@ -10,6 +10,18 @@ from research.floodwarp_methods_paper.fidelity import (
     timing_repeats,
 )
 
+
+def test_revision_comparison_requires_the_same_exact_reference_and_reports_timestep_parity_separately():
+    from research.floodwarp_methods_paper.analytical_revision import field_comparison
+
+    original = {name: np.array([0.0, 1.0]) for name in
+                ("x_m", "t_s", "exact_cell_averages", "exact_gauges", "model_centreline", "model_gauges", "accepted_dt_s")}
+    revised = dict(original, accepted_dt_s=np.array([0.5, 0.5]))
+    result = field_comparison(before=original, after=revised)
+    assert result == dict(model_centreline_equal=True, model_gauges_equal=True, accepted_dt_s_equal=False)
+    with pytest.raises(AssertionError, match="Reference differs"):
+        field_comparison(before=original, after=dict(revised, exact_gauges=np.array([0.0, 1.01])))
+
 def test_fixed_reach_report_rejects_displaced_section(tmp_path):
     import json
     from research.floodwarp_methods_paper import metrics, runner
