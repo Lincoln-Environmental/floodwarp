@@ -342,6 +342,29 @@ def native_timing_correction(*, study):
             "[Individual timing corrections and run identities](../fidelity/native_results/timing_provenance.csv)\n")
 
 
+def native_choice_table(*, file, references, objectives):
+    groups = defaultdict(dict)
+    for r in csv_read(file=file):
+        scope = r["station"], r["objective"]
+        if (r["cohort"] != "complete-native-metre" or (r["case"], r["reference_id"]) not in references
+                or scope not in objectives or float(r["tolerance"]) != objectives[scope][1]):
+            continue
+        key = (r["case"], float(r["end_h"]), float(r["interval_s"]), r["reference_id"], r["representation"], r["cap"])
+        values = groups[key].setdefault(scope, [])
+        if not r["id"]:
+            values.append("Outside tolerance" if int(r["assessable"]) else "Unresolved")
+        else:
+            method = {"fv1": "FV1", "adaptive": "RK2", "hancock_auto": "Hancock auto",
+                      "hancock_dense": "Hancock dense", "hancock_adaptive": "Hancock tiles"}.get(r["method"], r["method"])
+            values.append(f"{method} {r['dx']} m ({float(r['runtime_s']):.3g} s)")
+    lines = ["| Storm | End (h) | Interval (s) | " + " | ".join(v[0] for v in objectives.values()) + " |",
+             "|---|---:|---:|" + "---|" * len(objectives)]
+    for (case, hours, cadence, _, _, _), decisions in sorted(groups.items()):
+        lines.append(f"| {case} | {hours:g} | {cadence:g} | "
+                     + " | ".join(" / ".join(decisions.get(scope, ["Unresolved"])) for scope in objectives) + " |")
+    return lines
+
+
 def native_budget_evidence(*, study, tolerance):
     folder = study / "fidelity/native_results"
     file = folder / "least_cost_fidelity.csv"
@@ -357,30 +380,28 @@ def native_budget_evidence(*, study, tolerance):
               ("outlet", "infiltration_bias_pct"), ("outlet", "width80_bias_pct"),
               ("section", "peak_bias_pct"), ("section", "shape_tv_pct"))
     labels = ("Outlet peak", "Outlet shape", "Net export", "Infiltration", "Outlet width", "Internal peak", "Internal shape")
-    groups = defaultdict(dict)
-    for r in csv_read(file=file):
-        scope = r["station"], r["objective"]
-        if (r["cohort"] != "complete-native-metre" or (r["case"], r["reference_id"]) not in references
-                or float(r["tolerance"]) != tolerance or scope not in scopes):
-            continue
-        key = r["case"], float(r["end_h"]), float(r["interval_s"]), r["reference_id"]
-        values = groups[key].setdefault(scope, [])
-        if not r["id"]:
-            values.append("Outside tolerance" if int(r["assessable"]) else "Unresolved")
-        else:
-            method = {"fv1": "FV1", "adaptive": "RK2", "hancock_auto": "Hancock auto",
-                      "hancock_dense": "Hancock dense", "hancock_adaptive": "Hancock tiles"}.get(r["method"], r["method"])
-            values.append(f"{method} {r['dx']} m ({float(r['runtime_s']):.3g} s)")
+    hydraulic = {scope: (label, tolerance) for scope, label in zip(scopes, labels, strict=True)}
     text = ["", "## Fixed-area storms and the hydraulic objective", "",
             f"The table gives the cheapest measured configuration at a {tolerance:g}% tolerance on each "
             "observable. Compliance includes the measured reference sensitivity. Each row fixes the storm, "
             "reference, reporting interval and recession endpoint. Shape measures redistribution of normalised "
             "discharge volume, and width measures the central 80% of that volume.", "",
-            "| Storm | End (h) | Interval (s) | " + " | ".join(labels) + " |",
-            "|---|---:|---:|" + "---|" * len(labels)]
-    for (case, hours, cadence, _), decisions in sorted(groups.items()):
-        text.append(f"| {case} | {hours:g} | {cadence:g} | "
-                    + " | ".join(" / ".join(decisions.get(scope, ["Unresolved"])) for scope in scopes) + " |")
+            *native_choice_table(file=file, references=references, objectives=hydraulic)]
+    spatial_file = folder / "least_cost_depth_extent.csv"
+    if spatial_file.is_file():
+        import json
+
+        settings = json.loads((study / "fidelity/native_advisor_settings.json").read_text())
+        depth = settings["depth_tolerance_m"]
+        spatial = {("domain", "depth_rmse_m"): ("Final depth", depth),
+                   ("domain", "maximum_depth_rmse_m"): ("Maximum-depth map", depth),
+                   ("domain", "wet_union_depth_rmse_5cm_m"): ("Depth on 5 cm wet union", depth),
+                   ("domain", "wet_union_depth_rmse_10cm_m"): ("Depth on 10 cm wet union", depth),
+                   ("domain", "maximum_extent_error_5cm"): ("Maximum 5 cm extent", tolerance / 100),
+                   ("domain", "maximum_extent_error_10cm"): ("Maximum 10 cm extent", tolerance / 100)}
+        text.extend(["", f"Depth decisions use an RMSE tolerance of {100 * depth:g} cm. Maximum extent uses the "
+                     f"cellwise maximum-depth map and a {tolerance:g}% tolerance on one minus inundation IoU.", "",
+                     *native_choice_table(file=spatial_file, references=references, objectives=spatial)])
     text.extend(["", "Unresolved marks observations without an eligible hydraulic reference. Outside tolerance "
                  "marks a qualified comparison in which every measured candidate exceeds the error bound.", "",
                  "| Storm | RK2 spatial peak difference (%) | Fine formulation difference (%) | Half-CFL difference (%) | Peak reference |",

@@ -470,6 +470,26 @@ def test_transfer_resume_detects_changed_internal_gauge_observation(tmp_path):
         orton_transfer.read_complete(folder=folder, identity=identity)
 
 
+def test_manuscript_budget_decisions_keep_depth_and_extent_thresholds_in_their_own_units(tmp_path):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.manuscript.generate import native_choice_table
+
+    file = tmp_path / "cost.csv"
+    base = dict(case="hill", end_h=12, interval_s=60, reference_id="ref", cohort="complete-native-metre",
+                station="domain", representation="native", cap=0, dx=10, runtime_s=2., method="fv1")
+    scopes = {("domain", "maximum_depth_rmse_m"): ("Maximum-depth map", 0.01),
+              ("domain", "maximum_extent_error_5cm"): ("Maximum 5 cm extent", 0.05)}
+    rows = [dict(base, objective="maximum_depth_rmse_m", tolerance=.01, assessable=6, id="h", method="hancock_dense"),
+            dict(base, objective="maximum_extent_error_5cm", tolerance=.05, assessable=0, id=""),
+            dict(base, objective="maximum_extent_error_5cm", tolerance=.1, assessable=6, id="f")]
+    metrics.csv_write(file=file, rows=rows)
+    table = native_choice_table(file=file, references={("hill", "ref")}, objectives=scopes)
+    assert table[-1] == "| hill | 12 | 60 | Hancock dense 10 m (2 s) | Unresolved |"
+    rows[1]["assessable"] = 6
+    metrics.csv_write(file=file, rows=rows)
+    assert native_choice_table(file=file, references={("hill", "ref")}, objectives=scopes)[-1].endswith("Outside tolerance |")
+
+
 def test_manuscript_reports_single_measured_hancock_policy_and_checks_dual_policy_parity(tmp_path):
     from research.floodwarp_methods_paper import metrics, runner
     from research.floodwarp_methods_paper.manuscript.generate import native_operational_balances

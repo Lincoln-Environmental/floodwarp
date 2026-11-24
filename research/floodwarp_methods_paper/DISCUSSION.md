@@ -87,6 +87,13 @@ The table gives the cheapest measured configuration at a 5% tolerance on each ob
 | hill-8500-back-1000x1000 | 12 | 60 | FV1 10 m (2.15 s) | Unresolved | FV1 10 m (2.15 s) | Outside tolerance | Unresolved | FV1 10 m (2.15 s) | Unresolved |
 | plain-709-spatial-1000x1000 | 20 | 300 | Unresolved | Unresolved | Unresolved | FV1 10 m (2.29 s) | Hancock auto 10 m (2.84 s) | Hancock auto 10 m (2.84 s) | Hancock auto 10 m (2.84 s) |
 
+Depth decisions use an RMSE tolerance of 1 cm. Maximum extent uses the cellwise maximum-depth map and a 5% tolerance on one minus inundation IoU.
+
+| Storm | End (h) | Interval (s) | Final depth | Maximum-depth map | Depth on 5 cm wet union | Depth on 10 cm wet union | Maximum 5 cm extent | Maximum 10 cm extent |
+|---|---:|---:|---|---|---|---|---|---|
+| hill-8500-back-1000x1000 | 12 | 60 | FV1 10 m (2.15 s) | Hancock dense 10 m (2.28 s) | Unresolved | Unresolved | Unresolved | Unresolved |
+| plain-709-spatial-1000x1000 | 20 | 300 | FV1 10 m (2.29 s) | FV1 10 m (2.29 s) | Unresolved | Unresolved | Unresolved | Hancock auto 5 m (10.5 s) |
+
 Unresolved marks observations without an eligible hydraulic reference. Outside tolerance marks a qualified comparison in which every measured candidate exceeds the error bound.
 
 | Storm | RK2 spatial peak difference (%) | Fine formulation difference (%) | Half-CFL difference (%) | Peak reference |
