@@ -27,8 +27,7 @@ def operational_discussion(*, study):
     steps = [float(r["step_ratio"]) for r in rows]
     overhead = [float(r["per_step_ratio"]) for r in rows]
     return (
-        f"Across the {len(rows)} primary million-cell events, the faster measured explicit Hancock policy met "
-        f"1.5× FV1 in {sum(v <= 1.5 for v in time)} of {len(rows)}. Its median full-event ratio was {median(time):.2f}×. "
+        f"Across the {len(rows)} primary million-cell events, the faster measured explicit Hancock policy took a median of {median(time):.2f} times the FV1 runtime over the original observation windows. "
         f"The accepted-step ratios ranged from {min(steps):.2f} to {max(steps):.2f}, and the corresponding "
         f"mean cost per accepted step ranged from {min(overhead):.2f} to {max(overhead):.2f} times FV1. "
         "These factors multiply within each event. The normal timestep policy therefore matters even where "
@@ -154,7 +153,7 @@ def material(*, study):
     ):
         vals = [float(r[name]) for r in small]
         output.append(
-            f"| {label} | {len(vals)} | {median(vals):.3f} | {sum(x <= 1.5 for x in vals)} |"
+            f"| {label} | {len(vals)} | {median(vals):.3f} | {min(vals):.3f}–{max(vals):.3f} |"
         )
     operational = [
         "| Original forecast window | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps | Fastest / FV1 per step |",
@@ -187,7 +186,7 @@ def material(*, study):
     ]
     extra_recessions = sum(r["stage"] == "recession-controls" for r in event_rows)
     best = [float(r["fastest_ratio"]) for r in million]
-    outcome = f"The {len(million)} matched 1,024 × 1,024 comparisons covered {len({r['landform'] for r in million})} landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in {sum(v <= 1.5 for v in best)} of {len(best)} original fixed-duration forecasts. Its median ratio was {number(median(best) if best else None)}×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations."
+    outcome = f"The {len(million)} matched 1,024 × 1,024 comparisons covered {len({r['landform'] for r in million})} landform families. Across the original fixed-duration forecasts, the median runtime of the faster verified explicit Hancock schedule relative to FV1 was {number(median(best) if best else None)}×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations."
     audit = [
         "# Corrective numerical and GPU audit",
         "",
@@ -211,7 +210,7 @@ def material(*, study):
         "",
         "## Small-domain runtime correction",
         "",
-        "| Hancock execution | Events | Median / FV1 | Events ≤1.5× |",
+        "| Hancock execution | Events | Median / FV1 | Observed range / FV1 |",
         "|---|---:|---:|---:|",
         *output,
         "",

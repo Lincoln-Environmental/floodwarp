@@ -142,14 +142,14 @@ def run(*, directory, target):
             "",
             "## Measured runtime",
             "",
-            "| Method | Median runtime / FV1 | At or below 1.5× |",
+            "| Method | Median runtime / FV1 | Interquartile range / FV1 |",
             "|---|---:|---:|",
         ]
     )
     for name in ("hancock_dense", "hancock_adaptive", "adaptive"):
         ratio = np.array([indexed[case, name] / indexed[case, "fv1"] for case in cases])
         report.append(
-            f"| {labels[name]} | {np.median(ratio):.3f} | {(ratio <= 1.5).sum()}/{len(cases)} |"
+            f"| {labels[name]} | {np.median(ratio):.3f} | {np.percentile(ratio, 25):.3f}–{np.percentile(ratio, 75):.3f} |"
         )
     report.extend(
         [

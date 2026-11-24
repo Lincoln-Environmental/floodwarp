@@ -59,6 +59,52 @@ def specifications(*, study, config, design):
                     experiment_class=experiment,
                 )
 
+    length, width = design["reference_dimensions_m"]
+    for domain in design["reference_domains"]:
+        name = (
+            f"{domain['landform']}-{domain['seed']}-{domain['storm']}-{length}x{width}"
+        )
+        for spacing, methods in design["reference_grid_methods"].items():
+            dx = int(spacing)
+            for method in methods:
+                factors = [1.0]
+                if dx == 1 and method == "adaptive":
+                    factors.append(design["reference_cfl_factor"])
+                for factor in factors:
+                    yield dict(
+                        domain,
+                        case=name,
+                        dimensions=[length, width],
+                        dx=dx,
+                        dem=dx,
+                        hours=8,
+                        interval=design["reference_interval_s"],
+                        controls=True,
+                        support=10,
+                        coastal_stage=domain["landform"] == "coastal",
+                        multiplier=1.0,
+                        method=method,
+                        requested_method=method,
+                        factor=factor,
+                        initial_grid="native_1m_block_mean",
+                        terrain_aggregation="native_1m_block_mean",
+                        experiment_class="independent_reference",
+                    )
+
+
+def in_suite(*, spec, suite):
+    if suite == "references":
+        return spec["experiment_class"] in (
+            "independent_reference",
+            "fixed_physical_domain",
+        )
+    if suite == "heldout_references":
+        return (
+            spec["experiment_class"] == "independent_reference"
+            and spec["split"] == "test"
+        )
+    return suite is None or spec["experiment_class"] == suite
+
 
 def prepare(*, spec, bundle, receipt, **kwargs):
     normal = events.numerical
@@ -138,7 +184,8 @@ def run_group(*, directory, specs, config, design, settings, machine):
         cache_root=root / ".fidelity-restarts/native_inputs",
         strip_rows=design["strip_rows"],
         channel_core_m=design["channel_core_min_depth_m"],
-        include_native=base["seed"] == design["matched_km_seed"],
+        include_native=base["experiment_class"]
+        in ("fixed_physical_domain", "independent_reference"),
     )
     output = directory / "native_matrix" / base["case"]
     output.mkdir(parents=True, exist_ok=True)
@@ -357,7 +404,7 @@ def run(*, directory, arguments):
             or opts.get("--method", s["requested_method"]) != s["requested_method"]
             or ("--dx" in opts and s["dx"] != float(opts["--dx"]))
             or ("--dem" in opts and s["dem"] != float(opts["--dem"]))
-            or ("--suite" in opts and s["experiment_class"] != opts["--suite"])
+            or not in_suite(spec=s, suite=opts.get("--suite"))
         ):
             continue
         groups.setdefault(s["case"], []).append(

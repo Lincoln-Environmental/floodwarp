@@ -19,7 +19,7 @@ The 48 prospective physical events included six hours of rain and a common reces
 
 ## Original-window efficiency and terrain representation
 
-On the 96-cell controls, dense Hancock was faster than tiles in 48 of 48 original fixed-duration forecasts. Relative to sparse FV1 its median runtime was 1.352×, with 30 events meeting 1.5×. Tiled Hancock took 2.220× and met the target in 0 events. Selecting the faster qualified execution retrospectively gave 1.352×. Both schedules reproduced the same Hancock fields. With only 96 cells, marking and compacting tiles adds GPU launches while eliminating little work. The large-domain suite measures how this balance changes with the scheduled footprint. [Measured GPU costs](../tables/07_runtime.md) · [Full performance qualification](../../../validation/hancock_long_storm_review/DECISION.md)
+On the 96-cell controls, dense Hancock was faster than tiles in 48 of 48 original fixed-duration forecasts. Relative to sparse FV1 its median runtime was 1.352×. The tiled median was 2.220×. Selecting the faster qualified execution retrospectively gave 1.352×. Both schedules reproduced the same Hancock fields. With only 96 cells, marking and compacting tiles adds GPU launches while eliminating little work. The large-domain suite measures how this balance changes with the scheduled footprint. [Measured GPU costs](../tables/07_runtime.md) · [Full performance qualification](../../../validation/hancock_long_storm_review/DECISION.md)
 
 Fixed-geometry and resampled-geometry experiments use the same physical extent. Their objective-specific rankings and measured cost ratios are available for the plain, fan and incised development realisations. An unresolved reference is an explicit missing comparison. [Resolution profiles](../figures/06_resolution.pdf) · [Equal-cost results](../tables/08_cost_accuracy.md) · [Least-cost feasible configurations](../processed/pareto/least_cost.csv)
 
@@ -66,7 +66,7 @@ The fine-grid cross-formulation file reports each available Hancock–FV2 differ
 
 ## Million-cell operational controls
 
-The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in 1 of 8 original fixed-duration forecasts. Its median ratio was 1.69×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
+The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. Across the original fixed-duration forecasts, the median runtime of the faster verified explicit Hancock schedule relative to FV1 was 1.69×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
 
 The partial-domain rain and widespread inundation cases have different scheduling and timestep costs. [Complete operational records](../tables/11_execution.md) · [Costs by scheduled footprint](../figures/13_execution_cost.pdf) · [Finer reference checks](../tables/12_reference_qualification.md) · [Operational hydrographs](../figures/18_operational_storms.pdf).
 
@@ -79,3 +79,5 @@ The advisor abstained on 30 of 30 million-cell decisions. No measured option sat
 Earlier resolution experiments used cell-centre sampling or repeated parent elevations. The incised fixed-bed refinement created artificial treads that substantially altered runoff. These historical experiments do not establish accuracy at a practical resolution using an area-averaged DEM. The corrected series averages 25 native 1 m elevations per 5 m cell, then four 5 m elevations per 10 m cell. Initial water, momentum, rainfall footprint and infiltration also come from the native metre source. All practical runs start at time zero or resume their own verified checkpoint. [Native-input storm windows, budgets and reference qualification](../fidelity/native_results/README.md) Report practical extent separately at 5 and 10 cm. Historical 1 cm extent is a shallow-water diagnostic. [DEM construction, numerical controls and corrected outcomes](../fidelity/DEM_CORRECTION.md)
 
 The native-grid incised results also show sensitivity to the downstream FREE boundary. The steady-sheet experiment checks this effect independently against exact discharge. [Outlet placement and terminal storage](../fidelity/native_outlet/README.md)
+
+Runoff travel time and catchment storage allow the outlet maximum to follow rainfall. The incised diagnostic compares accepted flow at successive cross-sections with storage and infiltration over the intervening reach. The matched finer-grid checks test how strongly the outlet timing and magnitude depend on representation. [Recession water balance](../fidelity/native_tail/README.md)

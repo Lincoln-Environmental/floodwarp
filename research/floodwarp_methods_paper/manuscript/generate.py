@@ -118,7 +118,7 @@ The {len(matched)} prospective physical events included six hours of rain and a 
 
 ## Efficiency and terrain representation
 
-On the 96-cell controls, dense Hancock was faster than tiles in {dense_wins} of {len(matched)} original fixed-duration forecasts. Relative to sparse FV1 its median runtime was {median(dense):.3f}×, with {sum(r <= 1.5 for r in dense)} events meeting 1.5×. Tiled Hancock took {median(ratios):.3f}× and met the target in {sum(r <= 1.5 for r in ratios)} events. Selecting the faster qualified execution retrospectively gave {median(fastest):.3f}×. Both schedules reproduced the same Hancock fields. With only 96 cells, marking and compacting tiles adds GPU launches while eliminating little work. The large-domain suite measures how this balance changes with the scheduled footprint. [Measured GPU costs](../tables/07_runtime.md) · [Full performance qualification](../../../validation/hancock_long_storm_review/DECISION.md)
+On the 96-cell controls, dense Hancock was faster than tiles in {dense_wins} of {len(matched)} original fixed-duration forecasts. Relative to sparse FV1 its median runtime was {median(dense):.3f}×. The tiled median was {median(ratios):.3f}×. Selecting the faster qualified execution retrospectively gave {median(fastest):.3f}×. Both schedules reproduced the same Hancock fields. With only 96 cells, marking and compacting tiles adds GPU launches while eliminating little work. The large-domain suite measures how this balance changes with the scheduled footprint. [Measured GPU costs](../tables/07_runtime.md) · [Full performance qualification](../../../validation/hancock_long_storm_review/DECISION.md)
 
 Fixed-geometry and resampled-geometry experiments use the same physical extent. Their objective-specific rankings and measured cost ratios are available for the plain, fan and incised development realisations. An unresolved reference is an explicit missing comparison. [Resolution profiles](../figures/06_resolution.pdf) · [Equal-cost results](../tables/08_cost_accuracy.md) · [Least-cost feasible configurations](../processed/pareto/least_cost.csv)
 
@@ -206,6 +206,12 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
             correction += ("\nThe native-grid incised results also show sensitivity to the downstream FREE boundary. "
                            "The steady-sheet experiment checks this effect independently against exact discharge. "
                            "[Outlet placement and terminal storage](../fidelity/native_outlet/README.md)\n")
+        if (study / "fidelity/native_tail/README.md").is_file():
+            correction += ("\nRunoff travel time and catchment storage allow the outlet maximum to follow rainfall. "
+                           "The incised diagnostic compares accepted flow at successive cross-sections with "
+                           "storage and infiltration over the intervening reach. The matched finer-grid checks "
+                           "test how strongly the outlet timing and magnitude depend on representation. "
+                           "[Recession water balance](../fidelity/native_tail/README.md)\n")
         result += correction
         discussion += correction
         audit += correction.replace("](../", "](")
@@ -221,8 +227,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
     (study / "DISCUSSION.md").write_text(discussion.replace("](../", "]("))
     conclusions = [
         "# Conclusions",
-        f"Across the original fixed windows of {len(matched)} small-domain storms, the faster qualified Hancock execution met the "
-        f"1.5× FV1 target in {sum(r <= 1.5 for r in fastest)} cases with median {median(fastest):.3f}×. "
+        f"Across the original fixed windows of {len(matched)} small-domain storms, the faster qualified Hancock execution took a median "
+        f"{median(fastest):.3f} times the FV1 runtime. "
         f"Tiled execution alone had median {median(ratios):.3f}×.",
         paper.operational_discussion(study=study),
         f"The frozen advisor made a qualified feasible selection in {fmt(a['feasible_coverage_pct'])}% "

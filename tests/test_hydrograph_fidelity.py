@@ -863,3 +863,69 @@ def test_coincident_interior_supercritical_discharge_and_rotated_faces():
         np.testing.assert_allclose(values,values[0],atol=1e-10,rtol=0)
         compared[distance]=values[0]
     assert abs(compared[400]) < .05
+
+
+def test_native_outlet_budget_partitions_routed_water_and_local_drawdown():
+    from research.floodwarp_methods_paper.fidelity.native_tail import changes, measurements
+
+    h = np.array([[1.0, 4.0], [2.0, 5.0]])
+    soil = np.zeros_like(h)
+    rain = np.zeros_like(h)
+    start = measurements(h=h, soil=soil, rain=rain, volumes=np.zeros((2, 3)),
+                         distances=[0, 1], dx=1)
+    h[:, -1] -= 2
+    soil[:, -1] = 0.5
+    end = measurements(h=h, soil=soil, rain=rain, volumes=np.array([[0, 2, 4], [0, 3, 4]]),
+                       distances=[0, 1], dx=1)
+    band = changes(before=start, after=end)[1]
+    assert band["net_export_m3"] == 8
+    assert band["net_into_strip_m3"] == 5
+    assert band["fraction_from_strip_storage"] == 3 / 8
+    assert band["residual_m3"] == 0
+    assert changes(before=start, after=start)[1]["fraction_from_strip_storage"] is None
+    end[1]["storage_m3"] += 1
+    with pytest.raises(ArithmeticError, match="water balance"):
+        changes(before=start, after=end)
+    with pytest.raises(ValueError, match="outside or between"):
+        measurements(h=h, soil=soil, rain=rain, volumes=np.zeros((2, 3)), distances=[0, 3], dx=2)
+
+
+def test_post_rain_peak_and_volume_are_compared_at_shared_horizons():
+    from research.floodwarp_methods_paper.fidelity.native_tail import crest_windows
+
+    frames = [
+        {"t_s": t, "outlet_m3s": q}
+        for t, q in ((60, 1), (120, 2), (180, 3), (240, 5), (300, 0))
+    ]
+    series = [
+        dict(id="long", method="fv1", dx=10, frames=frames, settled=True),
+        dict(id="short", method="adaptive", dx=5, frames=frames[:3], settled=False),
+    ]
+    rows = crest_windows(histories=series, rain_end_s=120, original_end_s=180)
+    matched = [r for r in rows if r["window"] == "whole_record" and r["end_s"] == 180]
+    assert len(matched) == 2
+    assert all(r["peak_interval_mean_m3s"] == 3 and r["net_volume_m3"] == 360 for r in matched)
+    after = next(r for r in rows if r["window"] == "after_rain" and r["end_s"] == 300)
+    assert after["first_peak_interval_end_s"] == 240
+    assert after["recession_passed_at_end"]
+    assert after["net_volume_m3"] == 480
+
+
+def test_independent_native_references_hold_out_the_entire_realisation():
+    from research.floodwarp_methods_paper.fidelity.native_matrix import in_suite, specifications
+    from research.floodwarp_methods_paper.plan import read_config
+
+    study = Path(__file__).resolve().parents[1] / "research/floodwarp_methods_paper"
+    cfg = read_config(path=study / "configs/study.json")
+    design = json.loads((study / "fidelity/native_matrix_settings.json").read_text())
+    specs = list(specifications(study=study, config=cfg, design=design))
+    references = [s for s in specs if in_suite(spec=s, suite="references")]
+    held = [s for s in specs if in_suite(spec=s, suite="heldout_references")]
+    assert held and {s["split"] for s in held} == {"test"}
+    assert {s["seed"] for s in held}.isdisjoint(s["seed"] for s in references if s["split"] != "test")
+    for seed in {s["seed"] for s in references}:
+        group = [s for s in references if s["seed"] == seed]
+        assert len({s["split"] for s in group}) == len({tuple(s["dimensions"]) for s in group}) == 1
+        assert {s["dx"] for s in group} == {1, 5, 10}
+        assert all(s["dx"] == s["dem"] and s["initial_grid"] == "native_1m_block_mean" for s in group)
+        assert {s["factor"] for s in group if s["method"] == "adaptive" and s["dx"] == 1} == {0.5, 1}

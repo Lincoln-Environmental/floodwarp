@@ -179,7 +179,7 @@ def generate(*, directory):
                 "",
                 "## Accepted timesteps and whole-event cost",
                 "",
-                f"Using the longest paired native horizon once per landform, Hancock's median runtime was {np.median(ratios):.2f}× FV1. It met the 1.5× target on {sum(v <= 1.5 for v in ratios)} of {len(ratios)} landforms. Time per accepted step includes time spent in rejected trials.",
+                f"Using the longest paired native horizon once per landform, Hancock's median runtime was {np.median(ratios):.2f}× FV1. The observed ratios ranged from {min(ratios):.2f} to {max(ratios):.2f}. Time per accepted step includes time spent in rejected trials.",
                 "",
                 "| Landform | Hancock steps | FV1 steps | Step count ratio | Time per step ratio |",
                 "|---|---:|---:|---:|---:|",

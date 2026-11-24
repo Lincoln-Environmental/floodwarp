@@ -94,6 +94,7 @@ def manifest(*, directory, package):
         "native_results",
         "native_cpu_control",
         "native_outlet",
+        "native_tail",
         "free_plane",
         "free_reach",
         "verification",

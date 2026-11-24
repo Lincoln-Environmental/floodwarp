@@ -20,17 +20,17 @@ The reference screens and matched comparisons link decisions to experiment IDs. 
 
 ## Small-domain runtime correction
 
-| Hancock execution | Events | Median / FV1 | Events ≤1.5× |
+| Hancock execution | Events | Median / FV1 | Observed range / FV1 |
 |---|---:|---:|---:|
-| Dense | 48 | 1.352 | 30 |
-| Tiles | 48 | 2.220 | 0 |
-| Fastest measured | 48 | 1.352 | 30 |
+| Dense | 48 | 1.352 | 1.247–2.521 |
+| Tiles | 48 | 2.220 | 1.737–3.901 |
+| Fastest measured | 48 | 1.352 | 1.247–2.521 |
 
 For 96 cells, compacting the footprint costs extra launches and leaves little hydraulic work to skip. On large sparse rasters, each omitted tile avoids reconstruction, HLL flux, draining, update and accounting work. The separate common-cap measurements isolate this effect. Normal-policy storm times also include differences in accepted timesteps and rejected trials.
 
 ## Operational storm matrix
 
-The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. The faster verified explicit Hancock schedule met the 1.5× FV1 target in 1 of 8 original fixed-duration forecasts. Its median ratio was 1.69×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
+The 8 matched 1,024 × 1,024 comparisons covered 8 landform families. Across the original fixed-duration forecasts, the median runtime of the faster verified explicit Hancock schedule relative to FV1 was 1.69×. This retrospective choice gives an attainable measured cost for each event. The automatic runs used a policy frozen before these test observations.
 
 | Original forecast window | Grid cells | Δx (m) | Hours | FV1 (s) | Hancock dense (s) | Tiles (s) | Auto (s) | Fastest explicit / FV1 | Hancock / FV1 steps | Fastest / FV1 per step |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -234,3 +234,5 @@ Of 48 small events with six hours of rain, 31 required a longer recession. The l
 Earlier resolution experiments used cell-centre sampling or repeated parent elevations. The incised fixed-bed refinement created artificial treads that substantially altered runoff. These historical experiments do not establish accuracy at a practical resolution using an area-averaged DEM. The corrected series averages 25 native 1 m elevations per 5 m cell, then four 5 m elevations per 10 m cell. Initial water, momentum, rainfall footprint and infiltration also come from the native metre source. All practical runs start at time zero or resume their own verified checkpoint. [Native-input storm windows, budgets and reference qualification](fidelity/native_results/README.md) Report practical extent separately at 5 and 10 cm. Historical 1 cm extent is a shallow-water diagnostic. [DEM construction, numerical controls and corrected outcomes](fidelity/DEM_CORRECTION.md)
 
 The native-grid incised results also show sensitivity to the downstream FREE boundary. The steady-sheet experiment checks this effect independently against exact discharge. [Outlet placement and terminal storage](fidelity/native_outlet/README.md)
+
+Runoff travel time and catchment storage allow the outlet maximum to follow rainfall. The incised diagnostic compares accepted flow at successive cross-sections with storage and infiltration over the intervening reach. The matched finer-grid checks test how strongly the outlet timing and magnitude depend on representation. [Recession water balance](fidelity/native_tail/README.md)

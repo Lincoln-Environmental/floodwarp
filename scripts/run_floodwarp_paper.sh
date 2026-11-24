@@ -74,7 +74,13 @@ main() {
     if [[ $stage == million-storms ]]; then
         exec ./scripts/run_hydrograph_fidelity.sh native-storms --suite operational "${selected_options[@]}"
     fi
-    if [[ $stage == historical-resolution || $stage == historical-million-storms ]]; then
+    if [[ $stage == large-references || $stage == large-refinements ]]; then
+        exec ./scripts/run_hydrograph_fidelity.sh native-storms --suite references "${selected_options[@]}"
+    fi
+    if [[ $stage == heldout-references ]]; then
+        exec ./scripts/run_hydrograph_fidelity.sh native-storms --suite heldout_references "${selected_options[@]}"
+    fi
+    if [[ $stage == historical-resolution || $stage == historical-million-storms || $stage == historical-large-references || $stage == historical-large-refinements || $stage == historical-heldout-references ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.controller "${stage#historical-}" "${selected_options[@]}"
     fi
     if [[ $stage == native-products || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then

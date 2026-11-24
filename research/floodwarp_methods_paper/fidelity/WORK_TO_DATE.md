@@ -1,6 +1,6 @@
 # FloodWarp results to date
 
-Paired sparse FV1 and adaptive Hancock forecasts are complete on 8 native 1,048,576-cell landforms. Each received six hours of rain. The verified endpoints range from 12 to 48 h. Taking the longest measured pair once per landform, Hancock's median hydraulic runtime is 1.92× FV1, with 3/8 within 1.5×. Execution policies here were selected from original-window measurements.
+Paired sparse FV1 and adaptive Hancock forecasts are complete on 8 native 1,048,576-cell landforms. Each received six hours of rain. The verified endpoints range from 12 to 48 h. Taking the longest measured pair once per landform, Hancock's median hydraulic runtime is 1.92× FV1 (range 0.95–2.77×). Execution policies here were selected from original-window measurements.
 
 [Landform timings, storage, omitted export and accepted timesteps](NATIVE_RECESSIONS.md) · [Common-timestep GPU qualification](../../../validation/hancock_long_storm_review/DECISION.md) · [Hancock structures and verification](../../../docs/HANCOCK_STRUCTURES.md)
 

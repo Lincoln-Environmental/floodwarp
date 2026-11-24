@@ -49,11 +49,11 @@ Positive gain means a reduction in absolute error. The last columns count gains 
 
 ## Measured runtime
 
-| Method | Median runtime / FV1 | At or below 1.5× |
+| Method | Median runtime / FV1 | Interquartile range / FV1 |
 |---|---:|---:|
-| Hancock dense | 1.358 | 30/48 |
-| Hancock tiled | 2.208 | 0/48 |
-| FV2 RK2 | 1.888 | 0/48 |
+| Hancock dense | 1.358 | 1.308–1.626 |
+| Hancock tiled | 2.208 | 2.122–2.512 |
+| FV2 RK2 | 1.888 | 1.817–2.593 |
 
 These grids contain 96 cells at the candidate resolution. The table supports event-scale numerical comparisons on this geometry. The million-cell operational cases have separate measurements.
 

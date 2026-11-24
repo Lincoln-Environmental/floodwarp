@@ -237,7 +237,7 @@ def generate(*, directory):
     text = [
         "# FloodWarp results to date",
         "",
-        f"Paired sparse FV1 and adaptive Hancock forecasts are complete on {len(longest)} native 1,048,576-cell landforms. Each received six hours of rain. The verified endpoints range from {min(float(r['end_h']) for r in longest.values()):g} to {max(float(r['end_h']) for r in longest.values()):g} h. Taking the longest measured pair once per landform, Hancock's median hydraulic runtime is {median(ratios):.2f}× FV1, with {sum(v <= 1.5 for v in ratios)}/{len(ratios)} within 1.5×. Execution policies here were selected from original-window measurements.",
+        f"Paired sparse FV1 and adaptive Hancock forecasts are complete on {len(longest)} native 1,048,576-cell landforms. Each received six hours of rain. The verified endpoints range from {min(float(r['end_h']) for r in longest.values()):g} to {max(float(r['end_h']) for r in longest.values()):g} h. Taking the longest measured pair once per landform, Hancock's median hydraulic runtime is {median(ratios):.2f}× FV1 (range {min(ratios):.2f}–{max(ratios):.2f}×). Execution policies here were selected from original-window measurements.",
         "",
         "[Landform timings, storage, omitted export and accepted timesteps](NATIVE_RECESSIONS.md) · [Common-timestep GPU qualification](../../../validation/hancock_long_storm_review/DECISION.md) · [Hancock structures and verification](../../../docs/HANCOCK_STRUCTURES.md)",
         "",

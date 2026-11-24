@@ -25,7 +25,7 @@ Paired native-grid recession measurements are available for 8 of the 8 primary l
 
 ## Accepted timesteps and whole-event cost
 
-Using the longest paired native horizon once per landform, Hancock's median runtime was 1.92× FV1. It met the 1.5× target on 3 of 8 landforms. Time per accepted step includes time spent in rejected trials.
+Using the longest paired native horizon once per landform, Hancock's median runtime was 1.92× FV1. The observed ratios ranged from 0.95 to 2.77. Time per accepted step includes time spent in rejected trials.
 
 | Landform | Hancock steps | FV1 steps | Step count ratio | Time per step ratio |
 |---|---:|---:|---:|---:|

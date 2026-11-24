@@ -351,7 +351,7 @@ def summary(*, directory, storms, pulses, decisions):
             )
             sentence = (
                 f"At their verified recession endpoints the faster measured explicit Hancock policy took a median "
-                f"{float(r['median']):.2f}× FV1 across the {suite}, meeting 1.5× in {r['n_within_target']}/{r['events']} events."
+                f"{float(r['median']):.2f}× FV1 across the {suite} (interquartile range {float(r['lower_quartile']):.2f}–{float(r['upper_quartile']):.2f}× across {r['events']} events)."
             )
             narrative += " " + sentence
             lines.extend(
