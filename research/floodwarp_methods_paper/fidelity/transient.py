@@ -103,6 +103,8 @@ def summary(*, pair, reference, edges, threshold, landmarks=None):
     row = dict(
         meta,
         co_arrival_cells=np.isfinite(delay).sum(),
+        arrival_later_cells=int((delay > 0).sum()),
+        arrival_earlier_cells=int((delay < 0).sum()),
         median_arrival_delay_s=spatial.median_finite(field=delay),
         median_absolute_arrival_difference_s=spatial.median_finite(field=abs(delay)),
         missed_arrivals=(
@@ -134,6 +136,8 @@ def summary(*, pair, reference, edges, threshold, landmarks=None):
     ):
         difference = model_time - ref_time
         row[name + "_assessable_cells"] = int(np.isfinite(difference).sum())
+        row[name + "_later_cells"] = int((difference > 0).sum())
+        row[name + "_earlier_cells"] = int((difference < 0).sum())
         row[name + "_median_delay_s"] = spatial.median_finite(field=difference)
         row[name + "_median_abs_difference_s"] = spatial.median_finite(
             field=abs(difference)
