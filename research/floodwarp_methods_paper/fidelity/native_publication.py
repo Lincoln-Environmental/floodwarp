@@ -334,18 +334,22 @@ def run(*, directory):
                      "[Admissible cost for spatial fields](../native_results/least_cost_terrain_depth_extent.csv) · "
                      "[Hydraulic error within budget](../native_results/equal_cost_terrain_fidelity.csv) · "
                      "[Spatial error within budget](../native_results/equal_cost_terrain_depth_extent.csv)"])
-    comparison_file = source / "cpu_cuda_initial_controls.csv"
-    if comparison_file.is_file():
+    for label, filename in (("initial storm", "cpu_cuda_initial_controls.csv"), ("settled recession", "cpu_cuda_recession_controls.csv")):
+        comparison_file = source / filename
+        if not comparison_file.is_file():
+            continue
         devices = metrics.csv_read(file=comparison_file)
         decision_files.append(comparison_file)
         if devices:
-            text.extend(["", f"For {len(devices)} matched CPU/CUDA storm windows, the largest absolute "
+            endpoints_h = sorted({float(r["end_s"])/3600 for r in devices})
+            hours = ", ".join(f"{hour:g}" for hour in endpoints_h)
+            text.extend(["", f"For {len(devices)} matched CPU/CUDA {label} windows ending at {hours} h, the largest absolute "
                          f"discharge difference was {max(float(r['outlet_max_abs_difference_m3s']) for r in devices):.3g} m³/s "
                          f"at the outlet and {max(float(r['section_max_abs_difference_m3s']) for r in devices):.3g} m³/s "
                          f"at the internal section. Accepted step counts differed in "
                          f"{sum(int(r['intervals_with_different_step_count']) for r in devices)} of "
                          f"{sum(int(r['intervals']) for r in devices):,} intervals. "
-                         "[Device-specific water accounts, gauges and run identities](../native_results/cpu_cuda_initial_controls.csv)"])
+                         f"[Device-specific water accounts, gauges and run identities](../native_results/{filename})"])
     text.extend(["", "The measured-windows table includes endpoint inundated areas at 5 and 10 cm "
                  "on each solver's own model grid. Each area sums the archived subcell wet fractions over "
                  "the observation grid. Where the internal gauge lies on an observation cell face, the same table reports "

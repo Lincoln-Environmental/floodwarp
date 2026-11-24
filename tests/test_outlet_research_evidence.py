@@ -515,6 +515,21 @@ def test_cpu_cuda_comparison_uses_each_accepted_transport_interval_and_actual_ra
         device_controls.same_forcing(cpu=dict(long, rain_rates_ms=[1, 1, 0]), gpu=dict(short, rain_rates_ms=[1, 1, 0]), end=5)
 
 
+def test_cpu_recession_requires_all_intervals_from_the_physical_start(tmp_path):
+    import json
+    from research.floodwarp_methods_paper.fidelity.device_controls import cpu_recession
+
+    scheme = {"limiter": "adaptive"}
+    for start, end in ((0, 60), (60, 120)):
+        block = dict(start_s=start, end_s=end, frames=[dict(t_s=end)], budget=dict(numerical=scheme))
+        (tmp_path / f"{end}.json").write_text(json.dumps(block))
+    frames, final, files = cpu_recession(folder=tmp_path, end=120, numerical=scheme)
+    assert [r["t_s"] for r in frames] == [60, 120] and final["end_s"] == 120 and len(files) == 2
+    (tmp_path / "60.json").unlink()
+    with pytest.raises(ValueError, match="observation windows"):
+        cpu_recession(folder=tmp_path, end=120, numerical=scheme)
+
+
 def test_budget_reprices_on_admissible_terrain_and_preserves_hydraulic_winner(tmp_path):
     from research.floodwarp_methods_paper import metrics
     from research.floodwarp_methods_paper.fidelity import budgets

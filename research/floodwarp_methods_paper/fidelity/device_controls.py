@@ -1,5 +1,6 @@
-"""Compare archived CPU and GPU gauge observations on an identical initial storm window."""
+"""Compare archived CPU and GPU gauge observations on identical storm and recession windows."""
 
+import gzip
 import json
 import numpy as np
 
@@ -35,9 +36,62 @@ def same_forcing(*, cpu, gpu, end):
             raise ValueError("Different rainfall over the matched CPU and CUDA observation window")
 
 
+def cpu_recession(*, folder, end, numerical):
+    frames, files = [], {}
+    start = 0
+    windows = {int(p.stem): p for p in folder.glob("*.json") if p.stem.isdecimal()}
+    for seconds, path in sorted(windows.items()):
+        if seconds > end:
+            break
+        block = json.loads(path.read_text())
+        if (block["start_s"] != start or block["end_s"] != seconds
+                or block["frames"][-1]["t_s"] != seconds or block["budget"]["numerical"] != numerical):
+            raise ValueError("CPU recession observation windows or formulations disagree")
+        frames.extend(block["frames"])
+        files[path.name] = runner.checksum(path)
+        start = seconds
+    if not frames or start != end:
+        raise ValueError("Missing final CPU recession observation")
+    return frames, block, files
+
+
+def matched_recession(*, directory, control, item, folder, manifest):
+    end = round(float(control["end_h"]) * 3600)
+    if control["both_stations_passed"] != "True":
+        raise ValueError("CPU recession control lacks a settled endpoint")
+    records = []
+    for path in (directory / "endpoint_fields").glob(f"*/{end}.npz"):
+        with np.load(path, allow_pickle=False) as state:
+            receipt = json.loads(state["receipt"].item())
+        if receipt["parent_id"] != item["id"]:
+            continue
+        series_path = directory / "extended_runs" / path.parent.name / "horizons" / f"{end}.json.gz"
+        with gzip.open(series_path, "rt") as stream:
+            series = json.load(stream)
+        if (series["parent_id"] != item["id"] or series["id"] != receipt["id"] or series["id"] != path.parent.name
+                or series["end_s"] != end or receipt["end_s"] != end or series["cohort"] != "native-metre"
+                or series["spec"] != item["s"] or not series["settled"]):
+            raise ValueError("GPU endpoint and settled recession receipt disagree")
+        same_forcing(cpu=manifest["forcing"], gpu=series["forcing"], end=end)
+        frames, final, files = cpu_recession(folder=folder, end=end, numerical=item["d"]["numerical"])
+        intervals = interval_differences(cpu=frames, gpu=series["frames"])
+        differences = {}
+        for name, field in (("rain", "rain_m3"), ("infiltration", "infiltration_m3"), ("storage_m3", "storage_m3")):
+            if receipt[field] != series[field]:
+                raise ValueError("GPU endpoint and storm series have different water accounts")
+            differences[field.replace("_m3", "_difference_m3")] = series[field] - final["budget"][name]
+        records.append(dict(case=control["case"], method=control["method"], dx_m=control["dx_m"],
+                            cpu_id=control["id"], gpu_id=series["id"], gpu_parent_id=item["id"],
+                            native_fields_sha256=item["native_sha"], solver_source=item["solver_source"],
+                            cpu_window_checksums_sha256=runner.digest(files),
+                            gpu_window_sha256=runner.checksum(series_path), gpu_endpoint_sha256=runner.checksum(path),
+                            **differences, **intervals))
+    return records
+
+
 def collect(*, directory, records, target):
     index = directory / "strong_storms/completed.csv"
-    rows = []
+    rows, recessions = [], []
     if index.exists():
         for control in metrics.csv_read(file=index):
             folder = index.parent / control["id"]
@@ -65,4 +119,6 @@ def collect(*, directory, records, target):
                                  rain_difference_m3=data["rain_m3"]-ledger["rain"],
                                  infiltration_difference_m3=data["infiltration_m3"]-ledger["infiltration"],
                                  storage_difference_m3=data["final_storage_m3"]-ledger["storage_m3"], **delta))
+                recessions.extend(matched_recession(directory=directory, control=control, item=item, folder=folder, manifest=manifest))
     metrics.csv_write(file=target / "cpu_cuda_initial_controls.csv", rows=rows)
+    metrics.csv_write(file=target / "cpu_cuda_recession_controls.csv", rows=recessions)
