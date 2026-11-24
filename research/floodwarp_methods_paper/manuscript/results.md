@@ -315,6 +315,8 @@ Each row compares fields at the stated physical time on identical hydraulic cell
 | hill-8500-back-1000x1000 | 12.0 | 1 | Hancock | 1.0 | 0 | 0.018788 | empty union | empty union |
 | plain-709-intense-1000x1000 | 8.0 | 10 | FV1 | 1.0 | 51.745 | 28.641 | 0.72401 | 0.44878 |
 | plain-709-intense-1000x1000 | 8.0 | 5 | FV1 | 1.0 | 53.231 | 29.119 | 0.71496 | 0.43857 |
+| plain-709-intense-1000x1000 | 8.0 | 1 | FV1 | 1.0 | 26.762 | 20.658 | 0.97715 | 0.80541 |
+| plain-709-intense-1000x1000 | 8.0 | 1 | Hancock | 1.0 | 0.02042 | 0.012255 | 0.99992 | 0.99966 |
 | plain-709-intense-1000x1000 | 8.0 | 5 | Hancock | 1.0 | 0.076497 | 0.078499 | 0.99961 | 0.99843 |
 | plain-709-intense-1000x1000 | 8.0 | 10 | Hancock | 1.0 | 0.39292 | 0.27157 | 0.99638 | 0.98982 |
 | plain-709-moderate-1000x1000 | 8.0 | 1 | RK2 | 0.5 | 3.3885e-05 | 0.001106 | 1.00000 | 1.00000 |
@@ -342,7 +344,7 @@ Each row compares fields at the stated physical time on identical hydraulic cell
 
 [Wet-union errors, connectivity and map identities](../fidelity/native_results/native_grid_field_differences.csv)
 
-The maps show the same plain two hours after rainfall ended for the moderate and intense storms. Shading preserves the fraction of hydraulic cells reaching 10 cm in each 10 m reporting cell. The dashed line marks the internal gauge. [5 m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_5m.pdf) · [10 m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_10m.pdf)
+The maps show the same plain two hours after rainfall ended for the moderate and intense storms. Shading preserves the fraction of hydraulic cells reaching 10 cm in each 10 m reporting cell. The dashed line marks the internal gauge. [1 m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_1m.pdf) · [5 m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_5m.pdf) · [10 m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_10m.pdf)
 
 ## Practical grid selection on native terrain
 
