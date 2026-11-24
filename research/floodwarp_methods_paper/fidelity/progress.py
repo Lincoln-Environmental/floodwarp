@@ -190,6 +190,43 @@ def grid_spacing(row):
     return float(row["dx_m"])
 
 
+def terrain_and_calibration(*, study):
+    processed = study / "processed"
+    terrain = metrics.csv_read(file=processed / "million/terrain.csv")
+    connectivity = []
+    for spacing in sorted({float(r["diagnostic_dx"]) for r in terrain}):
+        cases = {r["case"]: r for r in terrain if float(r["diagnostic_dx"]) == spacing}
+        lost = sum(
+            r["native_connected"] == "True" and r["represented_connected"] == "False"
+            for r in cases.values()
+        )
+        connectivity.append(f"{lost}/{len(cases)} at {spacing:g} m")
+    transfers = metrics.csv_read(file=processed / "comparisons/transfer.csv")
+    scores = [
+        float(r["improvement"])
+        for r in transfers
+        if r["qualified_for_objective"] == "True"
+    ]
+    large = [
+        r
+        for r in metrics.csv_read(file=processed / "advisor/eligibility_breakdown.csv")
+        if int(r["cells"]) >= 1_000_000
+    ]
+    passes = [r for r in large if int(r["within_hydraulic_tolerance"]) > 0]
+    admissible = sum(r["terrain_admissible"] == "True" for r in passes)
+    return [
+        "## Terrain, calibration and solver selection",
+        "",
+        "Across the independent terrain windows, the prescribed 8 m opening lost its native hydraulic connection in "
+        + ", ".join(connectivity)
+        + ". The probe stage was 1 cm above the native spill elevation. [Terrain diagnostics](../processed/million/terrain.csv)",
+        "",
+        f"Bounded FV1 Manning fits improved {sum(x > 0 for x in scores)}/{len(scores)} reference-qualified transfer scores and worsened {sum(x < 0 for x in scores)}. Several scores come from different objectives and calibration bounds on the same terrain. [Calibration and transfer](../tables/09_calibration.md)",
+        "",
+        f"In the original independent million-cell advisor evaluation, {len(passes)}/{len(large)} decisions had a measured configuration within hydraulic tolerance. Of those, {admissible} also met the terrain requirement. This test supplies no feasible operational cost comparison for the advisor. [Held-out decisions and abstentions](../tables/13_advisor_scale.md)",
+    ]
+
+
 def generate(*, directory):
     rows = metrics.csv_read(file=directory / "results/native_horizons.csv")
     longest = {}
@@ -210,6 +247,8 @@ def generate(*, directory):
         *pulse_comparison(directory=directory),
         "",
         *storm_comparison(directory=directory),
+        "",
+        *terrain_and_calibration(study=directory.parent),
         "",
         "## Operational reference controls",
         "",

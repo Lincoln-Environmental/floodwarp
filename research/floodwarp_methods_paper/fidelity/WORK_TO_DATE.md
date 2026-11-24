@@ -43,6 +43,14 @@ All 48 events have a common checked recession. 31 needed longer than eight hours
 
 [Results by landform, signed effects and uncertainty](small_storms/README.md)
 
+## Terrain, calibration and solver selection
+
+Across the independent terrain windows, the prescribed 8 m opening lost its native hydraulic connection in 0/15 at 1 m, 9/15 at 5 m, 11/15 at 10 m. The probe stage was 1 cm above the native spill elevation. [Terrain diagnostics](../processed/million/terrain.csv)
+
+Bounded FV1 Manning fits improved 64/105 reference-qualified transfer scores and worsened 41. Several scores come from different objectives and calibration bounds on the same terrain. [Calibration and transfer](../tables/09_calibration.md)
+
+In the original independent million-cell advisor evaluation, 10/30 decisions had a measured configuration within hydraulic tolerance. Of those, 0 also met the terrain requirement. This test supplies no feasible operational cost comparison for the advisor. [Held-out decisions and abstentions](../tables/13_advisor_scale.md)
+
 ## Operational reference controls
 
 The following counts describe the original forecast windows. A separate matched-recession receipt records the common end used for hydraulic assessment.
