@@ -8,6 +8,8 @@ run_stage() {
     local -a extra=()
     case "$1" in
         status) module=status ;;
+        native-status) module=native_status ;;
+        strong-storm-controls) module=strong_storms ;;
         summary) module=progress ;;
         verify-kernels) module=verification ;;
         verify) module=verify_products ;;
@@ -39,6 +41,7 @@ run_stage() {
         native-tail|native-peak-replay) module=native_tail; extra=("$1") ;;
         outlet-report) module=outlet_report ;;
         native-storms) module=native_matrix ;;
+        native-terrain) module=native_matrix; extra=(--terrain-only) ;;
         native-products|verify-native) module=native_products; extra=("$1") ;;
         incised-plane) module=incised_plane ;;
         incised-reach) module=incised_reach ;;
@@ -72,7 +75,7 @@ main() {
         case "$option" in --dry-run) dry=true ;; --resume) ;; *) echo "Unsupported option: $option" >&2; return 2 ;; esac
     done
     if [[ $stage == all ]]; then
-        for item in verify-kernels pulses pulse-recession sharp-pulses pulse-reference orientation area-mean-terrain area-mean-storms native-states native-input-audit native-restart-control free-plane free-reach native-storms native-features native-products native-outlet native-tail native-peak-replay crest-sources native-infiltration outlet-report verify-native native-advisor-train native-advisor-validate native-publication; do run_stage "$item"; done
+        for item in verify-kernels pulses pulse-recession sharp-pulses pulse-reference pulse-figures orientation area-mean-terrain area-mean-storms native-states native-input-audit native-restart-control free-plane free-reach native-terrain strong-storm-controls native-storms native-features native-products native-outlet native-tail native-peak-replay crest-sources native-infiltration outlet-report verify-native native-advisor-train native-advisor-validate native-publication; do run_stage "$item"; done
     elif [[ $stage == historical-all ]]; then
         for item in verify-kernels pulses pulse-recession sharp-pulses pulse-reference operational-preview native-review orientation storm-controls storage-tail storage-tail-report operational-pairs native-horizons rolling-reference area-mean-terrain area-mean-storms incised-plane incised-reach recession small-review policy-recession bed-recession endpoint-fields analyse verify; do run_stage "$item"; done
     else

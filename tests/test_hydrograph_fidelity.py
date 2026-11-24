@@ -1075,3 +1075,48 @@ def test_native_advisor_freezes_before_scoring_held_out_groups(tmp_path, monkeyp
     path.write_text("{}")
     with pytest.raises(ValueError,match="checksum"):
         native_advisor.validate(**args)
+
+
+def test_native_policy_costs_use_matched_totals_and_record_auto(tmp_path):
+    from research.floodwarp_methods_paper import metrics
+    from research.floodwarp_methods_paper.fidelity import native_policies, parity
+
+    groups = {("original-window", "plain", "native"): []}
+    for method, times in (("hancock_dense", [5., 6.]), ("hancock_adaptive", [2., 7.]),
+                          ("hancock_auto", [1., 7.]), ("fv1", [1., 3.])):
+        frames = [dict(t_s=t, steps=10, hydraulic_s=s, outlet_m3s=0., section_m3s=0.)
+                  for t, s in zip((900, 1800), times, strict=True)]
+        data = dict(frames=frames, hydraulic_s=sum(times), hashes=dict.fromkeys(
+            ("state", "maximum", "volume_x", "volume_y", "soil", "rain_sum"), "same"))
+        item = dict(id=method, s=dict(dx=1, hours=.5, method=method, dimensions=[10, 20]),
+                    d=data, native_sha="same-grid", factor=1.)
+        groups["original-window", "plain", "native"].append(item)
+    verified = parity.compare(directory=tmp_path, groups=groups, target=tmp_path, original_window=True)
+    native_policies.collect(groups=groups, verified=verified, cadence=900, target=tmp_path)
+    [record] = metrics.csv_read(file=tmp_path / "policy_cost_events.csv")
+    assert record["fastest_measured"] == "auto"
+    assert float(record["fastest_over_fv1"]) == 2.
+    assert float(record["tiled_over_dense"]) == pytest.approx(9 / 11)
+    rows = metrics.csv_read(file=tmp_path / "policy_cost_windows.csv")
+    assert [r["fastest_measured"] for r in rows] == ["auto", "dense"]
+    with pytest.raises(ValueError, match="Missing exact hydraulic parity"):
+        native_policies.collect(groups=groups, verified=[], cadence=900, target=tmp_path)
+    del groups["original-window", "plain", "native"][1]["d"]["hashes"]["soil"]
+    with pytest.raises(ValueError, match="soil"):
+        parity.compare(directory=tmp_path, groups=groups, target=tmp_path, original_window=True)
+
+
+def test_spill_sensitivity_uses_conservative_nested_beds():
+    from research.floodwarp_methods_paper.fidelity.native_control_report import control_levels
+
+    bed = np.zeros((20, 20))
+    bed[:, 10:15] = .20
+    bed[10:12, 10:15] = 0.
+    grids, rows = control_levels(native=bed, heads_cm=[0, 5, 10, 20])
+    np.testing.assert_allclose(grids[10], grids[5].reshape(2, 2, 2, 2).mean(axis=(1, 3)))
+    table = {(r["dx_m"], r["head_above_native_spill_cm"]): r for r in rows}
+    assert table[1, 0]["connected"]
+    assert not table[5, 10]["connected"]
+    assert table[5, 20]["connected"]
+    assert table[5, 10]["shift_cm"] == pytest.approx(12)
+    assert table[10, 10]["connected"]

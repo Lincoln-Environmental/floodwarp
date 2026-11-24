@@ -47,6 +47,11 @@ def compare(*, directory, groups, target, original_window=False):
                 b = fingerprints(directory=directory, item=other)
                 more = other["d"].get("frames", other["d"].get("samples"))
                 shared = sorted(set(a) & set(b))
+                if cohort in ("original-window", "complete-native-metre"):
+                    required = {"state", "maximum", "volume_x", "volume_y", "soil", "rain_sum"}
+                    missing = required.difference(shared)
+                    if missing:
+                        raise ValueError(f"Missing native policy parity fields for {case}: {sorted(missing)}")
                 fields = {k: a[k] == b[k] for k in shared if k != "q"}
                 fields.update(
                     {

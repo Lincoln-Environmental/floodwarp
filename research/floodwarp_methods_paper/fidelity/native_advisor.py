@@ -416,7 +416,7 @@ def validate(*, directory, settings, config, design):
         final = [
             r for r in trials if r["terrain_id"] in settings["new_final_terrain_ids"]
         ]
-        if not final:
+        if {r["terrain_id"] for r in final} != set(settings["new_final_terrain_ids"]):
             raise ValueError("Missing prospectively reserved final terrain")
         by_subset.extend(
             dict(

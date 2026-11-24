@@ -15,6 +15,30 @@ All positions share the same native metre grid origin. Each 10 m elevation avera
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
+## Dense and tiled execution
+
+[original-window, 3 matched grid/event comparisons](policy_cost_original_window.pdf)
+
+Each upper-panel point represents a measured forecast window. Each lower-panel point represents a recorded timing interval (minutes: 15). Footprints are sampled at interval end. A ratio below one favours tiles. The same trajectory can contribute to both the initial window and the matched recession products.
+
+[Policy run identities and timings](../native_results/policy_cost_events.csv) · [Individual timing intervals](../native_results/policy_cost_windows.csv)
+
+## Terrain control elevations and connectivity
+
+A 80 m window surrounds the prescribed opening on each of 21 distinct native beds. Repeated storms on a bed count once. A connection requires a continuous path along shared cell faces from west to east. A single water-surface elevation is prescribed across each window. Its height above the native spill controls which paths are available.
+
+| Level above native spill (cm) | Disconnected at 1 m | At 5 m | At 10 m |
+|---:|---:|---:|---:|
+| 0 | 0 | 16 | 16 |
+| 1 | 0 | 14 | 15 |
+| 5 | 0 | 8 | 11 |
+| 10 | 0 | 3 | 8 |
+| 20 | 0 | 0 | 0 |
+
+All grid comparisons start from native metre elevation. The control-stage test is static. Hydraulic peak and arrival errors need separate matched storm observations.
+
+[Spill elevations by terrain](control_stage_sensitivity.csv) · [Map read-back checks](control_map_checks.csv) · [Connectivity figure](control_stage_sensitivity.pdf)
+
 ## Held-out Solver Advisor evaluation
 
 The held-out native-terrain evaluation is pending.

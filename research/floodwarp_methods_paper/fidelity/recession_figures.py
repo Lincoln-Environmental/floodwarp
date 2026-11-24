@@ -59,16 +59,18 @@ def native_cost(*, directory, rows):
     )
 
 
-def operational(*, groups, directory, cases):
+def operational(*, groups, directory, cases, cohort="complete-expanded", representation="sampled",
+                policies=("fv1", "hancock_adaptive", "hancock_dense"), rain_multiplier=None,
+                output_tag=None):
     folder = directory / "figures"
     for case, dx in cases:
-        cohort = groups["complete-expanded", case, "sampled"]
+        items = groups[cohort, case, representation]
         rows = [
             i
-            for i in cohort
+            for i in items
             if i["factor"] == 1
             and i["s"]["dx"] == dx
-            and i["s"]["method"] in ("fv1", "hancock_adaptive", "hancock_dense")
+            and i["s"]["method"] in policies
         ]
         if not rows:
             continue
@@ -79,20 +81,27 @@ def operational(*, groups, directory, cases):
         end = rows[0]["s"]["hours"]
         t = np.asarray(f["rain_times_s"]) / 3600
         rates = np.asarray(f["rain_rates_ms"]) * 3.6e6
+        if rain_multiplier is not None:
+            rates *= rain_multiplier
         rain_x = np.r_[t[t < end], end]
         axes[0].fill_between(rain_x, np.interp(rain_x, t, rates), color="#356b91")
-        axes[0].set_ylabel("Rain (mm/h)")
+        axes[0].set_ylabel("Area-mean rain (mm/h)" if rain_multiplier is not None else "Rain (mm/h)")
         axes[0].set_title(
             f"{case.split('-')[0].capitalize()}, {dx:g} m, {end:g} simulated hours"
+            + (f" • {output_tag.replace('_', ' ')}" if output_tag else "")
         )
         for row in rows:
             method = row["s"]["method"]
             d = row["d"]
             frames = d.get("frames", d.get("samples"))
             edges = np.r_[0.0, [f["t_s"] for f in frames]] / 3600
-            colour = figures.COLOURS[method]
-            style = "--" if method == "hancock_dense" else "-"
-            label = f"{figures.LABELS[method]} ({'sparse' if method == 'fv1' else 'tiles' if method == 'hancock_adaptive' else 'dense'})"
+            colour = {**figures.COLOURS, "hancock_auto": "#654397", "li": "#72721a",
+                      "euler_mc": "#495157"}[method]
+            style = {"hancock_dense": "--", "hancock_auto": ":"}.get(method, "-")
+            labels = {"fv1": "FV1 contact-HLL (sparse)", "hancock_dense": "Hancock (dense)",
+                      "hancock_adaptive": "Hancock (tiles)", "hancock_auto": "Hancock (auto)",
+                      "adaptive": "FV2 RK2", "euler_mc": "MUSCL–Euler", "li": "Local inertia"}
+            label = labels[method]
             axes[1].stairs(
                 [f["outlet_m3s"] for f in frames],
                 edges,
@@ -123,7 +132,8 @@ def operational(*, groups, directory, cases):
             xlabel="Time since start of rainfall (h)",
             xlim=(0, end),
         )
-        figures.save(fig=fig, folder=folder, name=case + "_cost")
+        suffix = f"_{dx:g}m_{output_tag}" if output_tag else ""
+        figures.save(fig=fig, folder=folder, name=case + suffix + "_cost")
 
 
 def spatial(*, directory):

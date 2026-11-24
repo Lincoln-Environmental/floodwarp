@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--resume | --force] [--dry-run]
 Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
         million-terrain million-pilots million-storms million-auto large-references large-refinements heldout-references million-profiles million-repeats recession-controls execution-policy pareto
-        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-products verify-native all historical-all
+        terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products native-publication strong-storm-controls verify-native all historical-all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
 Running check creates a Python 3.14 environment if needed and verifies the pinned packages.
 HELP
@@ -79,16 +79,7 @@ main() {
     fi
     if [[ $stage == terrain-features || $stage == advisor-train || $stage == advisor-validate ]]; then
         local native_stage="native-$stage"
-        if [[ $stage == figures || $stage == tables || $stage == manuscript ]]; then
-        if [[ -f research/floodwarp_methods_paper/fidelity/native_results/measured_windows.csv ]]; then
-            if [[ $dry == true ]]; then
-                ./scripts/run_hydrograph_fidelity.sh native-publication --dry-run
-            else
-                ./scripts/run_hydrograph_fidelity.sh native-publication
-            fi
-        fi
-    fi
-    if [[ $stage == terrain-features ]]; then native_stage="native-features"; fi
+        if [[ $stage == terrain-features ]]; then native_stage="native-features"; fi
         exec ./scripts/run_hydrograph_fidelity.sh "$native_stage" "${selected_options[@]}"
     fi
     if [[ $stage == million-terrain ]]; then
@@ -109,7 +100,7 @@ main() {
     if [[ $stage == historical-terrain-features || $stage == historical-advisor-train || $stage == historical-advisor-validate || $stage == historical-million-terrain || $stage == historical-resolution || $stage == historical-million-storms || $stage == historical-large-references || $stage == historical-large-refinements || $stage == historical-heldout-references ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.controller "${stage#historical-}" "${selected_options[@]}"
     fi
-    if [[ $stage == native-products || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
+    if [[ $stage == native-products || $stage == native-publication || $stage == native-status || $stage == strong-storm-controls || $stage == verify-native || $stage == native-storms || $stage == area-mean-storms || $stage == area-mean-terrain ]]; then
         exec ./scripts/run_hydrograph_fidelity.sh "$stage" "${selected_options[@]}"
     fi
     if [[ $stage == all ]]; then

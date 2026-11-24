@@ -7,6 +7,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from research.floodwarp_methods_paper import metrics, runner
+from research.floodwarp_methods_paper.fidelity import native_control_report
 from research.floodwarp_methods_paper.fidelity.figures import save
 
 
@@ -159,6 +160,53 @@ def advisor_report(*, directory, output):
             f"[Independent final terrain and subgroup results]({relative}/strata.csv)"], sources
 
 
+def policy_report(*, source, output):
+    window_file = source / "policy_cost_windows.csv"
+    event_file = source / "policy_cost_events.csv"
+    if not window_file.is_file() or not event_file.is_file():
+        return ["Matched execution timings are pending."], []
+    events = metrics.csv_read(file=event_file)
+    windows = metrics.csv_read(file=window_file)
+    lines = []
+    for cohort in sorted({r["cohort"] for r in events}):
+        group = [r for r in events if r["cohort"] == cohort]
+        chunks = [r for r in windows if r["cohort"] == cohort]
+        fig, axes = plt.subplots(2, 2, figsize=(8, 5.5), layout="constrained")
+        names = sorted({r["case"].split("-")[0] for r in group})
+        colours = {name: plt.get_cmap("tab10")(i % 10) for i, name in enumerate(names)}
+        for case in sorted({r["case"] for r in group}):
+            for ax, rows, x, xlabel, factor in (
+                (axes[0, 0], group, "cells", "Cells (millions)", 1e-6),
+                (axes[0, 1], group, "hancock_steps", "Accepted steps (thousands)", .001),
+                (axes[1, 0], chunks, "wet_fraction", "Wet cells at interval end (%)", 100.),
+                (axes[1, 1], chunks, "tiled_scheduled_fraction", "Scheduled cells at interval end (%)", 100.),
+            ):
+                sample = [r for r in rows if r["case"] == case and r[x] != ""]
+                if sample:
+                    ax.scatter([factor * float(r[x]) for r in sample],
+                               [float(r["tiled_over_dense"]) for r in sample],
+                               s=16, alpha=.7, color=colours[case.split("-")[0]],
+                               label=case.split("-")[0].capitalize())
+                ax.set(xlabel=xlabel, ylabel="Tiled / dense hydraulic time")
+        for ax in axes.flat:
+            ax.axhline(1, color=".4", linestyle=":", linewidth=.8)
+        handles, labels = axes[0, 0].get_legend_handles_labels()
+        families = dict(zip(labels, handles, strict=True))
+        if families:
+            fig.legend(families.values(), families.keys(), loc="outside upper center", ncol=4)
+        name = "policy_cost_" + cohort.replace("-", "_")
+        save(fig=fig, folder=output, name=name)
+        lines.append(f"[{cohort}, {len(group)} matched grid/event comparisons]({name}.pdf)")
+    durations = ", ".join(f"{seconds / 60:g}" for seconds in sorted({float(r["window_s"]) for r in windows}))
+    lines.extend(["", "Each upper-panel point represents a measured forecast window. Each lower-panel point "
+                  f"represents a recorded timing interval (minutes: {durations}). Footprints are sampled at interval end. "
+                  "A ratio below one favours tiles. The same trajectory can contribute to both the initial "
+                  "window and the matched recession products.",
+                  "", "[Policy run identities and timings](../native_results/policy_cost_events.csv) · "
+                  "[Individual timing intervals](../native_results/policy_cost_windows.csv)"])
+    return lines, [window_file, event_file]
+
+
 def run(*, directory):
     study = directory.parent
     source = directory / "native_results"
@@ -196,6 +244,14 @@ def run(*, directory):
             "[Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)",
         ]
     )
+    policy_text, policy_sources = policy_report(source=source, output=output)
+    text.extend(["", "## Dense and tiled execution", "", *policy_text])
+    settings_file = directory / "application_settings.json"
+    settings = json.loads(settings_file.read_text())
+    terrain_text, terrain_sources = native_control_report.run(
+        directory=directory, output=output, heads_cm=settings["control_levels_above_native_spill_cm"],
+    )
+    text.extend(["", "## Terrain control elevations and connectivity", "", *terrain_text])
     advisor_text, advisor_sources = advisor_report(directory=directory, output=output)
     text.extend(["", "## Held-out Solver Advisor evaluation", "", *advisor_text])
     (output / "README.md").write_text("\n".join(text) + "\n")
@@ -208,6 +264,10 @@ def run(*, directory):
                 source / "hydrograph_pareto.csv",
                 source / "recession_depth_pareto.csv",
                 Path(__file__),
+                *policy_sources,
+                *terrain_sources,
+                settings_file,
+                Path(native_control_report.__file__),
                 *advisor_sources,
             )
         },

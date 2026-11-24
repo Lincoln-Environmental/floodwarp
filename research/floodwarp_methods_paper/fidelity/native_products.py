@@ -15,9 +15,11 @@ from research.floodwarp_methods_paper.fidelity import (
     extended_analysis,
     final_depth,
     native_matrix,
+    native_policies,
     phase_cost,
     parity,
     recession,
+    recession_figures,
     statistics,
 )
 from research.floodwarp_methods_paper.plan import read_config
@@ -293,6 +295,37 @@ def plot_curves(*, directory, records):
         plt.close(fig)
 
 
+def event_figures(*, directory, groups, target):
+    feature_path = directory / "native_features/observations.csv"
+    features = {
+        (r["case"], int(r["dx_m"])): float(r["spatial_mean_multiplier"])
+        for r in metrics.csv_read(file=feature_path)
+    } if feature_path.exists() else {}
+    index = []
+    for key, items in sorted(groups.items()):
+        cohort, case, representation = key
+        if not items or any(i["s"].get("timing_repeat") for i in items):
+            continue
+        for dx in sorted({i["s"]["dx"] for i in items}):
+            subset = [i for i in items if i["s"]["dx"] == dx and i["factor"] == 1]
+            if not subset:
+                continue
+            end = {i["s"]["hours"] for i in subset}
+            if len(end) != 1 or len({i["native_sha"] for i in subset}) != 1:
+                raise ValueError("Figure requires matched forcing, terrain and physical end time")
+            tag = cohort.replace("-", "_")
+            recession_figures.operational(
+                groups={key: subset}, directory=target, cases=[(case, dx)],
+                cohort=cohort, representation=representation,
+                policies=tuple(i["s"]["method"] for i in subset),
+                rain_multiplier=features.get((case, dx)), output_tag=tag,
+            )
+            index.append(dict(cohort=cohort, case=case, dx_m=dx, end_h=end.pop(),
+                              ids=",".join(i["id"] for i in subset),
+                              pdf=f"figures/{case}_{dx:g}m_{tag}_cost.pdf"))
+    metrics.csv_write(file=target / "event_figures.csv", rows=index)
+
+
 def run(*, directory, require_complete):
     target = directory / "native_results"
     target.mkdir(exist_ok=True)
@@ -314,7 +347,7 @@ def run(*, directory, require_complete):
         key = "original-window", spec["case"], f"{i['native_sha']}, {spec['hours']} h, repeat {spec.get('timing_repeat', 0)}"
         member = dict(i,s=dict(spec,method=spec.get("requested_method",spec["method"])))
         prefix_groups.setdefault(key,[]).append(member)
-    parity.compare(directory=directory,groups=prefix_groups,target=target,original_window=True)
+    initial_parity = parity.compare(directory=directory,groups=prefix_groups,target=target,original_window=True)
     original = [
         describe(item=i, settings=settings, status="original_window")
         for i in records.values()
@@ -322,7 +355,7 @@ def run(*, directory, require_complete):
     groups = grouped(
         directory=directory, records=records, target=target, expected=expected
     )
-    parity.compare(directory=directory,groups=groups,target=target)
+    final_parity = parity.compare(directory=directory,groups=groups,target=target)
     complete = [
         describe(item=i, settings=settings, status=key[0])
         for key, items in groups.items()
@@ -331,6 +364,10 @@ def run(*, directory, require_complete):
     metrics.csv_write(file=target / "measured_windows.csv", rows=original + complete)
     hydro = json.loads((directory / "design.json").read_text())
     application = json.loads((directory / "application_settings.json").read_text())
+    native_policies.collect(
+        groups={**prefix_groups, **groups}, verified=initial_parity + final_parity,
+        cadence=application["cost_interval_s"], target=target,
+    )
     phase_cost.collect(
         groups=groups, directory=directory, target=target, representation="native metre area means",
         cadence=application["cost_interval_s"], edges=application["wet_fraction_edges"],
@@ -355,6 +392,7 @@ def run(*, directory, require_complete):
         target=target,
         settings=application["endpoint_depth"],
     )
+    event_figures(directory=directory, groups={**prefix_groups, **groups}, target=target)
     plot_curves(
         directory=directory,
         records=list(records.values())
@@ -371,6 +409,8 @@ def run(*, directory, require_complete):
         "Outlet peaks are interval means of accepted face transport. The original-window table may end while substantial flow continues. Numerical error rankings require common recession endpoints and separate spatial, temporal and formulation checks for the observable.",
         "",
         "[Hydraulic windows and water budgets](measured_windows.csv) · [Hydrograph comparisons](hydraulic_fidelity.csv) · [Reference checks](reference_checks.csv) · [Depth and extent](recession_depth.csv) · [Recorded hydrographs](figures) · [5 cm and 10 cm native extent](incised_practical_extent.csv) · [Matched-grid depth differences](incised_state_disagreement.csv) · [Accepted steps, retries, memory and accounting](whole_storm_diagnostics.csv) · [Costs by phase and footprint](cost_by_phase.csv) · [Original policy parity](original_execution_parity.csv) · [Recession policy parity](recession_execution_parity.csv)",
+        "",
+        "[Rainfall, outlet discharge, wet area and cumulative GPU runtime by event](event_figures.csv) · [Verified dense, tiled and automatic policy costs](policy_cost_events.csv) · [Matched 15-minute timing windows](policy_cost_windows.csv)",
     ]
     (target / "README.md").write_text("\n".join(text) + "\n")
     print(text[2], flush=True)
