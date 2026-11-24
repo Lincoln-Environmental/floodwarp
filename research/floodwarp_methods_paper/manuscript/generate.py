@@ -66,7 +66,8 @@ def repaired_budgets(*, directory):
                          f"{100*downstream/total:.2f}% lay downstream of the independent internal gauge "
                          f"and {100*dry/total:.2f}% lay outside the rainfall footprint. The final 40 m contained "
                          f"{100*strip/total:.2f}% of this disagreement. "
-                         "[Reach and rainfall-footprint decomposition](../fidelity/outlet_results/regional_contrasts.csv)")
+                         "[Reach and rainfall-footprint decomposition](../fidelity/outlet_results/regional_contrasts.csv) · "
+                         "[Maps of inundation and cumulative infiltration](../supplementary/incised/hour_eight_water.pdf)")
     events = csv_read(file=directory / "events.csv")
     strip_path = directory / "last_40m.csv"
     if strip_path.exists():
@@ -102,6 +103,22 @@ def repaired_budgets(*, directory):
     lines.append(f"The direct-outlet observables passing all three reference checks were {status}. "
                  "These checks support comparisons on the coarser grid. Practical 5 m absolute accuracy remains unresolved. "
                  "[Reference qualification by observable](../fidelity/outlet_results/reference_checks.csv)")
+    budgets = csv_read(file=directory / "least_cost_fidelity.csv")
+    for metric, label, tolerance in (("peak_bias_pct", "peak discharge", 5),
+                                      ("net_export_bias_pct", "net exported volume", 10)):
+        selected = [r for r in budgets if r["representation"] == "0 m downstream extension"
+                    and r["station"] == "outlet" and r["objective"] == metric
+                    and float(r["tolerance"]) == tolerance and r["id"]]
+        for decision in selected:
+            names = {"fv1": "FV1", "hancock_adaptive": "adaptive Hancock", "adaptive": "FV2 RK2"}
+            lines.append(f"With a {tolerance}% tolerance on {label}, {names[decision['method']]} at {decision['dx']} m "
+                         f"had the lowest measured hydraulic cost ({float(decision['runtime_s']):.1f} s). "
+                         f"Its absolute error against the 5 m RK2 reference was {float(decision['measured_error']):.2f}%, "
+                         f"rising to {float(decision['conservative_error']):.2f}% when reference sensitivity was included.")
+    lines.append("The two decision tables retain the event endpoint, output cadence and reference for each observable. "
+                 "The hydraulic costs use independent timing medians where available. "
+                 "[Cost at a stated tolerance](../tables/19_incised_cost_at_tolerance.md) · "
+                 "[Error within a measured runtime](../tables/20_incised_error_at_budget.md)")
     return "\n" + "\n\n".join(lines) + "\n"
 
 

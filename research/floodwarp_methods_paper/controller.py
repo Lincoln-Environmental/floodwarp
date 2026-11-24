@@ -89,6 +89,8 @@ def derived_identity(*, root, study, stage):
                 "outlet_results/depth_disagreement.csv",
                 "outlet_results/water_differences.csv",
                 "outlet_results/regional_contrasts.csv",
+                "outlet_results/hour_eight_contrasts.json",
+                "outlet_results/hour_eight_contrasts.npz",
                 "outlet_results/reference_checks.csv",
                 "outlet_results/spatial_reference_checks.csv",
                 "outlet_results/least_cost_fidelity.csv",

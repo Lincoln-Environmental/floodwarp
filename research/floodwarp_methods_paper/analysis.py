@@ -183,24 +183,13 @@ def verify(*, study, config):
 
     with TemporaryDirectory() as temporary:
         render = Path(temporary)
-        generate(study=study, output=render)
+        rendered = generate(study=study, output=render)
         for item in render.iterdir():
             if checksum(item) != checksum(study / "tables" / item.name):
                 raise ValueError(
                     "Published table differs from source evidence " + item.name
                 )
-    table_count = 0
-    for path in (study / "tables").glob("[0-9]*.csv"):
-        if not all(path.with_suffix(ext).is_file() for ext in (".md", ".tex")):
-            raise ValueError("Incomplete table " + path.stem)
-        table_count += 1
-    figs = list((study / "figures").glob("[0-9]*.pdf"))
-    if (
-        table_count != 13 + int((study / "fidelity/outlet_results/events.csv").is_file())
-        or len(figs) != 18 + int((study / "fidelity/outlet_results/events.csv").is_file())
-        or not all(p.with_suffix(e).is_file() for p in figs for e in (".svg", ".png"))
-    ):
-        raise ValueError("Publication output count mismatch")
+    table_count, figure_count = verify_publication_inventory(study=study, rendered=rendered)
     return dict(
         completed=counts,
         analytical=gates,
@@ -208,8 +197,30 @@ def verify(*, study, config):
         matched_input_groups=len(groups),
         exact_scheduler_pairs=parity,
         main_tables=table_count,
-        main_figures=len(figs),
+        main_figures=figure_count,
     )
+
+
+def verify_publication_inventory(*, study, rendered):
+    table_ids = set(range(1, 14))
+    figure_ids = set(range(1, 19))
+    if (study / "fidelity/outlet_results/events.csv").is_file():
+        table_ids.update((16, 19, 20))
+        figure_ids.add(19)
+    if (study / "fidelity/orton_transfer/transfer.csv").is_file():
+        table_ids.update((17, 18))
+        figure_ids.add(20)
+    for folder, suffixes, expected in (("tables", ("csv", "md", "tex"), table_ids),
+                                       ("figures", ("pdf", "svg", "png"), figure_ids)):
+        stems = {p.stem for p in (study / folder).glob(f"[0-9]*.{suffixes[0]}")}
+        if len(stems) != len(expected) or {int(name.split("_", 1)[0]) for name in stems} != expected:
+            raise ValueError(f"Incomplete or unexpected publication inventory in {folder}")
+        if folder == "tables" and stems != set(rendered):
+            raise ValueError("Archived table inventory differs from regeneration")
+        for ext in suffixes[1:]:
+            if {p.stem for p in (study / folder).glob(f"[0-9]*.{ext}")} != stems:
+                raise ValueError(f"Incomplete {ext} products in {folder}")
+    return len(table_ids), len(figure_ids)
 
 
 def evaluate(*, stage, spec, study, root, config, context, directory):
@@ -278,6 +289,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
             *(study / "figures").glob("[0-9]*.*"),
             *(study / "supplementary/pareto").rglob("*"),
             *(study / "supplementary/operational_storms").rglob("*"),
+            *(study / "supplementary/incised").glob("hour_eight_water.*"),
         ]
     elif stage == "manuscript":
         from research.floodwarp_methods_paper.manuscript.generate import generate

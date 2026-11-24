@@ -720,6 +720,46 @@ def orton_transfer(*, study, out):
     save(fig=fig, folder=out, name="20_orton_transfer")
 
 
+def incised_spatial_contrasts(*, study):
+    from research.floodwarp_methods_paper import runner
+
+    folder = study / "fidelity/outlet_results"
+    manifest = folder / "hour_eight_contrasts.json"
+    if not manifest.exists():
+        return
+    info = json.loads(manifest.read_text())
+    path = manifest.with_suffix(".npz")
+    if runner.checksum(path) != info["fields_sha256"]:
+        raise ValueError("Changed spatial contrast fields")
+    ny, nx = info["shape"]
+    dx = info["dx_m"]
+    extent = [0, nx * dx / 1000, 0, ny * dx / 1000]
+    with np.load(path) as fields:
+        rain = fields["rain_fraction"]
+        fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.4), sharex=True, sharey=True, layout="constrained")
+        for ax, cm in zip(axes[:2], (5, 10), strict=True):
+            fraction = fields[f"fv1_only_{cm}cm"]
+            image = ax.imshow(100 * fraction, origin="lower", extent=extent, vmin=0, vmax=100,
+                              cmap="Blues", interpolation="nearest")
+            ax.set_title(f"Above {cm} cm in FV1 alone")
+        fig.colorbar(image, ax=axes[:2], location="bottom", label=f"Area of {info['bin_m']} m reporting bin (%)")
+        delta = fields["infiltration_difference_m"] * 1000
+        limit = max(float(np.abs(delta).max()), np.finfo(float).eps)
+        image = axes[2].imshow(delta, origin="lower", extent=extent, vmin=-limit, vmax=limit,
+                               cmap="BrBG", interpolation="nearest")
+        axes[2].set_title("FV1 minus Hancock infiltration")
+        fig.colorbar(image, ax=axes[2], location="bottom", label="Cumulative difference (mm)")
+        for ax in axes:
+            if rain.min() < .5 < rain.max():
+                ax.contour(rain, levels=[.5], extent=extent, origin="lower", colors="black", linewidths=.6)
+            ax.axvline(info["common_section_x_m"] / 1000, ls="--", lw=.8, color="#444")
+            ax.set_xlabel("Distance east (km)")
+        axes[0].set_ylabel("Distance north (km)")
+        fig.suptitle(f"Incised catchment at {info['hour']:g} h on the {dx} m grid\n"
+                     "Solid line shows rainfall footprint, dashed line shows internal gauge")
+        save(fig=fig, folder=study / "supplementary/incised", name="hour_eight_water")
+
+
 def from_records(*, study):
     paper_style()
     out = study / "figures"
@@ -738,6 +778,7 @@ def from_records(*, study):
     from research.floodwarp_methods_paper.qualification import plots
     plots.generate(study=study)
     outlet_repair(study=study,out=out)
+    incised_spatial_contrasts(study=study)
     orton_transfer(study=study, out=out)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),

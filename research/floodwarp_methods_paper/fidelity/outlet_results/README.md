@@ -65,6 +65,8 @@ The gauge remains at the eastern edge of the original 104.8576 km² catchment. T
 
 [Water accounts, infiltration inside and outside the rainfall footprint](events.csv) · [Crest and whole-recession last 40 m budgets](last_40m.csv) · [Spatial extent](extent.csv) · [Wet-union depth differences on common spatial support](depth_disagreement.csv) · [Spatial reference qualification](spatial_reference_checks.csv) · [Hydrograph and infiltration reference qualification](reference_checks.csv)
 
+A focused CUDA regression briefly shared the GPU during the direct 5 m half-CFL RK2 run. Keep its recorded time for diagnostics. Use its hydraulics only for timestep sensitivity.
+
 ## FV1 minus Hancock on the original catchment
 
 | Grid (m) | Extension (m) | Extra export (m³) | Infiltration difference in rain footprint (m³) | Infiltration difference outside (m³) | Final storage difference (m³) | Unexplained export (m³) |

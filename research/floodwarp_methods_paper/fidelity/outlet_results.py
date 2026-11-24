@@ -105,7 +105,26 @@ def water_differences(*, summaries):
     return differences
 
 
-def regional_contrasts(*, directory, peers, hour, thresholds, strip_m):
+def write_contrast_map(*, destination, first, second, dx, bin_m, hour, footprint, soil_delta, disagreements):
+    factor, remainder = divmod(bin_m, dx)
+    if remainder or factor < 1:
+        raise ValueError("An output bin must contain whole hydraulic cells")
+    fields = {"rain_fraction": footprint, "infiltration_difference_m": soil_delta}
+    for cm, (fv1_only, hancock_only) in disagreements.items():
+        fields[f"fv1_only_{cm}cm"] = fv1_only
+        fields[f"hancock_only_{cm}cm"] = hancock_only
+    maps = {name: mean_cells(values=field, factor=factor) for name, field in fields.items()}
+    for name, field in fields.items():
+        np.testing.assert_allclose(maps[name].sum() * bin_m**2, field.sum() * dx**2, rtol=1.e-12, atol=1.e-8)
+    path = destination / "hour_eight_contrasts.npz"
+    np.savez_compressed(file=path, **maps)
+    runner.write_json(path=path.with_suffix(".json"), data=dict(
+        fv1=first["run_id"], hancock=second["run_id"], dx_m=dx, bin_m=bin_m, hour=hour,
+        origin_xy_m=[0, 0], row_order="south_to_north", shape=list(soil_delta.shape),
+        common_section_x_m=first["footprint_width_m"] / 2, fields_sha256=runner.checksum(path)))
+
+
+def regional_contrasts(*, directory, peers, hour, thresholds, strip_m, map_destination=None):
     import hashlib
 
     rows = []
@@ -142,6 +161,10 @@ def regional_contrasts(*, directory, peers, hour, thresholds, strip_m):
             for depth in thresholds:
                 wet_a, wet_b = a["q"] > depth, b["q"] > depth
                 disagreements[round(depth * 100)] = wet_a & ~wet_b, wet_b & ~wet_a
+            if map_destination is not None and dx == min(r["dx_m"] for r in peers) and not extension:
+                write_contrast_map(destination=map_destination, first=first, second=second, dx=dx,
+                                   bin_m=strip_m, hour=hour, footprint=footprint, soil_delta=soil_delta,
+                                   disagreements=disagreements)
             column = np.arange(width)[None, :]
             regions = (
                 ("upstream of internal gauge", column < width // 2),
@@ -326,6 +349,7 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
     experiments = []
     references = {}
     sources = {}
+    timing_notes = json.loads((directory/"outlet_timing_notes.json").read_text())
     current = runner.source_identity(
         root=directory.parents[2], study=directory.parent, stage="long-storms"
     )
@@ -363,12 +387,8 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
             footprint_width_m=identity["forcing"]["shape"][1] * identity["dx"],
             end_h=end / 3600,
         )
-        rows = [
-            r
-            for p in sorted(run.glob("[0-9]*.json"), key=window_end)
-            if int(p.stem) <= end
-            for r in json.loads(p.read_text())["frames"]
-        ]
+        windows = [json.loads(p.read_text()) for p in files]
+        rows = [r for window in windows for r in window["frames"]]
         times = np.array([r["t_s"] for r in rows])
         cadence = identity["settings"]["interval_s"]
         np.testing.assert_array_equal(times, np.arange(cadence, end + 1, cadence))
@@ -411,6 +431,15 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
                 initial_storage_m3=initial["footprint_storage_m3"],
                 recession_passed=stats["recession_passed"],
                 hydraulic_s=stats["hydraulic_s"],
+                graph_capture_s=sum(r["graph_capture_s"] for r in rows),
+                compilation_s=sum(r["compilation_s"] for r in rows),
+                checkpoint_windows_wall_s=sum(w["window_wall_s"] for w in windows),
+                mean_dt_s=end/stats["steps"],
+                min_dt_s=min(r["dt_min_s"] for r in rows),
+                max_dt_s=max(r["dt_max_s"] for r in rows),
+                hydraulic_ms_per_step=1000*stats["hydraulic_s"]/stats["steps"],
+                production_timing=identity["cfl_factor"] == 1 and run.name not in timing_notes,
+                timing_note=timing_notes.get(run.name),
                 steps=stats["steps"],
                 retries=sum(r["rejected"] for r in rows),
                 **{
@@ -460,7 +489,8 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
         del states
         if experiments:
             contrasts.extend(regional_contrasts(directory=directory, peers=peers, hour=hour, thresholds=thresholds,
-                                                strip_m=experiments[0][0]["identity"]["settings"]["strip_m"]))
+                                                strip_m=experiments[0][0]["identity"]["settings"]["strip_m"],
+                                                map_destination=dest if hour == extent_hour else None))
     metrics.csv_write(file=dest / "regional_contrasts.csv", rows=contrasts)
     metrics.csv_write(file=dest / "spatial_reference_checks.csv", rows=spatial_checks)
     outlet_observables.spatial_decisions(

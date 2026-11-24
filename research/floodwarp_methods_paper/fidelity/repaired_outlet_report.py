@@ -206,6 +206,9 @@ def run(*, directory):
         "[Spatial reference qualification](spatial_reference_checks.csv) · [Hydrograph and infiltration reference qualification](reference_checks.csv)",
     ]
     balances = metrics.csv_read(file=source / "water_differences.csv")
+    for r in rows:
+        if r.get("timing_note"):
+            text.extend(["", r["timing_note"]])
     extents = metrics.csv_read(file=source / "extent.csv")
     text.extend(
         [

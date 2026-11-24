@@ -465,6 +465,30 @@ def from_records(*, study, output):
                 "footprint_storage_m3", "steps", "hydraulic_s")
         output["16_free_boundary"] = ("Fixed original outlet, complete 16-hour storm comparisons",
                                       [{k:r[k] for k in keys} for r in csv_read(file=updated)])
+        for decision_type, title in (("least_cost", "Lowest measured hydraulic cost meeting the stated tolerance"),
+                             ("equal_cost", "Lowest qualified measured error within an FV1 runtime budget")):
+            decisions = []
+            for kind in ("fidelity", "depth_extent"):
+                for row in csv_read(file=updated.parent / f"{decision_type}_{kind}.csv"):
+                    if row["representation"] != "0 m downstream extension" or row["station"] not in ("outlet", "domain"):
+                        continue
+                    metric = row["objective"]
+                    if decision_type == "least_cost":
+                        context = dict(tolerance=row["tolerance"], qualified=row["assessable"],
+                                       feasible=row["feasible"], method=row["method"], dx_m=row["dx"], id=row["id"])
+                    else:
+                        context = dict(budget_dx_m=row["budget_dx"], budget_s=row["budget_s"],
+                                       qualified_in_budget=row["assessable_in_budget"], ranking=row["ranking_status"],
+                                       method=row["selected_method"], dx_m=row["selected_dx"], id=row["selected_id"])
+                    decisions.append(dict(objective=metric, unit="m" if kind == "depth_extent" and "depth" in metric
+                                          else "fraction" if kind == "depth_extent" else "%",
+                                          station=row["station"], end_h=row["end_h"], interval_s=row["interval_s"],
+                                          reference_id=row["reference_id"], **context, policy=row["execution"],
+                                          absolute_error=row["measured_error"], reference_sensitivity=row["reference_sensitivity"],
+                                          hydraulic_s=row["runtime_s"], accepted_steps=row["steps"],
+                                          hydraulic_s_per_step=row["hydraulic_s_per_step"]))
+            name = "19_incised_cost_at_tolerance" if decision_type == "least_cost" else "20_incised_error_at_budget"
+            output[name] = (title + " on the original incised domain", decisions)
     transfer_file = study / "fidelity/orton_transfer/transfer.csv"
     if transfer_file.exists():
         measured = csv_read(file=transfer_file)

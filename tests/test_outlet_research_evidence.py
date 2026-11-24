@@ -79,6 +79,19 @@ def test_spatial_cost_ends_at_the_snapshot():
     with pytest.raises(ValueError, match="endpoint"):
         outlet_observables.window_cost(frames=frames, end_s=150)
 
+def test_extent_display_aggregates_fine_cell_areas_before_drawing(tmp_path):
+    a = np.array([[.08, .0], [.0, .0]])
+    b = np.zeros_like(a)
+    outlet_results.write_contrast_map(
+        destination=tmp_path, first=dict(run_id="fv1", footprint_width_m=10), second=dict(run_id="hancock"),
+        dx=5, bin_m=10, hour=8, footprint=np.array([[True, True], [False, False]]), soil_delta=a-b,
+        disagreements={5: ((a > .05) & (b <= .05), (b > .05) & (a <= .05))},
+    )
+    with np.load(tmp_path/"hour_eight_contrasts.npz") as fields:
+        assert fields["fv1_only_5cm"].item() == .25 and fields["hancock_only_5cm"].item() == 0
+        assert fields["rain_fraction"].item() == .5
+        assert fields["infiltration_difference_m"].item() == .02
+
 def test_repeat_selection_covers_cross_grid_decisions_on_the_same_snapshot():
     from research.floodwarp_methods_paper.fidelity.outlet_timing import marginal_decisions
 
@@ -134,6 +147,30 @@ def test_transfer_figure_reads_the_observed_times_and_sections(tmp_path):
     metrics.csv_write(file=folder / "transfer.csv", rows=[dict(record, peak_m3s=4)])
     with pytest.raises(ValueError, match="peak"):
         orton_transfer(study=tmp_path, out=out)
+
+
+def test_publication_inventory_requires_incised_decisions_and_measured_orton_products(tmp_path):
+    from research.floodwarp_methods_paper.analysis import verify_publication_inventory
+
+    for group in ("outlet_results/events.csv", "orton_transfer/transfer.csv"):
+        path = tmp_path / "fidelity" / group
+        path.parent.mkdir(parents=True)
+        path.touch()
+    generated = set()
+    for category, numbers, formats in (("tables", [*range(1, 14), *range(16, 21)], ("md", "csv", "tex")),
+                                       ("figures", range(1, 21), ("svg", "pdf", "png"))):
+        folder = tmp_path / category
+        folder.mkdir()
+        for number in numbers:
+            name = f"{number:02d}_product"
+            for extension in formats:
+                (folder / f"{name}.{extension}").touch()
+            if category == "tables":
+                generated.add(name)
+    assert verify_publication_inventory(study=tmp_path, rendered=generated) == (18, 20)
+    (tmp_path/"figures/20_product.svg").unlink()
+    with pytest.raises(ValueError, match="Incomplete svg"):
+        verify_publication_inventory(study=tmp_path, rendered=generated)
 
 
 def test_reference_pair_needs_two_matched_events_on_independent_terrains():
