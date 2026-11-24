@@ -402,6 +402,9 @@ def run(*, directory, dest, end, rainfall_end, extent_hour, thresholds):
         )
         del states
     metrics.csv_write(file=dest / "spatial_reference_checks.csv", rows=spatial_checks)
+    outlet_observables.spatial_decisions(
+        directory=directory, destination=dest, experiments=experiments, checks=spatial_checks
+    )
     metrics.csv_write(file=dest / "depth_disagreement.csv", rows=differences)
     metrics.csv_write(
         file=dest / "water_differences.csv", rows=water_differences(summaries=summaries)

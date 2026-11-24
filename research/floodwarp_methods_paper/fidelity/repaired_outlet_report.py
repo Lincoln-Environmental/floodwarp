@@ -174,6 +174,12 @@ def run(*, directory):
             "",
             "[Water-balance decomposition](water_differences.csv) · [Least measured cost by tolerance](least_cost_fidelity.csv) · "
             "[Smallest qualified error within the FV1 budget](equal_cost_fidelity.csv)",
+            "",
+            "Depth and inundation costs run from the initial state to each snapshot. "
+            "The 8 h comparison uses only the first eight hours of measured hydraulic execution. "
+            "[Least cost by spatial tolerance](least_cost_depth_extent.csv) · "
+            "[Smallest spatial error at each FV1 budget](equal_cost_depth_extent.csv) · "
+            "[Independent timing windows](spatial_timing_windows.csv)",
         ]
     )
     (source / "README.md").write_text("\n".join(text) + "\n")

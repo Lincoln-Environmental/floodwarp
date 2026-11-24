@@ -31,10 +31,13 @@ def measured_fronts(*, directory, output):
                 row["station"] in ("outlet", "domain")
                 and row["objective"] in OBJECTIVES
             ):
-                key = row["cohort"], row["case"], row["reference_id"], float(row["interval_s"])
+                key = (
+                    row["cohort"], row["case"], row["representation"],
+                    row["reference_id"], float(row["interval_s"]), float(row["end_h"]),
+                )
                 groups[key].append(row)
     for key, records in sorted(groups.items()):
-        cohort, case, reference, interval = key
+        cohort, case, representation, reference, interval, end_h = key
         panels = defaultdict(list)
         for row in records:
             panels[row["objective"]].append(row)
@@ -44,6 +47,8 @@ def measured_fronts(*, directory, output):
                 dict(
                     cohort=cohort,
                     case=case,
+                    representation=representation,
+                    end_h=end_h,
                     reference_id=reference,
                     interval_s=interval,
                     metric=metric,
@@ -89,17 +94,17 @@ def measured_fronts(*, directory, output):
                     edgecolors="#266582",
                 )
                 ax.annotate(
-                    f"{r['method']} {r['dx']} m",
+                    f"{r['formulation']} {r['execution_mode']} {r['dx']} m",
                     (x, y),
                     xytext=(2, 3),
                     textcoords="offset points",
                     fontsize=6,
                 )
-        fig.suptitle(case)
+        fig.suptitle(f"{case} · {representation} · {end_h:g} h")
         save(
             fig=fig,
             folder=output,
-            name=f"{case}_{cohort}_{reference}_{interval}_pareto",
+            name=f"{case}_{cohort}_{runner.digest(representation)[:10]}_{reference}_{interval}_{end_h:g}h_pareto",
         )
     metrics.csv_write(file=output / "reference_eligibility.csv", rows=counts)
     return counts

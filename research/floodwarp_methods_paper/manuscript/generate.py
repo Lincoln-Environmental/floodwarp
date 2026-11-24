@@ -29,10 +29,23 @@ def repaired_budgets(*, directory):
                      f"The final storage difference was {float(row['footprint_storage_m3']):+,.0f} m³. "
                      f"At hour eight their areas above 5 cm were {float(first['area_above_5cm_m2'])/1e6:.4f} "
                      f"and {float(second['area_above_5cm_m2'])/1e6:.4f} km².")
-    qualified = [r["metric"] for r in csv_read(file=directory/"reference_checks.csv")
+    events = csv_read(file=directory / "events.csv")
+    temporal = {float(r["cfl_factor"]): r for r in events if r["method"] == "adaptive"
+                and int(r["dx_m"]) == 5 and int(r["extension_m"]) == 0}
+    if {0.5, 1.0} <= temporal.keys():
+        normal, half = temporal[1.0], temporal[0.5]
+        lines.append(f"Halving the RK2 CFL on the 5 m grid changed the one-minute peak from "
+                     f"{float(normal['minute_peak_m3s']):.3f} to {float(half['minute_peak_m3s']):.3f} m³/s. "
+                     f"Net export changed by {float(half['gauge_m3']) - float(normal['gauge_m3']):+,.0f} m³, "
+                     f"infiltration by {float(half['footprint_infiltration_m3']) - float(normal['footprint_infiltration_m3']):+,.0f} m³ "
+                     f"and final storage by {float(half['footprint_storage_m3']) - float(normal['footprint_storage_m3']):+,.0f} m³. "
+                     f"The normal and half-CFL runs accepted {int(normal['steps']):,} and {int(half['steps']):,} timesteps.")
+    names = dict(peak_bias_pct="peak magnitude", net_export_bias_pct="net exported volume",
+                 infiltration_bias_pct="cumulative infiltration")
+    qualified = [names.get(r["metric"], r["metric"]) for r in csv_read(file=directory/"reference_checks.csv")
                  if r["representation"] == "0 m downstream extension" and r["station"] == "outlet" and r["qualified"] == "True"]
     status = ", ".join(qualified) if qualified else "none"
-    lines.append(f"Outlet observables passing all three reference checks at the direct boundary: {status}. "
+    lines.append(f"The direct-outlet observables passing all three reference checks were {status}. "
                  "These checks support comparisons on the coarser grid. Practical 5 m absolute accuracy remains unresolved. "
                  "[Reference qualification by observable](../fidelity/outlet_results/reference_checks.csv)")
     return "\n" + "\n\n".join(lines) + "\n"

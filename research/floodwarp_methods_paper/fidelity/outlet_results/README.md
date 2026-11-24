@@ -31,10 +31,12 @@ The gauge remains at the eastern edge of the original 104.8576 km² catchment. T
 | adaptive | 10 | 400 | 1.0 | — | 47.660 | 4.800 | 47.495 | 47.590 | 857,182.5 |
 | fv1 | 10 | 400 | 1.0 | — | 48.319 | 5.400 | 48.236 | 48.241 | 910,412.8 |
 | hancock_adaptive | 10 | 400 | 1.0 | — | 47.185 | 4.783 | 47.021 | 47.120 | 869,078.9 |
+| adaptive | 5 | 0 | 0.5 | — | 48.123 | 4.817 | 47.982 | 48.039 | 805,082.8 |
 | adaptive | 5 | 0 | 1.0 | 48.330 | 48.115 | 4.800 | 47.960 | 48.032 | 822,874.5 |
+| fv1 | 5 | 0 | 1.0 | 49.186 | 49.186 | 5.350 | 49.087 | 49.101 | 910,143.2 |
 | hancock_adaptive | 5 | 0 | 1.0 | 48.286 | 48.019 | 4.800 | 47.849 | 47.934 | 829,026.1 |
 
-8 of 14 trajectories have completed the historical 16-hour comparison. Each hydrograph is an interval average of accepted transport. On these irregular terrains a solver difference alone does not establish accuracy.
+10 of 14 trajectories have completed the historical 16-hour comparison. Each hydrograph is an interval average of accepted transport. On these irregular terrains a solver difference alone does not establish accuracy.
 
 [Water accounts, infiltration inside and outside the rainfall footprint](events.csv) · [Crest and whole-recession last 40 m budgets](last_40m.csv) · [Spatial extent](extent.csv) · [Wet-union depth differences on common spatial support](depth_disagreement.csv) · [Spatial reference qualification](spatial_reference_checks.csv) · [Hydrograph and infiltration reference qualification](reference_checks.csv)
 
@@ -44,6 +46,7 @@ The gauge remains at the eastern edge of the original 104.8576 km² catchment. T
 |---|---|---:|---:|---:|---:|---:|
 | 10 | 0 | +41,130.9 | +17,863.3 | -59,098.2 | +104.1 | +1.18e-09 |
 | 10 | 400 | +41,333.9 | +17,862.7 | -59,196.6 | +0.0 | +1.27e-09 |
+| 5 | 0 | +81,117.1 | +6,210.5 | -87,383.4 | +55.8 | +1.26e-08 |
 
 ## Hour-eight inundation and maximum extent
 
@@ -53,8 +56,11 @@ The gauge remains at the eastern edge of the original 104.8576 km² catchment. T
 | fv1 | 10 | 0.7233 | 0.0143 | 6.1042 | 2.1934 |
 | hancock_adaptive | 10 | 0.0000 | 0.0000 | 1.1838 | 0.0000 |
 | adaptive | 5 | 0.0000 | 0.0000 | 0.5205 | 0.0000 |
+| fv1 | 5 | 0.5847 | 0.0092 | 7.4040 | 1.8847 |
 | hancock_adaptive | 5 | 0.0000 | 0.0000 | 0.5195 | 0.0000 |
 
 The spatial comparison thresholds area-averaged depths on the coarser common support. For maxima, it averages the recorded native-cell maxima. The extent table above counts cells at each native hydraulic spacing. The 5 m trajectories quantify formulation and timestep sensitivity. A finer storm reference is required for absolute 5 m accuracy.
 
 [Water-balance decomposition](water_differences.csv) · [Least measured cost by tolerance](least_cost_fidelity.csv) · [Smallest qualified error within the FV1 budget](equal_cost_fidelity.csv)
+
+Depth and inundation costs run from the initial state to each snapshot. The 8 h comparison uses only the first eight hours of measured hydraulic execution. [Least cost by spatial tolerance](least_cost_depth_extent.csv) · [Smallest spatial error at each FV1 budget](equal_cost_depth_extent.csv) · [Independent timing windows](spatial_timing_windows.csv)

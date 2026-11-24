@@ -1,6 +1,9 @@
 """Manually run the archived Orton Bradley 48 h HIRDS storm with matched physical sections."""
 
+import fnmatch
+import getopt
 import json
+from math import ceil
 from pathlib import Path
 import sys
 from time import perf_counter
@@ -206,7 +209,32 @@ def peak_flow(frame):
     return frame["net_outlet_m3s"]
 
 
-def run(*, directory, settings, dry):
+def inventory(*, directory, identity, settings, native_shape, method, spacing, case):
+    rows = []
+    for dx in settings["grids_m"]:
+        for candidate in settings["methods"]:
+            physical_case = "orton-bradley-48h-hirds"
+            if (not fnmatch.fnmatchcase(physical_case, case)
+                    or method not in (None, candidate) or spacing not in (None, dx)):
+                continue
+            contract = dict(identity, dx=dx, method=candidate)
+            dest = directory / "orton_transfer" / runner.digest(contract)[:24]
+            rows.append(dict(
+                identity=contract, case=physical_case, grid_m=dx, method=candidate,
+                nx=ceil(native_shape[1] / (dx // 5)), ny=ceil(native_shape[0] / (dx // 5)),
+                complete=(dest / "complete.json").is_file(),
+                archived_windows=len(list(dest.glob("hour_*.json"))), id=dest.name,
+            ))
+    return rows
+
+
+def run(*, directory, settings, arguments):
+    import rasterio
+
+    flags, rest = getopt.getopt(arguments, "", ["dry-run", "resume", "case=", "method=", "dx="])
+    if rest:
+        raise ValueError(f"Unknown transfer arguments {rest}")
+    options = dict(flags)
     release = directory.parents[2] / settings["release"]
     identity = dict(
         source=runner.checksum(Path(__file__)),
@@ -217,23 +245,26 @@ def run(*, directory, settings, dry):
             root=directory.parents[2], study=directory.parent, stage="long-storms"
         ),
     )
-    if dry:
-        for dx in settings["grids_m"]:
-            print(
-                "Orton Bradley",
-                dx,
-                "m,",
-                settings["methods"],
-                "48 h HIRDS design forcing, external transfer",
-            )
+    with rasterio.open(release / "outputs/orton_bradley_dem_5m.tif") as dem:
+        plans = inventory(
+            directory=directory, identity=identity, settings=settings, native_shape=dem.shape,
+            method=options.get("--method"), spacing=float(options["--dx"]) if "--dx" in options else None,
+            case=options.get("--case", "*"),
+        )
+    if not plans:
+        raise ValueError("No Orton Bradley transfer configurations match the selection")
+    print(f"{len(plans)} configurations, 48 h HIRDS design forcing, fixed physical gauges, external transfer", flush=True)
+    for plan in plans:
+        print(plan["id"], plan["method"], plan["grid_m"], "m,", plan["nx"], "×", plan["ny"],
+              "cells,", plan["archived_windows"], "checkpoint windows, complete", plan["complete"], flush=True)
+    if "--dry-run" in options:
         return
     state = archive.release_initial(directory=release)
-    rows = []
-    for dx in settings["grids_m"]:
+    for dx in dict.fromkeys(p["grid_m"] for p in plans):
         data, geometry = archive.geometry(state=state, factor=dx // 5)
         forcing = archive.forcing_check(state=state, data=data, dx=dx)
-        for method in settings["methods"]:
-            rows.append(
+        for plan in plans:
+            if plan["grid_m"] == dx:
                 simulate(
                     directory=directory,
                     settings=settings,
@@ -242,17 +273,26 @@ def run(*, directory, settings, dry):
                     geometry=geometry,
                     forcing=forcing,
                     dx=dx,
-                    method=method,
-                    identity=dict(identity, dx=dx, method=method),
+                    method=plan["method"],
+                    identity=plan["identity"],
                 )
-            )
-            metrics.csv_write(file=directory / "orton_transfer/transfer.csv", rows=rows)
+        # Recreate the index from every completed matching contract, including
+        # peers outside the current manual selection.
+        root = directory / "orton_transfer"
+        rows = []
+        for grid in settings["grids_m"]:
+            for candidate in settings["methods"]:
+                key = runner.digest(dict(identity, dx=grid, method=candidate))[:24]
+                result = root / key / "complete.json"
+                if result.exists():
+                    entry = json.loads(result.read_text())
+                    if (entry["id"], entry["dx_m"], entry["method"]) != (key, grid, candidate):
+                        raise ValueError("Transfer summary differs from source and physical contract")
+                    rows.append(entry)
+        metrics.csv_write(file=root / "transfer.csv", rows=rows)
 
 
 if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     settings = json.loads((directory / "orton_transfer_settings.json").read_text())
-    options = set(sys.argv[1:])
-    if options.difference({"--dry-run", "--resume"}):
-        raise ValueError("Unsupported transfer options")
-    run(directory=directory, settings=settings, dry="--dry-run" in options)
+    run(directory=directory, settings=settings, arguments=sys.argv[1:])

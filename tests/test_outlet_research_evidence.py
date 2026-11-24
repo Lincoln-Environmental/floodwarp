@@ -4,10 +4,37 @@ from floodwarp.solver_advisor.model import load_model, recommend
 
 from research.floodwarp_methods_paper.fidelity import (
     native_advisor,
+    outlet_observables,
     outlet_results,
     repeat_costs,
     timing_repeats,
 )
+
+
+def test_spatial_cost_ends_at_the_snapshot():
+    frames = [dict(t_s=t, steps=n, hydraulic_s=s) for t, n, s in
+              ((60, 5, 0.25), (120, 4, 0.15), (180, 8, 0.76))]
+    assert outlet_observables.window_cost(frames=frames, end_s=120) == (0.4, 9)
+    with pytest.raises(ValueError, match="endpoint"):
+        outlet_observables.window_cost(frames=frames, end_s=150)
+
+
+def test_transfer_inventory_retains_contract_for_selected_run(tmp_path):
+    from research.floodwarp_methods_paper.fidelity.orton_transfer import inventory
+
+    physical = dict(directory=tmp_path, identity={"dem": "fixed"},
+                    settings={"methods": ["fv1", "hancock", "rk2"], "grids_m": [20, 10, 5]},
+                    native_shape=(1123, 843), case="orton-*")
+    all_runs = inventory(**physical, method=None, spacing=None)
+    entry, = inventory(**physical, method="hancock", spacing=10)
+    assert len(all_runs) == 9 and entry in all_runs
+    assert (entry["ny"], entry["nx"]) == (562, 422)
+    folder = tmp_path / "orton_transfer" / entry["id"]
+    folder.mkdir(parents=True)
+    (folder / "hour_4.json").touch()
+    resumed, = inventory(**physical, method="hancock", spacing=10)
+    assert resumed["id"] == entry["id"] and resumed["archived_windows"] == 1
+    assert not resumed["complete"]
 
 
 def test_reference_pair_needs_two_matched_events_on_independent_terrains():
@@ -30,6 +57,15 @@ def test_reference_pair_needs_two_matched_events_on_independent_terrains():
     assert native_advisor.validated_pairs(rows=rows, minimum=2) == {}
     rows[-1]["case"] = "storm-b1"
     assert native_advisor.validated_pairs(rows=rows, minimum=2) == {"peak": [[5, 10]]}
+
+
+def test_lost_connection_cannot_supply_development_hydraulic_error():
+    row = dict(features=dict(critical_connection_lost=True), errors={"peak_discharge": 0.1},
+               qualified={"peak_discharge": True}, runtime_s=5.0)
+    training, = native_advisor.admissible_training(rows=[row])
+    assert training["runtime_s"] == 5.0 and training["errors"]["peak_discharge"] is None
+    assert training["qualified"] == {"peak_discharge": False}
+    assert row["errors"] == {"peak_discharge": 0.1}
 
 
 def test_repeat_summary_keeps_independent_completed_measurements(tmp_path):

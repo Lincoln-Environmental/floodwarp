@@ -201,6 +201,23 @@ def support(*, rows, objectives, minimum):
     }
 
 
+def admissible_training(*, rows):
+    """Keep measured costs while excluding numerical-error labels from lost controls."""
+    from floodwarp.solver_advisor.model import terrain_requires_refinement
+
+    training = []
+    for row in rows:
+        errors = {
+            objective: None
+            if terrain_requires_refinement(features=row["features"], objective=objective)
+            else value for objective, value in row["errors"].items()
+        }
+        qualified = {objective: row["qualified"][objective] and value is not None
+                     for objective, value in errors.items()}
+        training.append(dict(row, errors=errors, qualified=qualified))
+    return training
+
+
 def train(*, directory, settings, config, design):
     rows = sample_rows(
         directory=directory,
@@ -212,7 +229,7 @@ def train(*, directory, settings, config, design):
     groups = advisor_data.split_groups(
         rows=rows, heldout_family=config["advisor"]["heldout_family"]
     )
-    train_rows, val = groups["development"], groups["validation"]
+    train_rows, val = admissible_training(rows=groups["development"]), groups["validation"]
     if not train_rows or not val or groups["test"]:
         raise ValueError(
             "Fitting requires disjoint development and validation terrains"
@@ -277,12 +294,16 @@ def train(*, directory, settings, config, design):
     if not path.exists():
         folder.mkdir(parents=True, exist_ok=True)
         runner.write_json(path=path, data=model)
+        validation_path = folder / "validation_decisions.csv"
+        metrics.csv_write(file=validation_path, rows=valid)
         runner.write_json(
             path=folder / "frozen.json",
-            data=dict(identity=identity, sha256=runner.checksum(path)),
+            data=dict(identity=identity, sha256=runner.checksum(path),
+                      validation_decisions_sha256=runner.checksum(validation_path)),
         )
     frozen = json.loads((folder / "frozen.json").read_text())
-    if frozen["identity"] != identity or frozen["sha256"] != runner.checksum(path):
+    if (frozen["identity"] != identity or frozen["sha256"] != runner.checksum(path)
+            or frozen["validation_decisions_sha256"] != runner.checksum(folder / "validation_decisions.csv")):
         raise ValueError("Existing frozen model or fit inputs changed")
     pointer = directory / "native_advisor/frozen_model.json"
     runner.write_json(
@@ -402,7 +423,13 @@ def validate(*, directory, settings, config, design):
         summary.extend(
             dict(r, percentage_scenario=pct) for r in advisor.summary(rows=trials)
         )
-    output = path.parent / ("heldout_" + runner.digest(held)[:24])
+    from research.floodwarp_methods_paper.fidelity import paired_advisor
+
+    scoring = dict(heldout=runner.digest(held), frozen=pointer["sha256"],
+                   paired_analysis=runner.checksum(Path(paired_advisor.__file__)),
+                   single_grid_analysis=runner.checksum(Path(advisor.__file__)),
+                   native_analysis=runner.checksum(Path(__file__)))
+    output = path.parent / ("heldout_" + runner.digest(scoring)[:24])
     output.mkdir(exist_ok=True)
     metrics.csv_write(
         file=output / "candidate_predictions.csv",
@@ -414,9 +441,7 @@ def validate(*, directory, settings, config, design):
     paired = []
     for pct in settings["assessment_percentages"]:
         trials = [r for r in combined if r["percentage_scenario"] == pct]
-        from research.floodwarp_methods_paper.fidelity.paired_advisor import evaluate_pairs
-
-        paired.extend(dict(r, percentage_scenario=pct) for r in evaluate_pairs(
+        paired.extend(dict(r, percentage_scenario=pct) for r in paired_advisor.evaluate_pairs(
             model=model, rows=held, trials=trials, spacings=settings["practical_pair_m"]))
         for axis in ("family", "dx", "cells", "terrain_id", "wet_band"):
             for value in sorted({r[axis] for r in trials}):
@@ -452,6 +477,7 @@ def validate(*, directory, settings, config, design):
         path=output / "sources.json",
         data=dict(
             frozen_model=pointer,
+            scoring=scoring,
             heldout_ids=[r["run_id"] for r in held],
             final_independent_terrain_ids=settings["new_final_terrain_ids"],
             files={

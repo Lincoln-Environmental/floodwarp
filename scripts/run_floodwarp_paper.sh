@@ -101,11 +101,7 @@ main() {
         exec "$python_bin" -m research.floodwarp_methods_paper.controller "${stage#historical-}" "${selected_options[@]}"
     fi
     if [[ $stage == outlet-qualification || $stage == all ]]; then
-        if [[ $stage == all ]]; then
-            "$python_bin" -m research.floodwarp_methods_paper.controller analytical "${selected_options[@]}"
-            "$python_bin" -m research.floodwarp_methods_paper.controller convergence "${selected_options[@]}"
-        fi
-        for stage in free-plane free-reach outlet-storms outlet-results outlet-timing-repeats outlet-results verify-kernels million-terrain terrain-features advisor-design advisor-cli-check; do
+        for stage in free-plane free-reach outlet-storms outlet-results outlet-timing-repeats outlet-results verify-kernels analytical convergence million-terrain terrain-features advisor-design advisor-cli-check; do
             "$0" "$stage" "${selected_options[@]}"
         done
         for part in fit test; do

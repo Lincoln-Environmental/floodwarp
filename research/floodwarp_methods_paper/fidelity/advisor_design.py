@@ -134,6 +134,24 @@ def run(*, directory, config, design, settings):
     metrics.csv_write(file=dest/"scheduled.csv",rows=schedule)
     metrics.csv_write(file=dest / "opportunities.csv", rows=rows)
     pairs = []
+    decisions = []
+    frozen = {}
+    pointer = directory / "native_advisor/frozen_model.json"
+    if pointer.is_file():
+        manifest = json.loads(pointer.read_text())
+        model = directory / manifest["path"]
+        evidence = model.parent / "validation_decisions.csv"
+        seal = json.loads((model.parent / "frozen.json").read_text())
+        if runner.checksum(model) != manifest["sha256"]:
+            raise ValueError("Changed frozen validation model")
+        if evidence.exists():
+            if runner.checksum(evidence) != seal["validation_decisions_sha256"]:
+                raise ValueError("Changed decision evidence in validation")
+            candidates = metrics.csv_read(file=evidence)
+            ids = {r["run_id"] for members in measured.values() for r in members}
+            if all(r["selected_run"] in ids for r in candidates if r["selected_run"]):
+                decisions = candidates
+                frozen = json.loads(model.read_text())["native_cross_grid_validation"]
     for split in ("development", "validation", "test"):
         for objective in objectives:
             for i, low in enumerate(spacing):
@@ -155,9 +173,17 @@ def run(*, directory, config, design, settings):
                                 if {low, high} <= grids
                             }
                         )
-                    pairs.append(
-                        dict(split=split, objective=objective, dx=[low, high], **paired)
-                    )
+                    pair = dict(split=split, objective=objective, dx=[low, high], **paired)
+                    if split == "validation":
+                        successes = defaultdict(set)
+                        for r in decisions:
+                            if r["objective"] == objective and r["feasible"] == "True":
+                                successes[r["terrain_id"], r["case"]].add(float(r["dx"]))
+                        pair["successful_paired_selections"] = sorted(
+                            {t for (t, _), grids in successes.items() if {low, high} <= grids}
+                        )
+                        pair["frozen_pair_supported"] = [low, high] in frozen.get(objective, []) if decisions else None
+                    pairs.append(pair)
     runner.write_json(
         path=dest / "paired.json", data=dict(configurations=len(specs), pairs=pairs)
     )
@@ -172,12 +198,12 @@ def run(*, directory, config, design, settings):
         len(p["possible"]) < settings["validation_groups_per_spacing"]
         for p in pairs
         if p["dx"] == [5, 10]
-        and p["split"] in ("validation", "test")
+        and p["split"] in ("development", "validation", "test")
         and {**native_advisor.DEPTH, **native_advisor.WAVE}.get(p["objective"])
         is not None
     ):
         raise ValueError(
-            "Design cannot support two independent admissible terrains in both held-out partitions"
+            "Design lacks independent admissible development neighbours or validation/test terrains on both practical grids"
         )
 
 

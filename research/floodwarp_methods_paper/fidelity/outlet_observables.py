@@ -2,9 +2,79 @@
 
 from collections import defaultdict
 import json
+from statistics import median
 
 from research.floodwarp_methods_paper import metrics
 from research.floodwarp_methods_paper.fidelity import assessment, budgets, statistics
+
+
+def window_cost(*, frames, end_s):
+    selected = [r for r in frames if r["t_s"] <= end_s]
+    if not selected or selected[-1]["t_s"] != end_s:
+        raise ValueError("Missing timing at spatial assessment endpoint")
+    return sum(r["hydraulic_s"] for r in selected), sum(r["steps"] for r in selected)
+
+
+def spatial_decisions(*, directory, destination, experiments, checks):
+    from research.floodwarp_methods_paper.fidelity import outlet_storms, outlet_timing
+
+    controls = outlet_storms.archived(directory=directory)
+    application = json.loads((directory / "application_settings.json").read_text())
+    advisor = json.loads((directory / "native_advisor_settings.json").read_text())
+    timing_file = directory / "outlet_results/independent_timings.csv"
+    repeats = metrics.csv_read(file=timing_file) if timing_file.exists() else []
+    observations = []
+    costs = []
+    for contract, frames, summary, path in experiments:
+        identity = contract["identity"]
+        if identity["cfl_factor"] != 1:
+            continue
+        spec = controls[identity["method"], identity["dx"]]["inputs"]["spec"]
+        matched = [r for r in checks if r["run_id"] == path.name]
+        for hour in sorted({r["hour"] for r in matched}):
+            end = round(hour * 3600)
+            cost, steps = window_cost(frames=frames, end_s=end)
+            samples = {path.name: cost}
+            for repeat in repeats:
+                if (repeat["primary"] != path.name or repeat["id"] in samples
+                        or int(repeat["end_s"]) != summary["end_s"]):
+                    continue
+                data, _ = outlet_timing.read_frames(
+                    path=directory / "outlet_timing_repeats" / repeat["id"], end=end
+                )
+                seconds, count = window_cost(frames=data, end_s=end)
+                if count != steps:
+                    raise ValueError("Repeated timing changed spatial forecast step count")
+                samples[repeat["id"]] = seconds
+            for sample_id, seconds in samples.items():
+                costs.append(dict(primary=path.name, timing_id=sample_id, end_h=hour,
+                                  hydraulic_s=seconds, accepted_steps=steps))
+            data = dict(
+                cohort="repaired-outlet", case=spec["case"],
+                representation=f"{identity['extension_m']} m downstream extension",
+                station="domain", interval_max_s=identity["settings"]["spatial_s"],
+                end_h=hour, experiment_id=path.name, method=identity["method"],
+                dx=identity["dx"], runtime_s=median(samples.values()), steps=steps,
+                **assessment.numerical_identity(method=identity["method"]),
+            )
+            for row in matched:
+                if row["hour"] == hour:
+                    metric = row["metric"]
+                    data.update(reference_id=row["reference_id"])
+                    data[metric] = row["error"]
+                    data["qualified_" + metric] = row["qualified"]
+                    data[metric + "_sensitivity"] = row["reference_sensitivity"]
+            observations.append(data)
+    objectives = sorted({row["metric"] for row in checks})
+    limits = {
+        k: [advisor["depth_tolerance_m"]] if "depth" in k
+        else [pct / 100 for pct in application["tolerances_pct"]] for k in objectives
+    }
+    frontier = statistics.frontiers(rows=observations, objectives=objectives)
+    metrics.csv_write(file=destination / "spatial_timing_windows.csv", rows=costs)
+    metrics.csv_write(file=destination / "spatial_pareto.csv", rows=frontier)
+    budgets.feasible_cost(rows=frontier, target=destination, tolerances=limits,
+                         spacings=application["fv1_budget_grids_m"], name="depth_extent")
 
 
 def event(*, contract, frames, summary, path, spec):
