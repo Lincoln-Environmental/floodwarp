@@ -46,7 +46,15 @@ At 10 m, FV1 minus Hancock net export was +41,131 m³. The corresponding cumulat
 
 At 5 m, FV1 minus Hancock net export was +81,117 m³. The corresponding cumulative infiltration differences were +6,211 m³ inside the rainfall footprint and -87,383 m³ outside. The final storage difference was +56 m³. At hour eight their areas above 5 cm were 0.5847 and 0.0000 km².
 
+At rain cessation (6 h), the direct 5 m FV1-minus-Hancock differences were -10,822 m³ in cumulative export and +85,815 m³ in remaining storage. During the common recession alone FV1 exported +91,939 m³ relative to Hancock. [Rain and recession water accounts](../fidelity/outlet_results/phase_volume_differences.csv)
+
+Across 65 snapshots at 15-minute intervals, the largest simultaneous areas above 5 cm were 3.7250, 0.0542 and 0.0535 km² for 5 m FV1, Hancock and RK2. These measurements cover the full direct-outlet storm and recession. Cumulative inundation also includes cells that flooded at different times. [Sampled maxima and cumulative extent](../fidelity/outlet_results/peak_extent.csv)
+
 Of the hour-eight area above 5 cm in FV1 alone on the direct 5 m grid, 100.00% lay downstream of the independent internal gauge and 100.00% lay outside the rainfall footprint. The final 40 m contained 2.36% of this disagreement. [Reach and rainfall-footprint decomposition](../fidelity/outlet_results/regional_contrasts.csv) · [Maps of inundation and cumulative infiltration](../supplementary/incised/hour_eight_water.pdf)
+
+On the 10 m direct-outlet grid, Hancock required 34,118 accepted steps versus 48,782 for FV1. Across 3 and 3 warmed timings respectively, the median Hancock runtime was 1.47× as much per accepted step and 1.029× as much over the full 16 hours. [Independent timings and execution policies](../fidelity/outlet_results/independent_timings.csv)
+
+On the 5 m direct-outlet grid, Hancock required 68,115 accepted steps versus 99,493 for FV1. Across 3 and 3 warmed timings respectively, the median Hancock runtime was 1.52× as much per accepted step and 1.041× as much over the full 16 hours. [Independent timings and execution policies](../fidelity/outlet_results/independent_timings.csv)
 
 During the corrected 10 m Hancock crest minute, 2,834.2 m³ entered the final 40 m, 2,831.0 m³ passed the FREE face, 2.8 m³ infiltrated, and surface storage changed by +0.4 m³. Over the post-rain recession, drawdown in that strip after infiltration accounted for 0.63% of outlet export. [Accepted transport and strip water accounts](../fidelity/outlet_results/last_40m.csv)
 

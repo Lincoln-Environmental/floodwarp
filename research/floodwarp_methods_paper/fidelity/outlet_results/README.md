@@ -89,12 +89,40 @@ A focused CUDA regression briefly shared the GPU during the direct 5 m half-CFL 
 | fv1 | 5 | 0.5847 | 0.0092 | 7.4040 | 1.8847 |
 | hancock_adaptive | 5 | 0.0000 | 0.0000 | 0.5195 | 0.0000 |
 
+The largest area inundated simultaneously at the 15-minute snapshots was
+
+| Model | Grid (m) | Above 5 cm (km²) | First peak (h) | Above 10 cm (km²) | First peak (h) |
+|---|---:|---:|---:|---:|---:|
+| adaptive | 10 | 0.1253 | 1.5 | 0.0000 | — |
+| fv1 | 10 | 3.5233 | 0.25 | 1.3553 | 4.75 |
+| hancock_adaptive | 10 | 0.1331 | 1.5 | 0.0000 | — |
+| adaptive | 5 | 0.0535 | 1.5 | 0.0000 | — |
+| fv1 | 5 | 3.7250 | 4.25 | 1.0203 | 4.75 |
+| hancock_adaptive | 5 | 0.0542 | 1.5 | 0.0000 | — |
+
+A peak between snapshots can exceed the sampled maximum. The cumulative extent counts each cell that crossed the threshold at any accepted step. [All sampled maxima](peak_extent.csv) · [15-minute inundation series](extent.csv) · [Inundated area through time](../../supplementary/incised/simultaneous_extent.pdf)
+
 The spatial comparison thresholds area-averaged depths on the coarser common support. For maxima, it averages the recorded native-cell maxima. The extent table above counts cells at each native hydraulic spacing. The 5 m trajectories quantify formulation and timestep sensitivity. A finer storm reference is required for absolute 5 m accuracy.
 
-[Water-balance decomposition](water_differences.csv) · [Least measured cost by tolerance](least_cost_fidelity.csv) · [Smallest qualified error within the FV1 budget](equal_cost_fidelity.csv)
+[Water-balance decomposition](water_differences.csv) · [Rain and recession accounts](phase_volume_differences.csv) · [Least measured cost by tolerance](least_cost_fidelity.csv) · [Smallest qualified error within the FV1 budget](equal_cost_fidelity.csv)
 
 Depth and inundation costs run from the initial state to each snapshot. The 8 h comparison uses only the first eight hours of measured hydraulic execution. [Least cost by spatial tolerance](least_cost_depth_extent.csv) · [Smallest spatial error at each FV1 budget](equal_cost_depth_extent.csv) · [Independent timing windows](spatial_timing_windows.csv)
 
 The [regional water and inundation accounts](regional_contrasts.csv) divide the original footprint at the internal gauge and at the start of the final 40 m. Each area is also split by the prescribed rainfall footprint.
+
+## Independent full-storm timings
+
+| Grid (m) | Extension (m) | Method | Policy | End (h) | Timings | Hydraulic median (s) | Hydraulic range (s) | Steps | ms/step | End-to-end range (s) |
+|---:|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 10 | 0 | hancock_adaptive | tiles | 16 | 3 | 39.461 | 39.408–39.470 | 34,118 | 1.157 | 56.41–56.44 (2) |
+| 10 | 0 | fv1 | sparse | 16 | 3 | 38.362 | 38.348–38.374 | 48,782 | 0.786 | 60.37–60.68 (2) |
+| 10 | 400 | fv1 | sparse | 16 | 3 | 40.937 | 40.934–40.945 | 50,521 | 0.810 | 52.88–52.89 (2) |
+| 10 | 400 | hancock_adaptive | tiles | 16 | 3 | 41.351 | 41.346–41.352 | 34,314 | 1.205 | 52.64–52.74 (2) |
+| 5 | 400 | fv1 | sparse | 16 | 3 | 312.377 | 312.236–312.390 | 101,487 | 3.078 | 366.74–367.32 (2) |
+| 5 | 400 | hancock_adaptive | tiles | 16 | 3 | 322.303 | 322.194–322.346 | 68,458 | 4.708 | 432.77–432.82 (2) |
+| 5 | 0 | fv1 | sparse | 16 | 3 | 298.297 | 298.291–298.423 | 99,493 | 2.998 | 403.96–404.14 (2) |
+| 5 | 0 | hancock_adaptive | tiles | 16 | 3 | 310.600 | 310.495–310.603 | 68,115 | 4.560 | 415.19–415.64 (2) |
+
+Hydraulic timings exclude graph capture and compilation. End-to-end values include input verification, setup, interval diagnostics and checkpoint output. Parentheses give the number of uninterrupted end-to-end measurements. [Timing IDs, hardware and cadence](independent_timings.csv)
 
 On the 10 m moderate-rainfall plain the two CPU policies reproduced all 99,238 ordered timesteps through 40 hours. Their interval face transport and final fields matched the primary trajectory. [Ordered timestep evidence](../native_step_history/39b84d74d143dcf4a64e60f0/verified.json)
