@@ -210,6 +210,12 @@ def verify_publication_inventory(*, study, rendered):
     if (study / "fidelity/outlet_results/events.csv").is_file():
         table_ids.update((16, 19, 20))
         figure_ids.add(19)
+    native_results = study / "fidelity/native_results"
+    for path in native_results.glob("least_cost_*.csv"):
+        if any(r["cohort"] == "complete-native-metre" and int(r["assessable"]) > 0
+               and not r["objective"].endswith("_1cm") for r in metrics.csv_read(file=path)):
+            table_ids.update((21, 22))
+            break
     if (study / "fidelity/orton_transfer/transfer.csv").is_file():
         table_ids.update((17, 18))
         figure_ids.add(20)

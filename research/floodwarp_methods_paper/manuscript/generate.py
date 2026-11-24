@@ -308,6 +308,45 @@ def native_operational_balances(*, study, cells):
     ])
 
 
+def native_budget_evidence(*, study, case, tolerance):
+    folder = study / "fidelity/native_results"
+    file = folder / "least_cost_fidelity.csv"
+    if not file.is_file():
+        return ""
+    labels = {("section", "peak_bias_pct"): "internal peak discharge",
+              ("section", "shape_tv_pct"): "internal hydrograph shape",
+              ("outlet", "width80_bias_pct"): "central 80% outlet duration",
+              ("outlet", "infiltration_bias_pct"): "cumulative catchment infiltration"}
+    choices = [r for r in csv_read(file=file)
+               if r["case"] == case and r["cohort"] == "complete-native-metre"
+               and float(r["tolerance"]) == tolerance and r["id"]
+               and (r["station"], r["objective"]) in labels]
+    if not choices:
+        return ""
+    text = ["", "## Fixed-area plain and the hydraulic objective", "",
+            f"The following configurations had the lowest measured hydraulic cost at a {tolerance:g}% tolerance. "
+            "The error bound adds the measured reference sensitivity to the absolute candidate error.", "",
+            "| Objective | Grid (m) | Method | End (h) | Error bound (%) | GPU hydraulic time (s) |",
+            "|---|---:|---|---:|---:|---:|"]
+    for r in choices:
+        text.append(f"| {labels[r['station'], r['objective']]} | {r['dx']} | {r['method']} | "
+                    f"{float(r['end_h']):g} | {float(r['conservative_error']):.2f} | {float(r['runtime_s']):.3f} |")
+    checks = [r for r in csv_read(file=folder / "reference_checks.csv")
+              if r["case"] == case and r["cohort"] == "complete-native-metre" and r["station"] == "outlet"
+              and r["metric"] == "peak_bias_pct" and r["space"] and r["cross"] and r["time"]]
+    for r in checks:
+        outcome = "passed" if r["qualified"] == "True" else "exceeded"
+        text.extend(["", f"For outlet peak magnitude, RK2 spatial refinement changed the estimate by "
+                     f"{float(r['space']):.2f}%, compared with {float(r['cross']):.2f}% across fine-grid formulations "
+                     f"and {float(r['time']):.3f}% after halving CFL. The reference {outcome} the "
+                     f"{float(r['criterion']):g}% sensitivity criterion."])
+    text.extend(["", "Timing repeat counts and spread are reported for each policy. "
+                 "[Cost at a stated tolerance](../tables/21_native_cost_at_tolerance.md) · "
+                 "[Error within an FV1 runtime budget](../tables/22_native_error_at_budget.md) · "
+                 "[Independent timing observations](../fidelity/native_results/timing_distribution.csv)", ""])
+    return "\n".join(text)
+
+
 def widespread_plain(*, study):
     import json
 
@@ -625,6 +664,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 )
                 correction += repaired_budgets(directory=repaired.parent)
                 correction += widespread_plain(study=study)
+                correction += native_budget_evidence(study=study, case="plain-709-spatial-1000x1000", tolerance=5)
                 correction += native_operational_balances(study=study, cells=1024**2)
                 correction += native_advisor_findings(study=study)
         transfer = study / "fidelity/orton_transfer/transfer.csv"

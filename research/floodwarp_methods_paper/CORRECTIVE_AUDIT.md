@@ -285,6 +285,21 @@ The two decision tables retain the event endpoint, output cadence and reference 
 
 Under intense rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 4.331 and 6.806 m³/s. They exported 28,772 and 109,391 m³ through the common 32-hour endpoint. Under moderate rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 0.894 and 0.915 m³/s. They exported 24,912 and 38,983 m³ through the common 40-hour endpoint. Both gauges passed the recession criterion. These CPU controls measure formulation disagreement. [Six-hour rainfall and complete recession accounts](fidelity/strong_storms/completed.csv)
 
+## Fixed-area plain and the hydraulic objective
+
+The following configurations had the lowest measured hydraulic cost at a 5% tolerance. The error bound adds the measured reference sensitivity to the absolute candidate error.
+
+| Objective | Grid (m) | Method | End (h) | Error bound (%) | GPU hydraulic time (s) |
+|---|---:|---|---:|---:|---:|
+| central 80% outlet duration | 10 | hancock_auto | 20 | 1.94 | 2.842 |
+| cumulative catchment infiltration | 10 | fv1 | 20 | 3.08 | 2.294 |
+| internal peak discharge | 10 | hancock_auto | 20 | 2.78 | 2.842 |
+| internal hydrograph shape | 10 | hancock_auto | 20 | 0.63 | 2.842 |
+
+For outlet peak magnitude, RK2 spatial refinement changed the estimate by 14.78%, compared with 0.14% across fine-grid formulations and 0.017% after halving CFL. The reference exceeded the 5% sensitivity criterion.
+
+Timing repeat counts and spread are reported for each policy. [Cost at a stated tolerance](tables/21_native_cost_at_tolerance.md) · [Error within an FV1 runtime budget](tables/22_native_error_at_budget.md) · [Independent timing observations](fidelity/native_results/timing_distribution.csv)
+
 ## Complete 1,048,576-cell storms on native-metre terrain
 
 Peaks are interval means of accepted outlet transport. The volume columns give FV1 minus Hancock. Costs use the faster of the two verified explicit Hancock policies through the common recession endpoint and the median hydraulic time where repeats exist.
