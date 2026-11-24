@@ -22,6 +22,64 @@ def test_revision_comparison_requires_the_same_exact_reference_and_reports_times
     with pytest.raises(AssertionError, match="Reference differs"):
         field_comparison(before=original, after=dict(revised, exact_gauges=np.array([0.0, 1.01])))
 
+
+@pytest.mark.parametrize("device", ("cpu", "cuda:0"))
+def test_local_inertia_recession_records_accepted_model_time(tmp_path, monkeypatch, device):
+    import json
+    import warp as wp
+    from floodwarp.inputs import terrain_from_array
+    from floodwarp.model import create_model, advance, model_time
+    from research.floodwarp_methods_paper.fidelity import continuation, recession
+
+    if device.startswith("cuda") and not wp.is_cuda_available():
+        pytest.skip("CUDA required")
+    terrain = terrain_from_array(elevation=np.zeros((6, 6)), dx=5., dy=5., row_order="south_to_north",
+                                 vertical_datum="local")
+    model = create_model(terrain=terrain, solver_method="li", device=device, initial_depth=.02,
+                         track_cumulative_face_volumes=True)
+    advance(model=model, end_time=1.)
+    (tmp_path / "spatial_settings.json").write_text(json.dumps(dict(interval_s=1, support_m={})))
+    frames = []
+
+    def observe(**kwargs):
+        frames.extend(recession.advance_frames(model=model, spec=dict(method="li", interval=1, coastal_stage=False),
+                                              start=1, end=3, options={}, device=device))
+
+    monkeypatch.setattr(recession, "run", observe)
+    continuation.extend(directory=tmp_path, settings=dict(device=device), cohorts=("native-metre",))
+    assert [r["t_s"] for r in frames] == [2, 3] and model_time(model=model) == 3
+    assert all(r["wet_fraction"] == 1 and r["section_m3s"] == 0 and r["steps"] > 0 for r in frames)
+    assert all((r["live_pool_mib"] is None) == (device == "cpu") for r in frames)
+
+
+def test_native_archive_resume_checks_entire_contract_and_spatial_fields(tmp_path):
+    import json
+    from research.floodwarp_methods_paper import runner
+    from research.floodwarp_methods_paper.fidelity.native_resume import previous_prefix
+
+    old = dict(spec={"case": "plain"}, solver="s", sources={"record.py": "old"}, hardware=["board"])
+    ident = runner.digest(old)[:24]
+    output = tmp_path / "cases"
+    folder = output / ident
+    attempt = folder / "attempt_1"
+    attempt.mkdir(parents=True)
+    path = folder / "result.json"
+    path.write_text(json.dumps(dict(inputs=old, data={"steps": 10})))
+    field = folder / "spatial.npz"
+    np.savez(field, depth=[0.01])
+    (attempt / "complete.json").write_text(json.dumps(dict(result_sha256=runner.checksum(path),
+                                                            spatial_sha256=runner.checksum(field))))
+    (tmp_path / "native_prefix_compatibility.json").write_text(json.dumps(dict(
+        case="plain", prefix_ids=[ident], sources={"record.py": {"original": "old", "repaired": "new"}})))
+    forecast = dict(old, sources={"record.py": "new"})
+    options = dict(directory=tmp_path, output=output)
+    assert previous_prefix(**options, definition=forecast)["id"] == ident
+    assert previous_prefix(**options, definition=dict(forecast, solver="changed")) is None
+    assert previous_prefix(**options, definition=dict(forecast, hardware=["other"])) is None
+    np.savez(field, depth=[0.02])
+    with pytest.raises(ValueError, match="fields"):
+        previous_prefix(**options, definition=forecast)
+
 def test_fixed_reach_report_rejects_displaced_section(tmp_path):
     import json
     from research.floodwarp_methods_paper import metrics, runner

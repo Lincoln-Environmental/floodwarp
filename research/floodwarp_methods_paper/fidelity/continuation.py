@@ -9,7 +9,7 @@ from unittest.mock import patch
 import numpy as np
 from research.floodwarp_methods_paper.fidelity.spatial_capture import Recorder
 
-from floodwarp.model import load_checkpoint, save_checkpoint
+from floodwarp.model import load_checkpoint, model_time, save_checkpoint
 from research.floodwarp_methods_paper import events, runner
 from research.floodwarp_methods_paper.fidelity import (
     receipts,
@@ -137,6 +137,7 @@ def extend(*, directory, settings, cohorts, tail_only=False):
     transport = hydraulics.volumes
     spatial_settings = json.loads((directory / "spatial_settings.json").read_text())
     cadence = spatial_settings["interval_s"]
+    device = wp.get_device(settings["device"])
 
     def resume(**kwargs):
         if kwargs["start"] == 0:
@@ -159,13 +160,13 @@ def extend(*, directory, settings, cohorts, tail_only=False):
             tick = perf_counter()
             result = transport(solver=solver, li=li)
             spatial.snapshot(solver=solver, li=li)
-            t = round(solver.time)
+            t = round(model_time(model=kwargs["model"]))
             if t % cadence == 0:
                 state = read_state(solver=solver, li=li)
                 depth = state[..., 0]
                 if not np.isfinite(state).all() or depth.min() < 0:
                     raise ArithmeticError("Invalid recession state")
-                moving = depth > solver.dry_depth
+                moving = depth > float(solver.dry_depth)
                 depth_moving = depth[moving]
                 speed = (
                     np.hypot(state[..., 1][moving], state[..., 2][moving])
@@ -180,10 +181,7 @@ def extend(*, directory, settings, cohorts, tail_only=False):
                     if froude.size
                     else None,
                     cm_fraction=float((depth >= 0.01).mean()),
-                    live_pool_mib=wp.get_mempool_used_mem_current(
-                        device=settings["device"]
-                    )
-                    / 2**20,
+                    live_pool_mib=wp.get_mempool_used_mem_current(device=device) / 2**20 if device.is_cuda else None,
                 )
                 if not li and t > 0:
                     work = solver.execution_diagnostics()

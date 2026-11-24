@@ -21,6 +21,7 @@ from research.floodwarp_methods_paper.fidelity import (
 from research.floodwarp_methods_paper.plan import read_config
 from research.floodwarp_methods_paper.qualification import hydraulics, matrix
 from research.floodwarp_methods_paper.terrain.generators import native_inputs
+from research.floodwarp_methods_paper.fidelity.native_resume import previous_prefix
 
 
 def specifications(*, study, config, design):
@@ -295,6 +296,12 @@ def run_group(*, directory, specs, config, design, settings, machine):
             ident = runner.digest(definition)[:24]
             folder = output / ident
             path = folder / "result.json"
+            if not path.exists():
+                prior = previous_prefix(directory=directory, output=output, definition=definition)
+                if prior is not None:
+                    result.append(assessment.item(spec=spec, data=prior["data"], ident=prior["id"],
+                                                  path=output / prior["id"], cohort=cohort, factor=spec["factor"]))
+                    continue
             folder.mkdir(exist_ok=True)
             if not path.exists():
                 print(
