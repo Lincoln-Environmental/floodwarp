@@ -153,6 +153,8 @@ def sample_rows(*, directory, partitions, require_full, config, design):
                 else None,
                 sampled_regime=obs.get("flow_regime"),
                 reference_id=obs.get("reference_id"),
+                spatial_reference_id=beds.get(ident, {}).get("reference_id"),
+                spatial_support_m=float(beds[ident]["support_m"]) if beds.get(ident, {}).get("support_m") else None,
             )
         )
     return result

@@ -1,6 +1,7 @@
 """Score whole-event grid and method choices against the measured two-grid oracle."""
 
 from collections import defaultdict
+from math import isfinite
 
 from floodwarp.solver_advisor.model import (
     choose_resolution,
@@ -10,6 +11,24 @@ from floodwarp.solver_advisor.model import (
 
 def observed_cost(row):
     return row["runtime_s"]
+
+
+def qualified_reference(*, observations, objective):
+    from research.floodwarp_methods_paper.fidelity.native_advisor import DEPTH
+
+    spatial = objective in DEPTH
+    scopes = set()
+    for row in observations:
+        if not row["qualified"][objective]:
+            continue
+        reference = row["spatial_reference_id"] if spatial else row["reference_id"]
+        support = row["spatial_support_m"] if spatial else None
+        if not reference or (spatial and (support is None or not isfinite(support) or support <= 0)):
+            raise ValueError("Qualified paired-grid error lacks its reference or spatial support")
+        scopes.add((reference, support))
+    if len(scopes) > 1:
+        raise ValueError("Paired-grid errors use different numerical references or spatial supports")
+    return next(iter(scopes), (None, None))
 
 
 def evaluate_pairs(*, model, rows, trials, spacings):
@@ -35,7 +54,10 @@ def evaluate_pairs(*, model, rows, trials, spacings):
             raise ValueError(
                 "Paired validation requires identical terrain, forcing horizon and reporting interval"
             )
+        reference, support = qualified_reference(observations=measured.values(), objective=objective)
         tol = choices[spacings[0]]["tolerance"]
+        if any(t["tolerance"] != tol for t in choices.values()):
+            raise ValueError("Paired-grid choices require the same objective tolerance")
         available = [
             r
             for r in measured.values()
@@ -84,6 +106,8 @@ def evaluate_pairs(*, model, rows, trials, spacings):
                 dict(
                     original,
                     requested_dx=requested,
+                    reference_id=reference,
+                    spatial_support_m=support,
                     chosen_dx=grid if method else None,
                     status=prediction.get("status", original["status"]),
                     chosen=method,

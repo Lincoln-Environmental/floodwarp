@@ -665,12 +665,19 @@ def test_joint_oracle_excludes_unqualified_numeric_error():
 
     records = [dict(case="event", terrain_id="terrain", native_sha="inputs", end_h=16,
                     method="fv1", run_id=str(dx), features=dict(resolution=dx),
-                    interval_s=cadence, errors={"depth": 0.001}, qualified={"depth": dx == 5},
+                    interval_s=cadence, spatial_reference_id="rk2-1m", spatial_support_m=10,
+                    errors={"depth": 0.001}, qualified={"depth": dx == 5},
                     runtime_s=cost) for dx, cadence, cost in ((10, "60", 10), (5, "60.0", 20))]
     trials = [dict(case="event", objective="depth", rule="oracle", dx=dx, tolerance=.01,
                    status="oracle", terrain_admissible=True) for dx in (5, 10)]
     rows = evaluate_pairs(model={}, rows=records, trials=trials, spacings=[5, 10])
     assert len(rows) == 2 and all(r["optimal_dx"] == r["chosen_dx"] == 5 for r in rows)
+    assert {(r["reference_id"], r["spatial_support_m"]) for r in rows} == {("rk2-1m", 10)}
+    for field, value in (("spatial_reference_id", "different-ref"), ("spatial_support_m", 5)):
+        different = dict(records[0], qualified={"depth": True})
+        different[field] = value
+        with pytest.raises(ValueError, match="different numerical references or spatial supports"):
+            evaluate_pairs(model={}, rows=[different, records[1]], trials=trials, spacings=[5, 10])
 
 
 def test_repeat_summary_keeps_independent_completed_measurements(tmp_path):
