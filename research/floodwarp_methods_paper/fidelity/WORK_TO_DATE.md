@@ -35,7 +35,18 @@ The following counts describe the original forecast windows. A separate matched-
 | Investigation | Original windows completed | Verified matched end |
 |---|---:|---|
 | Rolling terrain, independently refined SWE | 4/4 | pending |
-| Incised late crest, fixed 10 m bed | 3/5 | pending |
+| Incised late crest, fixed 10 m bed | 4/5 | pending |
+
+### Incised channel through hour 8
+
+Each run subdivides the same 10 m bed and physical inputs. Outlet peaks are accepted face transport averaged over the reporting interval. Late export is the fraction of outward volume passing in the final 2 h of this window. Stored water can contribute to the later hydrograph.
+
+| Method | Grid | CFL | Peak (m³/s) | Outlet volume (m³) | Late export | End storage (m³) | Hydraulic time (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Hancock tiled | 10 m | 0.2 | 48.010 | 745,566 | 18.81% | 106,932 | 113.3 |
+| FV2 RK2 | 10 m | 0.4 | 47.500 | 768,761 | 18.11% | 97,935 | 182.7 |
+| FV2 RK2 | 5 m | 0.4 | 33.536 | 386,724 | 53.15% | 502,761 | 1708.1 |
+| Hancock tiled | 5 m | 0.4 | 34.293 | 401,852 | 51.84% | 491,800 | 516.0 |
 
 The incised diagnostic was defined after observing a late crest. It remains separate from advisor training and test decisions. Each control needs the same recession coverage before its hydrograph can support a solver ranking.
 

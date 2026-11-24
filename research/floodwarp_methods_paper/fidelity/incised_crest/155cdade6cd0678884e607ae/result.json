@@ -1,0 +1,6888 @@
+{
+  "inputs": {
+    "spec": {
+      "case": "incised-707-spatial-10240x10240",
+      "landform": "incised",
+      "seed": 707,
+      "storm": "spatial",
+      "initial": "channel",
+      "hours": 8,
+      "split": "test",
+      "dimensions": [
+        10240,
+        10240
+      ],
+      "dx": 5,
+      "dem": 10,
+      "multiplier": 1.0,
+      "interval": 60,
+      "controls": true,
+      "initial_grid": "parent",
+      "coastal_stage": false,
+      "support": 40,
+      "method": "hancock_adaptive"
+    },
+    "factor": 1,
+    "solver": "5c700e4ec5ecec87a8411e9fca193bae855317402f634d0b8139732efd33277b",
+    "design": {
+      "case": "incised-707-spatial-10240x10240",
+      "bed_m": 10,
+      "diagnostic_start_h": 8,
+      "controls": [
+        [
+          10,
+          "hancock_adaptive",
+          0.5
+        ],
+        [
+          10,
+          "adaptive",
+          1
+        ],
+        [
+          5,
+          "adaptive",
+          1
+        ],
+        [
+          5,
+          "hancock_adaptive",
+          1
+        ],
+        [
+          5,
+          "adaptive",
+          0.5
+        ]
+      ]
+    },
+    "code": {
+      "incised_crest.py": "a2d4fe467ffc5784a0b5044f051ae7adcf7033beff442f3c02e3e2ef29ddb4a4",
+      "hydraulics.py": "0e1d0bd0d02694bad2e5f261a0bc4d035c7844ea225d0349f7cab815388b4d0c",
+      "matrix.py": "ae082e12d9aeeac33d5558d0598e2b34a146b5e567af2ab393fde3b0d912c534"
+    },
+    "settings": {
+      "device": "cuda:0",
+      "rain_end_s": 21600,
+      "window_s": 7200,
+      "tail_fraction": 0.05,
+      "late_volume_fraction": 0.01,
+      "minimum_peak_m3s": 1e-05,
+      "minimum_volume_m3": 0.01,
+      "dry_supply_fraction": 1e-06,
+      "forcing_hours": 720,
+      "first_extension_h": 4,
+      "checkpoint_hours": 4,
+      "double_mm_h": [
+        4,
+        50,
+        6,
+        4,
+        55,
+        8,
+        4,
+        0
+      ]
+    },
+    "cfg": {
+      "analytical": {
+        "methods": [
+          "fv1",
+          "low_froude_hll",
+          "euler_mc",
+          "hancock_adaptive",
+          "adaptive",
+          "li"
+        ],
+        "spacings": [
+          1,
+          5,
+          10
+        ],
+        "samples": 12,
+        "order": 16,
+        "wet": [
+          0.01,
+          0.05,
+          0.1
+        ],
+        "gravity": 9.80665,
+        "max_dt": 5.0,
+        "li_floor": 1e-08,
+        "common_cap_per_m": 0.03125,
+        "repeats": 3,
+        "formal_spacings": [
+          10,
+          5,
+          2.5,
+          1.25
+        ],
+        "temporal_steps": [
+          0.25,
+          0.125,
+          0.0625,
+          0.03125,
+          0.015625
+        ]
+      },
+      "synthetic": {
+        "landforms": [
+          "plain",
+          "floodplain",
+          "coastal",
+          "rolling",
+          "fan",
+          "hill",
+          "incised",
+          "mixed"
+        ],
+        "seeds": [
+          18217,
+          39209,
+          61507
+        ],
+        "splits": [
+          "development",
+          "validation",
+          "test"
+        ],
+        "dimensions_m": [
+          120,
+          80
+        ],
+        "native_dx": 1,
+        "slope_scale": [
+          0.85,
+          1.15
+        ],
+        "incision_scale": [
+          0.75,
+          1.25
+        ],
+        "initial_states": [
+          "dry",
+          "channel",
+          "pond"
+        ],
+        "resolution_families": [
+          "plain",
+          "fan",
+          "incised"
+        ]
+      },
+      "storms": {
+        "events": [
+          "moderate",
+          "intense",
+          "front",
+          "back",
+          "spatial",
+          "soil"
+        ],
+        "methods": [
+          "fv1",
+          "low_froude_hll",
+          "euler_mc",
+          "hancock_adaptive",
+          "hancock_dense",
+          "adaptive",
+          "li"
+        ],
+        "dx": 10,
+        "reference_grids": [
+          5,
+          2.5
+        ],
+        "practical_grids": [
+          1,
+          5,
+          10
+        ],
+        "rain_hours": 6,
+        "end_hours": 8,
+        "extended_plain_hours": 24,
+        "interval_s": 900,
+        "manning_n": 0.035,
+        "gravity": 9.80665,
+        "dry_m": 0.0001,
+        "wet_thresholds_m": [
+          0.01,
+          0.05,
+          0.1
+        ]
+      },
+      "calibration": {
+        "fit_family": "plain",
+        "fit_seed": 18217,
+        "fit_event": "moderate",
+        "bounds": [
+          0.05,
+          0.1,
+          0.2
+        ],
+        "multipliers": [
+          0.8,
+          0.9,
+          0.95,
+          1,
+          1.05,
+          1.1,
+          1.2
+        ],
+        "objectives": [
+          "discharge",
+          "space",
+          "joint"
+        ],
+        "test_families": [
+          "plain",
+          "fan",
+          "incised"
+        ],
+        "test_seeds": [
+          39209,
+          61507
+        ]
+      },
+      "performance": {
+        "benchmark_commit": "84decbb90fc4c594a19b7f4f162961a8cea140e4",
+        "timing_repeats": 3,
+        "large_cells": [
+          250000,
+          500000,
+          1000000,
+          2000000
+        ],
+        "paired_control_cases": [
+          "stoker",
+          "dry_patch"
+        ],
+        "operational_family": "plain",
+        "operational_storm": "intense"
+      },
+      "advisor": {
+        "heldout_family": "mixed",
+        "bootstrap_seed": 24317,
+        "bootstrap_repeats": 1000,
+        "neighbours": [
+          2,
+          3,
+          5
+        ],
+        "quantile": 0.9,
+        "tolerances": {
+          "depth": 0.01,
+          "maximum_depth": 0.01,
+          "inundation": 0.1,
+          "discharge": 0.01,
+          "peak_discharge": 0.01,
+          "peak_timing": 900.0
+        },
+        "coverage_quantile": 0.95
+      }
+    },
+    "template": {
+      "seed": 7319,
+      "dimensions_m": [
+        240,
+        160
+      ],
+      "sample_seconds": 900,
+      "landforms": {
+        "plain": [
+          0.00015,
+          0.015,
+          "dry"
+        ],
+        "floodplain": [
+          0.001,
+          0.19,
+          "channel"
+        ],
+        "coastal": [
+          0.0004,
+          0.07,
+          "pond"
+        ],
+        "rolling": [
+          0.008,
+          0.1,
+          "dry"
+        ],
+        "fan": [
+          0.018,
+          0.17,
+          "dry"
+        ],
+        "hill": [
+          0.035,
+          0.3,
+          "channel"
+        ],
+        "incised": [
+          0.085,
+          0.6,
+          "channel"
+        ],
+        "mixed": [
+          0.07,
+          0.22,
+          "pond"
+        ]
+      },
+      "hours": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        5.75,
+        6
+      ],
+      "storms_mm_h": {
+        "moderate": [
+          8,
+          12,
+          16,
+          20,
+          16,
+          12,
+          8,
+          0
+        ],
+        "intense": [
+          6,
+          10,
+          20,
+          80,
+          32,
+          14,
+          6,
+          0
+        ],
+        "front": [
+          60,
+          42,
+          25,
+          16,
+          10,
+          6,
+          3,
+          0
+        ],
+        "back": [
+          8,
+          10,
+          12,
+          16,
+          24,
+          64,
+          40,
+          0
+        ],
+        "spatial": [
+          8,
+          14,
+          22,
+          34,
+          26,
+          14,
+          6,
+          0
+        ],
+        "soil": [
+          8,
+          14,
+          24,
+          42,
+          20,
+          12,
+          6,
+          0
+        ]
+      },
+      "storm_duration_h": 6,
+      "end_hours": 8,
+      "extended_event": {
+        "landform": "plain",
+        "storm": "moderate",
+        "hours": 24
+      },
+      "solver_groups": {
+        "cost": [
+          [
+            "fv1",
+            "sparse"
+          ],
+          [
+            "hancock",
+            "dense"
+          ],
+          [
+            "hancock",
+            "sparse"
+          ],
+          [
+            "hancock",
+            "tiles"
+          ]
+        ],
+        "reference": [
+          [
+            "fv2",
+            "dense"
+          ]
+        ],
+        "inertial": [
+          [
+            "li",
+            "native"
+          ]
+        ],
+        "refinement": [
+          [
+            "fv1",
+            "sparse"
+          ],
+          [
+            "hancock",
+            "tiles"
+          ],
+          [
+            "fv2",
+            "dense"
+          ]
+        ],
+        "directional": [
+          [
+            "hancock",
+            "tiles"
+          ]
+        ]
+      },
+      "suites": {
+        "primary": [
+          {
+            "solvers": "cost"
+          },
+          {
+            "solvers": "reference",
+            "storms": [
+              "moderate",
+              "spatial"
+            ]
+          },
+          {
+            "solvers": "inertial",
+            "landforms": [
+              "plain",
+              "coastal",
+              "floodplain"
+            ]
+          }
+        ],
+        "directional": [
+          {
+            "solvers": "directional"
+          }
+        ],
+        "reference": [
+          {
+            "solvers": "reference",
+            "grids": [
+              [
+                5,
+                5
+              ],
+              [
+                2.5,
+                2.5
+              ]
+            ]
+          }
+        ],
+        "refinement": [
+          {
+            "solvers": "refinement",
+            "landforms": [
+              "plain",
+              "fan",
+              "incised"
+            ],
+            "storms": [
+              "moderate"
+            ],
+            "grids": [
+              [
+                5,
+                5
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                5,
+                10
+              ],
+              [
+                1,
+                10
+              ]
+            ]
+          },
+          {
+            "solvers": "inertial",
+            "landforms": [
+              "plain"
+            ],
+            "storms": [
+              "moderate"
+            ],
+            "grids": [
+              [
+                5,
+                5
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                5,
+                10
+              ],
+              [
+                1,
+                10
+              ]
+            ]
+          }
+        ],
+        "large": [
+          {
+            "solvers": "cost",
+            "landforms": [
+              "plain"
+            ],
+            "storms": [
+              "spatial",
+              "moderate"
+            ],
+            "dimensions_m": [
+              [
+                5000,
+                5000
+              ],
+              [
+                10000,
+                5000
+              ],
+              [
+                10000,
+                10000
+              ],
+              [
+                20000,
+                10000
+              ]
+            ],
+            "interval_s": 1800,
+            "hours": 8
+          }
+        ],
+        "moving": [
+          {
+            "solvers": "cost",
+            "landforms": [
+              "plain"
+            ],
+            "storms": [
+              "moving"
+            ],
+            "dimensions_m": [
+              [
+                5000,
+                5000
+              ]
+            ],
+            "hours": 8
+          }
+        ],
+        "terrain_large": [
+          {
+            "solvers": "cost",
+            "landforms": [
+              "coastal"
+            ],
+            "storms": [
+              "moderate"
+            ],
+            "dimensions_m": [
+              [
+                5000,
+                5000
+              ]
+            ],
+            "hours": 8,
+            "interval_s": 1800
+          },
+          {
+            "solvers": "cost",
+            "landforms": [
+              "mixed"
+            ],
+            "storms": [
+              "spatial"
+            ],
+            "dimensions_m": [
+              [
+                5000,
+                5000
+              ]
+            ],
+            "hours": 8,
+            "interval_s": 1800
+          }
+        ],
+        "resolution_check": [
+          {
+            "solvers": "reference",
+            "landforms": [
+              "rolling"
+            ],
+            "storms": [
+              "spatial"
+            ],
+            "grids": [
+              [
+                1.25,
+                1.25
+              ]
+            ]
+          },
+          {
+            "solvers": "reference",
+            "landforms": [
+              "floodplain"
+            ],
+            "storms": [
+              "intense"
+            ],
+            "grids": [
+              [
+                1.25,
+                1.25
+              ]
+            ]
+          },
+          {
+            "solvers": "reference",
+            "landforms": [
+              "mixed"
+            ],
+            "storms": [
+              "spatial"
+            ],
+            "grids": [
+              [
+                1.25,
+                1.25
+              ]
+            ]
+          }
+        ],
+        "fine_check": [
+          {
+            "solvers": "reference",
+            "landforms": [
+              "incised"
+            ],
+            "storms": [
+              "moderate"
+            ],
+            "grids": [
+              [
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "solvers": "reference",
+            "landforms": [
+              "incised",
+              "fan"
+            ],
+            "storms": [
+              "moderate"
+            ],
+            "grids": [
+              [
+                2.5,
+                10
+              ]
+            ]
+          }
+        ],
+        "remaining_refinements": [
+          {
+            "landforms": [
+              "fan"
+            ],
+            "storms": [
+              "front",
+              "spatial"
+            ],
+            "solvers": "reference",
+            "grids": [
+              [
+                1.25,
+                1.25
+              ]
+            ]
+          },
+          {
+            "landforms": [
+              "floodplain"
+            ],
+            "storms": [
+              "front",
+              "soil"
+            ],
+            "solvers": "reference",
+            "grids": [
+              [
+                1.25,
+                1.25
+              ]
+            ]
+          },
+          {
+            "landforms": [
+              "hill"
+            ],
+            "storms": [
+              "back"
+            ],
+            "solvers": "reference",
+            "grids": [
+              [
+                1.25,
+                1.25
+              ]
+            ]
+          },
+          {
+            "landforms": [
+              "mixed"
+            ],
+            "storms": [
+              "back",
+              "front",
+              "intense",
+              "moderate",
+              "soil"
+            ],
+            "solvers": "reference",
+            "grids": [
+              [
+                1.25,
+                1.25
+              ]
+            ]
+          },
+          {
+            "landforms": [
+              "rolling"
+            ],
+            "storms": [
+              "back",
+              "front",
+              "intense",
+              "moderate"
+            ],
+            "solvers": "reference",
+            "grids": [
+              [
+                1.25,
+                1.25
+              ]
+            ]
+          }
+        ]
+      },
+      "default_hydraulic_dem_grids_m": [
+        [
+          10,
+          10
+        ]
+      ]
+    },
+    "options": {
+      "production_methods": [
+        "fv1",
+        "hancock_dense",
+        "hancock_adaptive"
+      ],
+      "pilot_end_s": 900,
+      "spatial_output_s": 900,
+      "coastal_stage_hours": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        24
+      ],
+      "coastal_stage_m": [
+        0.015,
+        0.06,
+        0.16,
+        0.08,
+        0.015,
+        0.015
+      ],
+      "events": [
+        [
+          "plain",
+          701,
+          "spatial",
+          "dry",
+          10,
+          1024,
+          1024,
+          8,
+          "development",
+          300
+        ],
+        [
+          "floodplain",
+          702,
+          "moderate",
+          "pond",
+          10,
+          1024,
+          1024,
+          12,
+          "development",
+          300
+        ],
+        [
+          "coastal",
+          703,
+          "moderate",
+          "pond",
+          10,
+          1024,
+          1024,
+          8,
+          "validation",
+          300
+        ],
+        [
+          "rolling",
+          704,
+          "soil",
+          "dry",
+          5,
+          1024,
+          1024,
+          8,
+          "development",
+          300
+        ],
+        [
+          "fan",
+          705,
+          "spatial",
+          "dry",
+          5,
+          1024,
+          1024,
+          8,
+          "validation",
+          300
+        ],
+        [
+          "hill",
+          706,
+          "back",
+          "channel",
+          10,
+          1024,
+          1024,
+          8,
+          "development",
+          300
+        ],
+        [
+          "incised",
+          707,
+          "spatial",
+          "channel",
+          10,
+          1024,
+          1024,
+          8,
+          "test",
+          60
+        ],
+        [
+          "mixed",
+          708,
+          "spatial",
+          "channel",
+          10,
+          1024,
+          1024,
+          8,
+          "test",
+          60
+        ],
+        [
+          "plain",
+          709,
+          "spatial",
+          "dry",
+          1,
+          1000,
+          1000,
+          8,
+          "development",
+          300
+        ],
+        [
+          "plain",
+          709,
+          "spatial",
+          "dry",
+          5,
+          200,
+          200,
+          8,
+          "development",
+          300
+        ],
+        [
+          "plain",
+          709,
+          "spatial",
+          "dry",
+          10,
+          100,
+          100,
+          8,
+          "development",
+          300
+        ],
+        [
+          "plain",
+          710,
+          "spatial",
+          "dry",
+          10,
+          500,
+          500,
+          8,
+          "development",
+          300
+        ],
+        [
+          "fan",
+          711,
+          "spatial",
+          "dry",
+          10,
+          1000,
+          500,
+          8,
+          "validation",
+          300
+        ],
+        [
+          "plain",
+          712,
+          "spatial",
+          "dry",
+          10,
+          2048,
+          1024,
+          24,
+          "development",
+          300
+        ],
+        [
+          "rolling",
+          713,
+          "moderate",
+          "dry",
+          10,
+          2048,
+          1024,
+          8,
+          "validation",
+          300
+        ],
+        [
+          "mixed",
+          714,
+          "spatial",
+          "channel",
+          10,
+          2048,
+          1024,
+          8,
+          "test",
+          300
+        ],
+        [
+          "plain",
+          715,
+          "spatial",
+          "dry",
+          10,
+          1024,
+          1024,
+          8,
+          "test",
+          300
+        ],
+        [
+          "plain",
+          715,
+          "spatial",
+          "dry",
+          5,
+          2048,
+          2048,
+          8,
+          "test",
+          300
+        ]
+      ],
+      "reference_methods": [
+        "adaptive",
+        "hancock_dense"
+      ],
+      "small_reference_families": [
+        "mixed",
+        "plain",
+        "fan",
+        "incised",
+        "floodplain",
+        "rolling"
+      ],
+      "small_reference_grids": [
+        10,
+        2.5,
+        1.25,
+        1
+      ],
+      "reference_interval_s": 60,
+      "subset_methods": {
+        "701": [
+          "adaptive",
+          "euler_mc",
+          "li"
+        ],
+        "709": [
+          "adaptive"
+        ],
+        "715": [
+          "adaptive"
+        ]
+      },
+      "family_control_halfwidth_m": 4.0,
+      "control_bank_height_m": 0.18
+    },
+    "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER, 595.99.02, 16376 MiB",
+    "warp": "1.17.0"
+  },
+  "hardware": {
+    "git_sha": "d778b8b21b73161bfeb8b40a161dcae729b6e5a8",
+    "cpu": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) Ultra 9 285K",
+    "python": "3.14.7",
+    "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER, 595.99.02, 16376 MiB",
+    "warp": "1.17.0",
+    "numpy": "2.3.5",
+    "precision": "FP64"
+  },
+  "data": {
+    "forcing": {
+      "terrain_sha256": "3b45383155b380b90ca0314e4830d67bc9c790b1665112bd8c6b2477ec242afe",
+      "rain_mask_sha256": "99c9b2dcf237576c8f0477f8ab7d4db8c0234f2a9272d4e67aee73ffa462ff55",
+      "initial_depth_sha256": "cb97de131bd9158bc4fde77c460e4c0f2f0bae0017ffecbcc7b6a90824327014",
+      "initial_hu_sha256": "0b81c92d374e101057c453b97b75cad7fd094a862f7ec571b1600865bba7f3fa",
+      "infiltration_sha256": "9efa36d622557a7ed621a4c661698ff651d8d32f35520851b76d567704b56dcc",
+      "boundary_x_sha256": "3732984e3bc4615963edac07cd451d2158dbc5f3585be8a1f1538a02d882c080",
+      "boundary_y_sha256": "4f341c43c0bd12e8f5ff2cf63c9b53c764c28130899bfca8d7c1f41cfbf92001",
+      "stage_m": null,
+      "roughness": 0.035,
+      "shape": [
+        2048,
+        2048
+      ],
+      "parameters": {
+        "grade": 0.07329022790304797,
+        "incision_m": 0.6489328557240113,
+        "phase_seed": 106941703,
+        "initial": "channel"
+      },
+      "rain_times_s": [
+        0.0,
+        3600.0,
+        7200.0,
+        10800.0,
+        14400.0,
+        18000.0,
+        20700.0,
+        21600.0,
+        28800.0
+      ],
+      "rain_rates_ms": [
+        2.222222222222222e-06,
+        3.888888888888889e-06,
+        6.111111111111111e-06,
+        9.444444444444445e-06,
+        7.222222222222222e-06,
+        3.888888888888889e-06,
+        1.6666666666666667e-06,
+        0.0,
+        0.0
+      ]
+    },
+    "numerical": {
+      "solver_method": "fv1_hancock",
+      "nx": 2048,
+      "ny": 2048,
+      "dx": 5.0,
+      "dy": 5.0,
+      "gravity": 9.80665,
+      "dry_depth": 0.0001,
+      "cfl": 0.4,
+      "maximum_dt": 60.0,
+      "minimum_dt": 0.001,
+      "stage_boundary_momentum": "velocity_extrapolation",
+      "flux_scheme": "contact_hll",
+      "method": "fv1_hancock",
+      "limiter": "adaptive",
+      "reconstruction": "muscl_ordered_bed_velocity_v2",
+      "integration": "unsplit_hancock_strang_drag",
+      "stage_forcing": {
+        "x": null,
+        "y": null
+      },
+      "shock_sensor": "compressive_froude_band_one_cell_halo_v1"
+    },
+    "method": "hancock",
+    "execution": "tiles",
+    "cells": 4194304,
+    "hours_completed": 8.0,
+    "expected_full_rain_m3": 873209.6493357903,
+    "rain_m3": 873209.6493357987,
+    "infiltration_m3": 378962.42883412517,
+    "inflow_m3": 0.0,
+    "outflow_m3": 401852.05858904956,
+    "initial_m3": 399404.82127888117,
+    "final_storage_m3": 491799.98319149436,
+    "residual_m3": 1.076841726899147e-08,
+    "steps": 106587,
+    "rejected": 2,
+    "dt_mean_s": 0.2702018069745841,
+    "dt_min_s": 0.0007926081034383969,
+    "wet_fraction": 0.22172945737838745,
+    "scheduled_fraction": 0.2661924362182617,
+    "setup_s": 0.974398814025335,
+    "hydraulic_s": 516.015066865948,
+    "preload_s": 0.01679456263082102,
+    "graph_capture_s": 0.0006860009743832052,
+    "extraction_s": 7.361215361219365,
+    "end_to_end_s": 524.6902311600279,
+    "live_pool_mib": 1796.8377685546875,
+    "stage_seconds": {},
+    "hashes": {
+      "state": "f2758ccebda37350e1ae25a85416569244a6e1f6e3ab89a09241f30c04868cda",
+      "maximum": "a5fbd794df2cd96c6e1e75ff19252d49344cd553b4337f882b3d04d20f1f763e",
+      "volume_x": "4948f329c956d18746b42f18638263eaad7dab9e63d1ecf8d2dae44764ed5bbb",
+      "volume_y": "5483740336d055e7217ebe8f1e9990e38d4bdfb06d0393d48f5ff696f4bb7d26",
+      "soil": "d0782dbae9e960a3c602b36bee4c8c8bbaf27c0ebe9898b81579e80ff74f8e80",
+      "rain_sum": "44fb160868d584cd237806d8dd78d927e03390e0e25f4f6c859d848fb6e7d3f2"
+    },
+    "components": {
+      "1": 60898,
+      "5": 39322,
+      "10": 2256
+    },
+    "frames": [
+      {
+        "t_s": 60,
+        "section_m3s": 3.606700075798553,
+        "outlet_m3s": 1.41385479658398,
+        "hydraulic_s": 0.44462498603388667,
+        "graph": true,
+        "steps": 86,
+        "rejected": 2,
+        "dt_min_s": 0.5518656275958946,
+        "dt_max_s": 0.8890911197423604
+      },
+      {
+        "t_s": 120,
+        "section_m3s": 3.6252430855911153,
+        "outlet_m3s": 1.3839406409776198,
+        "hydraulic_s": 0.5225305060739629,
+        "graph": true,
+        "steps": 103,
+        "rejected": 0,
+        "dt_min_s": 0.23714796004979632,
+        "dt_max_s": 0.6154984739993279
+      },
+      {
+        "t_s": 180,
+        "section_m3s": 4.000758329657668,
+        "outlet_m3s": 1.78516330631799,
+        "hydraulic_s": 0.5550592429935932,
+        "graph": true,
+        "steps": 106,
+        "rejected": 0,
+        "dt_min_s": 0.2769014676795507,
+        "dt_max_s": 0.576600185559046
+      },
+      {
+        "t_s": 240,
+        "section_m3s": 4.284874608928533,
+        "outlet_m3s": 2.133519971054098,
+        "hydraulic_s": 0.5688256919966079,
+        "graph": true,
+        "steps": 107,
+        "rejected": 0,
+        "dt_min_s": 0.4583378766414512,
+        "dt_max_s": 0.5666268027322947
+      },
+      {
+        "t_s": 300,
+        "section_m3s": 4.563788344477814,
+        "outlet_m3s": 2.4613029802424005,
+        "hydraulic_s": 0.5793605090002529,
+        "graph": true,
+        "steps": 108,
+        "rejected": 0,
+        "dt_min_s": 0.15063036049201628,
+        "dt_max_s": 0.5609621808752034
+      },
+      {
+        "t_s": 360,
+        "section_m3s": 4.644704383048289,
+        "outlet_m3s": 2.7208976928594892,
+        "hydraulic_s": 0.5877168020233512,
+        "graph": true,
+        "steps": 109,
+        "rejected": 0,
+        "dt_min_s": 0.07659777382230004,
+        "dt_max_s": 0.5627466208845792
+      },
+      {
+        "t_s": 420,
+        "section_m3s": 4.74511802846348,
+        "outlet_m3s": 2.8921769067880785,
+        "hydraulic_s": 0.5903043809230439,
+        "graph": true,
+        "steps": 109,
+        "rejected": 0,
+        "dt_min_s": 0.41948001519506306,
+        "dt_max_s": 0.5566008063165332
+      },
+      {
+        "t_s": 480,
+        "section_m3s": 4.68012176796938,
+        "outlet_m3s": 3.102382663967099,
+        "hydraulic_s": 0.5917428499669768,
+        "graph": true,
+        "steps": 109,
+        "rejected": 0,
+        "dt_min_s": 0.4670069325977124,
+        "dt_max_s": 0.5541801110855412
+      },
+      {
+        "t_s": 540,
+        "section_m3s": 4.732600124875565,
+        "outlet_m3s": 3.1697483192647042,
+        "hydraulic_s": 0.5981981189688668,
+        "graph": true,
+        "steps": 110,
+        "rejected": 0,
+        "dt_min_s": 0.12418850147685134,
+        "dt_max_s": 0.5514607088948534
+      },
+      {
+        "t_s": 600,
+        "section_m3s": 4.949190222540574,
+        "outlet_m3s": 3.2970135740380138,
+        "hydraulic_s": 0.6098261749721132,
+        "graph": true,
+        "steps": 112,
+        "rejected": 0,
+        "dt_min_s": 0.463002269378876,
+        "dt_max_s": 0.5518458535924562
+      },
+      {
+        "t_s": 660,
+        "section_m3s": 4.950276060935114,
+        "outlet_m3s": 3.485000043471208,
+        "hydraulic_s": 0.6264955790247768,
+        "graph": true,
+        "steps": 115,
+        "rejected": 0,
+        "dt_min_s": 0.1594418630858172,
+        "dt_max_s": 0.5288949676748921
+      },
+      {
+        "t_s": 720,
+        "section_m3s": 4.825855555888173,
+        "outlet_m3s": 3.5168073651868212,
+        "hydraulic_s": 0.6268742520478554,
+        "graph": true,
+        "steps": 115,
+        "rejected": 0,
+        "dt_min_s": 0.2612980431960068,
+        "dt_max_s": 0.5273509268767278
+      },
+      {
+        "t_s": 780,
+        "section_m3s": 4.84093158190586,
+        "outlet_m3s": 3.7394177951496013,
+        "hydraulic_s": 0.6325440059881657,
+        "graph": true,
+        "steps": 116,
+        "rejected": 0,
+        "dt_min_s": 0.19438568966745606,
+        "dt_max_s": 0.5253389465673884
+      },
+      {
+        "t_s": 840,
+        "section_m3s": 4.870994670338072,
+        "outlet_m3s": 3.753651472278352,
+        "hydraulic_s": 0.6383740769815631,
+        "graph": true,
+        "steps": 117,
+        "rejected": 0,
+        "dt_min_s": 0.1328266443334769,
+        "dt_max_s": 0.5196364344619355
+      },
+      {
+        "t_s": 900,
+        "section_m3s": 5.307564640073497,
+        "outlet_m3s": 3.7595657859978626,
+        "hydraulic_s": 0.6387089689960703,
+        "graph": true,
+        "steps": 117,
+        "rejected": 0,
+        "dt_min_s": 0.3999809153010574,
+        "dt_max_s": 0.5201670281991292
+      },
+      {
+        "t_s": 960,
+        "section_m3s": 4.968347551478246,
+        "outlet_m3s": 3.8726383995680256,
+        "hydraulic_s": 0.6501151660340838,
+        "graph": true,
+        "steps": 119,
+        "rejected": 0,
+        "dt_min_s": 0.09854013018025398,
+        "dt_max_s": 0.5104365342266705
+      },
+      {
+        "t_s": 1020,
+        "section_m3s": 4.878676799971921,
+        "outlet_m3s": 4.065796713033971,
+        "hydraulic_s": 0.6553753530024551,
+        "graph": true,
+        "steps": 120,
+        "rejected": 0,
+        "dt_min_s": 0.1300799666285002,
+        "dt_max_s": 0.5084720215485499
+      },
+      {
+        "t_s": 1080,
+        "section_m3s": 5.028465399746316,
+        "outlet_m3s": 4.18634067986095,
+        "hydraulic_s": 0.6609134960453957,
+        "graph": true,
+        "steps": 121,
+        "rejected": 0,
+        "dt_min_s": 0.025002534660188758,
+        "dt_max_s": 0.5041073549846147
+      },
+      {
+        "t_s": 1140,
+        "section_m3s": 5.30222974616836,
+        "outlet_m3s": 4.107322783206269,
+        "hydraulic_s": 0.6717944130068645,
+        "graph": true,
+        "steps": 123,
+        "rejected": 0,
+        "dt_min_s": 0.027097551670294706,
+        "dt_max_s": 0.49599749211088345
+      },
+      {
+        "t_s": 1200,
+        "section_m3s": 4.942197821841879,
+        "outlet_m3s": 4.221428014823884,
+        "hydraulic_s": 0.6825003969715908,
+        "graph": true,
+        "steps": 125,
+        "rejected": 0,
+        "dt_min_s": 0.21176069616444693,
+        "dt_max_s": 0.4856027359317428
+      },
+      {
+        "t_s": 1260,
+        "section_m3s": 5.236859043941725,
+        "outlet_m3s": 4.139288921719632,
+        "hydraulic_s": 0.693290097930003,
+        "graph": true,
+        "steps": 127,
+        "rejected": 0,
+        "dt_min_s": 0.25180525598102577,
+        "dt_max_s": 0.4756558476824319
+      },
+      {
+        "t_s": 1320,
+        "section_m3s": 5.176154705868187,
+        "outlet_m3s": 4.14441798050622,
+        "hydraulic_s": 0.7056087940582074,
+        "graph": true,
+        "steps": 129,
+        "rejected": 0,
+        "dt_min_s": 0.38313949853045415,
+        "dt_max_s": 0.4684630349968302
+      },
+      {
+        "t_s": 1380,
+        "section_m3s": 5.026713033387008,
+        "outlet_m3s": 4.1325240786629065,
+        "hydraulic_s": 0.7205964270397089,
+        "graph": true,
+        "steps": 132,
+        "rejected": 0,
+        "dt_min_s": 0.19751823300816795,
+        "dt_max_s": 0.46476595154131534
+      },
+      {
+        "t_s": 1440,
+        "section_m3s": 5.015978432613535,
+        "outlet_m3s": 4.080166618214707,
+        "hydraulic_s": 0.7258975750301033,
+        "graph": true,
+        "steps": 133,
+        "rejected": 0,
+        "dt_min_s": 0.17683503844818915,
+        "dt_max_s": 0.4576459573937075
+      },
+      {
+        "t_s": 1500,
+        "section_m3s": 5.1687943245588635,
+        "outlet_m3s": 4.179462631518845,
+        "hydraulic_s": 0.7313714139745571,
+        "graph": true,
+        "steps": 134,
+        "rejected": 0,
+        "dt_min_s": 0.2897782564020872,
+        "dt_max_s": 0.45145811512035566
+      },
+      {
+        "t_s": 1560,
+        "section_m3s": 4.952816275294481,
+        "outlet_m3s": 4.063672806758996,
+        "hydraulic_s": 0.7425090520409867,
+        "graph": true,
+        "steps": 136,
+        "rejected": 0,
+        "dt_min_s": 0.04034621865503141,
+        "dt_max_s": 0.44508083718453195
+      },
+      {
+        "t_s": 1620,
+        "section_m3s": 5.0623000754318435,
+        "outlet_m3s": 4.076131748524904,
+        "hydraulic_s": 0.7478492549853399,
+        "graph": true,
+        "steps": 137,
+        "rejected": 0,
+        "dt_min_s": 0.22113809168126863,
+        "dt_max_s": 0.44383956139234226
+      },
+      {
+        "t_s": 1680,
+        "section_m3s": 5.008456597673922,
+        "outlet_m3s": 4.0106839797228835,
+        "hydraulic_s": 0.7533510809880681,
+        "graph": true,
+        "steps": 138,
+        "rejected": 0,
+        "dt_min_s": 0.19969058236392812,
+        "dt_max_s": 0.4396466455772817
+      },
+      {
+        "t_s": 1740,
+        "section_m3s": 4.9897741525245385,
+        "outlet_m3s": 4.166590806821523,
+        "hydraulic_s": 0.7586732659838162,
+        "graph": true,
+        "steps": 139,
+        "rejected": 0,
+        "dt_min_s": 0.30063214017127393,
+        "dt_max_s": 0.43609706983369556
+      },
+      {
+        "t_s": 1800,
+        "section_m3s": 4.8421667928258705,
+        "outlet_m3s": 4.0848397708898725,
+        "hydraulic_s": 0.7641153960139491,
+        "graph": true,
+        "steps": 140,
+        "rejected": 0,
+        "dt_min_s": 0.23617107470067822,
+        "dt_max_s": 0.43166527914840264
+      },
+      {
+        "t_s": 1860,
+        "section_m3s": 5.014264491302462,
+        "outlet_m3s": 4.163773197378942,
+        "hydraulic_s": 0.7698064500000328,
+        "graph": true,
+        "steps": 141,
+        "rejected": 0,
+        "dt_min_s": 0.3275617330730256,
+        "dt_max_s": 0.42809663395450176
+      },
+      {
+        "t_s": 1920,
+        "section_m3s": 5.040255394421759,
+        "outlet_m3s": 4.169923823325886,
+        "hydraulic_s": 0.7805723459459841,
+        "graph": true,
+        "steps": 143,
+        "rejected": 0,
+        "dt_min_s": 0.022904168197783292,
+        "dt_max_s": 0.4238508976494107
+      },
+      {
+        "t_s": 1980,
+        "section_m3s": 4.993611499268749,
+        "outlet_m3s": 4.0680753520687025,
+        "hydraulic_s": 0.7858931790105999,
+        "graph": true,
+        "steps": 144,
+        "rejected": 0,
+        "dt_min_s": 0.10992418567889217,
+        "dt_max_s": 0.4203556183508209
+      },
+      {
+        "t_s": 2040,
+        "section_m3s": 4.998571972497302,
+        "outlet_m3s": 4.1895726516487075,
+        "hydraulic_s": 0.7914695260114968,
+        "graph": true,
+        "steps": 145,
+        "rejected": 0,
+        "dt_min_s": 0.16038681687496137,
+        "dt_max_s": 0.41724852881646113
+      },
+      {
+        "t_s": 2100,
+        "section_m3s": 4.932754147472588,
+        "outlet_m3s": 4.226729020686222,
+        "hydraulic_s": 0.7971469419426285,
+        "graph": true,
+        "steps": 146,
+        "rejected": 0,
+        "dt_min_s": 0.1744573973937804,
+        "dt_max_s": 0.4141522877890607
+      },
+      {
+        "t_s": 2160,
+        "section_m3s": 4.947986680843224,
+        "outlet_m3s": 4.20049271968328,
+        "hydraulic_s": 0.8024249349837191,
+        "graph": true,
+        "steps": 147,
+        "rejected": 0,
+        "dt_min_s": 0.2538826540053378,
+        "dt_max_s": 0.41104356290972566
+      },
+      {
+        "t_s": 2220,
+        "section_m3s": 5.004473205259607,
+        "outlet_m3s": 4.245634120314177,
+        "hydraulic_s": 0.8078058170503937,
+        "graph": true,
+        "steps": 148,
+        "rejected": 0,
+        "dt_min_s": 0.3095663741100907,
+        "dt_max_s": 0.4081228532321509
+      },
+      {
+        "t_s": 2280,
+        "section_m3s": 5.087825244147917,
+        "outlet_m3s": 4.116182389180964,
+        "hydraulic_s": 0.8131271609454416,
+        "graph": true,
+        "steps": 149,
+        "rejected": 0,
+        "dt_min_s": 0.38554190111699427,
+        "dt_max_s": 0.4042039314380685
+      },
+      {
+        "t_s": 2340,
+        "section_m3s": 5.100705648332071,
+        "outlet_m3s": 4.1985305675289055,
+        "hydraulic_s": 0.8185209920047782,
+        "graph": true,
+        "steps": 150,
+        "rejected": 0,
+        "dt_min_s": 0.36257232391926664,
+        "dt_max_s": 0.40196502821442576
+      },
+      {
+        "t_s": 2400,
+        "section_m3s": 5.071357637089447,
+        "outlet_m3s": 4.23801443340914,
+        "hydraulic_s": 0.8293932939413935,
+        "graph": true,
+        "steps": 152,
+        "rejected": 0,
+        "dt_min_s": 0.014038302154858684,
+        "dt_max_s": 0.3987586201100453
+      },
+      {
+        "t_s": 2460,
+        "section_m3s": 5.178267486190149,
+        "outlet_m3s": 4.182952923810869,
+        "hydraulic_s": 0.8295900400262326,
+        "graph": true,
+        "steps": 152,
+        "rejected": 0,
+        "dt_min_s": 0.3657281078531014,
+        "dt_max_s": 0.39798181522596987
+      },
+      {
+        "t_s": 2520,
+        "section_m3s": 5.349313031482689,
+        "outlet_m3s": 4.374811865853341,
+        "hydraulic_s": 0.8404154030140489,
+        "graph": true,
+        "steps": 154,
+        "rejected": 0,
+        "dt_min_s": 0.057202589114695,
+        "dt_max_s": 0.39631307752259753
+      },
+      {
+        "t_s": 2580,
+        "section_m3s": 5.109189662221889,
+        "outlet_m3s": 4.348842137743001,
+        "hydraulic_s": 0.8457530090236105,
+        "graph": true,
+        "steps": 155,
+        "rejected": 0,
+        "dt_min_s": 0.039737361721108755,
+        "dt_max_s": 0.39261331189811705
+      },
+      {
+        "t_s": 2640,
+        "section_m3s": 5.118239798572146,
+        "outlet_m3s": 4.3265845447658045,
+        "hydraulic_s": 0.8458965759491548,
+        "graph": true,
+        "steps": 155,
+        "rejected": 0,
+        "dt_min_s": 0.2417055885011905,
+        "dt_max_s": 0.38994061758129134
+      },
+      {
+        "t_s": 2700,
+        "section_m3s": 5.227822034008356,
+        "outlet_m3s": 4.3998235621000275,
+        "hydraulic_s": 0.8512132410542108,
+        "graph": true,
+        "steps": 156,
+        "rejected": 0,
+        "dt_min_s": 0.30479055522437193,
+        "dt_max_s": 0.38780753391145834
+      },
+      {
+        "t_s": 2760,
+        "section_m3s": 5.081124088218773,
+        "outlet_m3s": 4.366918509478061,
+        "hydraulic_s": 0.8566917989519425,
+        "graph": true,
+        "steps": 157,
+        "rejected": 0,
+        "dt_min_s": 0.18780853976977596,
+        "dt_max_s": 0.38576199025692903
+      },
+      {
+        "t_s": 2820,
+        "section_m3s": 5.2329868914905395,
+        "outlet_m3s": 4.6678246996423995,
+        "hydraulic_s": 0.8619090320426039,
+        "graph": true,
+        "steps": 158,
+        "rejected": 0,
+        "dt_min_s": 0.13061846716800574,
+        "dt_max_s": 0.3826783623829213
+      },
+      {
+        "t_s": 2880,
+        "section_m3s": 5.2033291446096275,
+        "outlet_m3s": 4.442922297800275,
+        "hydraulic_s": 0.8618821269483306,
+        "graph": true,
+        "steps": 158,
+        "rejected": 0,
+        "dt_min_s": 0.34144739533667234,
+        "dt_max_s": 0.38115306721492836
+      },
+      {
+        "t_s": 2940,
+        "section_m3s": 5.362491876043775,
+        "outlet_m3s": 4.628219445857909,
+        "hydraulic_s": 0.8727217459818348,
+        "graph": true,
+        "steps": 160,
+        "rejected": 0,
+        "dt_min_s": 0.20344785454562953,
+        "dt_max_s": 0.3779460863589108
+      },
+      {
+        "t_s": 3000,
+        "section_m3s": 5.192097157680989,
+        "outlet_m3s": 4.48958174974141,
+        "hydraulic_s": 0.8727791939745657,
+        "graph": true,
+        "steps": 160,
+        "rejected": 0,
+        "dt_min_s": 0.2834695345768523,
+        "dt_max_s": 0.37709841232346974
+      },
+      {
+        "t_s": 3060,
+        "section_m3s": 5.2590811727375995,
+        "outlet_m3s": 4.563751570577612,
+        "hydraulic_s": 0.8781439329613931,
+        "graph": true,
+        "steps": 161,
+        "rejected": 0,
+        "dt_min_s": 0.3565799737980342,
+        "dt_max_s": 0.37630016223344853
+      },
+      {
+        "t_s": 3120,
+        "section_m3s": 5.369079973522912,
+        "outlet_m3s": 4.698393152394389,
+        "hydraulic_s": 0.8836419430444948,
+        "graph": true,
+        "steps": 162,
+        "rejected": 0,
+        "dt_min_s": 0.05901409755915665,
+        "dt_max_s": 0.3738852342170387
+      },
+      {
+        "t_s": 3180,
+        "section_m3s": 5.385058531635938,
+        "outlet_m3s": 4.515236293652469,
+        "hydraulic_s": 0.8888102059136145,
+        "graph": true,
+        "steps": 163,
+        "rejected": 0,
+        "dt_min_s": 0.05334664479187268,
+        "dt_max_s": 0.37090686406073714
+      },
+      {
+        "t_s": 3240,
+        "section_m3s": 5.317331361508665,
+        "outlet_m3s": 4.614911148252395,
+        "hydraulic_s": 0.8940845929901116,
+        "graph": true,
+        "steps": 164,
+        "rejected": 0,
+        "dt_min_s": 0.003263064396833215,
+        "dt_max_s": 0.3688883575856666
+      },
+      {
+        "t_s": 3300,
+        "section_m3s": 5.352291254845962,
+        "outlet_m3s": 4.422067847830809,
+        "hydraulic_s": 0.8940545940422453,
+        "graph": true,
+        "steps": 164,
+        "rejected": 0,
+        "dt_min_s": 0.3175960762318937,
+        "dt_max_s": 0.3667137199737762
+      },
+      {
+        "t_s": 3360,
+        "section_m3s": 5.394689058409615,
+        "outlet_m3s": 4.410127399590389,
+        "hydraulic_s": 0.8994263569475152,
+        "graph": true,
+        "steps": 165,
+        "rejected": 0,
+        "dt_min_s": 0.19882215313236884,
+        "dt_max_s": 0.3655312840554264
+      },
+      {
+        "t_s": 3420,
+        "section_m3s": 5.611481209315086,
+        "outlet_m3s": 4.51809508939244,
+        "hydraulic_s": 0.9047367140301503,
+        "graph": true,
+        "steps": 166,
+        "rejected": 0,
+        "dt_min_s": 0.09152851813632878,
+        "dt_max_s": 0.3642513312655151
+      },
+      {
+        "t_s": 3480,
+        "section_m3s": 5.546967170201545,
+        "outlet_m3s": 4.6238537765364525,
+        "hydraulic_s": 0.9047936970018782,
+        "graph": true,
+        "steps": 166,
+        "rejected": 0,
+        "dt_min_s": 0.3393181343417382,
+        "dt_max_s": 0.3625669986662321
+      },
+      {
+        "t_s": 3540,
+        "section_m3s": 5.473942776560944,
+        "outlet_m3s": 4.652601650994741,
+        "hydraulic_s": 0.9101359399501234,
+        "graph": true,
+        "steps": 167,
+        "rejected": 0,
+        "dt_min_s": 0.10725414526041277,
+        "dt_max_s": 0.3620392120761062
+      },
+      {
+        "t_s": 3600,
+        "section_m3s": 5.3138294573872065,
+        "outlet_m3s": 4.620434712948524,
+        "hydraulic_s": 0.9102500129956752,
+        "graph": true,
+        "steps": 167,
+        "rejected": 0,
+        "dt_min_s": 0.3445424175711196,
+        "dt_max_s": 0.3598713037256126
+      },
+      {
+        "t_s": 3660,
+        "section_m3s": 5.337799019796633,
+        "outlet_m3s": 4.846876266682709,
+        "hydraulic_s": 0.9155969779239967,
+        "graph": true,
+        "steps": 168,
+        "rejected": 0,
+        "dt_min_s": 0.3061709613907624,
+        "dt_max_s": 0.3589580829572219
+      },
+      {
+        "t_s": 3720,
+        "section_m3s": 5.476900702391807,
+        "outlet_m3s": 4.721454302866429,
+        "hydraulic_s": 0.9209755570045672,
+        "graph": true,
+        "steps": 169,
+        "rejected": 0,
+        "dt_min_s": 0.1058966098903511,
+        "dt_max_s": 0.357037110493908
+      },
+      {
+        "t_s": 3780,
+        "section_m3s": 5.4729138281859075,
+        "outlet_m3s": 4.8084732999594655,
+        "hydraulic_s": 0.9264070330536924,
+        "graph": true,
+        "steps": 170,
+        "rejected": 0,
+        "dt_min_s": 0.16503281596260422,
+        "dt_max_s": 0.3553273466799714
+      },
+      {
+        "t_s": 3840,
+        "section_m3s": 5.243311110195221,
+        "outlet_m3s": 4.664570859127434,
+        "hydraulic_s": 0.9316181080066599,
+        "graph": true,
+        "steps": 171,
+        "rejected": 0,
+        "dt_min_s": 0.02847808653541506,
+        "dt_max_s": 0.35400399053087933
+      },
+      {
+        "t_s": 3900,
+        "section_m3s": 5.370667174987405,
+        "outlet_m3s": 4.610445189078443,
+        "hydraulic_s": 0.9316770499572158,
+        "graph": true,
+        "steps": 171,
+        "rejected": 0,
+        "dt_min_s": 0.28221834516625677,
+        "dt_max_s": 0.35173428672591944
+      },
+      {
+        "t_s": 3960,
+        "section_m3s": 5.153133881517291,
+        "outlet_m3s": 4.417495331988478,
+        "hydraulic_s": 0.9370267310296185,
+        "graph": true,
+        "steps": 172,
+        "rejected": 0,
+        "dt_min_s": 0.2087930594630052,
+        "dt_max_s": 0.3504469073868391
+      },
+      {
+        "t_s": 4020,
+        "section_m3s": 5.432907827952174,
+        "outlet_m3s": 4.598792150655299,
+        "hydraulic_s": 0.9424833160592243,
+        "graph": true,
+        "steps": 173,
+        "rejected": 0,
+        "dt_min_s": 0.11902098724885946,
+        "dt_max_s": 0.3495331752095848
+      },
+      {
+        "t_s": 4080,
+        "section_m3s": 5.380130123618558,
+        "outlet_m3s": 4.493905051261724,
+        "hydraulic_s": 0.942320604051929,
+        "graph": true,
+        "steps": 173,
+        "rejected": 0,
+        "dt_min_s": 0.22394436800186668,
+        "dt_max_s": 0.34848691164105855
+      },
+      {
+        "t_s": 4140,
+        "section_m3s": 5.4069271795470435,
+        "outlet_m3s": 4.645906041784716,
+        "hydraulic_s": 0.9474951730808243,
+        "graph": true,
+        "steps": 174,
+        "rejected": 0,
+        "dt_min_s": 0.042612951418050216,
+        "dt_max_s": 0.3472839008290445
+      },
+      {
+        "t_s": 4200,
+        "section_m3s": 5.469987869252509,
+        "outlet_m3s": 4.693953468458918,
+        "hydraulic_s": 0.9474038540502079,
+        "graph": true,
+        "steps": 174,
+        "rejected": 0,
+        "dt_min_s": 0.18295245274566696,
+        "dt_max_s": 0.34699972352148667
+      },
+      {
+        "t_s": 4260,
+        "section_m3s": 5.5281106174111,
+        "outlet_m3s": 4.62300176910976,
+        "hydraulic_s": 0.9473159550107084,
+        "graph": true,
+        "steps": 174,
+        "rejected": 0,
+        "dt_min_s": 0.2624484031184693,
+        "dt_max_s": 0.3461853060238657
+      },
+      {
+        "t_s": 4320,
+        "section_m3s": 5.5909886200897745,
+        "outlet_m3s": 4.832101762427434,
+        "hydraulic_s": 0.9525008689961396,
+        "graph": true,
+        "steps": 175,
+        "rejected": 0,
+        "dt_min_s": 0.13232003542270832,
+        "dt_max_s": 0.34519370905632163
+      },
+      {
+        "t_s": 4380,
+        "section_m3s": 5.82855251582411,
+        "outlet_m3s": 4.79151373752502,
+        "hydraulic_s": 0.9577118740417063,
+        "graph": true,
+        "steps": 176,
+        "rejected": 0,
+        "dt_min_s": 0.010563632797129685,
+        "dt_max_s": 0.34444917576393125
+      },
+      {
+        "t_s": 4440,
+        "section_m3s": 6.103514359671317,
+        "outlet_m3s": 4.7653088964467925,
+        "hydraulic_s": 0.957597505999729,
+        "graph": true,
+        "steps": 176,
+        "rejected": 0,
+        "dt_min_s": 0.15471645531306422,
+        "dt_max_s": 0.3427194890834786
+      },
+      {
+        "t_s": 4500,
+        "section_m3s": 6.817743945664066,
+        "outlet_m3s": 4.822310260411299,
+        "hydraulic_s": 0.9630222410196438,
+        "graph": true,
+        "steps": 177,
+        "rejected": 0,
+        "dt_min_s": 0.038161724894052895,
+        "dt_max_s": 0.3409647860357771
+      },
+      {
+        "t_s": 4560,
+        "section_m3s": 7.074177264594073,
+        "outlet_m3s": 4.944368937386753,
+        "hydraulic_s": 0.962787576019764,
+        "graph": true,
+        "steps": 177,
+        "rejected": 0,
+        "dt_min_s": 0.27989607622566837,
+        "dt_max_s": 0.33972859957285517
+      },
+      {
+        "t_s": 4620,
+        "section_m3s": 7.404187293750632,
+        "outlet_m3s": 4.948759829248107,
+        "hydraulic_s": 0.967895933019463,
+        "graph": true,
+        "steps": 178,
+        "rejected": 0,
+        "dt_min_s": 0.14654011549828283,
+        "dt_max_s": 0.33834629403285044
+      },
+      {
+        "t_s": 4680,
+        "section_m3s": 7.642798945912243,
+        "outlet_m3s": 5.134524432069278,
+        "hydraulic_s": 0.9730354079511017,
+        "graph": true,
+        "steps": 179,
+        "rejected": 0,
+        "dt_min_s": 0.017794395805140084,
+        "dt_max_s": 0.3376431738861443
+      },
+      {
+        "t_s": 4740,
+        "section_m3s": 7.919294977484787,
+        "outlet_m3s": 5.142586971262427,
+        "hydraulic_s": 0.9730095770210028,
+        "graph": true,
+        "steps": 179,
+        "rejected": 0,
+        "dt_min_s": 0.31354049859874067,
+        "dt_max_s": 0.3364591293305017
+      },
+      {
+        "t_s": 4800,
+        "section_m3s": 8.199057806427057,
+        "outlet_m3s": 5.1390418456330735,
+        "hydraulic_s": 0.978334708022885,
+        "graph": true,
+        "steps": 180,
+        "rejected": 0,
+        "dt_min_s": 0.08255779111732409,
+        "dt_max_s": 0.33498563717088714
+      },
+      {
+        "t_s": 4860,
+        "section_m3s": 8.451732295584467,
+        "outlet_m3s": 5.179968777027777,
+        "hydraulic_s": 0.9834441079874523,
+        "graph": true,
+        "steps": 181,
+        "rejected": 0,
+        "dt_min_s": 0.015481149230254232,
+        "dt_max_s": 0.3339476834634413
+      },
+      {
+        "t_s": 4920,
+        "section_m3s": 8.716574153013244,
+        "outlet_m3s": 5.062018369306315,
+        "hydraulic_s": 0.983521825983189,
+        "graph": true,
+        "steps": 181,
+        "rejected": 0,
+        "dt_min_s": 0.14271283469861373,
+        "dt_max_s": 0.33281128365408374
+      },
+      {
+        "t_s": 4980,
+        "section_m3s": 9.07906149704892,
+        "outlet_m3s": 5.148824538349193,
+        "hydraulic_s": 0.9885349749820307,
+        "graph": true,
+        "steps": 182,
+        "rejected": 0,
+        "dt_min_s": 0.0492337649111505,
+        "dt_max_s": 0.33213784081085296
+      },
+      {
+        "t_s": 5040,
+        "section_m3s": 9.416199110676947,
+        "outlet_m3s": 5.270934624946676,
+        "hydraulic_s": 0.9884215240017511,
+        "graph": true,
+        "steps": 182,
+        "rejected": 0,
+        "dt_min_s": 0.21782317412817065,
+        "dt_max_s": 0.33053835798484393
+      },
+      {
+        "t_s": 5100,
+        "section_m3s": 9.701499852919612,
+        "outlet_m3s": 5.30756386935603,
+        "hydraulic_s": 0.9935990159865469,
+        "graph": true,
+        "steps": 183,
+        "rejected": 0,
+        "dt_min_s": 0.0009862166425591568,
+        "dt_max_s": 0.3301723948388251
+      },
+      {
+        "t_s": 5160,
+        "section_m3s": 10.1924930416549,
+        "outlet_m3s": 5.329163164625061,
+        "hydraulic_s": 0.9935452229692601,
+        "graph": true,
+        "steps": 183,
+        "rejected": 0,
+        "dt_min_s": 0.19971241396888217,
+        "dt_max_s": 0.3291719236116634
+      },
+      {
+        "t_s": 5220,
+        "section_m3s": 10.729425768216666,
+        "outlet_m3s": 5.478155001268897,
+        "hydraulic_s": 0.9988083960488439,
+        "graph": true,
+        "steps": 184,
+        "rejected": 0,
+        "dt_min_s": 0.0957903612707014,
+        "dt_max_s": 0.32834125351221866
+      },
+      {
+        "t_s": 5280,
+        "section_m3s": 11.179166148279668,
+        "outlet_m3s": 5.526572409470767,
+        "hydraulic_s": 0.9987115180119872,
+        "graph": true,
+        "steps": 184,
+        "rejected": 0,
+        "dt_min_s": 0.2985666081094678,
+        "dt_max_s": 0.3275883282191979
+      },
+      {
+        "t_s": 5340,
+        "section_m3s": 11.514477264322462,
+        "outlet_m3s": 5.6610320730421035,
+        "hydraulic_s": 1.0068879129830748,
+        "graph": true,
+        "steps": 185,
+        "rejected": 0,
+        "dt_min_s": 0.13297561985837092,
+        "dt_max_s": 0.3255549508817249
+      },
+      {
+        "t_s": 5400,
+        "section_m3s": 11.807424517690682,
+        "outlet_m3s": 5.8309391820018694,
+        "hydraulic_s": 1.0092832400114276,
+        "graph": true,
+        "steps": 186,
+        "rejected": 0,
+        "dt_min_s": 0.07729134525288828,
+        "dt_max_s": 0.3251297350913158
+      },
+      {
+        "t_s": 5460,
+        "section_m3s": 11.900119737487875,
+        "outlet_m3s": 5.917305648797628,
+        "hydraulic_s": 1.0089886580244638,
+        "graph": true,
+        "steps": 186,
+        "rejected": 0,
+        "dt_min_s": 0.2900402234727153,
+        "dt_max_s": 0.3231197849154157
+      },
+      {
+        "t_s": 5520,
+        "section_m3s": 12.035358925430046,
+        "outlet_m3s": 6.122968665976381,
+        "hydraulic_s": 1.0142290859948844,
+        "graph": true,
+        "steps": 187,
+        "rejected": 0,
+        "dt_min_s": 0.25607060528454895,
+        "dt_max_s": 0.32180267951181707
+      },
+      {
+        "t_s": 5580,
+        "section_m3s": 12.060668906520732,
+        "outlet_m3s": 6.271171405064828,
+        "hydraulic_s": 1.0193376510287635,
+        "graph": true,
+        "steps": 188,
+        "rejected": 0,
+        "dt_min_s": 0.21025901769735356,
+        "dt_max_s": 0.3205319856196696
+      },
+      {
+        "t_s": 5640,
+        "section_m3s": 12.254005310578577,
+        "outlet_m3s": 6.4234935811815985,
+        "hydraulic_s": 1.0245242939563468,
+        "graph": true,
+        "steps": 189,
+        "rejected": 0,
+        "dt_min_s": 0.14173821741860593,
+        "dt_max_s": 0.3189898136653453
+      },
+      {
+        "t_s": 5700,
+        "section_m3s": 12.326523158085669,
+        "outlet_m3s": 6.4373343408130195,
+        "hydraulic_s": 1.0296685179928318,
+        "graph": true,
+        "steps": 190,
+        "rejected": 0,
+        "dt_min_s": 0.06985200115559564,
+        "dt_max_s": 0.3174040966258362
+      },
+      {
+        "t_s": 5760,
+        "section_m3s": 12.450692068014177,
+        "outlet_m3s": 6.664717522083023,
+        "hydraulic_s": 1.0349898330168799,
+        "graph": true,
+        "steps": 191,
+        "rejected": 0,
+        "dt_min_s": 0.04569624316536647,
+        "dt_max_s": 0.3165750089711121
+      },
+      {
+        "t_s": 5820,
+        "section_m3s": 12.449430648355337,
+        "outlet_m3s": 6.575115445013398,
+        "hydraulic_s": 1.0345765829551965,
+        "graph": true,
+        "steps": 191,
+        "rejected": 0,
+        "dt_min_s": 0.21127265380437166,
+        "dt_max_s": 0.31523063407109764
+      },
+      {
+        "t_s": 5880,
+        "section_m3s": 12.498589812213806,
+        "outlet_m3s": 6.841785063633264,
+        "hydraulic_s": 1.0397698700544424,
+        "graph": true,
+        "steps": 192,
+        "rejected": 0,
+        "dt_min_s": 0.17663510035708896,
+        "dt_max_s": 0.3141267150748082
+      },
+      {
+        "t_s": 5940,
+        "section_m3s": 12.511614008365722,
+        "outlet_m3s": 6.803842093056846,
+        "hydraulic_s": 1.0450076429988258,
+        "graph": true,
+        "steps": 193,
+        "rejected": 0,
+        "dt_min_s": 0.078732311460044,
+        "dt_max_s": 0.31244592270267146
+      },
+      {
+        "t_s": 6000,
+        "section_m3s": 12.5347508316765,
+        "outlet_m3s": 6.902152789175246,
+        "hydraulic_s": 1.05025241401745,
+        "graph": true,
+        "steps": 194,
+        "rejected": 0,
+        "dt_min_s": 0.07951899438012333,
+        "dt_max_s": 0.31124565476897503
+      },
+      {
+        "t_s": 6060,
+        "section_m3s": 12.640627094197164,
+        "outlet_m3s": 6.974924579371933,
+        "hydraulic_s": 1.0499095109989867,
+        "graph": true,
+        "steps": 194,
+        "rejected": 0,
+        "dt_min_s": 0.25707009928919433,
+        "dt_max_s": 0.31047447581272747
+      },
+      {
+        "t_s": 6120,
+        "section_m3s": 12.6391302314017,
+        "outlet_m3s": 7.015358580446991,
+        "hydraulic_s": 1.0550723770284094,
+        "graph": true,
+        "steps": 195,
+        "rejected": 0,
+        "dt_min_s": 0.1992696478155267,
+        "dt_max_s": 0.3087477860787578
+      },
+      {
+        "t_s": 6180,
+        "section_m3s": 12.610994475592937,
+        "outlet_m3s": 6.966541878491868,
+        "hydraulic_s": 1.0602511810138822,
+        "graph": true,
+        "steps": 196,
+        "rejected": 0,
+        "dt_min_s": 0.14111506373865268,
+        "dt_max_s": 0.3077593885480836
+      },
+      {
+        "t_s": 6240,
+        "section_m3s": 12.579369577036656,
+        "outlet_m3s": 7.086778376601069,
+        "hydraulic_s": 1.064596115029417,
+        "graph": true,
+        "steps": 197,
+        "rejected": 0,
+        "dt_min_s": 0.03445434258901514,
+        "dt_max_s": 0.3064722971274086
+      },
+      {
+        "t_s": 6300,
+        "section_m3s": 12.628627496054953,
+        "outlet_m3s": 7.095913839724502,
+        "hydraulic_s": 1.0691295309807174,
+        "graph": true,
+        "steps": 198,
+        "rejected": 0,
+        "dt_min_s": 0.005565147416746186,
+        "dt_max_s": 0.3049832660795464
+      },
+      {
+        "t_s": 6360,
+        "section_m3s": 12.607921015644994,
+        "outlet_m3s": 7.112654237991349,
+        "hydraulic_s": 1.0683208029950038,
+        "graph": true,
+        "steps": 198,
+        "rejected": 0,
+        "dt_min_s": 0.18355376962244918,
+        "dt_max_s": 0.3042946375651815
+      },
+      {
+        "t_s": 6420,
+        "section_m3s": 12.536167709314517,
+        "outlet_m3s": 7.1505047379908016,
+        "hydraulic_s": 1.0726487010833807,
+        "graph": true,
+        "steps": 199,
+        "rejected": 0,
+        "dt_min_s": 0.054500221072885324,
+        "dt_max_s": 0.3030936640475847
+      },
+      {
+        "t_s": 6480,
+        "section_m3s": 12.482637531472088,
+        "outlet_m3s": 7.187283414980387,
+        "hydraulic_s": 1.0718066460103728,
+        "graph": true,
+        "steps": 199,
+        "rejected": 0,
+        "dt_min_s": 0.27602582587860525,
+        "dt_max_s": 0.30201201626557383
+      },
+      {
+        "t_s": 6540,
+        "section_m3s": 12.489466966120624,
+        "outlet_m3s": 7.181046560482415,
+        "hydraulic_s": 1.0761034439783543,
+        "graph": true,
+        "steps": 200,
+        "rejected": 0,
+        "dt_min_s": 0.18815760019333538,
+        "dt_max_s": 0.30104987165974495
+      },
+      {
+        "t_s": 6600,
+        "section_m3s": 12.491746758279138,
+        "outlet_m3s": 7.28256244866922,
+        "hydraulic_s": 1.0806726759765297,
+        "graph": true,
+        "steps": 201,
+        "rejected": 0,
+        "dt_min_s": 0.07666050356147025,
+        "dt_max_s": 0.30008557897138843
+      },
+      {
+        "t_s": 6660,
+        "section_m3s": 12.361845767989387,
+        "outlet_m3s": 7.211970995995823,
+        "hydraulic_s": 1.0794239289825782,
+        "graph": true,
+        "steps": 201,
+        "rejected": 0,
+        "dt_min_s": 0.26449458604747633,
+        "dt_max_s": 0.2990080049385349
+      },
+      {
+        "t_s": 6720,
+        "section_m3s": 12.386029113081895,
+        "outlet_m3s": 7.172873228295551,
+        "hydraulic_s": 1.0837493379949592,
+        "graph": true,
+        "steps": 202,
+        "rejected": 0,
+        "dt_min_s": 0.16036576347960363,
+        "dt_max_s": 0.2982017201514183
+      },
+      {
+        "t_s": 6780,
+        "section_m3s": 12.351423256532993,
+        "outlet_m3s": 7.065823404107323,
+        "hydraulic_s": 1.087889592978172,
+        "graph": true,
+        "steps": 203,
+        "rejected": 0,
+        "dt_min_s": 0.022212098296222393,
+        "dt_max_s": 0.297428327389155
+      },
+      {
+        "t_s": 6840,
+        "section_m3s": 12.358647387828265,
+        "outlet_m3s": 7.171641986011612,
+        "hydraulic_s": 1.0866984590538777,
+        "graph": true,
+        "steps": 203,
+        "rejected": 0,
+        "dt_min_s": 0.20876472820509662,
+        "dt_max_s": 0.2963940915851449
+      },
+      {
+        "t_s": 6900,
+        "section_m3s": 12.357610760995763,
+        "outlet_m3s": 7.194273914744796,
+        "hydraulic_s": 1.090908632031642,
+        "graph": true,
+        "steps": 204,
+        "rejected": 0,
+        "dt_min_s": 0.07162344907555962,
+        "dt_max_s": 0.295828253861179
+      },
+      {
+        "t_s": 6960,
+        "section_m3s": 12.29072804714706,
+        "outlet_m3s": 7.148596505459257,
+        "hydraulic_s": 1.0902093219920062,
+        "graph": true,
+        "steps": 204,
+        "rejected": 0,
+        "dt_min_s": 0.26519474843371427,
+        "dt_max_s": 0.2945600636993245
+      },
+      {
+        "t_s": 7020,
+        "section_m3s": 12.285076749116463,
+        "outlet_m3s": 7.080378890482704,
+        "hydraulic_s": 1.0944350219797343,
+        "graph": true,
+        "steps": 205,
+        "rejected": 0,
+        "dt_min_s": 0.09219246188786201,
+        "dt_max_s": 0.2941845847021478
+      },
+      {
+        "t_s": 7080,
+        "section_m3s": 12.346755104872015,
+        "outlet_m3s": 7.112145137985741,
+        "hydraulic_s": 1.0930934110074304,
+        "graph": true,
+        "steps": 205,
+        "rejected": 0,
+        "dt_min_s": 0.26664330548192083,
+        "dt_max_s": 0.29324560836698427
+      },
+      {
+        "t_s": 7140,
+        "section_m3s": 12.2486101424347,
+        "outlet_m3s": 6.98967966125662,
+        "hydraulic_s": 1.0969223710126244,
+        "graph": true,
+        "steps": 206,
+        "rejected": 0,
+        "dt_min_s": 0.10026705402015068,
+        "dt_max_s": 0.2924300159836859
+      },
+      {
+        "t_s": 7200,
+        "section_m3s": 12.295902515116541,
+        "outlet_m3s": 7.02419069953224,
+        "hydraulic_s": 1.0957707989728078,
+        "graph": true,
+        "steps": 206,
+        "rejected": 0,
+        "dt_min_s": 0.23691263153614273,
+        "dt_max_s": 0.2917485914900599
+      },
+      {
+        "t_s": 7260,
+        "section_m3s": 12.361177833179802,
+        "outlet_m3s": 7.016321767072683,
+        "hydraulic_s": 1.0998047700268216,
+        "graph": true,
+        "steps": 207,
+        "rejected": 0,
+        "dt_min_s": 0.07305532237387524,
+        "dt_max_s": 0.2911762460200924
+      },
+      {
+        "t_s": 7320,
+        "section_m3s": 12.235226450300615,
+        "outlet_m3s": 7.011257354973713,
+        "hydraulic_s": 1.098410939972382,
+        "graph": true,
+        "steps": 207,
+        "rejected": 0,
+        "dt_min_s": 0.23538644403288345,
+        "dt_max_s": 0.29075775892010886
+      },
+      {
+        "t_s": 7380,
+        "section_m3s": 12.233724785055408,
+        "outlet_m3s": 7.002593219398113,
+        "hydraulic_s": 1.101915416016709,
+        "graph": true,
+        "steps": 208,
+        "rejected": 0,
+        "dt_min_s": 0.06524495716712408,
+        "dt_max_s": 0.29023446014520704
+      },
+      {
+        "t_s": 7440,
+        "section_m3s": 12.202332707902194,
+        "outlet_m3s": 6.976336188270822,
+        "hydraulic_s": 1.0997485580155626,
+        "graph": true,
+        "steps": 208,
+        "rejected": 0,
+        "dt_min_s": 0.20096730579643918,
+        "dt_max_s": 0.28918710294825073
+      },
+      {
+        "t_s": 7500,
+        "section_m3s": 12.133934812765558,
+        "outlet_m3s": 6.990196278987908,
+        "hydraulic_s": 1.1026203110232018,
+        "graph": true,
+        "steps": 209,
+        "rejected": 0,
+        "dt_min_s": 0.03837615693828411,
+        "dt_max_s": 0.2884358342733035
+      },
+      {
+        "t_s": 7560,
+        "section_m3s": 12.13248407177986,
+        "outlet_m3s": 6.932590147675365,
+        "hydraulic_s": 1.0999731019837782,
+        "graph": true,
+        "steps": 209,
+        "rejected": 0,
+        "dt_min_s": 0.1758927274886446,
+        "dt_max_s": 0.2878918453781789
+      },
+      {
+        "t_s": 7620,
+        "section_m3s": 12.133334757882645,
+        "outlet_m3s": 6.956012925085088,
+        "hydraulic_s": 1.0969791149836965,
+        "graph": true,
+        "steps": 209,
+        "rejected": 0,
+        "dt_min_s": 0.28671224660641653,
+        "dt_max_s": 0.28742226235749285
+      },
+      {
+        "t_s": 7680,
+        "section_m3s": 12.157030101095248,
+        "outlet_m3s": 6.988734724551008,
+        "hydraulic_s": 1.0989398040692322,
+        "graph": true,
+        "steps": 210,
+        "rejected": 0,
+        "dt_min_s": 0.11871321779381105,
+        "dt_max_s": 0.2869320832684385
+      },
+      {
+        "t_s": 7740,
+        "section_m3s": 12.088785498241002,
+        "outlet_m3s": 6.932888188319217,
+        "hydraulic_s": 1.0956983570358716,
+        "graph": true,
+        "steps": 210,
+        "rejected": 0,
+        "dt_min_s": 0.24512712054456642,
+        "dt_max_s": 0.28626421778221545
+      },
+      {
+        "t_s": 7800,
+        "section_m3s": 12.124567735330128,
+        "outlet_m3s": 6.920953188897207,
+        "hydraulic_s": 1.0973022850230336,
+        "graph": true,
+        "steps": 211,
+        "rejected": 0,
+        "dt_min_s": 0.06471905578291626,
+        "dt_max_s": 0.28556063320922614
+      },
+      {
+        "t_s": 7860,
+        "section_m3s": 12.025617817426367,
+        "outlet_m3s": 6.859631900382373,
+        "hydraulic_s": 1.0942047760472633,
+        "graph": true,
+        "steps": 211,
+        "rejected": 0,
+        "dt_min_s": 0.18811878930318926,
+        "dt_max_s": 0.285104344831016
+      },
+      {
+        "t_s": 7920,
+        "section_m3s": 12.042184098752477,
+        "outlet_m3s": 6.884368155303188,
+        "hydraulic_s": 1.0960298429708928,
+        "graph": true,
+        "steps": 212,
+        "rejected": 0,
+        "dt_min_s": 0.004358242476882879,
+        "dt_max_s": 0.2845460830778723
+      },
+      {
+        "t_s": 7980,
+        "section_m3s": 12.116221788905143,
+        "outlet_m3s": 6.881282129168904,
+        "hydraulic_s": 1.0931599689647555,
+        "graph": true,
+        "steps": 212,
+        "rejected": 0,
+        "dt_min_s": 0.1185600426279052,
+        "dt_max_s": 0.2842657737211275
+      },
+      {
+        "t_s": 8040,
+        "section_m3s": 12.065949101296914,
+        "outlet_m3s": 6.7738772910952925,
+        "hydraulic_s": 1.091110672976356,
+        "graph": true,
+        "steps": 212,
+        "rejected": 0,
+        "dt_min_s": 0.21957941631626454,
+        "dt_max_s": 0.2840003221588799
+      },
+      {
+        "t_s": 8100,
+        "section_m3s": 12.067401063864114,
+        "outlet_m3s": 6.793369893020402,
+        "hydraulic_s": 1.0890932220499963,
+        "graph": true,
+        "steps": 212,
+        "rejected": 0,
+        "dt_min_s": 0.2777765279452069,
+        "dt_max_s": 0.283462278130602
+      },
+      {
+        "t_s": 8160,
+        "section_m3s": 12.081004821293996,
+        "outlet_m3s": 6.8047549265287675,
+        "hydraulic_s": 1.0910169549752027,
+        "graph": true,
+        "steps": 213,
+        "rejected": 0,
+        "dt_min_s": 0.11311667751124332,
+        "dt_max_s": 0.28274225901676536
+      },
+      {
+        "t_s": 8220,
+        "section_m3s": 12.12573102652447,
+        "outlet_m3s": 6.761840142261887,
+        "hydraulic_s": 1.0873763230047189,
+        "graph": true,
+        "steps": 213,
+        "rejected": 0,
+        "dt_min_s": 0.20093996191280894,
+        "dt_max_s": 0.28252208388362027
+      },
+      {
+        "t_s": 8280,
+        "section_m3s": 12.152052420874922,
+        "outlet_m3s": 6.850535185197562,
+        "hydraulic_s": 1.0884593619848602,
+        "graph": true,
+        "steps": 214,
+        "rejected": 0,
+        "dt_min_s": 0.03384686750177934,
+        "dt_max_s": 0.28195942458573137
+      },
+      {
+        "t_s": 8340,
+        "section_m3s": 12.141425062638882,
+        "outlet_m3s": 6.689765487523376,
+        "hydraulic_s": 1.0844214840326458,
+        "graph": true,
+        "steps": 214,
+        "rejected": 0,
+        "dt_min_s": 0.08939989290774975,
+        "dt_max_s": 0.28162423273473874
+      },
+      {
+        "t_s": 8400,
+        "section_m3s": 12.182569742980316,
+        "outlet_m3s": 6.77613737872986,
+        "hydraulic_s": 1.0805404920247383,
+        "graph": true,
+        "steps": 214,
+        "rejected": 0,
+        "dt_min_s": 0.20466854898404563,
+        "dt_max_s": 0.28092755804464975
+      },
+      {
+        "t_s": 8460,
+        "section_m3s": 12.235547319231651,
+        "outlet_m3s": 6.7384713579176605,
+        "hydraulic_s": 1.0788112779264338,
+        "graph": true,
+        "steps": 215,
+        "rejected": 0,
+        "dt_min_s": 0.032077128504170105,
+        "dt_max_s": 0.2805729211734068
+      },
+      {
+        "t_s": 8520,
+        "section_m3s": 12.309695137141777,
+        "outlet_m3s": 6.645223163692086,
+        "hydraulic_s": 1.0742884149076417,
+        "graph": true,
+        "steps": 215,
+        "rejected": 0,
+        "dt_min_s": 0.0680394256796717,
+        "dt_max_s": 0.28026381998466177
+      },
+      {
+        "t_s": 8580,
+        "section_m3s": 12.336211800152522,
+        "outlet_m3s": 6.657445408743782,
+        "hydraulic_s": 1.0711019419832155,
+        "graph": true,
+        "steps": 215,
+        "rejected": 0,
+        "dt_min_s": 0.16739065682850196,
+        "dt_max_s": 0.2799465620262111
+      },
+      {
+        "t_s": 8640,
+        "section_m3s": 12.402328498701536,
+        "outlet_m3s": 6.689599962616922,
+        "hydraulic_s": 1.0710994269466028,
+        "graph": true,
+        "steps": 215,
+        "rejected": 0,
+        "dt_min_s": 0.2419093388634792,
+        "dt_max_s": 0.27930331733774416
+      },
+      {
+        "t_s": 8700,
+        "section_m3s": 12.487252912276501,
+        "outlet_m3s": 6.6488847252509,
+        "hydraulic_s": 1.071727865957655,
+        "graph": true,
+        "steps": 216,
+        "rejected": 0,
+        "dt_min_s": 0.03695367349246226,
+        "dt_max_s": 0.2792566123513573
+      },
+      {
+        "t_s": 8760,
+        "section_m3s": 12.599575581488898,
+        "outlet_m3s": 6.612408368819888,
+        "hydraulic_s": 1.0705990280257538,
+        "graph": true,
+        "steps": 216,
+        "rejected": 0,
+        "dt_min_s": 0.07320740899922384,
+        "dt_max_s": 0.2788762917589806
+      },
+      {
+        "t_s": 8820,
+        "section_m3s": 12.663807599031376,
+        "outlet_m3s": 6.7086949853423,
+        "hydraulic_s": 1.0695861980202608,
+        "graph": true,
+        "steps": 216,
+        "rejected": 0,
+        "dt_min_s": 0.16522369285485183,
+        "dt_max_s": 0.2785643678808621
+      },
+      {
+        "t_s": 8880,
+        "section_m3s": 12.752412558290477,
+        "outlet_m3s": 6.6837485277853075,
+        "hydraulic_s": 1.0682675830321386,
+        "graph": true,
+        "steps": 216,
+        "rejected": 0,
+        "dt_min_s": 0.24898817656321626,
+        "dt_max_s": 0.27841983670191695
+      },
+      {
+        "t_s": 8940,
+        "section_m3s": 12.899599932602237,
+        "outlet_m3s": 6.6508676486814995,
+        "hydraulic_s": 1.0724449569825083,
+        "graph": true,
+        "steps": 217,
+        "rejected": 0,
+        "dt_min_s": 0.033018696658473345,
+        "dt_max_s": 0.2777734942682371
+      },
+      {
+        "t_s": 9000,
+        "section_m3s": 12.90785645810441,
+        "outlet_m3s": 6.574803283376726,
+        "hydraulic_s": 1.0713951620273292,
+        "graph": true,
+        "steps": 217,
+        "rejected": 0,
+        "dt_min_s": 0.07131241219030926,
+        "dt_max_s": 0.2777960262141985
+      },
+      {
+        "t_s": 9060,
+        "section_m3s": 13.106650231289677,
+        "outlet_m3s": 6.590865755861644,
+        "hydraulic_s": 1.0706442969967611,
+        "graph": true,
+        "steps": 217,
+        "rejected": 0,
+        "dt_min_s": 0.1412569302101474,
+        "dt_max_s": 0.2775153484527574
+      },
+      {
+        "t_s": 9120,
+        "section_m3s": 13.123924886514578,
+        "outlet_m3s": 6.540479406413094,
+        "hydraulic_s": 1.0696454379358329,
+        "graph": true,
+        "steps": 217,
+        "rejected": 0,
+        "dt_min_s": 0.20030213920836104,
+        "dt_max_s": 0.2772009273339587
+      },
+      {
+        "t_s": 9180,
+        "section_m3s": 13.30692231966362,
+        "outlet_m3s": 6.5349167373090795,
+        "hydraulic_s": 1.0684765869518742,
+        "graph": true,
+        "steps": 217,
+        "rejected": 0,
+        "dt_min_s": 0.23298871709448576,
+        "dt_max_s": 0.2771838958016439
+      },
+      {
+        "t_s": 9240,
+        "section_m3s": 13.452932847784057,
+        "outlet_m3s": 6.463330390798849,
+        "hydraulic_s": 1.0724850179976784,
+        "graph": true,
+        "steps": 218,
+        "rejected": 0,
+        "dt_min_s": 0.007810261520717177,
+        "dt_max_s": 0.2766712778049908
+      },
+      {
+        "t_s": 9300,
+        "section_m3s": 13.501103091389329,
+        "outlet_m3s": 6.4277864505975835,
+        "hydraulic_s": 1.071942807000596,
+        "graph": true,
+        "steps": 218,
+        "rejected": 0,
+        "dt_min_s": 0.05589137305287295,
+        "dt_max_s": 0.27644259264760424
+      },
+      {
+        "t_s": 9360,
+        "section_m3s": 13.631166283159837,
+        "outlet_m3s": 6.449094344582773,
+        "hydraulic_s": 1.0709651390207,
+        "graph": true,
+        "steps": 218,
+        "rejected": 0,
+        "dt_min_s": 0.11624468861373316,
+        "dt_max_s": 0.2763990128786052
+      },
+      {
+        "t_s": 9420,
+        "section_m3s": 13.903606193467567,
+        "outlet_m3s": 6.342411207269106,
+        "hydraulic_s": 1.0701874979422428,
+        "graph": true,
+        "steps": 218,
+        "rejected": 0,
+        "dt_min_s": 0.14721751399883942,
+        "dt_max_s": 0.2761423316645909
+      },
+      {
+        "t_s": 9480,
+        "section_m3s": 14.30920571759028,
+        "outlet_m3s": 6.469463044554141,
+        "hydraulic_s": 1.0694627829361707,
+        "graph": true,
+        "steps": 218,
+        "rejected": 0,
+        "dt_min_s": 0.16260845890246856,
+        "dt_max_s": 0.276059024840862
+      },
+      {
+        "t_s": 9540,
+        "section_m3s": 14.805548179819986,
+        "outlet_m3s": 6.356632106071387,
+        "hydraulic_s": 1.0684644780121744,
+        "graph": true,
+        "steps": 218,
+        "rejected": 0,
+        "dt_min_s": 0.24081647001185047,
+        "dt_max_s": 0.2755981824547118
+      },
+      {
+        "t_s": 9600,
+        "section_m3s": 15.144971713929893,
+        "outlet_m3s": 6.344246199474461,
+        "hydraulic_s": 1.0674686289858073,
+        "graph": true,
+        "steps": 218,
+        "rejected": 0,
+        "dt_min_s": 0.25500010109135474,
+        "dt_max_s": 0.2755576944985879
+      },
+      {
+        "t_s": 9660,
+        "section_m3s": 15.331822377728773,
+        "outlet_m3s": 6.326829618556197,
+        "hydraulic_s": 1.071498143079225,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.014682054325021454,
+        "dt_max_s": 0.2756323274226806
+      },
+      {
+        "t_s": 9720,
+        "section_m3s": 15.592320372223185,
+        "outlet_m3s": 6.230482874810695,
+        "hydraulic_s": 1.0708576519973576,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.03441987902078836,
+        "dt_max_s": 0.2753855534829883
+      },
+      {
+        "t_s": 9780,
+        "section_m3s": 15.649098005033254,
+        "outlet_m3s": 6.246645256264553,
+        "hydraulic_s": 1.0697727869846858,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.07590108730983047,
+        "dt_max_s": 0.2751119029015051
+      },
+      {
+        "t_s": 9840,
+        "section_m3s": 15.876718265148277,
+        "outlet_m3s": 6.264275042893496,
+        "hydraulic_s": 1.0691498660016805,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.11545449507138983,
+        "dt_max_s": 0.27514755862013307
+      },
+      {
+        "t_s": 9900,
+        "section_m3s": 16.179308883178116,
+        "outlet_m3s": 6.266815495752598,
+        "hydraulic_s": 1.0683967789518647,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.1288008663650544,
+        "dt_max_s": 0.27514688956444094
+      },
+      {
+        "t_s": 9960,
+        "section_m3s": 16.270963959771567,
+        "outlet_m3s": 6.156866835606342,
+        "hydraulic_s": 1.067922926042229,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.14129382805913338,
+        "dt_max_s": 0.2746773339203151
+      },
+      {
+        "t_s": 10020,
+        "section_m3s": 16.424843889374944,
+        "outlet_m3s": 6.085539403716999,
+        "hydraulic_s": 1.0672903030063026,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.19479899066209327,
+        "dt_max_s": 0.27459362777658297
+      },
+      {
+        "t_s": 10080,
+        "section_m3s": 16.66237895232116,
+        "outlet_m3s": 6.153944380447744,
+        "hydraulic_s": 1.0671794040245004,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.22816135746688815,
+        "dt_max_s": 0.27458703183177613
+      },
+      {
+        "t_s": 10140,
+        "section_m3s": 16.917484626835357,
+        "outlet_m3s": 6.083283534896327,
+        "hydraulic_s": 1.0664513380033895,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.22718309372976364,
+        "dt_max_s": 0.2744655259771325
+      },
+      {
+        "t_s": 10200,
+        "section_m3s": 17.24386111919909,
+        "outlet_m3s": 6.190263513522586,
+        "hydraulic_s": 1.066025605017785,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.24762311143240368,
+        "dt_max_s": 0.27427474964995574
+      },
+      {
+        "t_s": 10260,
+        "section_m3s": 17.424537911384444,
+        "outlet_m3s": 6.095922387570196,
+        "hydraulic_s": 1.0655753209721297,
+        "graph": true,
+        "steps": 219,
+        "rejected": 0,
+        "dt_min_s": 0.26706216518141446,
+        "dt_max_s": 0.2743309648967377
+      },
+      {
+        "t_s": 10320,
+        "section_m3s": 17.553180231216537,
+        "outlet_m3s": 6.036490781355314,
+        "hydraulic_s": 1.069593674968928,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.01711964245987474,
+        "dt_max_s": 0.27412259397107636
+      },
+      {
+        "t_s": 10380,
+        "section_m3s": 17.777909279153633,
+        "outlet_m3s": 5.927935977120918,
+        "hydraulic_s": 1.0690368840005249,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.04597276362437697,
+        "dt_max_s": 0.27394979110189377
+      },
+      {
+        "t_s": 10440,
+        "section_m3s": 17.930488169348003,
+        "outlet_m3s": 5.9726528403200065,
+        "hydraulic_s": 1.0685140189598314,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.04497821964832838,
+        "dt_max_s": 0.2739316287729196
+      },
+      {
+        "t_s": 10500,
+        "section_m3s": 18.05079591797621,
+        "outlet_m3s": 5.946676246692854,
+        "hydraulic_s": 1.0681053230073303,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.0682711179360922,
+        "dt_max_s": 0.2738680254548743
+      },
+      {
+        "t_s": 10560,
+        "section_m3s": 18.21495852808827,
+        "outlet_m3s": 5.8693329514694295,
+        "hydraulic_s": 1.0671144580701366,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.0758575590352848,
+        "dt_max_s": 0.2737742284167173
+      },
+      {
+        "t_s": 10620,
+        "section_m3s": 18.32711058420561,
+        "outlet_m3s": 5.880389425065369,
+        "hydraulic_s": 1.0664733559824526,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.08574770657833142,
+        "dt_max_s": 0.273696859721036
+      },
+      {
+        "t_s": 10680,
+        "section_m3s": 18.553527301668996,
+        "outlet_m3s": 5.873413542365355,
+        "hydraulic_s": 1.0658617799635977,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.12816272180316446,
+        "dt_max_s": 0.2737599391404112
+      },
+      {
+        "t_s": 10740,
+        "section_m3s": 18.623439480148228,
+        "outlet_m3s": 5.828626789851236,
+        "hydraulic_s": 1.065094088029582,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.14774136417508998,
+        "dt_max_s": 0.2736507562887083
+      },
+      {
+        "t_s": 10800,
+        "section_m3s": 18.697654995031918,
+        "outlet_m3s": 5.846594564556411,
+        "hydraulic_s": 1.0643710819422267,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.15946908736077603,
+        "dt_max_s": 0.2735094732440539
+      },
+      {
+        "t_s": 10860,
+        "section_m3s": 18.74822716484123,
+        "outlet_m3s": 5.721831408502476,
+        "hydraulic_s": 1.0638915419694968,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.16796836952198646,
+        "dt_max_s": 0.2733103471108627
+      },
+      {
+        "t_s": 10920,
+        "section_m3s": 18.86890065033561,
+        "outlet_m3s": 5.687764034543094,
+        "hydraulic_s": 1.0636960529955104,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.18785808616667055,
+        "dt_max_s": 0.2732704465179476
+      },
+      {
+        "t_s": 10980,
+        "section_m3s": 19.10011612081871,
+        "outlet_m3s": 5.659121973442477,
+        "hydraulic_s": 1.0635819570161402,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.19153551906856592,
+        "dt_max_s": 0.2734480062596694
+      },
+      {
+        "t_s": 11040,
+        "section_m3s": 19.35261561071796,
+        "outlet_m3s": 5.6730733705589955,
+        "hydraulic_s": 1.0630106489988975,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.22748101988145208,
+        "dt_max_s": 0.2732360275793447
+      },
+      {
+        "t_s": 11100,
+        "section_m3s": 19.421932026091234,
+        "outlet_m3s": 5.630622673606437,
+        "hydraulic_s": 1.062798258033581,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.2128098040848272,
+        "dt_max_s": 0.2731923674059762
+      },
+      {
+        "t_s": 11160,
+        "section_m3s": 19.625601338808824,
+        "outlet_m3s": 5.546958374706689,
+        "hydraulic_s": 1.062657648930326,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.2354573722332134,
+        "dt_max_s": 0.27309470219022175
+      },
+      {
+        "t_s": 11220,
+        "section_m3s": 19.975579009558473,
+        "outlet_m3s": 5.458031999087203,
+        "hydraulic_s": 1.0624577130074613,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.24133454083494144,
+        "dt_max_s": 0.27308618723182243
+      },
+      {
+        "t_s": 11280,
+        "section_m3s": 20.3987295100771,
+        "outlet_m3s": 5.504062004281271,
+        "hydraulic_s": 1.062179446045775,
+        "graph": true,
+        "steps": 220,
+        "rejected": 0,
+        "dt_min_s": 0.23674194275554328,
+        "dt_max_s": 0.2733998212331752
+      },
+      {
+        "t_s": 11340,
+        "section_m3s": 21.045158168170747,
+        "outlet_m3s": 5.521214474429265,
+        "hydraulic_s": 1.0663105490384623,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.03952414243212843,
+        "dt_max_s": 0.27304890083083594
+      },
+      {
+        "t_s": 11400,
+        "section_m3s": 21.491985474946706,
+        "outlet_m3s": 5.507486843501223,
+        "hydraulic_s": 1.065852443978656,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.010978113312376081,
+        "dt_max_s": 0.272946159180712
+      },
+      {
+        "t_s": 11460,
+        "section_m3s": 21.676894310270292,
+        "outlet_m3s": 5.456561428992427,
+        "hydraulic_s": 1.065214563976042,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.030349856588145485,
+        "dt_max_s": 0.27273550042417255
+      },
+      {
+        "t_s": 11520,
+        "section_m3s": 22.02453365687955,
+        "outlet_m3s": 5.417144058464813,
+        "hydraulic_s": 1.0645125409937464,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.03631763274279365,
+        "dt_max_s": 0.2726175901014893
+      },
+      {
+        "t_s": 11580,
+        "section_m3s": 22.337097747954733,
+        "outlet_m3s": 5.374666229198313,
+        "hydraulic_s": 1.0636997819528915,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.050846061914853635,
+        "dt_max_s": 0.27265335375744815
+      },
+      {
+        "t_s": 11640,
+        "section_m3s": 22.503710012785692,
+        "outlet_m3s": 5.308625526772085,
+        "hydraulic_s": 1.062932591943536,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.05134353875473607,
+        "dt_max_s": 0.27267987109918274
+      },
+      {
+        "t_s": 11700,
+        "section_m3s": 22.642404260937475,
+        "outlet_m3s": 5.310347425125898,
+        "hydraulic_s": 1.0621488459873945,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.04481006348760275,
+        "dt_max_s": 0.2727538800039947
+      },
+      {
+        "t_s": 11760,
+        "section_m3s": 22.693605204084935,
+        "outlet_m3s": 5.310298312219917,
+        "hydraulic_s": 1.0613099029869772,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.0771831051188201,
+        "dt_max_s": 0.27256943099366876
+      },
+      {
+        "t_s": 11820,
+        "section_m3s": 22.58429719263877,
+        "outlet_m3s": 5.2873693439270335,
+        "hydraulic_s": 1.0609079710557126,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.08747556495654862,
+        "dt_max_s": 0.2725561491181642
+      },
+      {
+        "t_s": 11880,
+        "section_m3s": 22.552434974556913,
+        "outlet_m3s": 5.317648588752612,
+        "hydraulic_s": 1.0607457220321521,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.06947227682758239,
+        "dt_max_s": 0.2726774951327346
+      },
+      {
+        "t_s": 11940,
+        "section_m3s": 22.879907087848064,
+        "outlet_m3s": 5.310226023817934,
+        "hydraulic_s": 1.0622152379946783,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.09541369965518243,
+        "dt_max_s": 0.2724462203621796
+      },
+      {
+        "t_s": 12000,
+        "section_m3s": 23.48939434502754,
+        "outlet_m3s": 5.281830508734978,
+        "hydraulic_s": 1.0601878819870763,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.08879096468081116,
+        "dt_max_s": 0.2725755373378973
+      },
+      {
+        "t_s": 12060,
+        "section_m3s": 23.73085607126462,
+        "outlet_m3s": 5.306320525551322,
+        "hydraulic_s": 1.0600521179731004,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.1447106965824787,
+        "dt_max_s": 0.2723809890114152
+      },
+      {
+        "t_s": 12120,
+        "section_m3s": 24.201282373658128,
+        "outlet_m3s": 5.358728372910991,
+        "hydraulic_s": 1.0595916650490835,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.14709662278073665,
+        "dt_max_s": 0.2723448948636176
+      },
+      {
+        "t_s": 12180,
+        "section_m3s": 24.6860856357438,
+        "outlet_m3s": 5.379411633729615,
+        "hydraulic_s": 1.0596074470086023,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.18642854946665466,
+        "dt_max_s": 0.27229685982143315
+      },
+      {
+        "t_s": 12240,
+        "section_m3s": 25.12326374103189,
+        "outlet_m3s": 5.339820270016935,
+        "hydraulic_s": 1.0589568369905464,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.1780983026492322,
+        "dt_max_s": 0.2722127871259374
+      },
+      {
+        "t_s": 12300,
+        "section_m3s": 25.56022662889445,
+        "outlet_m3s": 5.366546386148305,
+        "hydraulic_s": 1.0583752020029351,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.19707105467932706,
+        "dt_max_s": 0.27210243106994125
+      },
+      {
+        "t_s": 12360,
+        "section_m3s": 26.03750394146482,
+        "outlet_m3s": 5.2529489009401,
+        "hydraulic_s": 1.0578252730192617,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.2244906412142882,
+        "dt_max_s": 0.27195157372260237
+      },
+      {
+        "t_s": 12420,
+        "section_m3s": 26.46965447011462,
+        "outlet_m3s": 5.343332369235092,
+        "hydraulic_s": 1.0575908080791123,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.20733161656062293,
+        "dt_max_s": 0.271943370883019
+      },
+      {
+        "t_s": 12480,
+        "section_m3s": 27.105681063517114,
+        "outlet_m3s": 5.381621566014656,
+        "hydraulic_s": 1.0575046659796499,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.2291751917637157,
+        "dt_max_s": 0.27194673725970403
+      },
+      {
+        "t_s": 12540,
+        "section_m3s": 27.795151128375437,
+        "outlet_m3s": 5.482778707995991,
+        "hydraulic_s": 1.0567266200087033,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.2063927952258382,
+        "dt_max_s": 0.2721692279566259
+      },
+      {
+        "t_s": 12600,
+        "section_m3s": 28.5445505830372,
+        "outlet_m3s": 5.512327235667181,
+        "hydraulic_s": 1.056196852994617,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.21155174516570696,
+        "dt_max_s": 0.2719682686030676
+      },
+      {
+        "t_s": 12660,
+        "section_m3s": 29.31695231594349,
+        "outlet_m3s": 5.496524883806705,
+        "hydraulic_s": 1.055976198927965,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.20531088588359125,
+        "dt_max_s": 0.2721845050330746
+      },
+      {
+        "t_s": 12720,
+        "section_m3s": 30.589270935920165,
+        "outlet_m3s": 5.4976714294078795,
+        "hydraulic_s": 1.0557740979711525,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.24465516590316838,
+        "dt_max_s": 0.2718582361221728
+      },
+      {
+        "t_s": 12780,
+        "section_m3s": 31.266524690621008,
+        "outlet_m3s": 5.518096028362924,
+        "hydraulic_s": 1.055346336972434,
+        "graph": true,
+        "steps": 221,
+        "rejected": 0,
+        "dt_min_s": 0.2532329543155356,
+        "dt_max_s": 0.27171665778094994
+      },
+      {
+        "t_s": 12840,
+        "section_m3s": 32.20586610808532,
+        "outlet_m3s": 5.584035096386409,
+        "hydraulic_s": 1.0597084130276926,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.006394088677552645,
+        "dt_max_s": 0.27177381553040386
+      },
+      {
+        "t_s": 12900,
+        "section_m3s": 33.2046620014599,
+        "outlet_m3s": 5.656799507561906,
+        "hydraulic_s": 1.0595451130066067,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.015048353283418692,
+        "dt_max_s": 0.27191724561386965
+      },
+      {
+        "t_s": 12960,
+        "section_m3s": 35.180884044967634,
+        "outlet_m3s": 5.794391082465396,
+        "hydraulic_s": 1.0588248150306754,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.029182299727835925,
+        "dt_max_s": 0.2715534041050589
+      },
+      {
+        "t_s": 13020,
+        "section_m3s": 38.12683614943089,
+        "outlet_m3s": 5.838034407546123,
+        "hydraulic_s": 1.0585155229782686,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.045176891015216825,
+        "dt_max_s": 0.27134823833443367
+      },
+      {
+        "t_s": 13080,
+        "section_m3s": 39.2585361154847,
+        "outlet_m3s": 5.86760698383999,
+        "hydraulic_s": 1.0583197369705886,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.06968275441795413,
+        "dt_max_s": 0.2713220613241654
+      },
+      {
+        "t_s": 13140,
+        "section_m3s": 39.76816225511235,
+        "outlet_m3s": 6.0079441409621115,
+        "hydraulic_s": 1.058353282045573,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.08026183314541413,
+        "dt_max_s": 0.27134506304413786
+      },
+      {
+        "t_s": 13200,
+        "section_m3s": 40.65064320322223,
+        "outlet_m3s": 6.128917220351044,
+        "hydraulic_s": 1.0581429239246063,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.09913627525384072,
+        "dt_max_s": 0.2711779624594994
+      },
+      {
+        "t_s": 13260,
+        "section_m3s": 41.887955603786395,
+        "outlet_m3s": 6.1961814361791765,
+        "hydraulic_s": 1.0574935200274922,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.13981940391749959,
+        "dt_max_s": 0.2712029953551146
+      },
+      {
+        "t_s": 13320,
+        "section_m3s": 41.88514334846404,
+        "outlet_m3s": 6.485542560978017,
+        "hydraulic_s": 1.0571408909745514,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.17066713720487314,
+        "dt_max_s": 0.27090259561551794
+      },
+      {
+        "t_s": 13380,
+        "section_m3s": 41.96397199405037,
+        "outlet_m3s": 6.695441906958634,
+        "hydraulic_s": 1.0565532420296222,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.218113158864071,
+        "dt_max_s": 0.27086543542681185
+      },
+      {
+        "t_s": 13440,
+        "section_m3s": 42.646874642529774,
+        "outlet_m3s": 6.840115071586479,
+        "hydraulic_s": 1.0558094579610042,
+        "graph": true,
+        "steps": 222,
+        "rejected": 0,
+        "dt_min_s": 0.23565704556676792,
+        "dt_max_s": 0.27066718597443346
+      },
+      {
+        "t_s": 13500,
+        "section_m3s": 42.99207272093142,
+        "outlet_m3s": 6.938011592154362,
+        "hydraulic_s": 1.0598753250087611,
+        "graph": true,
+        "steps": 223,
+        "rejected": 0,
+        "dt_min_s": 0.04355821558783646,
+        "dt_max_s": 0.27052162823819176
+      },
+      {
+        "t_s": 13560,
+        "section_m3s": 43.673864435905124,
+        "outlet_m3s": 7.1794097508621535,
+        "hydraulic_s": 1.0593969660112634,
+        "graph": true,
+        "steps": 223,
+        "rejected": 0,
+        "dt_min_s": 0.08781466182881559,
+        "dt_max_s": 0.2701230519095137
+      },
+      {
+        "t_s": 13620,
+        "section_m3s": 44.3001920547899,
+        "outlet_m3s": 7.282551637966147,
+        "hydraulic_s": 1.0587861569947563,
+        "graph": true,
+        "steps": 223,
+        "rejected": 0,
+        "dt_min_s": 0.16041832539485767,
+        "dt_max_s": 0.2697118156123273
+      },
+      {
+        "t_s": 13680,
+        "section_m3s": 44.78010425897616,
+        "outlet_m3s": 7.355439979197642,
+        "hydraulic_s": 1.0584636860294268,
+        "graph": true,
+        "steps": 223,
+        "rejected": 0,
+        "dt_min_s": 0.2075441188935656,
+        "dt_max_s": 0.26945904184649566
+      },
+      {
+        "t_s": 13740,
+        "section_m3s": 44.98719275641973,
+        "outlet_m3s": 7.497748540881488,
+        "hydraulic_s": 1.0578824810218066,
+        "graph": true,
+        "steps": 223,
+        "rejected": 0,
+        "dt_min_s": 0.25588031758525176,
+        "dt_max_s": 0.269288576939424
+      },
+      {
+        "t_s": 13800,
+        "section_m3s": 45.76603765075173,
+        "outlet_m3s": 7.64483033505215,
+        "hydraulic_s": 1.062486565031577,
+        "graph": true,
+        "steps": 224,
+        "rejected": 0,
+        "dt_min_s": 0.10638435278633551,
+        "dt_max_s": 0.26885881606559686
+      },
+      {
+        "t_s": 13860,
+        "section_m3s": 45.956922430934114,
+        "outlet_m3s": 7.758980943104446,
+        "hydraulic_s": 1.062930770975072,
+        "graph": true,
+        "steps": 224,
+        "rejected": 0,
+        "dt_min_s": 0.17777858115186973,
+        "dt_max_s": 0.2684057375645795
+      },
+      {
+        "t_s": 13920,
+        "section_m3s": 45.789360628959066,
+        "outlet_m3s": 7.902048832392029,
+        "hydraulic_s": 1.068058114964515,
+        "graph": true,
+        "steps": 225,
+        "rejected": 0,
+        "dt_min_s": 0.018339675700190128,
+        "dt_max_s": 0.2680448168784384
+      },
+      {
+        "t_s": 13980,
+        "section_m3s": 46.1178037051063,
+        "outlet_m3s": 8.019324790539152,
+        "hydraulic_s": 1.0680245240218937,
+        "graph": true,
+        "steps": 225,
+        "rejected": 0,
+        "dt_min_s": 0.06311841105161875,
+        "dt_max_s": 0.2677928707753154
+      },
+      {
+        "t_s": 14040,
+        "section_m3s": 46.25853143385903,
+        "outlet_m3s": 8.178527281404968,
+        "hydraulic_s": 1.0681227299501188,
+        "graph": true,
+        "steps": 225,
+        "rejected": 0,
+        "dt_min_s": 0.15782006252811698,
+        "dt_max_s": 0.26743743275462856
+      },
+      {
+        "t_s": 14100,
+        "section_m3s": 46.74900787229708,
+        "outlet_m3s": 8.205844150495492,
+        "hydraulic_s": 1.0743777040042914,
+        "graph": true,
+        "steps": 225,
+        "rejected": 0,
+        "dt_min_s": 0.23026803946959262,
+        "dt_max_s": 0.2671512535828079
+      },
+      {
+        "t_s": 14160,
+        "section_m3s": 46.86941782262681,
+        "outlet_m3s": 8.291100963782082,
+        "hydraulic_s": 1.0726818370167166,
+        "graph": true,
+        "steps": 226,
+        "rejected": 0,
+        "dt_min_s": 0.05389087674302573,
+        "dt_max_s": 0.26666067454535247
+      },
+      {
+        "t_s": 14220,
+        "section_m3s": 46.99950307261073,
+        "outlet_m3s": 8.447631832212453,
+        "hydraulic_s": 1.0725325840176083,
+        "graph": true,
+        "steps": 226,
+        "rejected": 0,
+        "dt_min_s": 0.15967765528148448,
+        "dt_max_s": 0.26607499435312
+      },
+      {
+        "t_s": 14280,
+        "section_m3s": 47.146724172857645,
+        "outlet_m3s": 8.497794198018285,
+        "hydraulic_s": 1.0724128439906053,
+        "graph": true,
+        "steps": 226,
+        "rejected": 0,
+        "dt_min_s": 0.24603434519303846,
+        "dt_max_s": 0.26577599978825084
+      },
+      {
+        "t_s": 14340,
+        "section_m3s": 47.47051173597914,
+        "outlet_m3s": 8.562673645189594,
+        "hydraulic_s": 1.076777794980444,
+        "graph": true,
+        "steps": 227,
+        "rejected": 0,
+        "dt_min_s": 0.04028100910363719,
+        "dt_max_s": 0.26540911420914437
+      },
+      {
+        "t_s": 14400,
+        "section_m3s": 47.71677150942172,
+        "outlet_m3s": 8.644200787253551,
+        "hydraulic_s": 1.0763833629898727,
+        "graph": true,
+        "steps": 227,
+        "rejected": 0,
+        "dt_min_s": 0.1260516591682972,
+        "dt_max_s": 0.26504130786921604
+      },
+      {
+        "t_s": 14460,
+        "section_m3s": 48.118482348823456,
+        "outlet_m3s": 8.692035157600428,
+        "hydraulic_s": 1.0766712680342607,
+        "graph": true,
+        "steps": 227,
+        "rejected": 0,
+        "dt_min_s": 0.22351207082829205,
+        "dt_max_s": 0.26468376349930983
+      },
+      {
+        "t_s": 14520,
+        "section_m3s": 47.83208958372901,
+        "outlet_m3s": 8.799614782832213,
+        "hydraulic_s": 1.080964879016392,
+        "graph": true,
+        "steps": 228,
+        "rejected": 0,
+        "dt_min_s": 0.05178195324333501,
+        "dt_max_s": 0.26427649232857037
+      },
+      {
+        "t_s": 14580,
+        "section_m3s": 47.87855204394485,
+        "outlet_m3s": 8.91099461903844,
+        "hydraulic_s": 1.0809418340213597,
+        "graph": true,
+        "steps": 228,
+        "rejected": 0,
+        "dt_min_s": 0.1503371698945557,
+        "dt_max_s": 0.2639270979266136
+      },
+      {
+        "t_s": 14640,
+        "section_m3s": 48.42153722744794,
+        "outlet_m3s": 8.958800218522326,
+        "hydraulic_s": 1.0806340210256167,
+        "graph": true,
+        "steps": 228,
+        "rejected": 0,
+        "dt_min_s": 0.23398123330298404,
+        "dt_max_s": 0.26345758810022696
+      },
+      {
+        "t_s": 14700,
+        "section_m3s": 48.405492571212626,
+        "outlet_m3s": 9.034999774143216,
+        "hydraulic_s": 1.0852367319748737,
+        "graph": true,
+        "steps": 229,
+        "rejected": 0,
+        "dt_min_s": 0.036752988504304085,
+        "dt_max_s": 0.26309596846322325
+      },
+      {
+        "t_s": 14760,
+        "section_m3s": 49.31698992734358,
+        "outlet_m3s": 9.069648848445649,
+        "hydraulic_s": 1.08543431898579,
+        "graph": true,
+        "steps": 229,
+        "rejected": 0,
+        "dt_min_s": 0.0956958280166873,
+        "dt_max_s": 0.2629139714022272
+      },
+      {
+        "t_s": 14820,
+        "section_m3s": 49.147153488068824,
+        "outlet_m3s": 9.107784199601399,
+        "hydraulic_s": 1.0857889580074698,
+        "graph": true,
+        "steps": 229,
+        "rejected": 0,
+        "dt_min_s": 0.14877266732037242,
+        "dt_max_s": 0.26265912896954896
+      },
+      {
+        "t_s": 14880,
+        "section_m3s": 48.30581215263325,
+        "outlet_m3s": 9.149937047435136,
+        "hydraulic_s": 1.0861142090288922,
+        "graph": true,
+        "steps": 229,
+        "rejected": 0,
+        "dt_min_s": 0.2184461973138241,
+        "dt_max_s": 0.2623381057419635
+      },
+      {
+        "t_s": 14940,
+        "section_m3s": 48.479148015388155,
+        "outlet_m3s": 9.192509947217332,
+        "hydraulic_s": 1.090766954002902,
+        "graph": true,
+        "steps": 230,
+        "rejected": 0,
+        "dt_min_s": 0.0235772888718202,
+        "dt_max_s": 0.2620285755312433
+      },
+      {
+        "t_s": 15000,
+        "section_m3s": 48.81560734439602,
+        "outlet_m3s": 9.237825027943472,
+        "hydraulic_s": 1.091034432000015,
+        "graph": true,
+        "steps": 230,
+        "rejected": 0,
+        "dt_min_s": 0.09155350553191965,
+        "dt_max_s": 0.2617787482305421
+      },
+      {
+        "t_s": 15060,
+        "section_m3s": 48.73089749920958,
+        "outlet_m3s": 9.292625783622741,
+        "hydraulic_s": 1.0908494259929284,
+        "graph": true,
+        "steps": 230,
+        "rejected": 0,
+        "dt_min_s": 0.15853701912783436,
+        "dt_max_s": 0.26148267953473486
+      },
+      {
+        "t_s": 15120,
+        "section_m3s": 49.4801190376762,
+        "outlet_m3s": 9.338917601990397,
+        "hydraulic_s": 1.0906963410088792,
+        "graph": true,
+        "steps": 230,
+        "rejected": 0,
+        "dt_min_s": 0.22402353260440577,
+        "dt_max_s": 0.2611876292620667
+      },
+      {
+        "t_s": 15180,
+        "section_m3s": 49.4951194911715,
+        "outlet_m3s": 9.379292397111566,
+        "hydraulic_s": 1.095207717968151,
+        "graph": true,
+        "steps": 231,
+        "rejected": 0,
+        "dt_min_s": 0.024160598853995907,
+        "dt_max_s": 0.26089952610077866
+      },
+      {
+        "t_s": 15240,
+        "section_m3s": 48.936254549117194,
+        "outlet_m3s": 9.408786293410715,
+        "hydraulic_s": 1.095072211988736,
+        "graph": true,
+        "steps": 231,
+        "rejected": 0,
+        "dt_min_s": 0.08379740943928482,
+        "dt_max_s": 0.2605785941654154
+      },
+      {
+        "t_s": 15300,
+        "section_m3s": 49.081165050433384,
+        "outlet_m3s": 9.447773369233861,
+        "hydraulic_s": 1.09675058798166,
+        "graph": true,
+        "steps": 231,
+        "rejected": 0,
+        "dt_min_s": 0.15509227048096363,
+        "dt_max_s": 0.2602985418809994
+      },
+      {
+        "t_s": 15360,
+        "section_m3s": 49.02056597355307,
+        "outlet_m3s": 9.509481844538822,
+        "hydraulic_s": 1.0953323090216145,
+        "graph": true,
+        "steps": 231,
+        "rejected": 0,
+        "dt_min_s": 0.2242441315211181,
+        "dt_max_s": 0.2600706503258663
+      },
+      {
+        "t_s": 15420,
+        "section_m3s": 49.20611156647598,
+        "outlet_m3s": 9.54898403313491,
+        "hydraulic_s": 1.099927325034514,
+        "graph": true,
+        "steps": 232,
+        "rejected": 0,
+        "dt_min_s": 0.014416019408599823,
+        "dt_max_s": 0.25980482150152423
+      },
+      {
+        "t_s": 15480,
+        "section_m3s": 49.04885488441117,
+        "outlet_m3s": 9.609522825899088,
+        "hydraulic_s": 1.100029245018959,
+        "graph": true,
+        "steps": 232,
+        "rejected": 0,
+        "dt_min_s": 0.08020634786043956,
+        "dt_max_s": 0.25949883807986146
+      },
+      {
+        "t_s": 15540,
+        "section_m3s": 49.27324030092568,
+        "outlet_m3s": 9.652813385303793,
+        "hydraulic_s": 1.0999610369908623,
+        "graph": true,
+        "steps": 232,
+        "rejected": 0,
+        "dt_min_s": 0.14734428363954066,
+        "dt_max_s": 0.2593043146665084
+      },
+      {
+        "t_s": 15600,
+        "section_m3s": 49.282719954074125,
+        "outlet_m3s": 9.623904688599577,
+        "hydraulic_s": 1.0998657569871284,
+        "graph": true,
+        "steps": 232,
+        "rejected": 0,
+        "dt_min_s": 0.1946420338244934,
+        "dt_max_s": 0.2589784849998406
+      },
+      {
+        "t_s": 15660,
+        "section_m3s": 49.81114193647809,
+        "outlet_m3s": 9.741612259400911,
+        "hydraulic_s": 1.1044777549686842,
+        "graph": true,
+        "steps": 233,
+        "rejected": 0,
+        "dt_min_s": 0.001097595722967526,
+        "dt_max_s": 0.2587989336577801
+      },
+      {
+        "t_s": 15720,
+        "section_m3s": 49.950424450275996,
+        "outlet_m3s": 9.665647610595382,
+        "hydraulic_s": 1.1044348789728247,
+        "graph": true,
+        "steps": 233,
+        "rejected": 0,
+        "dt_min_s": 0.03743282036703022,
+        "dt_max_s": 0.2585792236591036
+      },
+      {
+        "t_s": 15780,
+        "section_m3s": 50.1044420937571,
+        "outlet_m3s": 9.678998758104232,
+        "hydraulic_s": 1.1048271489562467,
+        "graph": true,
+        "steps": 233,
+        "rejected": 0,
+        "dt_min_s": 0.10715230500318285,
+        "dt_max_s": 0.25827218777199273
+      },
+      {
+        "t_s": 15840,
+        "section_m3s": 50.05574619476587,
+        "outlet_m3s": 9.65878744524986,
+        "hydraulic_s": 1.105151284020394,
+        "graph": true,
+        "steps": 233,
+        "rejected": 0,
+        "dt_min_s": 0.16692048966251605,
+        "dt_max_s": 0.2580221464038833
+      },
+      {
+        "t_s": 15900,
+        "section_m3s": 49.904613910863795,
+        "outlet_m3s": 9.763444420361338,
+        "hydraulic_s": 1.105441250023432,
+        "graph": true,
+        "steps": 233,
+        "rejected": 0,
+        "dt_min_s": 0.21425356452164124,
+        "dt_max_s": 0.2579049613278632
+      },
+      {
+        "t_s": 15960,
+        "section_m3s": 49.56592676669243,
+        "outlet_m3s": 9.739088219413679,
+        "hydraulic_s": 1.1102218290325254,
+        "graph": true,
+        "steps": 234,
+        "rejected": 0,
+        "dt_min_s": 0.0007926081034383969,
+        "dt_max_s": 0.2577120284825036
+      },
+      {
+        "t_s": 16020,
+        "section_m3s": 49.77406298621305,
+        "outlet_m3s": 9.74752076338118,
+        "hydraulic_s": 1.110599601001013,
+        "graph": true,
+        "steps": 234,
+        "rejected": 0,
+        "dt_min_s": 0.055891199084726395,
+        "dt_max_s": 0.25738031973152486
+      },
+      {
+        "t_s": 16080,
+        "section_m3s": 49.55833962837739,
+        "outlet_m3s": 9.737155443603843,
+        "hydraulic_s": 1.11054438498104,
+        "graph": true,
+        "steps": 234,
+        "rejected": 0,
+        "dt_min_s": 0.1033000685783918,
+        "dt_max_s": 0.257146622838533
+      },
+      {
+        "t_s": 16140,
+        "section_m3s": 49.21531877832506,
+        "outlet_m3s": 9.743756340794546,
+        "hydraulic_s": 1.11056772491429,
+        "graph": true,
+        "steps": 234,
+        "rejected": 0,
+        "dt_min_s": 0.15463936854393978,
+        "dt_max_s": 0.2569579131319223
+      },
+      {
+        "t_s": 16200,
+        "section_m3s": 49.490238693578675,
+        "outlet_m3s": 9.757255239499015,
+        "hydraulic_s": 1.1105892600608058,
+        "graph": true,
+        "steps": 234,
+        "rejected": 0,
+        "dt_min_s": 0.19974303653907555,
+        "dt_max_s": 0.2567469029525215
+      },
+      {
+        "t_s": 16260,
+        "section_m3s": 49.59866523561262,
+        "outlet_m3s": 9.768250080057623,
+        "hydraulic_s": 1.1107765310443938,
+        "graph": true,
+        "steps": 234,
+        "rejected": 0,
+        "dt_min_s": 0.24522693427206832,
+        "dt_max_s": 0.25655061193897377
+      },
+      {
+        "t_s": 16320,
+        "section_m3s": 49.0363468073745,
+        "outlet_m3s": 9.778195567245469,
+        "hydraulic_s": 1.1153666989994235,
+        "graph": true,
+        "steps": 235,
+        "rejected": 0,
+        "dt_min_s": 0.03138733205196331,
+        "dt_max_s": 0.2563621502150923
+      },
+      {
+        "t_s": 16380,
+        "section_m3s": 49.20318551125917,
+        "outlet_m3s": 9.786957704142939,
+        "hydraulic_s": 1.115222678927239,
+        "graph": true,
+        "steps": 235,
+        "rejected": 0,
+        "dt_min_s": 0.07260498106006708,
+        "dt_max_s": 0.2561862275649725
+      },
+      {
+        "t_s": 16440,
+        "section_m3s": 49.345204412206655,
+        "outlet_m3s": 9.829102928806,
+        "hydraulic_s": 1.115465217968449,
+        "graph": true,
+        "steps": 235,
+        "rejected": 0,
+        "dt_min_s": 0.11749492369199288,
+        "dt_max_s": 0.2560053491708464
+      },
+      {
+        "t_s": 16500,
+        "section_m3s": 48.85313486285934,
+        "outlet_m3s": 9.873945928808583,
+        "hydraulic_s": 1.115168975025881,
+        "graph": true,
+        "steps": 235,
+        "rejected": 0,
+        "dt_min_s": 0.16153566610591952,
+        "dt_max_s": 0.25580756832064305
+      },
+      {
+        "t_s": 16560,
+        "section_m3s": 48.94032628734227,
+        "outlet_m3s": 9.851065397584655,
+        "hydraulic_s": 1.1151894069625996,
+        "graph": true,
+        "steps": 235,
+        "rejected": 0,
+        "dt_min_s": 0.19731386748389923,
+        "dt_max_s": 0.25564250465691235
+      },
+      {
+        "t_s": 16620,
+        "section_m3s": 48.89970655007055,
+        "outlet_m3s": 9.847527341258926,
+        "hydraulic_s": 1.115153400984127,
+        "graph": true,
+        "steps": 235,
+        "rejected": 0,
+        "dt_min_s": 0.23644462107040454,
+        "dt_max_s": 0.25551262696588317
+      },
+      {
+        "t_s": 16680,
+        "section_m3s": 48.955153373708406,
+        "outlet_m3s": 9.85803559873287,
+        "hydraulic_s": 1.1200436539947987,
+        "graph": true,
+        "steps": 236,
+        "rejected": 0,
+        "dt_min_s": 0.020922858766425634,
+        "dt_max_s": 0.2553309751309145
+      },
+      {
+        "t_s": 16740,
+        "section_m3s": 48.687571763066806,
+        "outlet_m3s": 9.867302930765678,
+        "hydraulic_s": 1.1200673910207115,
+        "graph": true,
+        "steps": 236,
+        "rejected": 0,
+        "dt_min_s": 0.05856647330801934,
+        "dt_max_s": 0.2551447828368495
+      },
+      {
+        "t_s": 16800,
+        "section_m3s": 49.2713009204376,
+        "outlet_m3s": 9.876684148736725,
+        "hydraulic_s": 1.1202736409613863,
+        "graph": true,
+        "steps": 236,
+        "rejected": 0,
+        "dt_min_s": 0.0963396215774992,
+        "dt_max_s": 0.2549602084348702
+      },
+      {
+        "t_s": 16860,
+        "section_m3s": 49.22683645588404,
+        "outlet_m3s": 9.887607590504194,
+        "hydraulic_s": 1.120137122052256,
+        "graph": true,
+        "steps": 236,
+        "rejected": 0,
+        "dt_min_s": 0.13439502203618758,
+        "dt_max_s": 0.2548309755102245
+      },
+      {
+        "t_s": 16920,
+        "section_m3s": 48.87425063851988,
+        "outlet_m3s": 9.899144795485093,
+        "hydraulic_s": 1.120237234979868,
+        "graph": true,
+        "steps": 236,
+        "rejected": 0,
+        "dt_min_s": 0.1653857354322099,
+        "dt_max_s": 0.25469321700646314
+      },
+      {
+        "t_s": 16980,
+        "section_m3s": 48.47060611461056,
+        "outlet_m3s": 9.90692393585341,
+        "hydraulic_s": 1.1202925110119395,
+        "graph": true,
+        "steps": 236,
+        "rejected": 0,
+        "dt_min_s": 0.19755709404489608,
+        "dt_max_s": 0.25453046105314814
+      },
+      {
+        "t_s": 17040,
+        "section_m3s": 48.22619412121324,
+        "outlet_m3s": 9.921751992013984,
+        "hydraulic_s": 1.1205447129905224,
+        "graph": true,
+        "steps": 236,
+        "rejected": 0,
+        "dt_min_s": 0.23059253275278024,
+        "dt_max_s": 0.25440684515999235
+      },
+      {
+        "t_s": 17100,
+        "section_m3s": 48.13210699168849,
+        "outlet_m3s": 9.936065026650128,
+        "hydraulic_s": 1.1253075919812545,
+        "graph": true,
+        "steps": 237,
+        "rejected": 0,
+        "dt_min_s": 0.00826198994036531,
+        "dt_max_s": 0.2542744192740429
+      },
+      {
+        "t_s": 17160,
+        "section_m3s": 48.188487163351965,
+        "outlet_m3s": 9.949237072060836,
+        "hydraulic_s": 1.1256410569767468,
+        "graph": true,
+        "steps": 237,
+        "rejected": 0,
+        "dt_min_s": 0.04255108479628689,
+        "dt_max_s": 0.2541334193864174
+      },
+      {
+        "t_s": 17220,
+        "section_m3s": 48.3355582869311,
+        "outlet_m3s": 9.962117414765574,
+        "hydraulic_s": 1.125235503015574,
+        "graph": true,
+        "steps": 237,
+        "rejected": 0,
+        "dt_min_s": 0.07493572781822877,
+        "dt_max_s": 0.2539965565045488
+      },
+      {
+        "t_s": 17280,
+        "section_m3s": 48.08031895939882,
+        "outlet_m3s": 9.976554546340775,
+        "hydraulic_s": 1.1252781469956972,
+        "graph": true,
+        "steps": 237,
+        "rejected": 0,
+        "dt_min_s": 0.10799647699968773,
+        "dt_max_s": 0.25384290272075555
+      },
+      {
+        "t_s": 17340,
+        "section_m3s": 47.43352328722831,
+        "outlet_m3s": 9.994463312288524,
+        "hydraulic_s": 1.1252619500737637,
+        "graph": true,
+        "steps": 237,
+        "rejected": 0,
+        "dt_min_s": 0.14053780060930876,
+        "dt_max_s": 0.2537002953738991
+      },
+      {
+        "t_s": 17400,
+        "section_m3s": 47.9020984393234,
+        "outlet_m3s": 10.012074003294645,
+        "hydraulic_s": 1.1251605900470167,
+        "graph": true,
+        "steps": 237,
+        "rejected": 0,
+        "dt_min_s": 0.17119698629903723,
+        "dt_max_s": 0.2535771268814499
+      },
+      {
+        "t_s": 17460,
+        "section_m3s": 47.46088379221134,
+        "outlet_m3s": 10.027699373264719,
+        "hydraulic_s": 1.1250761460396461,
+        "graph": true,
+        "steps": 237,
+        "rejected": 0,
+        "dt_min_s": 0.19934826349344803,
+        "dt_max_s": 0.25345202527066374
+      },
+      {
+        "t_s": 17520,
+        "section_m3s": 47.49093690330143,
+        "outlet_m3s": 10.044622925032794,
+        "hydraulic_s": 1.1251807989901863,
+        "graph": true,
+        "steps": 237,
+        "rejected": 0,
+        "dt_min_s": 0.22826180889023817,
+        "dt_max_s": 0.25333179810563083
+      },
+      {
+        "t_s": 17580,
+        "section_m3s": 46.80089657662126,
+        "outlet_m3s": 10.06804494483998,
+        "hydraulic_s": 1.1301598220597953,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.011170042351295706,
+        "dt_max_s": 0.25319643396063124
+      },
+      {
+        "t_s": 17640,
+        "section_m3s": 46.85033209530617,
+        "outlet_m3s": 10.093310265148709,
+        "hydraulic_s": 1.1303830850520171,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.04550283858770854,
+        "dt_max_s": 0.2530390283374306
+      },
+      {
+        "t_s": 17700,
+        "section_m3s": 46.35483804372877,
+        "outlet_m3s": 10.117299973640668,
+        "hydraulic_s": 1.130494423035998,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.0728402974200435,
+        "dt_max_s": 0.2529102311157195
+      },
+      {
+        "t_s": 17760,
+        "section_m3s": 46.30491600628496,
+        "outlet_m3s": 10.141587614954672,
+        "hydraulic_s": 1.130381568975281,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.09653032193091349,
+        "dt_max_s": 0.252805469447124
+      },
+      {
+        "t_s": 17820,
+        "section_m3s": 45.69443779609089,
+        "outlet_m3s": 10.167446825168494,
+        "hydraulic_s": 1.1303027919493616,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.11997126010101056,
+        "dt_max_s": 0.2527075165725987
+      },
+      {
+        "t_s": 17880,
+        "section_m3s": 45.53030215940283,
+        "outlet_m3s": 10.196200391674939,
+        "hydraulic_s": 1.1302716340287589,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.14434226846788079,
+        "dt_max_s": 0.25260675592583703
+      },
+      {
+        "t_s": 17940,
+        "section_m3s": 45.671195130909716,
+        "outlet_m3s": 10.227332638423832,
+        "hydraulic_s": 1.1300551579915918,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.16943702357821167,
+        "dt_max_s": 0.252502138449274
+      },
+      {
+        "t_s": 18000,
+        "section_m3s": 45.05967031179656,
+        "outlet_m3s": 10.261304096493161,
+        "hydraulic_s": 1.1296061419998296,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.19550072951096809,
+        "dt_max_s": 0.25239424235149893
+      },
+      {
+        "t_s": 18060,
+        "section_m3s": 44.594486010800274,
+        "outlet_m3s": 10.298525829341331,
+        "hydraulic_s": 1.1295218539889902,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.22237270488403738,
+        "dt_max_s": 0.25228246034067586
+      },
+      {
+        "t_s": 18120,
+        "section_m3s": 44.463925609745395,
+        "outlet_m3s": 10.337825919142293,
+        "hydraulic_s": 1.1294494340545498,
+        "graph": true,
+        "steps": 238,
+        "rejected": 0,
+        "dt_min_s": 0.24961953917954816,
+        "dt_max_s": 0.2521684007910023
+      },
+      {
+        "t_s": 18180,
+        "section_m3s": 44.56545023793588,
+        "outlet_m3s": 10.380450444575398,
+        "hydraulic_s": 1.1341099109849893,
+        "graph": true,
+        "steps": 239,
+        "rejected": 0,
+        "dt_min_s": 0.026316623447200982,
+        "dt_max_s": 0.2520519591745387
+      },
+      {
+        "t_s": 18240,
+        "section_m3s": 44.06070525220033,
+        "outlet_m3s": 10.428308847030712,
+        "hydraulic_s": 1.1341700009652413,
+        "graph": true,
+        "steps": 239,
+        "rejected": 0,
+        "dt_min_s": 0.05708371349828667,
+        "dt_max_s": 0.2519260302148258
+      },
+      {
+        "t_s": 18300,
+        "section_m3s": 43.747067207923585,
+        "outlet_m3s": 10.479638376069003,
+        "hydraulic_s": 1.1341681519988924,
+        "graph": true,
+        "steps": 239,
+        "rejected": 0,
+        "dt_min_s": 0.08874014005050412,
+        "dt_max_s": 0.25179400457767404
+      },
+      {
+        "t_s": 18360,
+        "section_m3s": 43.714473207855676,
+        "outlet_m3s": 10.53202254989228,
+        "hydraulic_s": 1.1339025490451604,
+        "graph": true,
+        "steps": 239,
+        "rejected": 0,
+        "dt_min_s": 0.12060290519002592,
+        "dt_max_s": 0.25166017683461744
+      },
+      {
+        "t_s": 18420,
+        "section_m3s": 43.5106473078049,
+        "outlet_m3s": 10.595116625860586,
+        "hydraulic_s": 1.1337865429813974,
+        "graph": true,
+        "steps": 239,
+        "rejected": 0,
+        "dt_min_s": 0.15280828824688797,
+        "dt_max_s": 0.2515255735866118
+      },
+      {
+        "t_s": 18480,
+        "section_m3s": 43.37310552064543,
+        "outlet_m3s": 10.673580835695127,
+        "hydraulic_s": 1.1361930359271355,
+        "graph": true,
+        "steps": 239,
+        "rejected": 0,
+        "dt_min_s": 0.1855094337988703,
+        "dt_max_s": 0.25138917892917517
+      },
+      {
+        "t_s": 18540,
+        "section_m3s": 43.0258755094721,
+        "outlet_m3s": 10.758098354610654,
+        "hydraulic_s": 1.1339092010166496,
+        "graph": true,
+        "steps": 239,
+        "rejected": 0,
+        "dt_min_s": 0.21825751445067,
+        "dt_max_s": 0.2512519644385897
+      },
+      {
+        "t_s": 18600,
+        "section_m3s": 42.50352924184311,
+        "outlet_m3s": 10.85492628648232,
+        "hydraulic_s": 1.138424055010546,
+        "graph": true,
+        "steps": 240,
+        "rejected": 0,
+        "dt_min_s": 0.0014256178874347825,
+        "dt_max_s": 0.25111792809477873
+      },
+      {
+        "t_s": 18660,
+        "section_m3s": 42.349778700450166,
+        "outlet_m3s": 10.959250542406517,
+        "hydraulic_s": 1.1384924169979058,
+        "graph": true,
+        "steps": 240,
+        "rejected": 0,
+        "dt_min_s": 0.13431890618812758,
+        "dt_max_s": 0.2510019916617079
+      },
+      {
+        "t_s": 18720,
+        "section_m3s": 41.99637068159451,
+        "outlet_m3s": 11.079590405535662,
+        "hydraulic_s": 1.1429037759662606,
+        "graph": true,
+        "steps": 241,
+        "rejected": 0,
+        "dt_min_s": 0.04146068718546303,
+        "dt_max_s": 0.25038676257766374
+      },
+      {
+        "t_s": 18780,
+        "section_m3s": 41.96121175198835,
+        "outlet_m3s": 11.220772228459586,
+        "hydraulic_s": 1.1425944920629263,
+        "graph": true,
+        "steps": 241,
+        "rejected": 0,
+        "dt_min_s": 0.16809840075438842,
+        "dt_max_s": 0.2500052201975658
+      },
+      {
+        "t_s": 18840,
+        "section_m3s": 41.44633984897421,
+        "outlet_m3s": 11.411463535898172,
+        "hydraulic_s": 1.1469939690432511,
+        "graph": true,
+        "steps": 242,
+        "rejected": 0,
+        "dt_min_s": 0.022878677846165374,
+        "dt_max_s": 0.24924520373980277
+      },
+      {
+        "t_s": 18900,
+        "section_m3s": 40.88416041009671,
+        "outlet_m3s": 11.616874318919388,
+        "hydraulic_s": 1.146668290020898,
+        "graph": true,
+        "steps": 242,
+        "rejected": 0,
+        "dt_min_s": 0.1465182422361977,
+        "dt_max_s": 0.24901518687787288
+      },
+      {
+        "t_s": 18960,
+        "section_m3s": 40.791309253617264,
+        "outlet_m3s": 11.902044113066706,
+        "hydraulic_s": 1.1514758020057343,
+        "graph": true,
+        "steps": 243,
+        "rejected": 0,
+        "dt_min_s": 0.05170588391047204,
+        "dt_max_s": 0.24815129203175612
+      },
+      {
+        "t_s": 19020,
+        "section_m3s": 40.88120480536018,
+        "outlet_m3s": 12.223149048880199,
+        "hydraulic_s": 1.1513108310173266,
+        "graph": true,
+        "steps": 243,
+        "rejected": 0,
+        "dt_min_s": 0.18249201785511104,
+        "dt_max_s": 0.24769654131974023
+      },
+      {
+        "t_s": 19080,
+        "section_m3s": 40.61063189904768,
+        "outlet_m3s": 12.57296755963107,
+        "hydraulic_s": 1.1554917609901167,
+        "graph": true,
+        "steps": 244,
+        "rejected": 0,
+        "dt_min_s": 0.06739679883685312,
+        "dt_max_s": 0.2470340013184026
+      },
+      {
+        "t_s": 19140,
+        "section_m3s": 40.19936859854109,
+        "outlet_m3s": 12.959974965063157,
+        "hydraulic_s": 1.1553356219665147,
+        "graph": true,
+        "steps": 244,
+        "rejected": 0,
+        "dt_min_s": 0.18282203130365815,
+        "dt_max_s": 0.24677464931945084
+      },
+      {
+        "t_s": 19200,
+        "section_m3s": 40.204252562016094,
+        "outlet_m3s": 13.437018128040654,
+        "hydraulic_s": 1.159623808984179,
+        "graph": true,
+        "steps": 245,
+        "rejected": 0,
+        "dt_min_s": 0.03632503541302867,
+        "dt_max_s": 0.2461269515901954
+      },
+      {
+        "t_s": 19260,
+        "section_m3s": 39.499605694200724,
+        "outlet_m3s": 13.997238888508582,
+        "hydraulic_s": 1.159563202993013,
+        "graph": true,
+        "steps": 245,
+        "rejected": 0,
+        "dt_min_s": 0.1224383422450046,
+        "dt_max_s": 0.24616252135981176
+      },
+      {
+        "t_s": 19320,
+        "section_m3s": 39.30661917352797,
+        "outlet_m3s": 14.611290043686314,
+        "hydraulic_s": 1.1595720849581994,
+        "graph": true,
+        "steps": 245,
+        "rejected": 0,
+        "dt_min_s": 0.19908292702530161,
+        "dt_max_s": 0.24558796262023727
+      },
+      {
+        "t_s": 19380,
+        "section_m3s": 39.08113231746053,
+        "outlet_m3s": 15.380567314764873,
+        "hydraulic_s": 1.1642251340672374,
+        "graph": true,
+        "steps": 246,
+        "rejected": 0,
+        "dt_min_s": 0.021220414324488956,
+        "dt_max_s": 0.2450705740837882
+      },
+      {
+        "t_s": 19440,
+        "section_m3s": 38.98397698340317,
+        "outlet_m3s": 16.168851427230887,
+        "hydraulic_s": 1.1642597179743461,
+        "graph": true,
+        "steps": 246,
+        "rejected": 0,
+        "dt_min_s": 0.08162091477788636,
+        "dt_max_s": 0.24533050317406058
+      },
+      {
+        "t_s": 19500,
+        "section_m3s": 38.46553584364689,
+        "outlet_m3s": 17.03471299496159,
+        "hydraulic_s": 1.1636810569325462,
+        "graph": true,
+        "steps": 246,
+        "rejected": 0,
+        "dt_min_s": 0.13623836549959378,
+        "dt_max_s": 0.2449117431245978
+      },
+      {
+        "t_s": 19560,
+        "section_m3s": 38.38519999832303,
+        "outlet_m3s": 17.881043660964256,
+        "hydraulic_s": 1.1632829250302166,
+        "graph": true,
+        "steps": 246,
+        "rejected": 0,
+        "dt_min_s": 0.18218568378142663,
+        "dt_max_s": 0.24454825986025053
+      },
+      {
+        "t_s": 19620,
+        "section_m3s": 37.96600471506147,
+        "outlet_m3s": 18.804419370733378,
+        "hydraulic_s": 1.1629925260785967,
+        "graph": true,
+        "steps": 246,
+        "rejected": 0,
+        "dt_min_s": 0.22266440532257548,
+        "dt_max_s": 0.24424694122133978
+      },
+      {
+        "t_s": 19680,
+        "section_m3s": 37.653753965379046,
+        "outlet_m3s": 19.68503079100774,
+        "hydraulic_s": 1.1669138099532574,
+        "graph": true,
+        "steps": 247,
+        "rejected": 0,
+        "dt_min_s": 0.021763787481177133,
+        "dt_max_s": 0.24396741086026
+      },
+      {
+        "t_s": 19740,
+        "section_m3s": 37.73587425275958,
+        "outlet_m3s": 20.57757292068903,
+        "hydraulic_s": 1.1662600400159135,
+        "graph": true,
+        "steps": 247,
+        "rejected": 0,
+        "dt_min_s": 0.09013323783437954,
+        "dt_max_s": 0.24415942657124773
+      },
+      {
+        "t_s": 19800,
+        "section_m3s": 37.341926969539294,
+        "outlet_m3s": 21.398333606117617,
+        "hydraulic_s": 1.1660197580349632,
+        "graph": true,
+        "steps": 247,
+        "rejected": 0,
+        "dt_min_s": 0.15796169046370778,
+        "dt_max_s": 0.24373502763174315
+      },
+      {
+        "t_s": 19860,
+        "section_m3s": 36.83879118001593,
+        "outlet_m3s": 22.255391983987163,
+        "hydraulic_s": 1.1655223139678128,
+        "graph": true,
+        "steps": 247,
+        "rejected": 0,
+        "dt_min_s": 0.21704445336945355,
+        "dt_max_s": 0.243297079368936
+      },
+      {
+        "t_s": 19920,
+        "section_m3s": 36.66978934997654,
+        "outlet_m3s": 23.065153554461723,
+        "hydraulic_s": 1.1698458600440063,
+        "graph": true,
+        "steps": 248,
+        "rejected": 0,
+        "dt_min_s": 0.03383541242874344,
+        "dt_max_s": 0.2429633200625353
+      },
+      {
+        "t_s": 19980,
+        "section_m3s": 36.301260582064664,
+        "outlet_m3s": 23.82725655942874,
+        "hydraulic_s": 1.1692051250720397,
+        "graph": true,
+        "steps": 248,
+        "rejected": 0,
+        "dt_min_s": 0.13058788915441255,
+        "dt_max_s": 0.24258988894905145
+      },
+      {
+        "t_s": 20040,
+        "section_m3s": 36.09375029508762,
+        "outlet_m3s": 24.556287723646285,
+        "hydraulic_s": 1.1687623109901324,
+        "graph": true,
+        "steps": 248,
+        "rejected": 0,
+        "dt_min_s": 0.23516926213051192,
+        "dt_max_s": 0.24217488381103314
+      },
+      {
+        "t_s": 20100,
+        "section_m3s": 35.794716685208066,
+        "outlet_m3s": 25.23640676557261,
+        "hydraulic_s": 1.173019825015217,
+        "graph": true,
+        "steps": 249,
+        "rejected": 0,
+        "dt_min_s": 0.10161237929423805,
+        "dt_max_s": 0.2417529082482278
+      },
+      {
+        "t_s": 20160,
+        "section_m3s": 35.814215044952775,
+        "outlet_m3s": 25.8851944721008,
+        "hydraulic_s": 1.1723309149965644,
+        "graph": true,
+        "steps": 249,
+        "rejected": 0,
+        "dt_min_s": 0.22240000460806186,
+        "dt_max_s": 0.24128153270526284
+      },
+      {
+        "t_s": 20220,
+        "section_m3s": 35.13628515105229,
+        "outlet_m3s": 26.501383714539408,
+        "hydraulic_s": 1.1765981169883162,
+        "graph": true,
+        "steps": 250,
+        "rejected": 0,
+        "dt_min_s": 0.1082515627349494,
+        "dt_max_s": 0.24078336955732937
+      },
+      {
+        "t_s": 20280,
+        "section_m3s": 34.76401711910148,
+        "outlet_m3s": 27.115743196798334,
+        "hydraulic_s": 1.1760558080277406,
+        "graph": true,
+        "steps": 250,
+        "rejected": 0,
+        "dt_min_s": 0.2253548010958184,
+        "dt_max_s": 0.240286919127028
+      },
+      {
+        "t_s": 20340,
+        "section_m3s": 34.70942324824573,
+        "outlet_m3s": 27.65852008350921,
+        "hydraulic_s": 1.180192495987285,
+        "graph": true,
+        "steps": 251,
+        "rejected": 0,
+        "dt_min_s": 0.10068227758529247,
+        "dt_max_s": 0.23981981934896704
+      },
+      {
+        "t_s": 20400,
+        "section_m3s": 34.52689518886715,
+        "outlet_m3s": 28.185398597480283,
+        "hydraulic_s": 1.1799308870104142,
+        "graph": true,
+        "steps": 251,
+        "rejected": 0,
+        "dt_min_s": 0.2065834618115332,
+        "dt_max_s": 0.23937737711687765
+      },
+      {
+        "t_s": 20460,
+        "section_m3s": 33.94575240072542,
+        "outlet_m3s": 28.672052856244168,
+        "hydraulic_s": 1.1843321319902316,
+        "graph": true,
+        "steps": 252,
+        "rejected": 0,
+        "dt_min_s": 0.062438332293822896,
+        "dt_max_s": 0.2389725321188492
+      },
+      {
+        "t_s": 20520,
+        "section_m3s": 33.81350725531811,
+        "outlet_m3s": 29.137103947581394,
+        "hydraulic_s": 1.1841628980473615,
+        "graph": true,
+        "steps": 252,
+        "rejected": 0,
+        "dt_min_s": 0.15375516884523677,
+        "dt_max_s": 0.23861484115013964
+      },
+      {
+        "t_s": 20580,
+        "section_m3s": 33.63414978283884,
+        "outlet_m3s": 29.567901088753327,
+        "hydraulic_s": 1.1883817550260574,
+        "graph": true,
+        "steps": 253,
+        "rejected": 0,
+        "dt_min_s": 0.0061288768010854255,
+        "dt_max_s": 0.23824545938276923
+      },
+      {
+        "t_s": 20640,
+        "section_m3s": 33.527978059732895,
+        "outlet_m3s": 29.969758980319117,
+        "hydraulic_s": 1.1877388080465607,
+        "graph": true,
+        "steps": 253,
+        "rejected": 0,
+        "dt_min_s": 0.08815160630547325,
+        "dt_max_s": 0.23790316429635602
+      },
+      {
+        "t_s": 20700,
+        "section_m3s": 33.13484472024138,
+        "outlet_m3s": 30.342844469494594,
+        "hydraulic_s": 1.1870601039845496,
+        "graph": true,
+        "steps": 253,
+        "rejected": 0,
+        "dt_min_s": 0.17149448324198602,
+        "dt_max_s": 0.23758110529394597
+      },
+      {
+        "t_s": 20760,
+        "section_m3s": 33.01081438295174,
+        "outlet_m3s": 30.69263620368438,
+        "hydraulic_s": 1.191239909036085,
+        "graph": true,
+        "steps": 254,
+        "rejected": 0,
+        "dt_min_s": 0.022021552602382144,
+        "dt_max_s": 0.23724280688561822
+      },
+      {
+        "t_s": 20820,
+        "section_m3s": 32.92914953198924,
+        "outlet_m3s": 31.01038894598023,
+        "hydraulic_s": 1.1907437900081277,
+        "graph": true,
+        "steps": 254,
+        "rejected": 0,
+        "dt_min_s": 0.11592111873324029,
+        "dt_max_s": 0.23687977831359333
+      },
+      {
+        "t_s": 20880,
+        "section_m3s": 32.54175784333105,
+        "outlet_m3s": 31.317419954819584,
+        "hydraulic_s": 1.190576367022004,
+        "graph": true,
+        "steps": 254,
+        "rejected": 0,
+        "dt_min_s": 0.20908055871041142,
+        "dt_max_s": 0.23651075591549042
+      },
+      {
+        "t_s": 20940,
+        "section_m3s": 32.46486664129868,
+        "outlet_m3s": 31.617868942571416,
+        "hydraulic_s": 1.195057352015283,
+        "graph": true,
+        "steps": 255,
+        "rejected": 0,
+        "dt_min_s": 0.0640704423385614,
+        "dt_max_s": 0.2361447908211985
+      },
+      {
+        "t_s": 21000,
+        "section_m3s": 31.75129152412507,
+        "outlet_m3s": 31.892779753887833,
+        "hydraulic_s": 1.1948772610048763,
+        "graph": true,
+        "steps": 255,
+        "rejected": 0,
+        "dt_min_s": 0.1516003170836484,
+        "dt_max_s": 0.23579231685150975
+      },
+      {
+        "t_s": 21060,
+        "section_m3s": 31.86944179982335,
+        "outlet_m3s": 32.138916082275685,
+        "hydraulic_s": 1.1993318070308305,
+        "graph": true,
+        "steps": 256,
+        "rejected": 0,
+        "dt_min_s": 0.0020593908593582455,
+        "dt_max_s": 0.23545223485369118
+      },
+      {
+        "t_s": 21120,
+        "section_m3s": 31.528667708071104,
+        "outlet_m3s": 32.37929432853659,
+        "hydraulic_s": 1.198894442000892,
+        "graph": true,
+        "steps": 256,
+        "rejected": 0,
+        "dt_min_s": 0.08156158109704847,
+        "dt_max_s": 0.23512182654242406
+      },
+      {
+        "t_s": 21180,
+        "section_m3s": 31.19668156845825,
+        "outlet_m3s": 32.595849114528875,
+        "hydraulic_s": 1.1983662680140696,
+        "graph": true,
+        "steps": 256,
+        "rejected": 0,
+        "dt_min_s": 0.15813915021135472,
+        "dt_max_s": 0.23481943624459825
+      },
+      {
+        "t_s": 21240,
+        "section_m3s": 31.165746496617793,
+        "outlet_m3s": 32.78775800383931,
+        "hydraulic_s": 1.1981726720114239,
+        "graph": true,
+        "steps": 256,
+        "rejected": 0,
+        "dt_min_s": 0.23344829525740352,
+        "dt_max_s": 0.23452545739649389
+      },
+      {
+        "t_s": 21300,
+        "section_m3s": 31.107526471622986,
+        "outlet_m3s": 32.968048790955315,
+        "hydraulic_s": 1.2028631090652198,
+        "graph": true,
+        "steps": 257,
+        "rejected": 0,
+        "dt_min_s": 0.07250557492079679,
+        "dt_max_s": 0.23423250477146906
+      },
+      {
+        "t_s": 21360,
+        "section_m3s": 30.520635501551443,
+        "outlet_m3s": 33.13211698786132,
+        "hydraulic_s": 1.2032014139695093,
+        "graph": true,
+        "steps": 257,
+        "rejected": 0,
+        "dt_min_s": 0.14280851191506372,
+        "dt_max_s": 0.23395156916463267
+      },
+      {
+        "t_s": 21420,
+        "section_m3s": 30.385990107645437,
+        "outlet_m3s": 33.2840647593941,
+        "hydraulic_s": 1.2034919839934446,
+        "graph": true,
+        "steps": 257,
+        "rejected": 0,
+        "dt_min_s": 0.21201430049404735,
+        "dt_max_s": 0.23367985366207186
+      },
+      {
+        "t_s": 21480,
+        "section_m3s": 30.376560818356424,
+        "outlet_m3s": 33.42774559094978,
+        "hydraulic_s": 1.2096954939770512,
+        "graph": true,
+        "steps": 258,
+        "rejected": 0,
+        "dt_min_s": 0.04565170143177966,
+        "dt_max_s": 0.23341337508903728
+      },
+      {
+        "t_s": 21540,
+        "section_m3s": 30.072106377603873,
+        "outlet_m3s": 33.55301063803733,
+        "hydraulic_s": 1.2085297870216891,
+        "graph": true,
+        "steps": 258,
+        "rejected": 0,
+        "dt_min_s": 0.11272381236994988,
+        "dt_max_s": 0.23315420163555167
+      },
+      {
+        "t_s": 21600,
+        "section_m3s": 29.726672066781127,
+        "outlet_m3s": 33.666680880213974,
+        "hydraulic_s": 1.208500424923841,
+        "graph": true,
+        "steps": 258,
+        "rejected": 0,
+        "dt_min_s": 0.1824329658265924,
+        "dt_max_s": 0.23288973460766563
+      },
+      {
+        "t_s": 21660,
+        "section_m3s": 29.305478721038284,
+        "outlet_m3s": 33.768034866497814,
+        "hydraulic_s": 1.1969418980297633,
+        "graph": true,
+        "steps": 259,
+        "rejected": 0,
+        "dt_min_s": 0.021825254010764183,
+        "dt_max_s": 0.23261240335870148
+      },
+      {
+        "t_s": 21720,
+        "section_m3s": 29.058406882962057,
+        "outlet_m3s": 33.85720362235588,
+        "hydraulic_s": 1.196378520980943,
+        "graph": true,
+        "steps": 259,
+        "rejected": 0,
+        "dt_min_s": 0.09150329103431432,
+        "dt_max_s": 0.2323361497210096
+      },
+      {
+        "t_s": 21780,
+        "section_m3s": 29.066859885968732,
+        "outlet_m3s": 33.93426698499146,
+        "hydraulic_s": 1.1956591300549917,
+        "graph": true,
+        "steps": 259,
+        "rejected": 0,
+        "dt_min_s": 0.16065013666957384,
+        "dt_max_s": 0.23206709194593952
+      },
+      {
+        "t_s": 21840,
+        "section_m3s": 28.902662298628517,
+        "outlet_m3s": 34.00459808408535,
+        "hydraulic_s": 1.1949354319367558,
+        "graph": true,
+        "steps": 259,
+        "rejected": 0,
+        "dt_min_s": 0.22553738130591228,
+        "dt_max_s": 0.2318061933168994
+      },
+      {
+        "t_s": 21900,
+        "section_m3s": 28.74876329464605,
+        "outlet_m3s": 34.06711289479475,
+        "hydraulic_s": 1.1994928540079854,
+        "graph": true,
+        "steps": 260,
+        "rejected": 0,
+        "dt_min_s": 0.055961095615202794,
+        "dt_max_s": 0.23156162949914086
+      },
+      {
+        "t_s": 21960,
+        "section_m3s": 28.648202030554724,
+        "outlet_m3s": 34.12316753224586,
+        "hydraulic_s": 1.1988863099832088,
+        "graph": true,
+        "steps": 260,
+        "rejected": 0,
+        "dt_min_s": 0.11457154365780298,
+        "dt_max_s": 0.23132724156705367
+      },
+      {
+        "t_s": 22020,
+        "section_m3s": 28.386722504198165,
+        "outlet_m3s": 34.17210042408939,
+        "hydraulic_s": 1.1986303250305355,
+        "graph": true,
+        "steps": 260,
+        "rejected": 0,
+        "dt_min_s": 0.16974348913208814,
+        "dt_max_s": 0.23110780314319646
+      },
+      {
+        "t_s": 22080,
+        "section_m3s": 28.074189456920916,
+        "outlet_m3s": 34.21151930122869,
+        "hydraulic_s": 1.198193016985897,
+        "graph": true,
+        "steps": 260,
+        "rejected": 0,
+        "dt_min_s": 0.22214855027050362,
+        "dt_max_s": 0.23090165451489056
+      },
+      {
+        "t_s": 22140,
+        "section_m3s": 27.82493730094284,
+        "outlet_m3s": 34.23641022652155,
+        "hydraulic_s": 1.2026772980461828,
+        "graph": true,
+        "steps": 261,
+        "rejected": 0,
+        "dt_min_s": 0.04247839458184899,
+        "dt_max_s": 0.23070462250502086
+      },
+      {
+        "t_s": 22200,
+        "section_m3s": 27.500112737591067,
+        "outlet_m3s": 34.255728618083715,
+        "hydraulic_s": 1.2025967700174078,
+        "graph": true,
+        "steps": 261,
+        "rejected": 0,
+        "dt_min_s": 0.09482376436062623,
+        "dt_max_s": 0.23050438329612197
+      },
+      {
+        "t_s": 22260,
+        "section_m3s": 27.365320747099272,
+        "outlet_m3s": 34.27789219458452,
+        "hydraulic_s": 1.20240032102447,
+        "graph": true,
+        "steps": 261,
+        "rejected": 0,
+        "dt_min_s": 0.14864825432596263,
+        "dt_max_s": 0.23030167369181997
+      },
+      {
+        "t_s": 22320,
+        "section_m3s": 27.244278252045238,
+        "outlet_m3s": 34.29078011563106,
+        "hydraulic_s": 1.2021575800608844,
+        "graph": true,
+        "steps": 261,
+        "rejected": 0,
+        "dt_min_s": 0.20289923351811012,
+        "dt_max_s": 0.23009257076719455
+      },
+      {
+        "t_s": 22380,
+        "section_m3s": 27.12036116478266,
+        "outlet_m3s": 34.29307154476458,
+        "hydraulic_s": 1.2064680019393563,
+        "graph": true,
+        "steps": 262,
+        "rejected": 0,
+        "dt_min_s": 0.028539067272504326,
+        "dt_max_s": 0.2298823703009028
+      },
+      {
+        "t_s": 22440,
+        "section_m3s": 26.933199722296557,
+        "outlet_m3s": 34.28208300227367,
+        "hydraulic_s": 1.2063758780132048,
+        "graph": true,
+        "steps": 262,
+        "rejected": 0,
+        "dt_min_s": 0.08460021374048665,
+        "dt_max_s": 0.22966548612352716
+      },
+      {
+        "t_s": 22500,
+        "section_m3s": 26.562460519369537,
+        "outlet_m3s": 34.260212049509576,
+        "hydraulic_s": 1.2061656709411182,
+        "graph": true,
+        "steps": 262,
+        "rejected": 0,
+        "dt_min_s": 0.13813600072899135,
+        "dt_max_s": 0.22945552455336374
+      },
+      {
+        "t_s": 22560,
+        "section_m3s": 26.489116163080325,
+        "outlet_m3s": 34.22995461474542,
+        "hydraulic_s": 1.2059180069481954,
+        "graph": true,
+        "steps": 262,
+        "rejected": 0,
+        "dt_min_s": 0.18796589463454438,
+        "dt_max_s": 0.22925806609827734
+      },
+      {
+        "t_s": 22620,
+        "section_m3s": 26.128239500022026,
+        "outlet_m3s": 34.195952606103674,
+        "hydraulic_s": 1.2101321840309538,
+        "graph": true,
+        "steps": 263,
+        "rejected": 0,
+        "dt_min_s": 0.006404280989954714,
+        "dt_max_s": 0.2290716450681298
+      },
+      {
+        "t_s": 22680,
+        "section_m3s": 26.00071865323116,
+        "outlet_m3s": 34.15788833364932,
+        "hydraulic_s": 1.2097398010082543,
+        "graph": true,
+        "steps": 263,
+        "rejected": 0,
+        "dt_min_s": 0.04912132109166123,
+        "dt_max_s": 0.2288983470053106
+      },
+      {
+        "t_s": 22740,
+        "section_m3s": 25.744796413664396,
+        "outlet_m3s": 34.11568685630676,
+        "hydraulic_s": 1.2088652340462431,
+        "graph": true,
+        "steps": 263,
+        "rejected": 0,
+        "dt_min_s": 0.0893776546981826,
+        "dt_max_s": 0.22874121107740053
+      },
+      {
+        "t_s": 22800,
+        "section_m3s": 25.55088934833378,
+        "outlet_m3s": 34.0678623980309,
+        "hydraulic_s": 1.208231653959956,
+        "graph": true,
+        "steps": 263,
+        "rejected": 0,
+        "dt_min_s": 0.12779333378057345,
+        "dt_max_s": 0.22859211944566818
+      },
+      {
+        "t_s": 22860,
+        "section_m3s": 25.329404156356272,
+        "outlet_m3s": 34.01802513941754,
+        "hydraulic_s": 1.2079449479933828,
+        "graph": true,
+        "steps": 263,
+        "rejected": 0,
+        "dt_min_s": 0.16598827863344923,
+        "dt_max_s": 0.2284467226986249
+      },
+      {
+        "t_s": 22920,
+        "section_m3s": 25.064607242263932,
+        "outlet_m3s": 33.97081683551029,
+        "hydraulic_s": 1.20788734103553,
+        "graph": true,
+        "steps": 263,
+        "rejected": 0,
+        "dt_min_s": 0.20651833755982807,
+        "dt_max_s": 0.228297431654787
+      },
+      {
+        "t_s": 22980,
+        "section_m3s": 24.89833447878288,
+        "outlet_m3s": 33.91618070817058,
+        "hydraulic_s": 1.2126664430252276,
+        "graph": true,
+        "steps": 264,
+        "rejected": 0,
+        "dt_min_s": 0.02014652373691206,
+        "dt_max_s": 0.22814039027138364
+      },
+      {
+        "t_s": 23040,
+        "section_m3s": 24.696912599688705,
+        "outlet_m3s": 33.856783272666505,
+        "hydraulic_s": 1.2128382309456356,
+        "graph": true,
+        "steps": 264,
+        "rejected": 0,
+        "dt_min_s": 0.061770822776452405,
+        "dt_max_s": 0.22797872554232482
+      },
+      {
+        "t_s": 23100,
+        "section_m3s": 24.50426247396972,
+        "outlet_m3s": 33.794368430414764,
+        "hydraulic_s": 1.2129094720003195,
+        "graph": true,
+        "steps": 264,
+        "rejected": 0,
+        "dt_min_s": 0.10360493124244385,
+        "dt_max_s": 0.2278237275353423
+      },
+      {
+        "t_s": 23160,
+        "section_m3s": 24.294813822128344,
+        "outlet_m3s": 33.71759135006093,
+        "hydraulic_s": 1.2128505500149913,
+        "graph": true,
+        "steps": 264,
+        "rejected": 0,
+        "dt_min_s": 0.14392083201892092,
+        "dt_max_s": 0.22766719243968228
+      },
+      {
+        "t_s": 23220,
+        "section_m3s": 24.102848668532292,
+        "outlet_m3s": 33.63547224541641,
+        "hydraulic_s": 1.2128723410423845,
+        "graph": true,
+        "steps": 264,
+        "rejected": 0,
+        "dt_min_s": 0.1818200479283405,
+        "dt_max_s": 0.22751442407204095
+      },
+      {
+        "t_s": 23280,
+        "section_m3s": 23.86665755621701,
+        "outlet_m3s": 33.54703266792494,
+        "hydraulic_s": 1.2126451610238291,
+        "graph": true,
+        "steps": 264,
+        "rejected": 0,
+        "dt_min_s": 0.21694847016624408,
+        "dt_max_s": 0.2273765270193019
+      },
+      {
+        "t_s": 23340,
+        "section_m3s": 23.703431922988965,
+        "outlet_m3s": 33.45406075879825,
+        "hydraulic_s": 1.2170397629961371,
+        "graph": true,
+        "steps": 265,
+        "rejected": 0,
+        "dt_min_s": 0.021822566261107568,
+        "dt_max_s": 0.22724961094759483
+      },
+      {
+        "t_s": 23400,
+        "section_m3s": 23.611014863229745,
+        "outlet_m3s": 33.35525711672235,
+        "hydraulic_s": 1.2165333739831112,
+        "graph": true,
+        "steps": 265,
+        "rejected": 0,
+        "dt_min_s": 0.05163879335668753,
+        "dt_max_s": 0.22713114016670152
+      },
+      {
+        "t_s": 23460,
+        "section_m3s": 23.443463306555834,
+        "outlet_m3s": 33.25173368475031,
+        "hydraulic_s": 1.2166406500618905,
+        "graph": true,
+        "steps": 265,
+        "rejected": 0,
+        "dt_min_s": 0.07988342648241087,
+        "dt_max_s": 0.22702261183128913
+      },
+      {
+        "t_s": 23520,
+        "section_m3s": 23.28124004988543,
+        "outlet_m3s": 33.144868163769814,
+        "hydraulic_s": 1.2165956429671496,
+        "graph": true,
+        "steps": 265,
+        "rejected": 0,
+        "dt_min_s": 0.10769630076902104,
+        "dt_max_s": 0.22691660791911283
+      },
+      {
+        "t_s": 23580,
+        "section_m3s": 23.17945286943383,
+        "outlet_m3s": 33.035727979543054,
+        "hydraulic_s": 1.2164282059529796,
+        "graph": true,
+        "steps": 265,
+        "rejected": 0,
+        "dt_min_s": 0.13556472300479072,
+        "dt_max_s": 0.22681121458948159
+      },
+      {
+        "t_s": 23640,
+        "section_m3s": 23.005057837765587,
+        "outlet_m3s": 32.92091091851471,
+        "hydraulic_s": 1.2163081290200353,
+        "graph": true,
+        "steps": 265,
+        "rejected": 0,
+        "dt_min_s": 0.16354181855058414,
+        "dt_max_s": 0.2267054669688362
+      },
+      {
+        "t_s": 23700,
+        "section_m3s": 22.73183089068625,
+        "outlet_m3s": 32.81327831476325,
+        "hydraulic_s": 1.2163411889923736,
+        "graph": true,
+        "steps": 265,
+        "rejected": 0,
+        "dt_min_s": 0.19330135776181123,
+        "dt_max_s": 0.22659752746822728
+      },
+      {
+        "t_s": 23760,
+        "section_m3s": 22.508371381636245,
+        "outlet_m3s": 32.70095911533669,
+        "hydraulic_s": 1.2161610440234654,
+        "graph": true,
+        "steps": 265,
+        "rejected": 0,
+        "dt_min_s": 0.22245996720448602,
+        "dt_max_s": 0.22648324191315164
+      },
+      {
+        "t_s": 23820,
+        "section_m3s": 22.35074116146619,
+        "outlet_m3s": 32.58382745140795,
+        "hydraulic_s": 1.2203262750408612,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.023390744983771583,
+        "dt_max_s": 0.2263770247372107
+      },
+      {
+        "t_s": 23880,
+        "section_m3s": 22.105886246815015,
+        "outlet_m3s": 32.46703597297892,
+        "hydraulic_s": 1.219960357004311,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.04977430827784701,
+        "dt_max_s": 0.22627625626209993
+      },
+      {
+        "t_s": 23940,
+        "section_m3s": 21.950508768678024,
+        "outlet_m3s": 32.345714680848566,
+        "hydraulic_s": 1.2199031140189618,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.07474792061839253,
+        "dt_max_s": 0.22617812728361195
+      },
+      {
+        "t_s": 24000,
+        "section_m3s": 21.61243869784327,
+        "outlet_m3s": 32.21898248012197,
+        "hydraulic_s": 1.2201836370513774,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.09855359346693149,
+        "dt_max_s": 0.22608674251914726
+      },
+      {
+        "t_s": 24060,
+        "section_m3s": 21.3625379768045,
+        "outlet_m3s": 32.08908596891076,
+        "hydraulic_s": 1.2200692670303397,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.12061584752518684,
+        "dt_max_s": 0.22599964060962985
+      },
+      {
+        "t_s": 24120,
+        "section_m3s": 21.22999309966108,
+        "outlet_m3s": 31.961245028911314,
+        "hydraulic_s": 1.2199811870232224,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.14419689633359667,
+        "dt_max_s": 0.22591493839750967
+      },
+      {
+        "t_s": 24180,
+        "section_m3s": 21.18027338394701,
+        "outlet_m3s": 31.835960626929104,
+        "hydraulic_s": 1.2197718580137007,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.1666849574285152,
+        "dt_max_s": 0.22582506392475152
+      },
+      {
+        "t_s": 24240,
+        "section_m3s": 21.08877875065858,
+        "outlet_m3s": 31.704654955029643,
+        "hydraulic_s": 1.219489587994758,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.18559662843472324,
+        "dt_max_s": 0.2257493593067944
+      },
+      {
+        "t_s": 24300,
+        "section_m3s": 20.89939725063547,
+        "outlet_m3s": 31.57283357430715,
+        "hydraulic_s": 1.2191933889989741,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.2042895358899841,
+        "dt_max_s": 0.2256756051879071
+      },
+      {
+        "t_s": 24360,
+        "section_m3s": 20.72083510153461,
+        "outlet_m3s": 31.435097989847417,
+        "hydraulic_s": 1.2193904190207832,
+        "graph": true,
+        "steps": 266,
+        "rejected": 0,
+        "dt_min_s": 0.22192522406112403,
+        "dt_max_s": 0.2256113929375998
+      },
+      {
+        "t_s": 24420,
+        "section_m3s": 20.56129793728663,
+        "outlet_m3s": 31.302488867938518,
+        "hydraulic_s": 1.2249125720118172,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.015549036379525205,
+        "dt_max_s": 0.22554273214697562
+      },
+      {
+        "t_s": 24480,
+        "section_m3s": 20.499285151739606,
+        "outlet_m3s": 31.170735463835687,
+        "hydraulic_s": 1.2235100910183974,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.03399072174215689,
+        "dt_max_s": 0.22546902812708133
+      },
+      {
+        "t_s": 24540,
+        "section_m3s": 20.233052338756774,
+        "outlet_m3s": 31.030226841468053,
+        "hydraulic_s": 1.2233403999707662,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.05132694722851738,
+        "dt_max_s": 0.22540197847388704
+      },
+      {
+        "t_s": 24600,
+        "section_m3s": 19.97378647928902,
+        "outlet_m3s": 30.893935489913567,
+        "hydraulic_s": 1.2231992370216176,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.06775877381369355,
+        "dt_max_s": 0.2253392537905435
+      },
+      {
+        "t_s": 24660,
+        "section_m3s": 19.878455074178056,
+        "outlet_m3s": 30.753898692128132,
+        "hydraulic_s": 1.2231061559868976,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.08337410192325478,
+        "dt_max_s": 0.2252791227459037
+      },
+      {
+        "t_s": 24720,
+        "section_m3s": 19.724652292903436,
+        "outlet_m3s": 30.619696598230316,
+        "hydraulic_s": 1.2233911880175583,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.09715807414977462,
+        "dt_max_s": 0.22522339462116697
+      },
+      {
+        "t_s": 24780,
+        "section_m3s": 19.61891058968613,
+        "outlet_m3s": 30.47548707104385,
+        "hydraulic_s": 1.223058768955525,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.10982502481056144,
+        "dt_max_s": 0.22517392562579971
+      },
+      {
+        "t_s": 24840,
+        "section_m3s": 19.500972757861017,
+        "outlet_m3s": 30.33236702417295,
+        "hydraulic_s": 1.2230227910913527,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.12205150460067671,
+        "dt_max_s": 0.22513052595274774
+      },
+      {
+        "t_s": 24900,
+        "section_m3s": 19.427996599672284,
+        "outlet_m3s": 30.186617694644763,
+        "hydraulic_s": 1.222893059020862,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.1366209168008936,
+        "dt_max_s": 0.22507728441929675
+      },
+      {
+        "t_s": 24960,
+        "section_m3s": 19.121061707051314,
+        "outlet_m3s": 30.044353237631732,
+        "hydraulic_s": 1.2231104720267467,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.15237023822919582,
+        "dt_max_s": 0.2250184387570293
+      },
+      {
+        "t_s": 25020,
+        "section_m3s": 18.79954535550981,
+        "outlet_m3s": 29.89463096204175,
+        "hydraulic_s": 1.2233151330146939,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.16345849012213876,
+        "dt_max_s": 0.22497206993534707
+      },
+      {
+        "t_s": 25080,
+        "section_m3s": 18.497840615709233,
+        "outlet_m3s": 29.74727581146775,
+        "hydraulic_s": 1.2238121060072444,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.17604777435190044,
+        "dt_max_s": 0.22492662379924688
+      },
+      {
+        "t_s": 25140,
+        "section_m3s": 18.349810041153493,
+        "outlet_m3s": 29.601714612539702,
+        "hydraulic_s": 1.223547878966201,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.18610429660475347,
+        "dt_max_s": 0.22488201253302406
+      },
+      {
+        "t_s": 25200,
+        "section_m3s": 18.219234525080537,
+        "outlet_m3s": 29.453819051741934,
+        "hydraulic_s": 1.2233415130758658,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.19520210547852912,
+        "dt_max_s": 0.22484574909910354
+      },
+      {
+        "t_s": 25260,
+        "section_m3s": 18.02270787981688,
+        "outlet_m3s": 29.313107145711548,
+        "hydraulic_s": 1.2234816430136561,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.20331966579760774,
+        "dt_max_s": 0.22481393527975338
+      },
+      {
+        "t_s": 25320,
+        "section_m3s": 17.78954632105888,
+        "outlet_m3s": 29.157091166465154,
+        "hydraulic_s": 1.2235689769731835,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.21183169924188405,
+        "dt_max_s": 0.22478297135612293
+      },
+      {
+        "t_s": 25380,
+        "section_m3s": 17.695760025314907,
+        "outlet_m3s": 29.004277715612748,
+        "hydraulic_s": 1.2232736050500534,
+        "graph": true,
+        "steps": 267,
+        "rejected": 0,
+        "dt_min_s": 0.21987327860551886,
+        "dt_max_s": 0.22475160398568444
+      },
+      {
+        "t_s": 25440,
+        "section_m3s": 17.52992990700489,
+        "outlet_m3s": 28.861106944503263,
+        "hydraulic_s": 1.2278442280367017,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.0028545386994665023,
+        "dt_max_s": 0.22472305345496774
+      },
+      {
+        "t_s": 25500,
+        "section_m3s": 17.352351749973604,
+        "outlet_m3s": 28.721449341548336,
+        "hydraulic_s": 1.227471183927264,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.014997133384895278,
+        "dt_max_s": 0.22469305523759012
+      },
+      {
+        "t_s": 25560,
+        "section_m3s": 17.228263009653894,
+        "outlet_m3s": 28.571185387398387,
+        "hydraulic_s": 1.2273811109480448,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.019680811386933783,
+        "dt_max_s": 0.22466217359434046
+      },
+      {
+        "t_s": 25620,
+        "section_m3s": 17.069727289013098,
+        "outlet_m3s": 28.423866066570433,
+        "hydraulic_s": 1.227083672012668,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.028943949277163483,
+        "dt_max_s": 0.22462844373512958
+      },
+      {
+        "t_s": 25680,
+        "section_m3s": 16.973592098573377,
+        "outlet_m3s": 28.2815879938377,
+        "hydraulic_s": 1.226787149964366,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.03967106034178869,
+        "dt_max_s": 0.2245914044491431
+      },
+      {
+        "t_s": 25740,
+        "section_m3s": 16.75159605364509,
+        "outlet_m3s": 28.13578119890881,
+        "hydraulic_s": 1.2268418580060825,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.0457898327622388,
+        "dt_max_s": 0.22456002856952714
+      },
+      {
+        "t_s": 25800,
+        "section_m3s": 16.729259746329625,
+        "outlet_m3s": 27.986469830724914,
+        "hydraulic_s": 1.2264296589419246,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.05105722914231592,
+        "dt_max_s": 0.22454203081706633
+      },
+      {
+        "t_s": 25860,
+        "section_m3s": 16.718896783147162,
+        "outlet_m3s": 27.839560305457173,
+        "hydraulic_s": 1.226118952035904,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.05568514723927365,
+        "dt_max_s": 0.22451629061513131
+      },
+      {
+        "t_s": 25920,
+        "section_m3s": 16.514296837700144,
+        "outlet_m3s": 27.689378773028146,
+        "hydraulic_s": 1.2258085030480288,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.05948781527331448,
+        "dt_max_s": 0.22450202238884825
+      },
+      {
+        "t_s": 25980,
+        "section_m3s": 16.400603114929982,
+        "outlet_m3s": 27.541921880133064,
+        "hydraulic_s": 1.2255788780748844,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.0615274186602619,
+        "dt_max_s": 0.224492113726748
+      },
+      {
+        "t_s": 26040,
+        "section_m3s": 16.303145108649428,
+        "outlet_m3s": 27.387694787804502,
+        "hydraulic_s": 1.225398680078797,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.06130577891235589,
+        "dt_max_s": 0.22449253039754563
+      },
+      {
+        "t_s": 26100,
+        "section_m3s": 16.13811356930916,
+        "outlet_m3s": 27.245092867430262,
+        "hydraulic_s": 1.2254831259488128,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.06442786493789754,
+        "dt_max_s": 0.22448535556626398
+      },
+      {
+        "t_s": 26160,
+        "section_m3s": 16.09355506686843,
+        "outlet_m3s": 27.09649792398074,
+        "hydraulic_s": 1.2252063869964331,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.06742636158014648,
+        "dt_max_s": 0.22447188752402
+      },
+      {
+        "t_s": 26220,
+        "section_m3s": 15.95438031340794,
+        "outlet_m3s": 26.96381296007894,
+        "hydraulic_s": 1.2248718629707582,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.07730334777807002,
+        "dt_max_s": 0.2244605313348502
+      },
+      {
+        "t_s": 26280,
+        "section_m3s": 15.854522423436476,
+        "outlet_m3s": 26.81582979837937,
+        "hydraulic_s": 1.2244563800049946,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.08159712645647232,
+        "dt_max_s": 0.22442045125169707
+      },
+      {
+        "t_s": 26340,
+        "section_m3s": 15.751850566884968,
+        "outlet_m3s": 26.672773892083207,
+        "hydraulic_s": 1.2238757649320178,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.08770164632369415,
+        "dt_max_s": 0.2243981939794249
+      },
+      {
+        "t_s": 26400,
+        "section_m3s": 15.663033718788453,
+        "outlet_m3s": 26.530784719758472,
+        "hydraulic_s": 1.2230607210076414,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09251027918799082,
+        "dt_max_s": 0.22437596866176276
+      },
+      {
+        "t_s": 26460,
+        "section_m3s": 15.463162725170454,
+        "outlet_m3s": 26.386447380445315,
+        "hydraulic_s": 1.2223651399835944,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09650438344760914,
+        "dt_max_s": 0.22436570169909686
+      },
+      {
+        "t_s": 26520,
+        "section_m3s": 15.229196370296025,
+        "outlet_m3s": 26.2472772335362,
+        "hydraulic_s": 1.2212094140704721,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09909010898627457,
+        "dt_max_s": 0.22435117452720418
+      },
+      {
+        "t_s": 26580,
+        "section_m3s": 15.093144856166328,
+        "outlet_m3s": 26.10918757178103,
+        "hydraulic_s": 1.220330057956744,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.10064486944247619,
+        "dt_max_s": 0.22434262352873455
+      },
+      {
+        "t_s": 26640,
+        "section_m3s": 14.88421851680614,
+        "outlet_m3s": 25.974743611726446,
+        "hydraulic_s": 1.2193685100064613,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.10016188266672543,
+        "dt_max_s": 0.22434727638530438
+      },
+      {
+        "t_s": 26700,
+        "section_m3s": 14.83839759385834,
+        "outlet_m3s": 25.820757054067993,
+        "hydraulic_s": 1.2179739929852076,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09869945553145953,
+        "dt_max_s": 0.2243596561817214
+      },
+      {
+        "t_s": 26760,
+        "section_m3s": 14.693089577243276,
+        "outlet_m3s": 25.681306436642384,
+        "hydraulic_s": 1.2170612379559316,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09696425938454922,
+        "dt_max_s": 0.22436250886074888
+      },
+      {
+        "t_s": 26820,
+        "section_m3s": 14.445185305348907,
+        "outlet_m3s": 25.551039971856518,
+        "hydraulic_s": 1.216425087011885,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09993879561079666,
+        "dt_max_s": 0.22436268989717104
+      },
+      {
+        "t_s": 26880,
+        "section_m3s": 14.264260475100794,
+        "outlet_m3s": 25.42225583755159,
+        "hydraulic_s": 1.2151941509800963,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.1030307998189528,
+        "dt_max_s": 0.22434774852541758
+      },
+      {
+        "t_s": 26940,
+        "section_m3s": 14.121203677666683,
+        "outlet_m3s": 25.29252306248333,
+        "hydraulic_s": 1.2139839800074697,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.10501502345505287,
+        "dt_max_s": 0.22435376758003656
+      },
+      {
+        "t_s": 27000,
+        "section_m3s": 14.006532987742684,
+        "outlet_m3s": 25.16121797913802,
+        "hydraulic_s": 1.2130835969583131,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.109971660975134,
+        "dt_max_s": 0.22431387553891427
+      },
+      {
+        "t_s": 27060,
+        "section_m3s": 14.021077445471503,
+        "outlet_m3s": 25.026278219986125,
+        "hydraulic_s": 1.2120695759658702,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11385682246691431,
+        "dt_max_s": 0.22429641216327606
+      },
+      {
+        "t_s": 27120,
+        "section_m3s": 13.928512768542472,
+        "outlet_m3s": 24.88532603069228,
+        "hydraulic_s": 1.2105400049476884,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11467204706423217,
+        "dt_max_s": 0.2242926462230856
+      },
+      {
+        "t_s": 27180,
+        "section_m3s": 13.634739431800941,
+        "outlet_m3s": 24.75665113190189,
+        "hydraulic_s": 1.2087904349900782,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11534446284349542,
+        "dt_max_s": 0.22428887333467828
+      },
+      {
+        "t_s": 27240,
+        "section_m3s": 13.478720567181396,
+        "outlet_m3s": 24.602546947886005,
+        "hydraulic_s": 1.2070304270018823,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11558270261230064,
+        "dt_max_s": 0.22429112534567364
+      },
+      {
+        "t_s": 27300,
+        "section_m3s": 13.274073928425787,
+        "outlet_m3s": 24.463624720220103,
+        "hydraulic_s": 1.2071140119805932,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11335913644506945,
+        "dt_max_s": 0.22429969053298202
+      },
+      {
+        "t_s": 27360,
+        "section_m3s": 13.094599884651446,
+        "outlet_m3s": 24.319478796676655,
+        "hydraulic_s": 1.2033957219682634,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11059499096518266,
+        "dt_max_s": 0.22430847073864493
+      },
+      {
+        "t_s": 27420,
+        "section_m3s": 12.871763288497458,
+        "outlet_m3s": 24.19259535970632,
+        "hydraulic_s": 1.2011320820311084,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11737150787666906,
+        "dt_max_s": 0.22430923702087374
+      },
+      {
+        "t_s": 27480,
+        "section_m3s": 12.923885172194181,
+        "outlet_m3s": 24.050951545269346,
+        "hydraulic_s": 1.1996089910389856,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11325598588155117,
+        "dt_max_s": 0.22430390118264956
+      },
+      {
+        "t_s": 27540,
+        "section_m3s": 12.763009687681915,
+        "outlet_m3s": 23.92430362169301,
+        "hydraulic_s": 1.198123599984683,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11500550827258849,
+        "dt_max_s": 0.2242977934582421
+      },
+      {
+        "t_s": 27600,
+        "section_m3s": 12.889615685190075,
+        "outlet_m3s": 23.795528037843177,
+        "hydraulic_s": 1.1964678100775927,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11628474829922197,
+        "dt_max_s": 0.2242899909713582
+      },
+      {
+        "t_s": 27660,
+        "section_m3s": 12.778009139399122,
+        "outlet_m3s": 23.664372315916506,
+        "hydraulic_s": 1.1944819079944864,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11668777625527582,
+        "dt_max_s": 0.22428556294372398
+      },
+      {
+        "t_s": 27720,
+        "section_m3s": 12.609339412666547,
+        "outlet_m3s": 23.53644993780569,
+        "hydraulic_s": 1.1927103000343777,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11882232012794702,
+        "dt_max_s": 0.22427641378043317
+      },
+      {
+        "t_s": 27780,
+        "section_m3s": 12.481249892286723,
+        "outlet_m3s": 23.40954421053369,
+        "hydraulic_s": 1.1911769260186702,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.12070504294752027,
+        "dt_max_s": 0.2242695866433674
+      },
+      {
+        "t_s": 27840,
+        "section_m3s": 12.477316589050073,
+        "outlet_m3s": 23.279103795756235,
+        "hydraulic_s": 1.1898375230375677,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11952396938431775,
+        "dt_max_s": 0.22427470704420868
+      },
+      {
+        "t_s": 27900,
+        "section_m3s": 12.375450496769433,
+        "outlet_m3s": 23.140808508124124,
+        "hydraulic_s": 1.1875248700380325,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11788479084862047,
+        "dt_max_s": 0.2242816314174742
+      },
+      {
+        "t_s": 27960,
+        "section_m3s": 12.319421337191791,
+        "outlet_m3s": 23.008091544017468,
+        "hydraulic_s": 1.1862839760142379,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11337726384590496,
+        "dt_max_s": 0.22430115287799912
+      },
+      {
+        "t_s": 28020,
+        "section_m3s": 12.10117256946202,
+        "outlet_m3s": 22.875186144529533,
+        "hydraulic_s": 1.184982914943248,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.11157229992022621,
+        "dt_max_s": 0.22431225837930355
+      },
+      {
+        "t_s": 28080,
+        "section_m3s": 12.13461677498417,
+        "outlet_m3s": 22.7530656275873,
+        "hydraulic_s": 1.1841299589723349,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.10966727629784145,
+        "dt_max_s": 0.22431772111886764
+      },
+      {
+        "t_s": 28140,
+        "section_m3s": 12.125744001606169,
+        "outlet_m3s": 22.614736988565223,
+        "hydraulic_s": 1.1831686990335584,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.10480440347237163,
+        "dt_max_s": 0.22433543325475655
+      },
+      {
+        "t_s": 28200,
+        "section_m3s": 11.916248299728613,
+        "outlet_m3s": 22.48461947529965,
+        "hydraulic_s": 1.1823371589998715,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.10430295667174505,
+        "dt_max_s": 0.22434328983347526
+      },
+      {
+        "t_s": 28260,
+        "section_m3s": 11.998747095950725,
+        "outlet_m3s": 22.350420877791475,
+        "hydraulic_s": 1.1813841660623439,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.10303092807589564,
+        "dt_max_s": 0.22434153422940215
+      },
+      {
+        "t_s": 28320,
+        "section_m3s": 11.977820933468562,
+        "outlet_m3s": 22.216177027281567,
+        "hydraulic_s": 1.1804681689827703,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.1007971002618433,
+        "dt_max_s": 0.22434767450591342
+      },
+      {
+        "t_s": 28380,
+        "section_m3s": 11.834385131736052,
+        "outlet_m3s": 22.091936418515008,
+        "hydraulic_s": 1.1795454730163328,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09934028988936916,
+        "dt_max_s": 0.2243476974854416
+      },
+      {
+        "t_s": 28440,
+        "section_m3s": 11.800362465936148,
+        "outlet_m3s": 21.956412593217102,
+        "hydraulic_s": 1.1785881359828636,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09892899098485941,
+        "dt_max_s": 0.22435127136004668
+      },
+      {
+        "t_s": 28500,
+        "section_m3s": 11.695810316473944,
+        "outlet_m3s": 21.82332173177565,
+        "hydraulic_s": 1.1771849039942026,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09730560156822321,
+        "dt_max_s": 0.22435967654276281
+      },
+      {
+        "t_s": 28560,
+        "section_m3s": 11.566113882321709,
+        "outlet_m3s": 21.677371218207796,
+        "hydraulic_s": 1.1762444369960576,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09243608673932613,
+        "dt_max_s": 0.2243803327787897
+      },
+      {
+        "t_s": 28620,
+        "section_m3s": 11.44192863330051,
+        "outlet_m3s": 21.543830463904307,
+        "hydraulic_s": 1.1748757940367796,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09411668646862381,
+        "dt_max_s": 0.2244127006455431
+      },
+      {
+        "t_s": 28680,
+        "section_m3s": 11.479473742318806,
+        "outlet_m3s": 21.40895856761199,
+        "hydraulic_s": 1.173801105003804,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.09039869893967989,
+        "dt_max_s": 0.22440768851452497
+      },
+      {
+        "t_s": 28740,
+        "section_m3s": 11.382936498115305,
+        "outlet_m3s": 21.273912791341232,
+        "hydraulic_s": 1.172672701999545,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.08476594274543459,
+        "dt_max_s": 0.22441953374015317
+      },
+      {
+        "t_s": 28800,
+        "section_m3s": 11.398610205311948,
+        "outlet_m3s": 21.143221047435265,
+        "hydraulic_s": 1.1714320870232768,
+        "graph": true,
+        "steps": 268,
+        "rejected": 0,
+        "dt_min_s": 0.080899202843284,
+        "dt_max_s": 0.22442482247063894
+      }
+    ],
+    "spatial": [
+      {
+        "t_s": 900,
+        "wet_fraction": 0.25208139419555664,
+        "cm_fraction": 0.1127631664276123,
+        "active_fraction": 0.307586669921875,
+        "tile_work_fraction": 0.307586669921875,
+        "residual_m3": 8.149072527885437e-10,
+        "storage_m3": 399622.65776134806,
+        "rain_m3": 16573.93586049494,
+        "infiltration_m3": 13799.232779176622
+      },
+      {
+        "t_s": 1800,
+        "wet_fraction": 0.25246596336364746,
+        "cm_fraction": 0.11065387725830078,
+        "active_fraction": 0.305267333984375,
+        "tile_work_fraction": 0.305267333984375,
+        "residual_m3": 2.6775524020195007e-09,
+        "storage_m3": 401611.0745581611,
+        "rain_m3": 35989.11786850332,
+        "infiltration_m3": 27534.11963434005
+      },
+      {
+        "t_s": 2700,
+        "wet_fraction": 0.2525291442871094,
+        "cm_fraction": 0.11108636856079102,
+        "active_fraction": 0.3035888671875,
+        "tile_work_fraction": 0.3035888671875,
+        "residual_m3": 1.4551915228366852e-09,
+        "storage_m3": 406377.33429565566,
+        "rain_m3": 58245.546024024974,
+        "infiltration_m3": 41217.29145379848
+      },
+      {
+        "t_s": 3600,
+        "wet_fraction": 0.25223541259765625,
+        "cm_fraction": 0.10647845268249512,
+        "active_fraction": 0.30169677734375,
+        "tile_work_fraction": 0.30169677734375,
+        "residual_m3": 9.89530235528946e-10,
+        "storage_m3": 413752.79620583897,
+        "rain_m3": 83343.22032706038,
+        "infiltration_m3": 54845.407485969656
+      },
+      {
+        "t_s": 4500,
+        "wet_fraction": 0.2519996166229248,
+        "cm_fraction": 0.10317492485046387,
+        "active_fraction": 0.299835205078125,
+        "tile_work_fraction": 0.299835205078125,
+        "residual_m3": 4.0745362639427185e-10,
+        "storage_m3": 424375.2733477937,
+        "rain_m3": 111755.6818021942,
+        "infiltration_m3": 68415.22531588221
+      },
+      {
+        "t_s": 5400,
+        "wet_fraction": 0.25125646591186523,
+        "cm_fraction": 0.10534501075744629,
+        "active_fraction": 0.298095703125,
+        "tile_work_fraction": 0.298095703125,
+        "residual_m3": 5.238689482212067e-10,
+        "storage_m3": 438326.28225143196,
+        "rain_m3": 143956.4714740131,
+        "infiltration_m3": 81918.73884256312
+      },
+      {
+        "t_s": 6300,
+        "wet_fraction": 0.24822425842285156,
+        "cm_fraction": 0.11204743385314941,
+        "active_fraction": 0.295745849609375,
+        "tile_work_fraction": 0.295745849609375,
+        "residual_m3": -9.89530235528946e-10,
+        "storage_m3": 454916.76757463475,
+        "rain_m3": 179945.5893425158,
+        "infiltration_m3": 95311.40715929869
+      },
+      {
+        "t_s": 7200,
+        "wet_fraction": 0.2424023151397705,
+        "cm_fraction": 0.11604452133178711,
+        "active_fraction": 0.290618896484375,
+        "tile_work_fraction": 0.29058837890625,
+        "residual_m3": -2.6193447411060333e-09,
+        "storage_m3": 475150.97841038916,
+        "rain_m3": 219723.03540770235,
+        "infiltration_m3": 108429.50483929325
+      },
+      {
+        "t_s": 8100,
+        "wet_fraction": 0.23315739631652832,
+        "cm_fraction": 0.11943888664245605,
+        "active_fraction": 0.28033447265625,
+        "tile_work_fraction": 0.28033447265625,
+        "residual_m3": -1.6298145055770874e-09,
+        "storage_m3": 500712.3960892489,
+        "rain_m3": 264235.89171874657,
+        "infiltration_m3": 121145.71867034474
+      },
+      {
+        "t_s": 9000,
+        "wet_fraction": 0.22364258766174316,
+        "cm_fraction": 0.12484240531921387,
+        "active_fraction": 0.269012451171875,
+        "tile_work_fraction": 0.269012451171875,
+        "residual_m3": -2.3283064365386963e-10,
+        "storage_m3": 532778.5707441162,
+        "rain_m3": 314431.2403248177,
+        "infiltration_m3": 133245.30178839905
+      },
+      {
+        "t_s": 9900,
+        "wet_fraction": 0.22088241577148438,
+        "cm_fraction": 0.12997651100158691,
+        "active_fraction": 0.26495361328125,
+        "tile_work_fraction": 0.26495361328125,
+        "residual_m3": -1.3969838619232178e-09,
+        "storage_m3": 571089.292487899,
+        "rain_m3": 370309.0812259194,
+        "infiltration_m3": 145061.16450984665
+      },
+      {
+        "t_s": 10800,
+        "wet_fraction": 0.21919584274291992,
+        "cm_fraction": 0.13424253463745117,
+        "active_fraction": 0.26251220703125,
+        "tile_work_fraction": 0.26251220703125,
+        "residual_m3": 1.5133991837501526e-09,
+        "storage_m3": 615572.0476701728,
+        "rain_m3": 431869.41442204744,
+        "infiltration_m3": 156741.86653322447
+      },
+      {
+        "t_s": 11700,
+        "wet_fraction": 0.21718955039978027,
+        "cm_fraction": 0.13730239868164062,
+        "active_fraction": 0.260650634765625,
+        "tile_work_fraction": 0.26068115234375,
+        "residual_m3": 1.862645149230957e-09,
+        "storage_m3": 661535.1595026024,
+        "rain_m3": 494376.8296673415,
+        "infiltration_m3": 168319.5192365758
+      },
+      {
+        "t_s": 12600,
+        "wet_fraction": 0.21561193466186523,
+        "cm_fraction": 0.13871145248413086,
+        "active_fraction": 0.259613037109375,
+        "tile_work_fraction": 0.259552001953125,
+        "residual_m3": 1.1641532182693481e-09,
+        "storage_m3": 703963.8834499554,
+        "rain_m3": 553095.916715953,
+        "infiltration_m3": 179796.0098130952
+      },
+      {
+        "t_s": 13500,
+        "wet_fraction": 0.21442079544067383,
+        "cm_fraction": 0.13983821868896484,
+        "active_fraction": 0.258331298828125,
+        "tile_work_fraction": 0.258331298828125,
+        "residual_m3": -9.313225746154785e-10,
+        "storage_m3": 742057.5452934459,
+        "rain_m3": 608026.6755678796,
+        "infiltration_m3": 191200.3880206206
+      },
+      {
+        "t_s": 14400,
+        "wet_fraction": 0.21406912803649902,
+        "cm_fraction": 0.1414632797241211,
+        "active_fraction": 0.25811767578125,
+        "tile_work_fraction": 0.25811767578125,
+        "residual_m3": 1.862645149230957e-09,
+        "storage_m3": 774666.5913325525,
+        "rain_m3": 659169.106223124,
+        "infiltration_m3": 202565.68617665436
+      },
+      {
+        "t_s": 15300,
+        "wet_fraction": 0.21416568756103516,
+        "cm_fraction": 0.14280939102172852,
+        "active_fraction": 0.258453369140625,
+        "tile_work_fraction": 0.258453369140625,
+        "residual_m3": 3.725290298461914e-09,
+        "storage_m3": 801485.3590931953,
+        "rain_m3": 705576.1266325087,
+        "infiltration_m3": 213932.64612130565
+      },
+      {
+        "t_s": 16200,
+        "wet_fraction": 0.2141284942626953,
+        "cm_fraction": 0.1440448760986328,
+        "active_fraction": 0.25933837890625,
+        "tile_work_fraction": 0.259307861328125,
+        "residual_m3": 3.958120942115784e-09,
+        "storage_m3": 822124.8011681947,
+        "rain_m3": 746300.654746866,
+        "infiltration_m3": 225307.0537639904
+      },
+      {
+        "t_s": 17100,
+        "wet_fraction": 0.2141573429107666,
+        "cm_fraction": 0.14514684677124023,
+        "active_fraction": 0.260040283203125,
+        "tile_work_fraction": 0.260040283203125,
+        "residual_m3": 1.3969838619232178e-09,
+        "storage_m3": 836913.8457922834,
+        "rain_m3": 781342.6905661953,
+        "infiltration_m3": 236686.73130123483
+      },
+      {
+        "t_s": 18000,
+        "wet_fraction": 0.21405458450317383,
+        "cm_fraction": 0.14583301544189453,
+        "active_fraction": 0.260498046875,
+        "tile_work_fraction": 0.260498046875,
+        "residual_m3": 3.026798367500305e-09,
+        "storage_m3": 845816.8850331887,
+        "rain_m3": 810702.2340905002,
+        "infiltration_m3": 248068.87786078925
+      },
+      {
+        "t_s": 18900,
+        "wet_fraction": 0.2137150764465332,
+        "cm_fraction": 0.14569640159606934,
+        "active_fraction": 0.2606201171875,
+        "tile_work_fraction": 0.2606201171875,
+        "residual_m3": 6.6356733441352844e-09,
+        "storage_m3": 848742.7620483569,
+        "rain_m3": 834694.979336171,
+        "infiltration_m3": 259438.1593852931
+      },
+      {
+        "t_s": 19800,
+        "wet_fraction": 0.21277213096618652,
+        "cm_fraction": 0.1445760726928711,
+        "active_fraction": 0.260040283203125,
+        "tile_work_fraction": 0.260009765625,
+        "residual_m3": 6.402842700481415e-09,
+        "storage_m3": 842045.1526510528,
+        "rain_m3": 853636.6203195946,
+        "infiltration_m3": 270759.35687602044
+      },
+      {
+        "t_s": 20700,
+        "wet_fraction": 0.21144747734069824,
+        "cm_fraction": 0.14226651191711426,
+        "active_fraction": 0.259033203125,
+        "tile_work_fraction": 0.259033203125,
+        "residual_m3": 8.265487849712372e-09,
+        "storage_m3": 820581.0947767692,
+        "rain_m3": 867527.1570407714,
+        "infiltration_m3": 281995.3675918438
+      },
+      {
+        "t_s": 21600,
+        "wet_fraction": 0.2102644443511963,
+        "cm_fraction": 0.13783979415893555,
+        "active_fraction": 0.258636474609375,
+        "tile_work_fraction": 0.246246337890625,
+        "residual_m3": 8.847564458847046e-09,
+        "storage_m3": 785966.8487373067,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 293104.23118768085
+      },
+      {
+        "t_s": 22500,
+        "wet_fraction": 0.20891618728637695,
+        "cm_fraction": 0.13204216957092285,
+        "active_fraction": 0.2451171875,
+        "tile_work_fraction": 0.2451171875,
+        "residual_m3": 8.498318493366241e-09,
+        "storage_m3": 744259.2120449492,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 304089.8169923392
+      },
+      {
+        "t_s": 23400,
+        "wet_fraction": 0.20830273628234863,
+        "cm_fraction": 0.12688112258911133,
+        "active_fraction": 0.243804931640625,
+        "tile_work_fraction": 0.243804931640625,
+        "residual_m3": 1.0011717677116394e-08,
+        "storage_m3": 702841.3625159954,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 315025.6905212552
+      },
+      {
+        "t_s": 24300,
+        "wet_fraction": 0.20789027214050293,
+        "cm_fraction": 0.12203526496887207,
+        "active_fraction": 0.2431640625,
+        "tile_work_fraction": 0.243194580078125,
+        "residual_m3": 1.0593794286251068e-08,
+        "storage_m3": 662734.6468471572,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 325933.5970551254
+      },
+      {
+        "t_s": 25200,
+        "wet_fraction": 0.20727324485778809,
+        "cm_fraction": 0.1176302433013916,
+        "active_fraction": 0.242828369140625,
+        "tile_work_fraction": 0.242828369140625,
+        "residual_m3": 9.89530235528946e-09,
+        "storage_m3": 624429.7745410455,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 336821.92863671895
+      },
+      {
+        "t_s": 26100,
+        "wet_fraction": 0.20476055145263672,
+        "cm_fraction": 0.11357951164245605,
+        "active_fraction": 0.242828369140625,
+        "tile_work_fraction": 0.24273681640625,
+        "residual_m3": 8.032657206058502e-09,
+        "storage_m3": 588174.6248420739,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 347627.5040513846
+      },
+      {
+        "t_s": 27000,
+        "wet_fraction": 0.20109200477600098,
+        "cm_fraction": 0.10945367813110352,
+        "active_fraction": 0.241302490234375,
+        "tile_work_fraction": 0.24127197265625,
+        "residual_m3": 9.313225746154785e-09,
+        "storage_m3": 554031.1006942014,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 358267.4408732451
+      },
+      {
+        "t_s": 27900,
+        "wet_fraction": 0.19733190536499023,
+        "cm_fraction": 0.10551190376281738,
+        "active_fraction": 0.234771728515625,
+        "tile_work_fraction": 0.234771728515625,
+        "residual_m3": 8.96397978067398e-09,
+        "storage_m3": 521923.4119261104,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 368712.27585053584
+      },
+      {
+        "t_s": 28800,
+        "wet_fraction": 0.19370627403259277,
+        "cm_fraction": 0.10161328315734863,
+        "active_fraction": 0.231719970703125,
+        "tile_work_fraction": 0.231689453125,
+        "residual_m3": 1.076841726899147e-08,
+        "storage_m3": 491799.98319149436,
+        "rain_m3": 873209.6493357987,
+        "infiltration_m3": 378962.42883412517
+      }
+    ],
+    "recession_capture": {
+      "adapter": "75650f7f3ed244d5703c058653b4cb81ff282b2610dc3206f2d0a05a9c6f081d",
+      "extended_zero_rain_coverage_h": 720,
+      "actual_forcing": {
+        "rainfall": [
+          [
+            0.0,
+            3600.0,
+            7200.0,
+            10800.0,
+            14400.0,
+            18000.0,
+            20700.0,
+            21600.0,
+            2592000.0
+          ],
+          [
+            2.222222222222222e-06,
+            3.888888888888889e-06,
+            6.111111111111111e-06,
+            9.444444444444445e-06,
+            7.222222222222222e-06,
+            3.888888888888889e-06,
+            1.6666666666666667e-06,
+            0.0,
+            0.0
+          ]
+        ],
+        "stage_x": null,
+        "stage_y": null
+      }
+    }
+  }
+}

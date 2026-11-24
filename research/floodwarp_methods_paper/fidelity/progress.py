@@ -4,11 +4,14 @@ import json
 from pathlib import Path
 from statistics import median
 
+import numpy as np
+
 from research.floodwarp_methods_paper import metrics
+from research.floodwarp_methods_paper.fidelity import assessment
 
 
 def pulse_comparison(*, directory):
-    records = metrics.csv_read(directory / "results/pulses.csv")
+    records = metrics.csv_read(file=directory / "results/pulses.csv")
     chosen = {
         (int(row["dx"]), row["method"]): row
         for row in records
@@ -42,8 +45,8 @@ def pulse_comparison(*, directory):
 
 
 def storm_comparison(*, directory):
-    records = metrics.csv_read(directory / "small_storms/outlet_metrics.csv")
-    horizons = metrics.csv_read(directory / "small_storms/recession_horizons.csv")
+    records = metrics.csv_read(file=directory / "small_storms/outlet_metrics.csv")
+    horizons = metrics.csv_read(file=directory / "small_storms/recession_horizons.csv")
     text = [
         "## Six-hour rainfall on the small domains",
         "",
@@ -83,8 +86,57 @@ def storm_comparison(*, directory):
     return text
 
 
+def incised_windows(*, directory, design):
+    end_h = design["diagnostic_start_h"]
+    settings = json.loads((directory / "recession_settings.json").read_text())
+    window_s = settings["window_s"]
+    folder = directory / "incised_crest"
+    text = [
+        "",
+        f"### Incised channel through hour {end_h:g}",
+        "",
+        f"Each run subdivides the same {design['bed_m']:g} m bed and physical inputs. Outlet peaks are accepted face transport averaged over the reporting interval. Late export is the fraction of outward volume passing in the final {window_s / 3600:g} h of this window. Stored water can contribute to the later hydrograph.",
+        "",
+        "| Method | Grid | CFL | Peak (m³/s) | Outlet volume (m³) | Late export | End storage (m³) | Hydraulic time (s) |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    runs = {}
+    for path in folder.glob("*/result.json"):
+        record = json.loads(path.read_text())
+        inputs = record["inputs"]
+        spec = inputs["spec"]
+        if spec["case"] != design["case"] or inputs["design"] != design:
+            continue
+        key = spec["dx"], spec["method"], inputs["factor"]
+        if key in runs:
+            raise ValueError(f"Multiple incised runs for control {key}")
+        runs[key] = record["data"]
+    labels = {"adaptive": "FV2 RK2", "hancock_adaptive": "Hancock tiled"}
+    for dx, method, factor in design["controls"]:
+        data = runs.get((dx, method, factor))
+        if data is None:
+            continue
+        t, q = assessment.curve(it={"d": data}, station="outlet")
+        if t[-1] != end_h * 3600 or t[-1] - window_s not in t:
+            raise ValueError("Incomplete reporting window for the incised control")
+        outward = np.maximum(q, 0) * np.diff(t)
+        tail = outward[t[:-1] >= t[-1] - window_s].sum()
+        volume = outward.sum()
+        fraction = (
+            f"{100 * tail / volume:.2f}%"
+            if volume >= settings["minimum_volume_m3"]
+            else "negligible"
+        )
+        cfl = data["numerical"]["cfl"]
+        text.append(
+            f"| {labels[method]} | {dx:g} m | {cfl:g} | {q.max():.3f} | "
+            f"{volume:,.0f} | {fraction} | {data['final_storage_m3']:,.0f} | {data['hydraulic_s']:.1f} |"
+        )
+    return text
+
+
 def generate(*, directory):
-    rows = metrics.csv_read(directory / "results/native_horizons.csv")
+    rows = metrics.csv_read(file=directory / "results/native_horizons.csv")
     longest = {}
     for r in rows:
         if r["station"] == "outlet" and r["method"] != "fv1":
@@ -111,6 +163,7 @@ def generate(*, directory):
         "| Investigation | Original windows completed | Verified matched end |",
         "|---|---:|---|",
     ]
+    incised_design = json.loads((directory / "incised_settings.json").read_text())
     designs = [
         (
             "Rolling terrain, independently refined SWE",
@@ -124,11 +177,7 @@ def generate(*, directory):
             "incised-707-spatial-10240x10240",
             "incised-crest",
             directory / "incised_crest",
-            len(
-                json.loads((directory / "incised_settings.json").read_text())[
-                    "controls"
-                ]
-            ),
+            len(incised_design["controls"]),
         ),
     ]
     groups = [
@@ -155,6 +204,7 @@ def generate(*, directory):
         ]
         common = f"{max(verified):g} h" if verified else "pending"
         text.append(f"| {name} | {count}/{planned} | {common} |")
+    text += incised_windows(directory=directory, design=incised_design)
     text += [
         "",
         "The incised diagnostic was defined after observing a late crest. It remains separate from advisor training and test decisions. Each control needs the same recession coverage before its hydrograph can support a solver ranking.",
