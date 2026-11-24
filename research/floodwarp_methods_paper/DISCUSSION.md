@@ -76,7 +76,7 @@ The two decision tables retain the event endpoint, output cadence and reference 
 
 Under intense rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 4.331 and 6.806 m³/s. They exported 28,772 and 109,391 m³ through the common 32-hour endpoint. Under moderate rainfall on the 1 km² plain, 10 m FV1 and Hancock peaked at 0.894 and 0.915 m³/s. They exported 24,912 and 38,983 m³ through the common 40-hour endpoint. Both gauges passed the recession criterion. These CPU controls measure formulation disagreement. [Six-hour rainfall and complete recession accounts](fidelity/strong_storms/completed.csv)
 
-Across 52 completed native storm configurations, 12 restart records inherited initial-window timings from a different execution of the same hydraulics. The revised costs use each configuration's own measured initial and recession intervals. Both gauges and accepted step counts agreed at all 5,760 initial intervals checked. All operational costs, budget decisions and advisor inputs use this attribution. [Individual timing corrections and run identities](fidelity/native_results/timing_provenance.csv)
+Across 55 completed native storm configurations, 13 restart records inherited initial-window timings from a different execution of the same hydraulics. The revised costs use each configuration's own measured initial and recession intervals. Both gauges and accepted step counts agreed at all 6,048 initial intervals checked. All operational costs, budget decisions and advisor inputs use this attribution. [Individual timing corrections and run identities](fidelity/native_results/timing_provenance.csv)
 
 ## Fixed-area plain and the hydraulic objective
 
@@ -93,18 +93,23 @@ For outlet peak magnitude, RK2 spatial refinement changed the estimate by 14.78%
 
 Timing repeat counts and spread are reported for each policy. [Cost at a stated tolerance](tables/21_native_cost_at_tolerance.md) · [Error within an FV1 runtime budget](tables/22_native_error_at_budget.md) · [Independent timing observations](fidelity/native_results/timing_distribution.csv)
 
-## Complete 1,048,576-cell storms on native-metre terrain
+## Complete storms on native-metre terrain at 250,000 cells and above
 
-Peaks are interval means of accepted outlet transport. The volume columns give FV1 minus Hancock. Costs use the faster of the two verified explicit Hancock policies through the common recession endpoint and the median hydraulic time where repeats exist.
+Each row compares solvers on the same event and physical footprint. Domain area varies between rows. Peaks are interval means of accepted outlet transport. The volume columns give FV1 minus Hancock. Costs use the faster of the two verified explicit Hancock policies through the common recession endpoint and the median hydraulic time where repeats exist.
 
-| Storm | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | Δ net export (m³) | Δ infiltration (m³) | Hancock / FV1 time |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| coastal-703-moderate-10240x10240 | 10 | 32 | 300 | 131.72 | 112.55 | +870,045 | -835,214 | 1.752 |
-| fan-705-spatial-5120x5120 | 5 | 12 | 300 | 10.59 | 10.12 | -3,662 | +2,883 | 1.245 |
-| floodplain-702-moderate-10240x10240 | 10 | 28 | 300 | 141.05 | 123.69 | +1,123,372 | -1,137,291 | 1.954 |
-| hill-706-back-10240x10240 | 10 | 16 | 300 | 1174.70 | 1251.56 | +128,872 | -130,907 | 1.477 |
-| plain-701-spatial-10240x10240 | 10 | 52 | 300 | 0.00 | 0.00 | +0 | +0 | 0.943 |
-| rolling-704-soil-5120x5120 | 5 | 12 | 300 | 61.21 | 25.64 | +161,747 | -161,747 | 2.002 |
+| Storm | Cells | Area (km²) | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | Δ net export (m³) | Δ infiltration (m³) | Hancock / FV1 time |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| coastal-703-moderate-10240x10240 | 1,048,576 | 104.858 | 10 | 32 | 300 | 131.72 | 112.55 | +870,045 | -835,214 | 1.752 |
+| fan-705-spatial-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 10.59 | 10.12 | -3,662 | +2,883 | 1.245 |
+| fan-711-spatial-10000x5000 | 500,000 | 50.000 | 10 | 16 | 300 | 15.22 | 15.83 | -28,081 | +25,783 | 1.067 |
+| floodplain-702-moderate-10240x10240 | 1,048,576 | 104.858 | 10 | 28 | 300 | 141.05 | 123.69 | +1,123,372 | -1,137,291 | 1.954 |
+| hill-706-back-10240x10240 | 1,048,576 | 104.858 | 10 | 16 | 300 | 1174.70 | 1251.56 | +128,872 | -130,907 | 1.477 |
+| plain-701-spatial-10240x10240 | 1,048,576 | 104.858 | 10 | 52 | 300 | 0.00 | 0.00 | +0 | +0 | 0.943 |
+| plain-709-spatial-1000x1000 | 1,000,000 | 1.000 | 1 | 20 | 300 | 0.02 | 0.04 | -256 | +230 | 1.223 |
+| plain-710-spatial-5000x5000 | 250,000 | 25.000 | 10 | 60 | 300 | 0.00 | 0.00 | +0 | -0 | 0.878 |
+| plain-712-spatial-20480x10240 | 2,097,152 | 209.715 | 10 | 40 | 300 | 0.00 | 0.00 | +0 | +0 | 1.094 |
+| rolling-704-soil-5120x5120 | 1,048,576 | 26.214 | 5 | 12 | 300 | 61.21 | 25.64 | +161,747 | -161,747 | 2.002 |
+| rolling-713-moderate-20480x10240 | 2,097,152 | 209.715 | 10 | 24 | 300 | 464.91 | 330.56 | +1,070,101 | -1,073,309 | 2.263 |
 
 The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions use the independently screened reference for each observable. [Water budgets and internal gauges](fidelity/native_results/measured_windows.csv) · [Policy-specific observations and reference eligibility](fidelity/native_publication/README.md)
 

@@ -262,7 +262,7 @@ def repaired_budgets(*, directory):
     return "\n" + "\n\n".join(lines) + "\n"
 
 
-def native_operational_balances(*, study, cells):
+def native_operational_balances(*, study, minimum_cells):
     import json
 
     folder = study / "fidelity/native_results"
@@ -280,7 +280,7 @@ def native_operational_balances(*, study, cells):
     rows = []
     for p in csv_read(file=pairs):
         ids = [p[k] for k in ("fv1_id", "dense_id", "tiled_id")]
-        if (p["cohort"] != "complete-native-metre" or int(p["cells"]) != cells
+        if (p["cohort"] != "complete-native-metre" or int(p["cells"]) < minimum_cells
                 or not all(key in completed for key in ids)):
             continue
         fv, h, tiled = (completed[key] for key in ids)
@@ -288,19 +288,21 @@ def native_operational_balances(*, study, cells):
         delta_soil = float(fv["infiltration_m3"]) - float(h["infiltration_m3"])
         best = min(times[h["source_id"]], times[tiled["source_id"]])
         ratio = best / times[fv["source_id"]]
-        rows.append(f"| {p['case']} | {p['dx_m']} | {float(p['end_h']):g} | {float(h['interval_s']):g} | "
+        area_km2 = int(p["cells"]) * float(p["dx_m"]) ** 2 / 1e6
+        rows.append(f"| {p['case']} | {int(p['cells']):,} | {area_km2:.3f} | {p['dx_m']} | {float(p['end_h']):g} | {float(h['interval_s']):g} | "
                     f"{float(fv['outlet_peak_m3s']):.2f} | {float(h['outlet_peak_m3s']):.2f} | "
                     f"{delta_export:+,.0f} | {delta_soil:+,.0f} | {ratio:.3f} |")
     if not rows:
         return ""
     return "\n" + "\n".join([
-        f"## Complete {cells:,}-cell storms on native-metre terrain", "",
+        f"## Complete storms on native-metre terrain at {minimum_cells:,} cells and above", "",
+        "Each row compares solvers on the same event and physical footprint. Domain area varies between rows. "
         "Peaks are interval means of accepted outlet transport. The volume columns give FV1 minus Hancock. "
         "Costs use the faster of the two verified explicit Hancock policies through the common recession endpoint "
         "and the median hydraulic time where repeats exist.", "",
-        "| Storm | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | "
+        "| Storm | Cells | Area (km²) | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | "
         "Δ net export (m³) | Δ infiltration (m³) | Hancock / FV1 time |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|", *rows, "",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|", *rows, "",
         "The differences measure sensitivity to formulation on the same represented terrain. Accuracy decisions "
         "use the independently screened reference for each observable. "
         "[Water budgets and internal gauges](../fidelity/native_results/measured_windows.csv) · "
@@ -683,7 +685,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 correction += widespread_plain(study=study)
                 correction += native_timing_correction(study=study)
                 correction += native_budget_evidence(study=study, case="plain-709-spatial-1000x1000", tolerance=5)
-                correction += native_operational_balances(study=study, cells=1024**2)
+                correction += native_operational_balances(study=study, minimum_cells=250_000)
                 correction += native_advisor_findings(study=study)
         transfer = study / "fidelity/orton_transfer/transfer.csv"
         if transfer.exists():

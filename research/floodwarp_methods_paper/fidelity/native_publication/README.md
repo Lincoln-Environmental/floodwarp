@@ -42,6 +42,9 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | hill-706-back-10240x10240 | 10 | Hancock | dense | 1.0 | 16 | 300 | 729.513 | 1251.557 | 13,255,499 | 202.91 | 52,330 |
 | hill-706-back-10240x10240 | 10 | Hancock | tiles | 1.0 | 16 | 300 | 729.513 | 1251.557 | 13,255,499 | 192.20 | 52,330 |
 | hill-706-back-10240x10240 | 10 | Hancock | auto → dense | 1.0 | 16 | 300 | 729.513 | 1251.557 | 13,255,499 | 202.95 | 52,330 |
+| rolling-713-moderate-20480x10240 | 10 | FV1 | sparse | 1.0 | 24 | 300 | 395.763 | 464.906 | 11,562,408 | 216.07 | 51,022 |
+| rolling-713-moderate-20480x10240 | 10 | Hancock | dense | 1.0 | 24 | 300 | 330.543 | 330.561 | 10,492,307 | 531.72 | 70,032 |
+| rolling-713-moderate-20480x10240 | 10 | Hancock | tiles | 1.0 | 24 | 300 | 330.543 | 330.561 | 10,492,307 | 489.05 | 70,032 |
 | plain-710-spatial-5000x5000 | 10 | FV1 | sparse | 1.0 | 60 | 300 | 4.640 | 0.000 | 0 | 11.72 | 57,951 |
 | plain-710-spatial-5000x5000 | 10 | Hancock | dense | 1.0 | 60 | 300 | 4.186 | 0.000 | 0 | 20.46 | 37,647 |
 | plain-710-spatial-5000x5000 | 10 | Hancock | tiles | 1.0 | 60 | 300 | 4.186 | 0.000 | 0 | 10.29 | 37,647 |
@@ -61,7 +64,7 @@ The internal gauge spans the middle column of x faces. Both peaks use interval-m
 | fan-705-spatial-5120x5120 | 5 | Hancock | tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.62 | 35,833 |
 | fan-705-spatial-5120x5120 | 5 | Hancock | auto → tiles | 1.0 | 12 | 300 | 13.657 | 10.125 | 112,186 | 40.60 | 35,833 |
 
-40 of 459 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
+40 of 486 assessed objective/configuration rows have an eligible numerical reference. Multiple objectives on the same simulation share a physical realisation. A frontier can be estimated only among eligible observations for the same case, common time window and reference.
 
 [Eligibility by objective](reference_eligibility.csv) · [Measured windows and full water budgets](../native_results/measured_windows.csv) · [Peak, timing and shape comparisons](../native_results/hydrograph_pareto.csv) · [Depth and extent comparisons](../native_results/recession_depth_pareto.csv)
 
@@ -71,12 +74,12 @@ Each decision fixes the event, reference, gauge or spatial support, cadence and 
 
 Lowest hydraulic cost meeting a tolerance [for discharge and water accounts](../native_results/least_cost_fidelity.csv) · [for depth and inundation](../native_results/least_cost_depth_extent.csv). Lowest qualified error within an FV1 runtime budget [for discharge and water accounts](../native_results/equal_cost_fidelity.csv) · [for depth and inundation](../native_results/equal_cost_depth_extent.csv).
 
-Of 52 completed native continuations, 12 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
+Of 55 completed native continuations, 13 shared a hydraulic restart carrying timing observations from another execution. Every completed cost in these products uses the original measured intervals of its own policy followed by its measured recession intervals. Both gauges and the accepted step counts must agree for every joined interval. The original restart and timing receipts retain their source identities. [Raw and corrected times by execution](../native_results/timing_provenance.csv)
 
 ## Dense and tiled execution
 
-[complete-native-metre, 12 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
-[original-window, 12 matched grid/event comparisons](policy_cost_original_window.pdf)
+[complete-native-metre, 13 matched grid/event comparisons](policy_cost_complete_native_metre.pdf)
+[original-window, 13 matched grid/event comparisons](policy_cost_original_window.pdf)
 
 Each upper-panel point represents a measured forecast window. Each lower-panel point represents a recorded timing interval (minutes: 15). Footprints are sampled at interval end. A ratio below one favours tiles. The same trajectory can contribute to both the initial window and the matched recession products.
 
@@ -98,7 +101,7 @@ Each upper-panel point represents a measured forecast window. Each lower-panel p
 
 The first ratio measures the cost of selecting a schedule using the two explicit runs. The second compares the measured automatic run with its selected explicit counterpart and includes timing variability. Each cost uses its available hydraulic timing median. [Run identities, sample sizes and timing ranges](execution_choice_cost.csv)
 
-0 of 52 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
+0 of 55 matched full-recession configurations have at least three independent hydraulic timings. Cost comparisons use their median. Other configurations retain their measured single-run costs where available. End-to-end timing includes setup and recorded continuation work.
 
 [Timing identities, quartiles and range](../native_results/timing_distribution.csv)
 
