@@ -141,6 +141,7 @@ Peaks are interval means of accepted outlet transport. The volume columns give F
 | Storm | Grid (m) | End (h) | Interval (s) | FV1 peak (m³/s) | Hancock peak (m³/s) | Δ net export (m³) | Δ infiltration (m³) | Hancock / FV1 time |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | coastal-703-moderate-10240x10240 | 10 | 32 | 300 | 131.72 | 112.55 | +870,045 | -835,214 | 1.752 |
+| fan-705-spatial-5120x5120 | 5 | 12 | 300 | 10.59 | 10.12 | -3,662 | +2,883 | 1.245 |
 | floodplain-702-moderate-10240x10240 | 10 | 28 | 300 | 141.05 | 123.69 | +1,123,372 | -1,137,291 | 1.954 |
 | plain-701-spatial-10240x10240 | 10 | 52 | 300 | 0.00 | 0.00 | +0 | +0 | 0.943 |
 | rolling-704-soil-5120x5120 | 5 | 12 | 300 | 61.21 | 25.64 | +161,747 | -161,747 | 2.002 |
