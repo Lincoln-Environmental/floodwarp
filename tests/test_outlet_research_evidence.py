@@ -1227,3 +1227,46 @@ def test_native_status_snapshot_integrates_signed_transport_only_at_requested_en
         snapshot_budget(data=dict(state, frames=frames[1:]), **options)
     with pytest.raises(ValueError, match="water balance"):
         snapshot_budget(data=dict(state, storage_m3=60), **options)
+
+
+def test_native_inventory_filters_preserve_full_event_recession_requirement(tmp_path, monkeypatch, capsys):
+    import json
+    from research.floodwarp_methods_paper.fidelity import native_status
+
+    base = dict(case="plain-a", dx=1, dem=1, method="adaptive", requested_method="adaptive",
+                factor=1., landform="plain", split="validation", experiment_class="independent_reference")
+    half = dict(base, factor=0.5)
+    other = dict(base, requested_method="fv1", method="fv1")
+    heldout = dict(base, case="hill-b", landform="hill")
+
+    def specs(**kwargs):
+        return [base, half, other, heldout]
+
+    def prefixes(**kwargs):
+        return {key: dict(s=spec, factor=spec["factor"], solver_source="build")
+                for key, spec in zip(("normal", "half", "fv1", "heldout"), specs(), strict=True)}
+
+    def identity(**kwargs):
+        return "build"
+
+    monkeypatch.setattr(native_status.native_matrix, "specifications", specs)
+    monkeypatch.setattr(native_status.native_products, "prefixes", prefixes)
+    monkeypatch.setattr(native_status.runner, "source_identity", identity)
+    directory = tmp_path / "research/study/fidelity"
+    runs = directory / "extended_runs"
+    runs.mkdir(parents=True)
+    receipt = runs / "group_filtered.json"
+    group = dict(cohort="native-metre", case="plain-a", end_s=43200, sources=["normal", "half"])
+    receipt.write_text(json.dumps(group))
+    options = {"--method": "adaptive", "--partition": "fit", "--dx": "1", "--suite": "references"}
+    inputs = dict(directory=directory, config={"advisor": {"heldout_family": "hill"}}, design={}, inventory=True,
+                  options=options)
+    native_status.status(**inputs)
+    report = capsys.readouterr().out
+    assert "2/2 configurations" in report and report.count("common end (h) pending") == 2
+    assert "hill-b" not in report and "fv1" not in report
+    receipt.write_text(json.dumps(dict(group, sources=["normal", "half", "fv1"])))
+    native_status.status(**inputs)
+    assert capsys.readouterr().out.count("common end (h) 12.0") == 2
+    with pytest.raises(ValueError, match="No native storm"):
+        native_status.status(**dict(inputs, options={"--dem": "10"}))

@@ -104,13 +104,34 @@ def window_report(*, directory, config, design, case_pattern, spacing, method, e
     writer.writerows(rows)
 
 
-def status(*, directory, config, design, inventory=False):
+def selected_policy(*, spec, options, heldout_family):
+    heldout = spec["split"] == "test" or spec["landform"] == heldout_family
+    partition = options.get("--partition")
+    if partition not in (None, "fit", "test"):
+        raise ValueError("Partition must be fit or test")
+    return (
+        (partition is None or heldout == (partition == "test"))
+        and fnmatch.fnmatchcase(spec["case"], options.get("--case", "*"))
+        and options.get("--method", spec["requested_method"]) == spec["requested_method"]
+        and spec["dx"] == float(options.get("--dx", spec["dx"]))
+        and spec["dem"] == float(options.get("--dem", spec["dem"]))
+        and native_matrix.in_suite(spec=spec, suite=options.get("--suite"))
+    )
+
+
+def status(*, directory, config, design, inventory=False, options=None):
+    options = options or {}
     expected = defaultdict(set)
+    selected = defaultdict(set)
     for spec in native_matrix.specifications(
         study=directory.parent, config=config, design=design
     ):
         key = policy_key(spec=spec, factor=spec["factor"])
         expected[key[0]].add(key)
+        if selected_policy(spec=spec, options=options, heldout_family=config["advisor"]["heldout_family"]):
+            selected[key[0]].add(key)
+    if not selected:
+        raise ValueError("No native storm matches the requested selection")
     by_id = {}
     done = defaultdict(set)
     current = runner.source_identity(root=directory.parents[2], study=directory.parent, stage="long-storms")
@@ -119,10 +140,10 @@ def status(*, directory, config, design, inventory=False):
         spec = record["s"]
         if spec.get("timing_repeat"):
             continue
-        if record["solver_source"] != current:
-            historical += 1
-            continue
         key = policy_key(spec=spec, factor=record["factor"])
+        if record["solver_source"] != current:
+            historical += key in selected.get(key[0], ())
+            continue
         if key in expected.get(key[0], ()):
             by_id[ident] = key
             done[key[0]].add(key)
@@ -133,10 +154,12 @@ def status(*, directory, config, design, inventory=False):
         if r["cohort"] == "native-metre" and set(r["sources"]) <= by_id.keys():
             if {by_id[i] for i in r["sources"]} == expected[r["case"]]:
                 matched[r["case"]] = r["end_s"] / 3600
-    planned = sum(map(len, expected.values()))
-    measured = sum(map(len, done.values()))
+    matched = {case: end for case, end in matched.items() if case in selected}
+    by_id = {ident: key for ident, key in by_id.items() if key in selected.get(key[0], ())}
+    planned = sum(map(len, selected.values()))
+    measured = sum(len(done[case] & keys) for case, keys in selected.items())
     if inventory:
-        print(f"Archive inventory across all {len(expected)} domains, solver {current}:")
+        print(f"Archive inventory across {len(selected)} selected domains, solver {current}:")
         print(f"{historical} older-build primary windows retained and excluded from reuse.")
         for ident, key in sorted(by_id.items()):
             print("  Same-build candidate", ident, *key, "common end (h)", matched.get(key[0], "pending"))
@@ -144,23 +167,25 @@ def status(*, directory, config, design, inventory=False):
               "Resume additionally checks the physical fields, driver, controls and launch environment.")
         return
     print(
-        f"{measured}/{planned} initial windows available; {len(matched)}/{len(expected)} domains at their common recession endpoint."
+        f"{measured}/{planned} initial windows available; {len(matched)}/{len(selected)} domains at their common recession endpoint."
     )
-    for case in expected:
-        if done.get(case):
+    for case, keys in selected.items():
+        if done[case] & keys or len(selected) == 1:
             end = (
                 f"{matched[case]:g} h matched"
                 if case in matched
                 else "common recession pending"
             )
             print(
-                f"  {case}  {len(done[case])}/{len(expected[case])} initial windows, {end}."
+                f"  {case}  {len(done[case] & keys)}/{len(keys)} initial windows, {end}."
             )
     attempts = directory / "native_matrix"
     for start in sorted(attempts.glob("*/*/attempt_*/started.json")):
         attempt = start.parent
         if not (attempt / "complete.json").is_file():
             data = json.loads(start.read_text())["inputs"]["spec"]
+            if policy_key(spec=data, factor=data["factor"]) not in selected.get(data["case"], ()):
+                continue
             state = (
                 "failed"
                 if (attempt / "failed.json").is_file()
@@ -192,19 +217,17 @@ if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     config = read_config(path=directory.parent / "configs/study.json")
     design = json.loads((directory / "native_matrix_settings.json").read_text())
-    flags, extra = getopt.getopt(sys.argv[1:], "", ["inventory", "resume", "dry-run", "end-h=", "case=", "dx=", "method="])
+    flags, extra = getopt.getopt(sys.argv[1:], "", ["inventory", "resume", "dry-run", "end-h=", "case=", "dx=", "method=", "dem=", "partition=", "suite="])
     options = dict(flags)
     if extra:
         raise ValueError(f"Unrecognised native status arguments {extra}")
     if "--dry-run" in options:
         print("Read native forecast receipts and report the selected measured endpoints.")
     elif "--end-h" in options:
-        if "--inventory" in options:
-            raise ValueError("Choose an endpoint comparison or an inventory")
+        if {"--inventory", "--dem", "--partition", "--suite"}.intersection(options):
+            raise ValueError("Endpoint comparisons accept case, method and hydraulic spacing selectors")
         window_report(directory=directory, config=config, design=design, case_pattern=options.get("--case", "*"),
                       spacing=float(options["--dx"]) if "--dx" in options else None, method=options.get("--method"),
                       end_s=float(options["--end-h"]) * 3600, output=sys.stdout)
-    elif {"--case", "--method", "--dx"}.intersection(options):
-        raise ValueError("Choose --end-h to report selected forecasts on a common observation window")
     else:
-        status(directory=directory, config=config, design=design, inventory="--inventory" in options)
+        status(directory=directory, config=config, design=design, inventory="--inventory" in options, options=options)

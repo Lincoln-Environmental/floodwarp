@@ -89,10 +89,17 @@ main() {
     fi
     if [[ $stage == native-storms ]]; then
         shift
+        local -a inventory_options=()
+        for option in "$@"; do
+            case "$option" in
+                --dry-run|--terrain-only|--resume|--force) ;;
+                *) inventory_options+=("$option") ;;
+            esac
+        done
         for option in "$@"; do
             if [[ $option == --dry-run ]]; then
                 "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_matrix "$@"
-                "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_status --inventory
+                "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_status --inventory "${inventory_options[@]}"
                 return
             fi
         done
