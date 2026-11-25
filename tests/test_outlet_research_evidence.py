@@ -1210,3 +1210,20 @@ def test_manning_transfer_rebuilds_from_archived_inputs_and_detects_changes(tmp_
     file.write_text(file.read_text().replace("peak_bias_pct", "unverified_bias", 1))
     with pytest.raises(ValueError, match="regeneration"):
         calibration_fidelity.verify(study=study, target=tmp_path)
+
+
+def test_native_status_snapshot_integrates_signed_transport_only_at_requested_end():
+    from research.floodwarp_methods_paper.fidelity.native_status import snapshot_budget
+
+    frames = [dict(t_s=60, outlet_m3s=-1, section_m3s=0.5), dict(t_s=120, outlet_m3s=3, section_m3s=1)]
+    state = dict(frames=frames, initial_m3=10., rain_m3=200., infiltration_m3=20., storage_m3=70., residual_m3=0.)
+    options = dict(initial=10., end_s=120, interval=60)
+    read = snapshot_budget(data=state, **options)
+    assert read["outlet_net_m3"] == 120 and read["section_net_m3"] == 90 and read["residual_m3"] == 0
+    assert read["peak_outlet_m3s"] == 3 and read["peak_interval_end_s"] == 120
+    with pytest.raises(ValueError, match="end differs"):
+        snapshot_budget(data=state, initial=10, end_s=180, interval=60)
+    with pytest.raises(ValueError, match="irregular"):
+        snapshot_budget(data=dict(state, frames=frames[1:]), **options)
+    with pytest.raises(ValueError, match="water balance"):
+        snapshot_budget(data=dict(state, storage_m3=60), **options)

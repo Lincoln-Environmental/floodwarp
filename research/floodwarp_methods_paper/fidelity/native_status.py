@@ -1,12 +1,18 @@
 """Read current corrected storm receipts, including individual recession checkpoints."""
 
 from collections import defaultdict
+import csv
+import fnmatch
+import getopt
+import gzip
 from pathlib import Path
 import json
 import sys
+
+import numpy as np
 from research.floodwarp_methods_paper import runner
 
-from research.floodwarp_methods_paper.fidelity import native_matrix, native_products
+from research.floodwarp_methods_paper.fidelity import native_matrix, native_products, recession
 from research.floodwarp_methods_paper.plan import read_config
 
 
@@ -17,6 +23,85 @@ def policy_key(*, spec, factor):
         spec.get("requested_method", spec["method"]),
         factor,
     )
+
+
+def snapshot_budget(*, data, initial, end_s, interval):
+    """Integrate the accepted outlet and internal face transports at one requested time."""
+    frames = data["frames"]
+    times = np.asarray([r["t_s"] for r in frames], dtype=float)
+    if len(times) == 0 or times[-1] != end_s:
+        raise ValueError("Requested end differs from observed hydrograph end")
+    dt = np.diff(times, prepend=0)
+    if not np.all(dt == interval):
+        raise ValueError("Missing or irregular accepted reporting intervals")
+    q = np.asarray([r["outlet_m3s"] for r in frames])
+    qi = np.asarray([r["section_m3s"] for r in frames])
+    exported = float(q @ dt)
+    storage = data["storage_m3"] if "storage_m3" in data else data["final_storage_m3"]
+    rain, soil = data["rain_m3"], data["infiltration_m3"]
+    residual = initial + rain - exported - storage - soil
+    allowed = max(1., initial + rain + np.maximum(-q, 0) @ dt) * 1e-8
+    if not np.all(np.isfinite([q.max(), qi @ dt, residual, data["residual_m3"]])) or max(abs(residual - data["residual_m3"]), abs(residual)) > allowed:
+        raise ValueError("Accepted outlet transport disagrees with the archived water balance")
+    return dict(initial_m3=initial, rain_m3=rain, infiltration_m3=soil, storage_m3=storage,
+                outlet_net_m3=exported, section_net_m3=float(qi @ dt), residual_m3=residual,
+                terminal_outlet_m3s=float(q[-1]), peak_outlet_m3s=float(q.max()),
+                peak_interval_end_s=float(times[np.argmax(q)]))
+
+
+def window_report(*, directory, config, design, case_pattern, spacing, method, end_s, output):
+    if not np.isfinite(end_s) or end_s <= 0 or not float(end_s).is_integer():
+        raise ValueError("Request an archived positive endpoint at whole-second precision")
+    specs = native_matrix.specifications(study=directory.parent, config=config, design=design)
+    planned = sorted({policy_key(spec=s, factor=s["factor"]) for s in specs})
+    keys = [k for k in planned if fnmatch.fnmatchcase(k[0], case_pattern)
+            and spacing in (None, k[1]) and method in (None, k[2])]
+    if not keys:
+        raise ValueError("No scheduled forecasts match the requested terrain, spacing and method")
+    records = native_products.prefixes(directory=directory)
+    current = runner.source_identity(root=directory.parents[2], study=directory.parent, stage="long-storms")
+    selected = {}
+    for ident, item in records.items():
+        key = policy_key(spec=item["s"], factor=item["factor"])
+        if item["solver_source"] == current and not item["s"].get("timing_repeat") and key in keys:
+            if key in selected:
+                raise ValueError("Ambiguous primary observation for the selected policy")
+            selected[key] = ident
+    series = {}
+    for path in (directory / "extended_runs").glob(f"*/horizons/{int(end_s)}.json.gz"):
+        with gzip.open(path, "rt") as stream:
+            d = json.load(stream)
+        parent = d["parent_id"]
+        if parent not in selected.values() or d["cohort"] != "native-metre":
+            continue
+        if (d["end_s"] != end_s or d["spec"] != records[parent]["s"] or d["factor"] != records[parent]["factor"]
+                or d["id"] != path.parents[1].name or parent in series):
+            raise ValueError("Ambiguous or mismatched horizon receipt")
+        series[parent] = d
+    settings = json.loads((directory / "recession_settings.json").read_text())
+    rows = []
+    for key in keys:
+        ident = selected.get(key)
+        row = dict(case=key[0], dx_m=key[1], method=key[2], cfl_factor=key[3], end_h=end_s / 3600,
+                   initial_id=ident, status="no receipt at requested endpoint")
+        if ident is not None:
+            item = records[ident]
+            window = series.get(ident)
+            if item["s"]["hours"] * 3600 == end_s:
+                window = item["d"]
+            if window is not None:
+                budget = snapshot_budget(data=window, initial=item["d"]["initial_m3"], end_s=end_s,
+                                         interval=item["s"]["interval"])
+                passed, _ = recession.settled(frames=window["frames"], storage=budget["storage_m3"],
+                                               supply=max(1, budget["rain_m3"] + budget["initial_m3"]), config=settings)
+                if "settled" in window and passed != window["settled"]:
+                    raise ValueError("Recomputed recession status differs from the measured receipt")
+                row.update(status="measured", series_id=window.get("id", ident), both_gauges_receded=passed,
+                           interval_s=item["s"]["interval"], native_sha=item["native_sha"], **budget)
+        rows.append(row)
+    writer = csv.DictWriter(output, fieldnames=list(dict.fromkeys(k for r in rows for k in r)), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
 
 
 def status(*, directory, config, design, inventory=False):
@@ -107,4 +192,19 @@ if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     config = read_config(path=directory.parent / "configs/study.json")
     design = json.loads((directory / "native_matrix_settings.json").read_text())
-    status(directory=directory, config=config, design=design, inventory="--inventory" in sys.argv[1:])
+    flags, extra = getopt.getopt(sys.argv[1:], "", ["inventory", "resume", "dry-run", "end-h=", "case=", "dx=", "method="])
+    options = dict(flags)
+    if extra:
+        raise ValueError(f"Unrecognised native status arguments {extra}")
+    if "--dry-run" in options:
+        print("Read native forecast receipts and report the selected measured endpoints.")
+    elif "--end-h" in options:
+        if "--inventory" in options:
+            raise ValueError("Choose an endpoint comparison or an inventory")
+        window_report(directory=directory, config=config, design=design, case_pattern=options.get("--case", "*"),
+                      spacing=float(options["--dx"]) if "--dx" in options else None, method=options.get("--method"),
+                      end_s=float(options["--end-h"]) * 3600, output=sys.stdout)
+    elif {"--case", "--method", "--dx"}.intersection(options):
+        raise ValueError("Choose --end-h to report selected forecasts on a common observation window")
+    else:
+        status(directory=directory, config=config, design=design, inventory="--inventory" in options)
