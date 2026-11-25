@@ -417,6 +417,46 @@ def plain_grid_fidelity(*, study, cases):
                       "[Per-configuration observations and physical input identities](../fidelity/native_results/measured_windows.csv)", ""])
 
 
+def recession_followup_summary(*, study, spacing_m, method):
+    file = study / "fidelity/native_results/recession_followup.csv"
+    if not file.is_file():
+        return ""
+    observations = [r for r in csv_read(file=file) if r["station"] == "outlet" and float(r["cfl_factor"]) == 1
+                    and r["followup_pct_of_complete_outward"] and float(r["followup_h"]) > 0]
+    original = [r for r in observations if r["earlier_window"] == "original window"
+                and float(r["dx_m"]) == spacing_m and r["method"] == method]
+    if not original:
+        return ""
+    lines = ["", "### How much runoff reaches the outlet after the initial window?", "",
+             f"Each row follows the same dense Hancock trajectory on its {spacing_m:g} m bed. "
+             "The percentage divides outward volume delivered after the initial endpoint by outward volume "
+             "over the complete matched record. Inward transport is recorded separately.", "",
+             "| Event | Initial → matched end (h) | Early peak (m³/s) | Complete peak (m³/s) | "
+             "Later outward volume (m³) | Share delivered later (%) |",
+             "|---|---:|---:|---:|---:|---:|"]
+    for r in sorted(original, key=itemgetter("case")):
+        volume = float(r["followup_outward_m3"])
+        percent = float(r["followup_pct_of_complete_outward"])
+        amount = f"{volume:,.2f}" if volume >= 0.01 or volume == 0 else "<0.01"
+        share = f"{percent:.2f}" if percent >= 0.01 or percent == 0 else "<0.01"
+        lines.append(f"| {r['case']} | {float(r['earlier_end_h']):g} → {float(r['end_h']):g} | "
+                     f"{float(r['early_peak_m3s']):.5g} | {float(r['complete_peak_m3s']):.5g} | "
+                     f"{amount} | {share} |")
+    passed = [r for r in observations if r["earlier_window"] == "earliest archived two-gauge pass"
+              and r["method"] in ("fv1", "hancock_dense", "adaptive")]
+    if passed:
+        events = {r["case"] for r in passed}
+        highs = sum(r["larger_crest_during_followup"] == "True" for r in passed)
+        max_pct = max(float(r["followup_pct_of_complete_outward"]) for r in passed)
+        lines.extend(["", f"{len(passed)} ordinary-CFL FV1, dense Hancock and RK2 trajectories across {len(events)} "
+                      "events have a recorded pass at both gauges before the common stop. During the observed "
+                      f"follow-up, {highs} developed a larger outlet crest and the largest additional share of "
+                      f"outward volume was {max_pct:.3g}%. The evidence ends at the common stop."])
+    lines.extend(["", "[Original and earlier-passing endpoints, both gauge ledgers and remaining storage]"
+                  "(../fidelity/native_results/recession_followup.csv)", ""])
+    return "\n".join(lines)
+
+
 def native_floor_hydrographs(*, study, spacing_m):
     source = study / "fidelity/native_results/hydraulic_fidelity.csv"
     if not source.is_file():
@@ -1065,6 +1105,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
                 correction += plain_embankment(study=study, cases={"plain-709-moderate-1000x1000": "Moderate",
                                                                   "plain-709-intense-1000x1000": "Intense"}, face_m=880)
                 correction += native_floor_hydrographs(study=study, spacing_m=1)
+                correction += recession_followup_summary(study=study, spacing_m=1, method="hancock_dense")
                 correction += native_reach_contrasts(study=study)
                 correction += native_grid_field_comparison(study=study)
                 correction += native_advisor_findings(study=study)

@@ -247,6 +247,20 @@ Each percentage uses ordinary-CFL RK2 on the same bed and event as the compariso
 
 [Paired run IDs, internal and outlet hydrograph metrics, temporal screens and reference checks](../fidelity/native_results/hydraulic_fidelity.csv)
 
+### How much runoff reaches the outlet after the initial window?
+
+Each row follows the same dense Hancock trajectory on its 1 m bed. The percentage divides outward volume delivered after the initial endpoint by outward volume over the complete matched record. Inward transport is recorded separately.
+
+| Event | Initial → matched end (h) | Early peak (m³/s) | Complete peak (m³/s) | Later outward volume (m³) | Share delivered later (%) |
+|---|---:|---:|---:|---:|---:|
+| hill-8500-back-1000x1000 | 8 → 12 | 16.159 | 16.159 | <0.01 | <0.01 |
+| plain-709-moderate-1000x1000 | 8 → 40 | 0.91794 | 0.91794 | 26,151.39 | 60.27 |
+| plain-709-spatial-1000x1000 | 8 → 20 | 0.0070687 | 0.035363 | 532.51 | 99.22 |
+
+9 ordinary-CFL FV1, dense Hancock and RK2 trajectories across 4 events have a recorded pass at both gauges before the common stop. During the observed follow-up, 0 developed a larger outlet crest and the largest additional share of outward volume was 0.254%. The evidence ends at the common stop.
+
+[Original and earlier-passing endpoints, both gauge ledgers and remaining storage](../fidelity/native_results/recession_followup.csv)
+
 ### Where export differences develop
 
 The table gives FV1 minus dense Hancock on either side of the internal gauge. The upstream east face is the gauge and the downstream east face is the outlet. Infiltration and retained storage come from separate cell fields. Each reach closes against its initial water, rain and signed transport on all four sides.

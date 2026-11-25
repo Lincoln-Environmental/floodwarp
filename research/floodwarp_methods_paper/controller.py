@@ -83,6 +83,7 @@ def derived_identity(*, root, study, stage):
     if stage in ("manuscript", "verify"):
         dependencies.extend((study / "supplementary/native_grid_extent/observations.csv",
                              study / "fidelity/native_results/regional_water.csv",
+                             study / "fidelity/native_results/recession_followup.csv",
                              study / "fidelity/native_results/embankment_transport.csv"))
     if stage == "verify":
         native = study / "fidelity/native_results"
