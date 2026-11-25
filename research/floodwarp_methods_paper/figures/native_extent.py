@@ -1,4 +1,4 @@
-"""Compare measured outlet peaks with cumulative inundation on each hydraulic grid."""
+"""Pair outlet peaks and event footprints with surface water remaining after recession."""
 
 from collections import defaultdict
 
@@ -31,12 +31,19 @@ def observations(*, windows, differences, thresholds):
             for cm in thresholds:
                 base = float(pair[f"maximum_reference_wet_area_{cm}cm_m2"])
                 value = base + float(pair[f"maximum_wet_area_difference_{cm}cm_m2"]) if candidate else base
-                if not 0 <= value <= int(r["cells"]) * dx**2:
-                    raise ValueError("Cumulative wet area falls outside the measured catchment")
+                final = float(pair[f"reference_wet_area_{cm}cm_m2"])
+                if candidate:
+                    final += float(pair[f"wet_area_difference_{cm}cm_m2"])
+                if not 0 <= final <= value <= int(r["cells"]) * dx**2:
+                    raise ValueError("Final or cumulative wet area falls outside its observed footprint")
+                measured = r.get(f"model_grid_wet_area_{cm}cm_m2")
+                if measured not in ("", None) and float(measured) != final:
+                    raise ValueError("Endpoint wet area disagrees with the storm water account")
                 area[f"area_{cm}cm_m2"] = value
+                area[f"final_area_{cm}cm_m2"] = final
             record = dict(case=case, dx_m=dx, end_h=end, cadence_s=float(r["interval_s"]),
                           method=r["method"], source_id=ident, outlet_peak_m3s=float(r["outlet_peak_m3s"]),
-                          **area)
+                          storage_m3=float(r["storage_m3"]), **area)
             key = case, end, dx, r["method"]
             if key in rows and rows[key] != record:
                 raise ValueError("Conflicting observations of the same peak or cumulative wet area")
@@ -59,7 +66,9 @@ def generate(*, study, thresholds, methods, save):
     for (case, end, cadence), group in groups.items():
         fields = [("outlet_peak_m3s", "Outlet peak (m³/s)", 1)]
         fields.extend((f"area_{cm}cm_m2", f"Area ever ≥{cm} cm (ha)", 10000) for cm in thresholds)
-        fig, axes = plt.subplots(1, len(fields), figsize=(7.2, 2.8), layout="constrained", squeeze=False)
+        fields.append(("storage_m3", "Final surface storage (10³ m³)", 1000))
+        fields.extend((f"final_area_{cm}cm_m2", f"Final area ≥{cm} cm (ha)", 10000) for cm in thresholds)
+        fig, axes = plt.subplots(2, len(thresholds) + 1, figsize=(7.2, 4.7), layout="constrained", squeeze=False)
         grids = sorted({row["dx_m"] for row in group})
         for ax, (field, ylabel, divisor) in zip(axes.flat, fields, strict=True):
             for (name, (label, colour, marker)), offset in zip(methods.items(), np.linspace(-0.16, 0.16, len(methods)), strict=True):

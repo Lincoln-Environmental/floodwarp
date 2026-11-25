@@ -26,14 +26,22 @@ def test_cost_independent_extent_uses_original_cells_and_actual_complete_event()
     from research.floodwarp_methods_paper.figures.native_extent import observations
 
     common = dict(case="hill", native_sha="terrain", factor=1, end_h=12, dx_m=5,
-                  cells=100, interval_s=60, outlet_peak_m3s=2, horizon="complete-native-metre")
+                  cells=100, interval_s=60, outlet_peak_m3s=2, storage_m3=5, horizon="complete-native-metre")
     windows = [dict(common, source_id="f", method="fv1"), dict(common, source_id="r", method="adaptive")]
     pair = dict(case="hill", dx_m=5, end_h=12, cadence_s=60, native_fields="terrain", method="fv1",
                 state_source="f", comparator_state_source="r",
+                reference_wet_area_5cm_m2=25, wet_area_difference_5cm_m2=25,
+                reference_wet_area_10cm_m2=0, wet_area_difference_10cm_m2=0,
                 maximum_reference_wet_area_5cm_m2=50, maximum_wet_area_difference_5cm_m2=200,
                 maximum_reference_wet_area_10cm_m2=0, maximum_wet_area_difference_10cm_m2=25)
     fv, rk = sorted(observations(windows=windows, differences=[pair], thresholds=(5, 10)), key=run_id)
     assert (fv["area_5cm_m2"], fv["area_10cm_m2"], rk["area_10cm_m2"]) == (250, 25, 0)
+    assert (fv["final_area_5cm_m2"], fv["final_area_10cm_m2"], rk["final_area_5cm_m2"]) == (50, 0, 25)
+    with pytest.raises(ValueError, match="observed footprint"):
+        observations(windows=windows, differences=[dict(pair, wet_area_difference_5cm_m2=250)], thresholds=(5, 10))
+    with pytest.raises(ValueError, match="water account"):
+        observations(windows=[dict(windows[0], model_grid_wet_area_10cm_m2=25), windows[1]],
+                     differences=[pair], thresholds=(5, 10))
     assert not observations(windows=windows, differences=[dict(pair, end_h=8)], thresholds=(5, 10))
     with pytest.raises(ValueError, match="identical terrain"):
         observations(windows=windows, differences=[dict(pair, native_fields="other")], thresholds=(5, 10))

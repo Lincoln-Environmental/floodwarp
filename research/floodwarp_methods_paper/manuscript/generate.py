@@ -647,10 +647,10 @@ def native_grid_field_comparison(*, study):
         groups = sorted({(r["case"], float(r["end_h"])) for r in csv_read(file=figures / "observations.csv")})
         links = [f"[{case}, {end:g} h](../supplementary/native_grid_extent/{case}_{end:g}h.pdf)" for case, end in groups]
         if links:
-            text.extend(["", "The following figures pair outlet peak discharge with the area that reached 5 cm or "
-                         "10 cm at any time before the common recession endpoint. The inundation measurement counts "
-                         "original hydraulic cells. The outlet and the inundation footprint can respond quite "
-                         "differently to the choice of formulation. " + " · ".join(links)])
+            text.extend(["", "The upper panels show peak discharge and the area that reached 5 cm or 10 cm at any "
+                         "time in the event. The lower panels show surface storage and the area still flooded at "
+                         "those thresholds when both gauges passed the common recession check. All areas count "
+                         "cells at the original hydraulic spacing. " + " · ".join(links)])
     maps = study / "supplementary/operational_storms"
     links = [f"[{dx} m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_{dx}m.pdf)"
              for dx in (1, 5, 10) if (maps / f"plain_709_extent_10cm_{dx}m.pdf").is_file()]
