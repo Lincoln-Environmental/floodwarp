@@ -175,7 +175,7 @@ main() {
                 ./scripts/run_hydrograph_fidelity.sh native-advisor-validate "${selected_options[@]}"
             fi
         done
-        for stage in verify-native advisor-design orton-transfer native-publication summary tables figures manuscript verify; do
+        for stage in verify-native advisor-design orton-transfer verify-kernels native-publication summary tables figures manuscript verify; do
             "$0" "$stage" "${selected_options[@]}"
         done
         return
