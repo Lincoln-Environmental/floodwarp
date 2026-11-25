@@ -46,10 +46,35 @@ def matched_geometry(*, directory: Path, rows):
     return per_grid
 
 
+def release_differences(*, model, curves, ends, cadence, row, end_h, digest):
+    selected = ends <= end_h * 3600
+    if not selected.any() or ends[selected][-1] != end_h * 3600:
+        raise ValueError("Historical and current comparison must end on the same accepted interval")
+    candidate = model[selected]
+    times = ends[selected]
+    contrasts = []
+    for method, full_control in curves.items():
+        control = full_control[selected]
+        peak = float(control.max())
+        contrasts.append(dict(
+            run_id=row["id"], method=row["method"], dx_m=row["dx_m"], interval_s=cadence,
+            end_h=end_h, historical_method=method, historical_dx_m=5,
+            release_hydrographs_sha256=digest, historical_peak_m3s=peak,
+            historical_peak_end_s=int(times[np.argmax(control)]),
+            historical_net_export_m3=float(control.sum() * cadence),
+            signed_peak_difference_pct=float(100 * (candidate.max() / peak - 1)) if peak > 0 else None,
+            peak_end_difference_s=int(times[np.argmax(candidate)] - times[np.argmax(control)]),
+            net_export_difference_m3=float(np.sum(candidate - control) * cadence),
+            hydrograph_rms_difference_m3s=float(np.sqrt(np.mean((candidate - control)**2))),
+        ))
+    return contrasts
+
+
 def compare(*, release: Path, destination: Path, settings, rows):
     file = release / "outputs/orton_bradley_hydrographs_72h.csv"
     digest = runner.checksum(file)
     contrasts = []
+    rain_end_contrasts = []
     for row in rows:
         cadence = int(row["interval_s"])
         if cadence != settings["cadence_s"]:
@@ -63,17 +88,14 @@ def compare(*, release: Path, destination: Path, settings, rows):
         model = np.array([r["net_outlet_m3s"] for r in frames])
         np.testing.assert_allclose(model.sum() * cadence, row["boundary_outflow"] - row["boundary_inflow"],
                                    rtol=1e-10, atol=1e-7)
-        for method, control in curves.items():
-            peak = float(control.max())
-            contrasts.append(dict(
-                run_id=row["id"], method=row["method"], dx_m=row["dx_m"], interval_s=cadence,
-                end_h=row["duration_h"], historical_method=method, historical_dx_m=5,
-                release_hydrographs_sha256=digest, historical_peak_m3s=peak,
-                historical_peak_end_s=int(ends[np.argmax(control)]),
-                historical_net_export_m3=float(control.sum() * cadence),
-                signed_peak_difference_pct=float(100 * (model.max() / peak - 1)) if peak > 0 else None,
-                peak_end_difference_s=int(ends[np.argmax(model)] - ends[np.argmax(control)]),
-                net_export_difference_m3=float(np.sum(model - control) * cadence),
-                hydrograph_rms_difference_m3s=float(np.sqrt(np.mean((model - control)**2))),
-            ))
+        data = dict(model=model, curves=curves, ends=ends, cadence=cadence, row=row, digest=digest)
+        contrasts.extend(release_differences(**data, end_h=row["duration_h"]))
+        if "rain_end_h" in row:
+            rain_h = row["rain_end_h"]
+            prefix = model[ends <= rain_h * 3600]
+            np.testing.assert_allclose(prefix.sum() * cadence, row["rain_end_boundary_outflow"] - row["rain_end_boundary_inflow"],
+                                       rtol=1e-10, atol=1e-7)
+            rain_end_contrasts.extend(release_differences(**data, end_h=rain_h))
     metrics.csv_write(file=destination / "historical_transfer.csv", rows=contrasts)
+    if rain_end_contrasts:
+        metrics.csv_write(file=destination / "historical_rain_end.csv", rows=rain_end_contrasts)

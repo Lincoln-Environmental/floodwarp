@@ -704,6 +704,8 @@ def orton_transfer(*, study, out):
             raise ValueError("Archived Orton peak and accepted interval transport disagree")
         column = grids.index(int(row["dx_m"]))
         for ax, q in zip(axes[:, column], series, strict=True):
+            if "rain_end_h" in row and not ax.lines:
+                ax.axvline(float(row["rain_end_h"]), color="0.45", linestyle=":", linewidth=0.8, label="Rain ends")
             ax.stairs(q, edges / 3600, baseline=None, color=colours[row["method"]],
                       label=row["method"].upper(), linewidth=0.95)
     for i, grid in enumerate(grids):

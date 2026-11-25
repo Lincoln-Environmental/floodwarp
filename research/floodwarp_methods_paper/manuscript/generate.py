@@ -1113,7 +1113,8 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
         if transfer.exists():
             transfers = csv_read(file=transfer)
             correction += (f"\n{len(transfers)} of nine Orton Bradley configurations completed the archived 48-hour HIRDS "
-                           "design storm. These measured differences quantify numerical transfer to real terrain under design "
+                           f"design storm and the subsequent {float(transfers[0]['duration_h']) - float(transfers[0]['rain_end_h']):g}-hour recession. "
+                           "These measured differences quantify numerical transfer to real terrain under design "
                            "forcing. The footprint area added by aggregation, represented stage width and greatest outlet-face "
                            "displacement accompany each grid comparison. Errors against an observed event remain unknown. "
                            "[Water balance and inundation](../tables/17_orton_storm.md) · "

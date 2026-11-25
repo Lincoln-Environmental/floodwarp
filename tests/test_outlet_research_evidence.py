@@ -1102,3 +1102,81 @@ def test_native_grid_shape_table_matches_comparator_and_flags_initial_flow(tmp_p
     metrics.csv_write(file=target, rows=rows)
     with pytest.raises(ValueError, match="comparator differs"):
         native_floor_hydrographs(study=tmp_path, spacing_m=1)
+
+
+def test_transfer_separates_rain_endpoint_from_late_crest_and_return_flow():
+    from research.floodwarp_methods_paper.fidelity.orton_transfer import recession_evidence
+
+    records = [dict(t_s=t, net_outlet_m3s=q, boundary_net_m3=net, steps=3, retries=1, hydraulic_s=0.75)
+               for t, q, net in ((1800, 1, 1800), (3600, 2, 5400), (5400, 4, 12600), (7200, -1, 10800))]
+    wet = dict(boundary_inflow=100., boundary_outflow=5500., infiltration=500., storage=7100., rain=13000.)
+    end = dict(boundary_inflow=1900., boundary_outflow=12700., infiltration=600., storage=1600., rain=13000.)
+    measured = recession_evidence(records=records, rain_end_h=1, water_at_rain_end=wet, water_at_end=end)
+    assert measured["rain_end_peak_m3s"] == 2 and measured["recession_peak_m3s"] == 4
+    assert measured["rain_end_peak_end_s"] == 3600 and measured["recession_peak_end_s"] == 5400
+    assert measured["recession_net_export_m3"] == 5400 and measured["recession_infiltration_m3"] == 100
+    assert measured["rain_end_steps"] == 6 and measured["rain_end_hydraulic_s"] == 1.5
+    assert measured["terminal_discharge_m3s"] == -1
+    with pytest.raises(ValueError, match="subsequent recession"):
+        recession_evidence(records=records[:2], rain_end_h=1, water_at_rain_end=wet, water_at_end=end)
+    with pytest.raises(AssertionError):
+        recession_evidence(records=records, rain_end_h=1, water_at_rain_end=wet, water_at_end=dict(end, rain=13010.))
+
+
+def test_transfer_historical_recession_comparison_does_not_leak_late_peak_into_storm():
+    import numpy as np
+    from research.floodwarp_methods_paper.fidelity.orton_controls import release_differences
+
+    data = dict(model=np.array([1., 2., 5., 1.]), curves={"fv1": np.array([1., 3., 4., 1.])},
+                ends=np.array([1800, 3600, 5400, 7200]), cadence=1800, row=dict(id="test", method="rk2", dx_m=5),
+                digest="fixture")
+    rain, = release_differences(**data, end_h=1)
+    end, = release_differences(**data, end_h=2)
+    assert rain["net_export_difference_m3"] == -1800 and end["net_export_difference_m3"] == 0
+    assert rain["signed_peak_difference_pct"] == pytest.approx(-100/3)
+    assert end["signed_peak_difference_pct"] == 25
+
+
+@pytest.mark.parametrize("method", ("fv1", "hancock", "rk2"))
+def test_transfer_driver_records_dry_recession_and_restores_both_endpoints(tmp_path, monkeypatch, method):
+    from floodwarp.full_swe_solver import FullSWESolver
+    from research.floodwarp_methods_paper import runner
+    from research.floodwarp_methods_paper.fidelity import orton_transfer
+    from validation import fv2_orton_matrix
+
+    # Small synthetic geometry uses the production replay and checkpoint code.
+    mask = np.array([[True, True], [True, True], [False, False]])
+    solver = FullSWESolver(ny=3, nx=2, dx=5., dy=5., bed_elevation=np.zeros(mask.shape),
+                           manning_n=0.035, active_mask=mask, maximum_dt=60., device="cpu")
+    ports = np.zeros((4, 2), dtype=int)
+    ports[2, 0] = 3
+    solver.set_boundary_type_qy(boundary_type=ports)
+    rate = 1e-8
+    solver.set_rainfall_hyetograph(times_s=np.array([0., 3600.]), rates_m_s=np.full(2, rate))
+    state = solver.capture_state()
+    data, geometry = fv2_orton_matrix.geometry(state=state, factor=1)
+    directory = tmp_path / "research/study/fidelity"
+    settings = dict(cadence_s=600, checkpoint_h=1, recession_h=1, thresholds_cm=[5, 10], gauges_m=[5], device="cpu")
+    identity = dict(settings=settings, method=method, dx=5)
+    folder = directory / "orton_transfer" / runner.digest(identity)[:24]
+    forcing = dict(duration_h=1, integrated_volume_m3=mask.sum() * 25 * 3600 * rate)
+
+    def fixture_machine(*, root):
+        return {"cpu_model": "test fixture"}
+
+    def fixture_pool(*, device):
+        return 0
+
+    monkeypatch.setattr(runner, "machine", fixture_machine)
+    monkeypatch.setattr(orton_transfer.wp, "get_mempool_used_mem_current", fixture_pool)
+    inputs = dict(directory=directory, settings=settings, state=state, data=data, geometry=geometry,
+                  forcing=forcing, dx=5, method=method, identity=identity)
+    # Mimic an interruption after the final summary was written but before the
+    # attempt completed. Both observational ledgers must survive restoration.
+    first = orton_transfer.simulate(**inputs)
+    with orton_transfer.measured_attempt(folder=folder, machine=fixture_machine(root=tmp_path), ident=first["id"]):
+        restored = orton_transfer.simulate(**inputs)
+    assert first == restored == orton_transfer.read_complete(folder=folder, identity=identity)
+    assert first["duration_h"] == 2 and first["rain_end_h"] == 1
+    assert first["rain"] == first["rain_end_rain"] == pytest.approx(forcing["integrated_volume_m3"])
+    assert first["steps"] > first["rain_end_steps"] and abs(first["residual"]) < 1e-10

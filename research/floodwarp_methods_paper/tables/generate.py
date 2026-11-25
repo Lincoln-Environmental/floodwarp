@@ -561,23 +561,28 @@ def from_records(*, study, output):
         geometry = orton_controls.matched_geometry(directory=transfer_file.parent, rows=measured)
         contrasts = csv_read(file=transfer_file.with_name("historical_transfer.csv"))
         release_fv1 = {r["run_id"]: r for r in contrasts if r["historical_method"] == "floodwarp_fv1"}
-        if set(release_fv1) != {r["id"] for r in measured}:
+        rain_end_fv1 = {r["run_id"]: r for r in csv_read(file=transfer_file.with_name("historical_rain_end.csv"))
+                        if r["historical_method"] == "floodwarp_fv1"}
+        if set(rain_end_fv1) != set(release_fv1) or set(release_fv1) != {r["id"] for r in measured}:
             raise ValueError("Missing matched historical 5 m FV1 outlet comparison")
-        keys = ("id", "dx_m", "method", "peak_m3s", "peak_end_s", "rain", "infiltration",
+        keys = ("id", "dx_m", "method", "duration_h", "rain_end_h", "rain_end_peak_m3s",
+                "rain_end_terminal_m3s", "rain_end_storage_m3", "recession_net_export_m3",
+                "recession_infiltration_m3", "terminal_discharge_m3s", "peak_m3s", "peak_end_s", "rain", "infiltration",
                 "boundary_inflow", "boundary_outflow", "storage_m3", "residual",
                 "final_area_5cm_m2", "maximum_area_5cm_m2", "final_area_10cm_m2", "maximum_area_10cm_m2")
-        output["17_orton_storm"] = ("Orton Bradley 48-hour design-storm transfer and differences from release FV1 at 5 m",
+        output["17_orton_storm"] = ("Orton Bradley water balance at rain cessation and after recession, with matched release FV1 comparisons at 5 m",
                                    [dict({k: r[k] for k in keys},
                                          stage_width_m=geometry[int(r["dx_m"])]["stage_width_m"],
                                          max_stage_displacement_m=geometry[int(r["dx_m"])]["max_stage_displacement_m"],
                                          added_footprint_m2=geometry[int(r["dx_m"])]["added_footprint_m2"],
+                                         rain_end_release_fv1_export_difference_m3=rain_end_fv1[r["id"]]["net_export_difference_m3"],
                                          release_fv1_peak_difference_pct=release_fv1[r["id"]]["signed_peak_difference_pct"],
                                          release_fv1_peak_time_difference_s=release_fv1[r["id"]]["peak_end_difference_s"],
                                          release_fv1_export_difference_m3=release_fv1[r["id"]]["net_export_difference_m3"])
                                     for r in measured])
-        keys = ("id", "dx_m", "method", "policy", "steps", "retries", "minimum_dt_s", "mean_dt_s",
+        keys = ("id", "dx_m", "method", "policy", "duration_h", "rain_end_steps", "rain_end_hydraulic_s", "steps", "retries", "minimum_dt_s", "mean_dt_s",
                 "hydraulic_s", "end_to_end_solver_s", "sampled_peak_pool_mib")
-        output["18_orton_cost"] = ("Orton Bradley measured 48-hour transfer costs and timestep counts",
+        output["18_orton_cost"] = ("Orton Bradley measured costs and accepted steps through rainfall and the full recession",
                                   [{k: r[k] for k in keys} for r in measured])
     for name, (caption, data) in output.items():
         render(directory=out, name=name, rows=data, caption=caption)

@@ -43,7 +43,8 @@ def read_complete(*, folder, identity):
     result = folder / "complete.json"
     entry = json.loads(result.read_text())
     manifest = json.loads((folder / "inputs.json").read_text())
-    if (entry["duration_h"] != manifest["forcing"]["duration_h"]
+    rain_h = manifest["forcing"]["duration_h"]
+    if (entry["duration_h"] != rain_h + identity["settings"].get("recession_h", 0)
             or entry["interval_s"] != identity["settings"]["cadence_s"]):
         raise ValueError("Transfer observations must cover the imposed storm at its prescribed cadence")
     if (entry["id"], entry["dx_m"], entry["method"]) != (
@@ -87,6 +88,51 @@ def verify_index(*, directory, required_ids=()):
     if missing:
         raise ValueError("Missing completed transfer forecasts: " + ", ".join(sorted(missing)))
     return len(seen)
+
+
+def endpoint_water(*, solver, thresholds_cm, integrated_rain_m3):
+    ledger = solver.cumulative_accounting()
+    depth = solver.get_water_depth()
+    maximum = solver.get_max_water_depth()
+    np.testing.assert_allclose(ledger["rain"], integrated_rain_m3, rtol=1e-9)
+    if (not np.isfinite(depth).all() or not np.isfinite(maximum).all()
+            or np.any(depth < 0) or np.any(maximum < depth)
+            or abs(ledger["residual"]) > 1e-8 * ledger["rain"]):
+        raise ArithmeticError("Orton transfer failed endpoint depth or water-balance check")
+    area = solver.dx * solver.dy
+    result = dict(ledger, storage_m3=ledger["storage"])
+    for cm in thresholds_cm:
+        result[f"final_area_{cm}cm_m2"] = float(np.count_nonzero(depth >= cm / 100) * area)
+        result[f"maximum_area_{cm}cm_m2"] = float(np.count_nonzero(maximum >= cm / 100) * area)
+    return result
+
+
+def recession_evidence(*, records, rain_end_h, water_at_rain_end, water_at_end):
+    """Split accepted transport exactly at the end of rainfall, including return flow."""
+    rain_rows = [r for r in records if r["t_s"] <= rain_end_h * 3600]
+    tail = records[len(rain_rows):]
+    if not rain_rows or rain_rows[-1]["t_s"] != rain_end_h * 3600 or not tail:
+        raise ValueError("Transfer requires both the rain endpoint and subsequent recession")
+    storm_peak = max(rain_rows, key=peak_flow)
+    tail_peak = max(tail, key=peak_flow)
+    differences = {}
+    for field in ("boundary_outflow", "boundary_inflow", "infiltration", "storage", "rain"):
+        differences[field] = water_at_end[field] - water_at_rain_end[field]
+    net = differences["boundary_outflow"] - differences["boundary_inflow"]
+    np.testing.assert_allclose(net, tail[-1]["boundary_net_m3"] - rain_rows[-1]["boundary_net_m3"],
+                               rtol=1e-10, atol=1e-7)
+    np.testing.assert_allclose(differences["rain"], 0, rtol=0, atol=1e-7)
+    return dict(
+        rain_end_h=rain_end_h, rain_end_peak_m3s=storm_peak["net_outlet_m3s"],
+        rain_end_peak_end_s=storm_peak["t_s"], rain_end_terminal_m3s=rain_rows[-1]["net_outlet_m3s"],
+        rain_end_steps=sum(r["steps"] for r in rain_rows),
+        rain_end_retries=sum(r["retries"] for r in rain_rows),
+        rain_end_hydraulic_s=sum(r["hydraulic_s"] for r in rain_rows),
+        recession_net_export_m3=net, recession_infiltration_m3=differences["infiltration"],
+        recession_peak_m3s=tail_peak["net_outlet_m3s"], recession_peak_end_s=tail_peak["t_s"],
+        terminal_discharge_m3s=tail[-1]["net_outlet_m3s"],
+        **{"rain_end_" + k: v for k, v in water_at_rain_end.items()},
+    )
 
 
 def simulate(
@@ -137,11 +183,15 @@ def simulate(
             ),
         )
     interval = settings["cadence_s"]
+    rain_h = forcing["duration_h"]
+    end_h = rain_h + settings["recession_h"]
+    if settings["recession_h"] <= 0 or any(h % settings["checkpoint_h"] for h in (rain_h, end_h)):
+        raise ValueError("Rain and recession endpoints must coincide with retained checkpoints")
     records = []
     previous_in = previous_out = 0.0
     initial = discharge_volumes(solver=s, gauges=settings["gauges_m"])
     for hour in range(
-        settings["checkpoint_h"], forcing["duration_h"] + 1, settings["checkpoint_h"]
+        settings["checkpoint_h"], end_h + 1, settings["checkpoint_h"]
     ):
         path = dest / f"hour_{hour}.json"
         checkpoint = cache / f"hour_{hour}.npz"
@@ -191,11 +241,14 @@ def simulate(
                 )
             )
             previous_out, previous_in, initial = boundary_out, boundary_in, current
+        water = (endpoint_water(solver=s, thresholds_cm=settings["thresholds_cm"],
+                                integrated_rain_m3=forcing["integrated_volume_m3"])
+                 if hour in (rain_h, end_h) else None)
         s.save_checkpoint(path=checkpoint)
         recession.atomic_json(
             path=path,
             payload=dict(
-                frames=new,
+                frames=new, endpoint_water=water,
                 checkpoint_sha256=runner.checksum(checkpoint),
                 window_wall_s=perf_counter() - tick,
             ),
@@ -208,26 +261,16 @@ def simulate(
             method,
             hour,
             "of",
-            forcing["duration_h"],
+            end_h,
             "h",
             flush=True,
         )
-    ledger = s.cumulative_accounting()
-    h = s.get_water_depth()
-    maximum = s.get_max_water_depth()
-    np.testing.assert_allclose(
-        ledger["rain"], forcing["integrated_volume_m3"], rtol=1e-9
-    )
-    if (
-        h.min() < 0
-        or not np.isfinite(h).all()
-        or abs(ledger["residual"]) > 1e-8 * ledger["rain"]
-    ):
-        raise ArithmeticError("Orton transfer failed conservation or positivity")
+    water_at_rain_end = json.loads((dest / f"hour_{rain_h}.json").read_text())["endpoint_water"]
+    water_at_end = json.loads((dest / f"hour_{end_h}.json").read_text())["endpoint_water"]
     peak = max(records, key=peak_flow)
     times = np.array([r["t_s"] for r in records])
     np.testing.assert_array_equal(
-        times, np.arange(interval, forcing["duration_h"] * 3600 + 1, interval)
+        times, np.arange(interval, end_h * 3600 + 1, interval)
     )
     window_times = [
         json.loads(p.read_text())["window_wall_s"] for p in dest.glob("hour_*.json")
@@ -240,18 +283,19 @@ def simulate(
         policy=mode,
         peak_m3s=peak["net_outlet_m3s"],
         peak_end_s=peak["t_s"],
-        storage_m3=float(h.sum() * dx**2),
         steps=sum(r["steps"] for r in records),
         retries=sum(r["retries"] for r in records),
         end_to_end_solver_s=elapsed,
         initial_m3=float(s.initial_volume),
-        duration_h=forcing["duration_h"],
+        duration_h=end_h,
         interval_s=interval,
         minimum_dt_s=min(r["dt_min_s"] for r in records),
         mean_dt_s=times[-1] / sum(r["steps"] for r in records),
         hydraulic_s=sum(r["hydraulic_s"] for r in records),
         sampled_peak_pool_mib=max(r["pool_mib"] for r in records),
-        **ledger,
+        **water_at_end,
+        **recession_evidence(records=records, rain_end_h=rain_h, water_at_rain_end=water_at_rain_end,
+                             water_at_end=water_at_end),
     )
     answer["mean_dt_s"] = float(answer["mean_dt_s"])
     for index, position in enumerate(settings["gauges_m"]):
@@ -260,11 +304,8 @@ def simulate(
         answer[f"gauge_{position}m_peak_m3s"] = float(series[top])
         answer[f"gauge_{position}m_peak_end_s"] = int(times[top])
         answer[f"gauge_{position}m_net_volume_m3"] = float(series.sum() * interval)
-    for cm in settings["thresholds_cm"]:
-        answer[f"final_area_{cm}cm_m2"] = int((h >= cm / 100).sum()) * dx**2
-        answer[f"maximum_area_{cm}cm_m2"] = int((maximum >= cm / 100).sum()) * dx**2
     answer["observation_sha256"] = runner.digest(observation_checksums(
-        folder=dest, hours=forcing["duration_h"], checkpoint_h=settings["checkpoint_h"],
+        folder=dest, hours=end_h, checkpoint_h=settings["checkpoint_h"],
     ))
     if result.exists():
         if answer != json.loads(result.read_text()):
@@ -328,6 +369,7 @@ def run(*, directory, settings, arguments):
     release = directory.parents[2] / settings["release"]
     identity = dict(
         source=runner.checksum(Path(__file__)),
+        release_replay=runner.checksum(Path(archive.__file__)),
         forcing_reader=runner.checksum(directory.parents[2] / "examples/orton_bradley/run_model.py"),
         inputs=runner.checksum(release / "inputs/manifest.json"),
         dem=runner.checksum(release / "outputs/orton_bradley_dem_5m.tif"),
@@ -351,7 +393,7 @@ def run(*, directory, settings, arguments):
         )
     if not plans:
         raise ValueError("No Orton Bradley transfer configurations match the selection")
-    print(f"{len(plans)} configurations, 48 h HIRDS design forcing, fixed physical gauges, external transfer", flush=True)
+    print(f"{len(plans)} configurations, 48 h HIRDS design forcing + {settings['recession_h']} h recession, fixed physical gauges, external transfer", flush=True)
     for plan in plans:
         print(plan["id"], plan["method"], plan["grid_m"], "m,", plan["nx"], "×", plan["ny"],
               "cells,", plan["archived_windows"], "checkpoint windows, complete", plan["complete"], flush=True)
