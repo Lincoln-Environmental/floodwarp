@@ -303,6 +303,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
             *(study / "figures").glob("[0-9]*.*"),
             *(study / "supplementary/pareto").rglob("*"),
             *(study / "supplementary/operational_storms").rglob("*"),
+            *(study / "supplementary/native_grid_extent").glob("*"),
             *(study / "supplementary/incised").glob("hour_eight_water.*"),
             *(study / "supplementary/incised").glob("simultaneous_extent.*"),
         ]

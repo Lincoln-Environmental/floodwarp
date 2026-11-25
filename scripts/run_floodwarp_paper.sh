@@ -135,24 +135,17 @@ main() {
         return
     fi
     if [[ $stage == native-grid-maps ]]; then
-        local map_driver=research.floodwarp_methods_paper.fidelity.native_map_comparison
-        local case_name spacing explicit_grid=false
+        for flag in "${selected_options[@]}"; do
+            if [[ $flag == --partition || $flag == --partition=* ]]; then
+                exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_map_suite "${selected_options[@]}"
+            fi
+        done
         for flag in "${selected_options[@]}"; do
             if [[ $flag == --case || $flag == --case=* ]]; then
-                exec "$python_bin" -m "$map_driver" "${selected_options[@]}"
+                exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_map_comparison "${selected_options[@]}"
             fi
-            if [[ $flag == --dx || $flag == --dx=* ]]; then explicit_grid=true; fi
         done
-        "$python_bin" -m "$map_driver" "${selected_options[@]}"
-        "$python_bin" -m "$map_driver" --case plain-709-intense-1000x1000 "${selected_options[@]}"
-        if [[ $explicit_grid == false ]]; then
-            for case_name in plain-709-moderate-1000x1000 plain-709-intense-1000x1000; do
-                for spacing in 5 10; do
-                    "$python_bin" -m "$map_driver" --case "$case_name" --dx "$spacing" "${selected_options[@]}"
-                done
-            done
-        fi
-        return
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_map_suite "${selected_options[@]}"
     fi
     if [[ $stage == hancock-temporal-control ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.fv1_clock --method hancock_dense "${selected_options[@]}"
@@ -167,8 +160,8 @@ main() {
         for part in fit test; do
             "$0" native-storms --partition "$part" "${selected_options[@]}"
             "$0" native-products "${selected_options[@]}"
+            "$0" native-grid-maps --partition "$part" "${selected_options[@]}"
             if [[ $part == fit ]]; then
-                "$0" native-grid-maps "${selected_options[@]}"
                 "$0" native-reach-balances "${selected_options[@]}"
                 "$0" embankment-transport "${selected_options[@]}"
                 "$0" native-step-history "${selected_options[@]}"

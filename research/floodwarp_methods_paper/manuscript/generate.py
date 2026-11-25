@@ -574,6 +574,15 @@ def native_grid_field_comparison(*, study):
                     f"{1000 * float(r['depth_rmse_m']):.5g} | {1000 * float(r['maximum_depth_rmse_m']):.5g} | "
                     f"{ious[0]} | {ious[1]} |")
     text.extend(["", "[Wet-union errors, connectivity and map identities](../fidelity/native_results/native_grid_field_differences.csv)"])
+    figures = study / "supplementary/native_grid_extent"
+    if (figures / "observations.csv").is_file():
+        groups = sorted({(r["case"], float(r["end_h"])) for r in csv_read(file=figures / "observations.csv")})
+        links = [f"[{case}, {end:g} h](../supplementary/native_grid_extent/{case}_{end:g}h.pdf)" for case, end in groups]
+        if links:
+            text.extend(["", "The following figures pair outlet peak discharge with the area that reached 5 cm or "
+                         "10 cm at any time before the common recession endpoint. The inundation measurement counts "
+                         "original hydraulic cells. The outlet and the inundation footprint can respond quite "
+                         "differently to the choice of formulation. " + " · ".join(links)])
     maps = study / "supplementary/operational_storms"
     links = [f"[{dx} m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_{dx}m.pdf)"
              for dx in (1, 5, 10) if (maps / f"plain_709_extent_10cm_{dx}m.pdf").is_file()]

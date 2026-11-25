@@ -77,8 +77,12 @@ def derived_identity(*, root, study, stage):
         study / "manifests/corrective_source_tree.json",
         study / "manifests/prevalidation_advisor_freeze.json",
     ]
+    if stage in ("figures", "manuscript", "verify"):
+        dependencies.extend((study / "fidelity/native_results/native_grid_field_differences.csv",
+                             study / "fidelity/native_results/hydraulic_fidelity.csv"))
     if stage in ("manuscript", "verify"):
-        dependencies.extend((study / "fidelity/native_results/regional_water.csv",
+        dependencies.extend((study / "supplementary/native_grid_extent/observations.csv",
+                             study / "fidelity/native_results/regional_water.csv",
                              study / "fidelity/native_results/embankment_transport.csv"))
     if stage == "verify":
         native = study / "fidelity/native_results"

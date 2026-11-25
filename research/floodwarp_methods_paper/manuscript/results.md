@@ -328,10 +328,18 @@ Each row compares fields at the stated physical time on identical hydraulic cell
 |---|---:|---:|---|---:|---:|---:|---:|---:|
 | hill-8500-back-1000x1000 | 8.0 | 1 | RK2 | 0.5 | 0.0083048 | 0.0084534 | empty union | empty union |
 | hill-8500-back-1000x1000 | 12.0 | 1 | RK2 | 0.5 | 0 | 0.0084534 | empty union | empty union |
+| hill-8500-back-1000x1000 | 8.0 | 5 | FV1 | 1.0 | 0.5318 | 15.459 | empty union | empty union |
+| hill-8500-back-1000x1000 | 12.0 | 5 | FV1 | 1.0 | 0.30703 | 15.459 | empty union | empty union |
 | hill-8500-back-1000x1000 | 8.0 | 1 | FV1 | 1.0 | 0.10716 | 6.2974 | empty union | empty union |
 | hill-8500-back-1000x1000 | 12.0 | 1 | FV1 | 1.0 | 0.0092575 | 6.2974 | empty union | empty union |
+| hill-8500-back-1000x1000 | 8.0 | 10 | FV1 | 1.0 | 1.5003 | 19.74 | 0.00000 | empty union |
+| hill-8500-back-1000x1000 | 12.0 | 10 | FV1 | 1.0 | 1.0526 | 19.74 | 0.00000 | empty union |
+| hill-8500-back-1000x1000 | 8.0 | 5 | Hancock | 1.0 | 0 | 0.14707 | empty union | empty union |
+| hill-8500-back-1000x1000 | 12.0 | 5 | Hancock | 1.0 | 0 | 0.14707 | empty union | empty union |
 | hill-8500-back-1000x1000 | 8.0 | 1 | Hancock | 1.0 | 0.010741 | 0.018788 | empty union | empty union |
 | hill-8500-back-1000x1000 | 12.0 | 1 | Hancock | 1.0 | 0 | 0.018788 | empty union | empty union |
+| hill-8500-back-1000x1000 | 8.0 | 10 | Hancock | 1.0 | 0 | 0.27301 | empty union | empty union |
+| hill-8500-back-1000x1000 | 12.0 | 10 | Hancock | 1.0 | 0 | 0.27301 | empty union | empty union |
 | plain-709-intense-1000x1000 | 8.0 | 1 | RK2 | 0.5 | 0.00029241 | 0.00049697 | 1.00000 | 1.00000 |
 | plain-709-intense-1000x1000 | 8.0 | 10 | FV1 | 1.0 | 51.745 | 28.641 | 0.72401 | 0.44878 |
 | plain-709-intense-1000x1000 | 8.0 | 5 | FV1 | 1.0 | 53.231 | 29.119 | 0.71496 | 0.43857 |
@@ -357,12 +365,22 @@ Each row compares fields at the stated physical time on identical hydraulic cell
 | plain-709-moderate-1000x1000 | 40.0 | 1 | Hancock | 1.0 | 0.00052723 | 0.0035165 | 1.00000 | 1.00000 |
 | plain-709-spatial-1000x1000 | 8.0 | 1 | RK2 | 0.5 | 0.00094817 | 0.0012903 | 1.00000 | 1.00000 |
 | plain-709-spatial-1000x1000 | 20.0 | 1 | RK2 | 0.5 | 3.8052e-05 | 0.0012476 | 1.00000 | 1.00000 |
+| plain-709-spatial-1000x1000 | 8.0 | 5 | FV1 | 1.0 | 2.1735 | 2.1572 | 0.97959 | 0.85000 |
+| plain-709-spatial-1000x1000 | 20.0 | 5 | FV1 | 1.0 | 0.50372 | 2.097 | 0.81250 | 0.53846 |
 | plain-709-spatial-1000x1000 | 8.0 | 1 | FV1 | 1.0 | 0.5193 | 0.54444 | 0.98380 | 0.99025 |
 | plain-709-spatial-1000x1000 | 20.0 | 1 | FV1 | 1.0 | 0.40509 | 1.0658 | 0.87808 | 0.85119 |
+| plain-709-spatial-1000x1000 | 8.0 | 10 | FV1 | 1.0 | 3.4477 | 3.6844 | 0.92857 | 0.50000 |
+| plain-709-spatial-1000x1000 | 20.0 | 10 | FV1 | 1.0 | 0.56011 | 3.3474 | 1.00000 | empty union |
+| plain-709-spatial-1000x1000 | 8.0 | 5 | Hancock | 1.0 | 0.024094 | 0.027654 | 1.00000 | 1.00000 |
+| plain-709-spatial-1000x1000 | 20.0 | 5 | Hancock | 1.0 | 0.00074614 | 0.016399 | 1.00000 | 1.00000 |
+| plain-709-spatial-1000x1000 | 8.0 | 10 | Hancock | 1.0 | 0.041748 | 0.056641 | 1.00000 | 1.00000 |
+| plain-709-spatial-1000x1000 | 20.0 | 10 | Hancock | 1.0 | 0.0035856 | 0.050241 | 1.00000 | empty union |
 | plain-709-spatial-1000x1000 | 8.0 | 1 | Hancock | 1.0 | 0.010704 | 0.010765 | 1.00000 | 0.99803 |
 | plain-709-spatial-1000x1000 | 20.0 | 1 | Hancock | 1.0 | 0.00011577 | 0.0071151 | 1.00000 | 1.00000 |
 
 [Wet-union errors, connectivity and map identities](../fidelity/native_results/native_grid_field_differences.csv)
+
+The following figures pair outlet peak discharge with the area that reached 5 cm or 10 cm at any time before the common recession endpoint. The inundation measurement counts original hydraulic cells. The outlet and the inundation footprint can respond quite differently to the choice of formulation. [hill-8500-back-1000x1000, 12 h](../supplementary/native_grid_extent/hill-8500-back-1000x1000_12h.pdf) · [plain-709-moderate-1000x1000, 40 h](../supplementary/native_grid_extent/plain-709-moderate-1000x1000_40h.pdf) · [plain-709-spatial-1000x1000, 20 h](../supplementary/native_grid_extent/plain-709-spatial-1000x1000_20h.pdf)
 
 The maps show the same plain two hours after rainfall ended for the moderate and intense storms. Shading preserves the fraction of hydraulic cells reaching 10 cm in each 10 m reporting cell. The dashed line marks the internal gauge. [1 m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_1m.pdf) · [5 m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_5m.pdf) · [10 m hydraulic grid](../supplementary/operational_storms/plain_709_extent_10cm_10m.pdf)
 

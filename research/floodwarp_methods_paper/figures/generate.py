@@ -957,11 +957,15 @@ def from_records(*, study):
                                             "plain-709-intense-1000x1000": "Intense rain"},
                         spacings={1: ("#0072B2", "-"), 5: ("#D55E00", "--"), 10: ("#333333", ":")},
                         face_m=880, hours=8)
+    from research.floodwarp_methods_paper.figures import native_extent
+    native_extent.generate(study=study, thresholds=(5, 10), save=save,
+                           methods={"fv1": ("FV1", "#0072B2", "o"), "hancock_dense": ("Hancock", "#D55E00", "s"),
+                                    "adaptive": ("RK2", "#009E73", "^")})
     orton_transfer(study=study, out=out)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),
         supplementary_figures=len(
-            list((study / "supplementary/pareto").rglob("*.pdf"))
+            list((study / "supplementary").rglob("*.pdf"))
         ),
     )
 
