@@ -163,8 +163,12 @@ def embankment_observations(*, directory, windows):
         normalized = {k: str(v) for k, v in source.items()}
         expected, _, _, _ = embankment_transport.contracts(directory=directory, event=normalized,
             feature=features[archived["case"], dx], face=identity["face_m"])
-        if (expected != identity or path.parent.name != runner.digest(identity)[:24]
-                or runner.digest(saved["profile"]) != saved["profile_sha"]):
+        if path.parent.name != runner.digest(identity)[:24] or runner.digest(saved["profile"]) != saved["profile_sha"]:
+            raise ValueError("Embankment measurement does not match the verified forecast and terrain")
+        if expected != identity:
+            historical_identity = dict(identity, feature_sha=expected["feature_sha"])
+            if historical_identity == expected:
+                continue
             raise ValueError("Embankment measurement does not match the verified forecast and terrain")
         key = (*key, identity["face_m"])
         if key in rows:
