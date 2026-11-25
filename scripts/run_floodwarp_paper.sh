@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
     cat <<'HELP'
 Usage: ./scripts/run_floodwarp_paper.sh STAGE [--case GLOB] [--method NAME] [--dx METRES] [--dem METRES] [--resume | --force] [--dry-run]
-Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration performance
+Stages: check analytical convergence fixed-dt-space synthetic long-storms resolution terrain-initial-controls calibration calibration-fidelity performance
         million-terrain million-pilots million-storms million-auto large-references large-refinements heldout-references million-profiles million-repeats recession-controls execution-policy pareto
         terrain-features advisor-train advisor-validate tables figures manuscript verify hydrograph-fidelity fidelity-figures area-mean-terrain area-mean-storms native-storms native-status native-products gpu-timing-samples native-step-history native-timing-repeats native-publication summary strong-storm-controls fv1-temporal-control hancock-temporal-control native-grid-maps native-reach-balances embankment-transport free-plane free-reach outlet-storms outlet-results outlet-timing-repeats advisor-design advisor-cli-check orton-transfer outlet-qualification verify-kernels verify-native all historical-all
 Environment: FLOODWARP_PAPER_PYTHON, FLOODWARP_PAPER_CONFIG, FLOODWARP_PAPER_DEVICE.
@@ -111,6 +111,9 @@ main() {
     if [[ $stage == native-status && ${#selected_options[@]} == 1 && ${selected_options[0]} == --inventory ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.native_status --inventory
     fi
+    if [[ $stage == calibration-fidelity ]]; then
+        exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.calibration_fidelity "${selected_options[@]}"
+    fi
     if [[ $stage == gpu-timing-samples ]]; then
         exec "$python_bin" -m research.floodwarp_methods_paper.fidelity.gpu_sharing "${selected_options[@]}"
     fi
@@ -175,7 +178,7 @@ main() {
                 ./scripts/run_hydrograph_fidelity.sh native-advisor-validate "${selected_options[@]}"
             fi
         done
-        for stage in verify-native advisor-design orton-transfer verify-kernels native-publication summary tables figures manuscript verify; do
+        for stage in verify-native advisor-design orton-transfer verify-kernels calibration-fidelity native-publication summary tables figures manuscript verify; do
             "$0" "$stage" "${selected_options[@]}"
         done
         return

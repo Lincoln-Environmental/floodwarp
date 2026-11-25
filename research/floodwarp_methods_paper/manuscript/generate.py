@@ -78,6 +78,34 @@ def cli_spacing(row):
     return float(row["dx_m"])
 
 
+def calibration_shape_transfer(*, study):
+    directory = study / "supplementary/manning_transfer"
+    if not directory.is_dir():
+        return ""
+    rows = csv_read(file=directory / "heldout_fidelity.csv")
+    amounts = sorted({float(r["bound"]) for r in rows})
+    terrains, = {int(r["terrains"]) for r in rows}
+    result = [
+        "", "### Transfer of fitted FV1 roughness to other hydrographs", "",
+        f"On the original 120 × 80 m synthetic domains, we applied the roughness fitted on the moderate plain to {terrains} other terrain realisations. Each row counts distinct event/grid pairs for one bound. Several fitting objectives selected the same forecast. The comparisons retain the original 15-minute hydrographs, use separate spatial, temporal and formulation checks for each observable, and require both forecasts to have receded at the common reference endpoint.", "",
+        "| Roughness adjustment allowed | Outlet observable | Qualified / held-out pairs | Terrains qualified | Median reduction in absolute error (points) | Improvements / deteriorations beyond sensitivity |",
+        "|---:|---|---:|---:|---:|---:|",
+    ]
+    labels = {"peak_bias_pct": "Peak discharge", "peak_delay_pct": "Peak time", "width80_bias_pct": "Central 80% duration",
+              "volume_bias_pct": "Exported volume", "shape_tv_pct": "Normalised hydrograph shape"}
+    for bound in amounts:
+        for metric, label in labels.items():
+            group, = [r for r in rows if float(r["bound"]) == bound and r["metric"] == metric]
+            gain = group["median_reduction_points"]
+            value = f"{float(gain):+.3f}" if gain else "Unresolved"
+            counts = f"{group['improved_beyond_sensitivity']} / {group['worse_beyond_sensitivity']}" if gain else "—"
+            result.append(f"| ±{100 * bound:g}% | {label} | {group['qualified_pairs']} / {group['forecast_pairs']} | "
+                          f"{group['qualified_terrains']} | {value} | {counts} |")
+    result.extend(["", "Positive reductions indicate improved fidelity. The final column counts changes larger than twice the observable’s reference sensitivity. These historical fits provide limited evidence for transferring roughness to other terrains. The current native-grid qualification uses prescribed physical roughness.",
+                   "[Peak and shape against true-roughness Hancock and RK2](../supplementary/manning_transfer/outlet_fidelity.pdf) · [All signed changes, rejected comparisons and forecast IDs](../supplementary/manning_transfer/transfer_fidelity.csv) · [Held-out denominators](../supplementary/manning_transfer/heldout_fidelity.csv) · [Input checksums](../supplementary/manning_transfer/sources.json)", ""])
+    return "\n".join(result)
+
+
 def repaired_budgets(*, directory):
     import json
 
@@ -1127,6 +1155,7 @@ Retain adaptive Hancock as the development default. Use FV1 or LI when the error
             sharp = next(line for line in pulse_comparison(directory=study / "fidelity")
                          if line.startswith("With quarter-second"))
             correction += "\n" + sharp.replace("](results/", "](../fidelity/results/") + "\n"
+        correction += calibration_shape_transfer(study=study)
         result += correction
         discussion += correction
         audit += correction.replace("](../", "](")

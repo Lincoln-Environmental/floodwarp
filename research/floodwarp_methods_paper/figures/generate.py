@@ -931,6 +931,44 @@ def embankment_profiles(*, study, cases, spacings, face_m, hours):
     save(fig=fig, folder=study / "supplementary/operational_storms", name="plain_709_embankment_profiles")
 
 
+def calibrated_transfer(*, study):
+    directory = study / "supplementary/manning_transfer"
+    file = directory / "transfer_fidelity.csv"
+    if not file.is_file():
+        return
+    rows = [row for row in csv_read(file) if row["fit_terrain"] == "False"]
+    bound = max(float(row["bound"]) for row in rows)
+    peers = [r for r in rows if float(r["bound"]) == bound]
+    metrics = (("peak_bias_pct", "Signed peak bias (%)"), ("shape_tv_pct", "Redistributed event volume (%)"))
+    handles = {}
+    fig, axes = plt.subplots(nrows=len(metrics), figsize=(7.0, 4.2), layout="constrained")
+    for ax, (key, label) in zip(axes, metrics, strict=True):
+        eligible = [r for r in peers if r["metric"] == key and r["qualified"] == "True"]
+        for i, r in enumerate(eligible):
+            uncertainty = float(r["reference_sensitivity_pct"])
+            lower = -uncertainty if key == "peak_bias_pct" else 0.0
+            band = ax.plot([lower, uncertainty], [i, i], color="0.8", linewidth=7, solid_capstyle="butt")[0]
+            handles["Reference sensitivity"] = band
+            for j, (field, name, color, marker) in enumerate((
+                    ("baseline_pct", "FV1, prescribed n", "#333333", "o"),
+                    ("fitted_pct", "FV1, fitted n", "#ad4765", "x"),
+                    ("hancock_true_n_pct", "Hancock, prescribed n", "#0072B2", "s"),
+                    ("rk2_true_n_pct", "RK2, prescribed n", "#009E73", "^"))):
+                peer = field.split("_")[0]
+                if r.get(field) and (peer not in ("hancock", "rk2") or r[peer + "_qualified"] == "True"):
+                    handles[name] = ax.plot(float(r[field]), i + (j - 1.5) * 0.095, marker=marker,
+                                            markersize=5, color=color, linestyle="none")[0]
+        total = sum(r["metric"] == key for r in peers)
+        ax.set_title(f"{len(eligible)} / {total} held-out event/grid pairs qualified", fontsize=9)
+        ax.set_yticks(range(len(eligible)), [f"{r['case']}, {r['dx_m']} m" for r in eligible], fontsize=8)
+        ax.set_ylim(-0.5, max(0, len(eligible) - 1) + 0.5)
+        ax.axvline(0, color="0.55", linewidth=0.7)
+        ax.set_xlabel(label)
+    fig.legend(handles.values(), handles.keys(), loc="outside lower center", ncol=3, fontsize=8)
+    fig.suptitle(f"Transfer with a ±{100 * bound:g}% Manning calibration bound")
+    save(fig=fig, folder=directory, name="outlet_fidelity")
+
+
 def from_records(*, study):
     paper_style()
     out = study / "figures"
@@ -964,6 +1002,7 @@ def from_records(*, study):
                            methods={"fv1": ("FV1", "#0072B2", "o"), "hancock_dense": ("Hancock", "#D55E00", "s"),
                                     "adaptive": ("RK2", "#009E73", "^")})
     orton_transfer(study=study, out=out)
+    calibrated_transfer(study=study)
     return dict(
         main_figures=len(list(out.glob("*.pdf"))),
         supplementary_figures=len(

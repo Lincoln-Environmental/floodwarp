@@ -355,3 +355,28 @@ On floodplain-8103 at 10 m, the installed DEM reader measured maximum local barr
 Joint method and grid selection on the new final terrains awaits the held-out evaluation.
 
 With quarter-second accepted transport at 200 m, 5 m Hancock took 0.149 s and 1 m FV1 took 1.348 s (9.03×). Their respective sharp-pulse peak biases were -54.09% and -58.60%. Refining Hancock to 1 m reduced its peak bias to -7.94%. [Quarter-second analytical comparisons](fidelity/results/sharp_pulses.csv)
+
+### Transfer of fitted FV1 roughness to other hydrographs
+
+On the original 120 × 80 m synthetic domains, we applied the roughness fitted on the moderate plain to 6 other terrain realisations. Each row counts distinct event/grid pairs for one bound. Several fitting objectives selected the same forecast. The comparisons retain the original 15-minute hydrographs, use separate spatial, temporal and formulation checks for each observable, and require both forecasts to have receded at the common reference endpoint.
+
+| Roughness adjustment allowed | Outlet observable | Qualified / held-out pairs | Terrains qualified | Median reduction in absolute error (points) | Improvements / deteriorations beyond sensitivity |
+|---:|---|---:|---:|---:|---:|
+| ±5% | Peak discharge | 3 / 16 | 3 | -0.013 | 0 / 0 |
+| ±5% | Peak time | 0 / 16 | 0 | Unresolved | — |
+| ±5% | Central 80% duration | 1 / 16 | 1 | +0.019 | 0 / 0 |
+| ±5% | Exported volume | 1 / 16 | 1 | +0.121 | 0 / 0 |
+| ±5% | Normalised hydrograph shape | 1 / 16 | 1 | +0.161 | 0 / 0 |
+| ±10% | Peak discharge | 3 / 16 | 3 | -0.027 | 0 / 0 |
+| ±10% | Peak time | 0 / 16 | 0 | Unresolved | — |
+| ±10% | Central 80% duration | 1 / 16 | 1 | +0.039 | 0 / 0 |
+| ±10% | Exported volume | 1 / 16 | 1 | +0.243 | 0 / 0 |
+| ±10% | Normalised hydrograph shape | 1 / 16 | 1 | +0.284 | 0 / 0 |
+| ±20% | Peak discharge | 3 / 16 | 3 | -0.054 | 0 / 0 |
+| ±20% | Peak time | 0 / 16 | 0 | Unresolved | — |
+| ±20% | Central 80% duration | 1 / 16 | 1 | +0.072 | 0 / 0 |
+| ±20% | Exported volume | 1 / 16 | 1 | +0.501 | 0 / 0 |
+| ±20% | Normalised hydrograph shape | 1 / 16 | 1 | +0.542 | 0 / 0 |
+
+Positive reductions indicate improved fidelity. The final column counts changes larger than twice the observable’s reference sensitivity. These historical fits provide limited evidence for transferring roughness to other terrains. The current native-grid qualification uses prescribed physical roughness.
+[Peak and shape against true-roughness Hancock and RK2](supplementary/manning_transfer/outlet_fidelity.pdf) · [All signed changes, rejected comparisons and forecast IDs](supplementary/manning_transfer/transfer_fidelity.csv) · [Held-out denominators](supplementary/manning_transfer/heldout_fidelity.csv) · [Input checksums](supplementary/manning_transfer/sources.json)

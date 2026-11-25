@@ -196,7 +196,14 @@ def verify(*, study, config):
     native_results = study / "fidelity/native_results"
     native_sql = catalogue.verify_database(target=native_results) if native_results.is_dir() else None
 
+    calibration_results = study / "supplementary/manning_transfer"
+    calibrated = None
+    if calibration_results.is_dir():
+        from research.floodwarp_methods_paper.fidelity import calibration_fidelity
+        calibrated = calibration_fidelity.verify(study=study, target=calibration_results)
+
     return dict(
+        calibration_fidelity=calibrated,
         completed=counts,
         analytical=gates,
         complete_hydrographs=nr,
@@ -304,6 +311,7 @@ def evaluate(*, stage, spec, study, root, config, context, directory):
             *(study / "supplementary/pareto").rglob("*"),
             *(study / "supplementary/operational_storms").rglob("*"),
             *(study / "supplementary/native_grid_extent").glob("*"),
+            *(study / "supplementary/manning_transfer").glob("outlet_fidelity.*"),
             *(study / "supplementary/incised").glob("hour_eight_water.*"),
             *(study / "supplementary/incised").glob("simultaneous_extent.*"),
         ]

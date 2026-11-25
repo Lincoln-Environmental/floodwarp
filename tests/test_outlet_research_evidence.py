@@ -1180,3 +1180,33 @@ def test_transfer_driver_records_dry_recession_and_restores_both_endpoints(tmp_p
     assert first["duration_h"] == 2 and first["rain_end_h"] == 1
     assert first["rain"] == first["rain_end_rain"] == pytest.approx(forcing["integrated_volume_m3"])
     assert first["steps"] > first["rain_end_steps"] and abs(first["residual"]) < 1e-10
+
+
+def test_calibration_transfer_counts_independent_forecasts_and_keeps_unqualified_rows(tmp_path):
+    from research.floodwarp_methods_paper.fidelity import calibration_fidelity
+
+    pair = dict(case="fan", seed="1", landform="fan", dx="10", bound="0.1", multiplier="0.9",
+                baseline_id="base", forecast_id="adjusted", fit_id="training")
+    groups = list(calibration_fidelity.distinct_fits(rows=[dict(pair, objective="space"), dict(pair, objective="joint"),
+                                                          dict(pair, objective="joint", bound="0.2")]))
+    assert len(groups) == 2 and groups[0]["fit_objectives"] == "joint space"
+    checked = dict(bound=0.1, metric="peak_bias_pct", terrain_id="fan-1", fit_terrain=False,
+                   qualified=True, absolute_error_reduction_points=-2., beyond_reference_sensitivity=False)
+    summary, = calibration_fidelity.summarize(rows=[checked, dict(checked, qualified=False, terrain_id="fan-2"),
+                                                    dict(checked, fit_terrain=True)], target=tmp_path)
+    assert summary["forecast_pairs"] == 2 and summary["qualified_pairs"] == 1
+    assert summary["median_reduction_points"] == -2 and summary["worse_beyond_sensitivity"] == 0
+
+
+def test_manning_transfer_rebuilds_from_archived_inputs_and_detects_changes(tmp_path):
+    from pathlib import Path
+    from research.floodwarp_methods_paper.fidelity import calibration_fidelity
+
+    study = Path(__file__).resolve().parents[1] / "research/floodwarp_methods_paper"
+    rows, summaries = calibration_fidelity.generate(study=study, target=tmp_path)
+    assert rows > summaries > 0
+    assert calibration_fidelity.verify(study=study, target=tmp_path) == (rows, summaries)
+    file = tmp_path / "transfer_fidelity.csv"
+    file.write_text(file.read_text().replace("peak_bias_pct", "unverified_bias", 1))
+    with pytest.raises(ValueError, match="regeneration"):
+        calibration_fidelity.verify(study=study, target=tmp_path)
